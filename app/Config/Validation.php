@@ -150,32 +150,6 @@ class Validation
         ]
     ];
 
-    public $branch = [
-        'value'             => [
-            'label'            => 'Branch Code',
-            'rules'            =>    'required|min_length[7]|max_length[7]|is_unique[md_branch.value,md_branch_id,{id}]',
-            'errors'        => [
-                'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Fill {field} first'
-            ]
-        ],
-        'name'                 => [
-            'label'            => 'Branch Name',
-            'rules'            => 'required|is_unique[md_branch.name,md_branch_id,{id}]',
-            'errors'        => [
-                'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
-            ]
-        ],
-        'address'              => [
-            'label'            => 'Address',
-            'rules'            => 'required',
-            'errors'        => [
-                'required'    => 'Please Insert the {field} first'
-            ]
-        ]
-    ];
-
     public $reference = [
         'name'                  => [
             'label'             => 'Name',
@@ -211,6 +185,32 @@ class Validation
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Please Insert the {field} Line'
+            ]
+        ]
+    ];
+
+    public $branch = [
+        'value'             => [
+            'label'            => 'Branch Code',
+            'rules'            =>    'required|min_length[7]|max_length[7]|is_unique[md_branch.value,md_branch_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Branch Name',
+            'rules'            => 'required|is_unique[md_branch.name,md_branch_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ],
+        'address'              => [
+            'label'            => 'Address',
+            'rules'            => 'required',
+            'errors'        => [
+                'required'    => 'Please Insert the {field} first'
             ]
         ]
     ];
