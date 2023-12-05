@@ -94,7 +94,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('reference/show/(:any)', 'Backend\Reference::show/$1');
     $routes->get('reference/destroy/(:any)', 'Backend\Reference::destroy/$1');
     $routes->post('reference/tableLine', 'Backend\Reference::tableLine');
-    $routes->get('reference/destroyLine/(:any)', 'Backend\Reference::destroyLine/$1');
     $routes->match(['get', 'post'], 'reference/getList', 'Backend\Reference::getList');
 });
 
