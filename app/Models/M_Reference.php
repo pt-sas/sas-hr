@@ -25,7 +25,7 @@ class M_Reference extends Model
 	protected $beforeUpdate			= [];
 	protected $afterUpdate			= [];
 	protected $beforeDelete			= [];
-	protected $afterDelete			= ['deleteDetail'];
+	protected $afterDelete			= [];
 	protected $column_order = [
 		'', // Hide column
 		'', // Number column
@@ -80,12 +80,6 @@ class M_Reference extends Model
 			"columnJoin" => $columnJoin,
 			"typeJoin" => $typeJoin
 		];
-	}
-
-	public function deleteDetail(array $rows)
-	{
-		$refDetail = new M_ReferenceDetail($this->request);
-		$refDetail->where($this->primaryKey, $rows['id'])->delete();
 	}
 
 	public function findBy($where = null, $field = null, $orderBy = [])

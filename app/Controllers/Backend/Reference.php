@@ -129,21 +129,7 @@ class Reference extends BaseController
     {
         if ($this->request->isAJAX()) {
             try {
-                $result = $this->model->delete($id);
-                $response = message('success', true, $result);
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
-
-            return $this->response->setJSON($response);
-        }
-    }
-
-    public function destroyLine($id)
-    {
-        if ($this->request->isAJAX()) {
-            try {
-                $result = $this->modelDetail->delete($id);
+                $result = $this->delete($id);
                 $response = message('success', true, $result);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -157,26 +143,72 @@ class Reference extends BaseController
     {
         $table = [];
 
+        $fieldValue = new \App\Entities\TableLine();
+        $fieldValue->setName("value");
+        $fieldValue->setType("text");
+        $fieldValue->setIsRequired(true);
+        $fieldValue->setLength(150);
+
+        $fieldName = new \App\Entities\TableLine();
+        $fieldName->setName("name");
+        $fieldName->setType("text");
+        $fieldName->setIsRequired(true);
+        $fieldName->setLength(200);
+
+        $fieldDesc = new \App\Entities\TableLine();
+        $fieldDesc->setName("description");
+        $fieldDesc->setType("text");
+        $fieldDesc->setLength(250);
+
+        $fieldActive = new \App\Entities\TableLine();
+        $fieldActive->setName("isactive");
+        $fieldActive->setType("checkbox");
+        $fieldActive->setClass("active");
+        $fieldActive->setIsChecked(true);
+
+        $btnDelete = new \App\Entities\TableLine();
+        $btnDelete->setName("sys_ref_detail_id");
+        $btnDelete->setType("button");
+        $btnDelete->setClass("delete");
+
         //? Create
         if (empty($set)) {
             $table = [
-                $this->field->fieldTable('input', 'text', 'value', null, 'required', null, null, null, null, 150),
-                $this->field->fieldTable('input', 'text', 'name', null, 'required', null, null, null, null, 200),
-                $this->field->fieldTable('input', 'text', 'description', null, null, null, null, null, null, 250),
-                $this->field->fieldTable('input', 'checkbox', 'isactive', 'active', null, null, 'checked'),
-                $this->field->fieldTable('button', 'button', 'sys_ref_detail_id')
+                $this->field->fieldTable($fieldValue),
+                $this->field->fieldTable($fieldName),
+                $this->field->fieldTable($fieldDesc),
+                $this->field->fieldTable($fieldActive),
+                $this->field->fieldTable($btnDelete)
             ];
         }
 
         //? Update
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
+                $fieldValue->setValue($row->getValue());
+                $fieldName->setValue($row->getName());
+                $fieldDesc->setValue($row->getDescription());
+                $fieldActive->setValue($row->getIsActive());
+                $btnDelete->setValue($row->getRefDetailId());
+
+                if ($row->getIsActive() === "N") {
+                    $fieldValue->setIsReadonly(true);
+                    $fieldName->setIsReadonly(true);
+                    $fieldDesc->setIsReadonly(true);
+                    $fieldActive->setIsChecked(false);
+                } else {
+                    $fieldValue->setIsReadonly(false);
+                    $fieldName->setIsReadonly(false);
+                    $fieldDesc->setIsReadonly(false);
+                    $fieldActive->setIsChecked(true);
+                }
+
                 $table[] = [
-                    $this->field->fieldTable('input', 'text', 'value', null, 'required', $row->isactive === 'N' ? 'readonly' : null, null, null, $row->value, 150),
-                    $this->field->fieldTable('input', 'text', 'name', null, 'required', $row->isactive === 'N' ? 'readonly' : null, null, null, $row->name, 200),
-                    $this->field->fieldTable('input', 'text', 'description', null, null, $row->isactive === 'N' ? 'readonly' : null, null, null, $row->description, 250),
-                    $this->field->fieldTable('input', 'checkbox', 'isactive', 'active', null, null, 'checked', null, $row->isactive),
-                    $this->field->fieldTable('button', 'button', 'sys_ref_detail_id', null, null, null, null, null, $row->sys_ref_detail_id)
+                    $this->field->fieldTable($fieldValue),
+                    $this->field->fieldTable($fieldName),
+                    $this->field->fieldTable($fieldDesc),
+                    $this->field->fieldTable($fieldActive),
+                    $this->field->fieldTable($btnDelete)
                 ];
             endforeach;
         }
