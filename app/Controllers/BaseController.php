@@ -464,59 +464,122 @@ class BaseController extends Controller
 				$dataUpdate = [];
 
 				//? Check property update 
-				if (isset($data['update']))
+				if (isset($data['update'])) {
 					$dataUpdate = $data['update'];
 
-				//TODO: Check value change 
-				$dataUpdate = $this->getValueChange($model, $dataUpdate);
+					//TODO: Check value change 
+					$dataUpdate = $this->getValueChange($model, $dataUpdate);
 
-				//? Header no data to update and Line No data and Not set property insert when submit data
-				if (count($arrDataHeader) == 1 && empty($dataUpdate) && !isset($data['insert']))
-					$result = $this->model->save($obj);
+					//? Header no data to update and Line No data and Not set property insert when submit data
+					if (count($arrDataHeader) == 1 && empty($dataUpdate) && !isset($data['insert']) && !isset($data['delete']))
+						$result = $this->model->save($obj);
 
-				//? Header exists data
-				if (count($arrDataHeader) > 1)
-					$result = $this->model->save($obj);
+					//? Header exists data
+					if (count($arrDataHeader) > 1)
+						$result = $this->model->save($obj);
 
-				//? Check line data
-				if (!empty($dataUpdate)) {
-					//* Set Updated_At Field 
-					$dataUpdate = $this->doSetField($this->updatedField, $this->setDate(), $dataUpdate);
+					//? Check line data
+					if (!empty($dataUpdate)) {
+						//* Set Updated_At Field 
+						$dataUpdate = $this->doSetField($this->updatedField, $this->setDate(), $dataUpdate);
 
-					//* Set Updated_By Field 
-					$dataUpdate = $this->doSetField($this->updatedByField, $this->access->getSessionUser(), $dataUpdate);
+						//* Set Updated_By Field 
+						$dataUpdate = $this->doSetField($this->updatedByField, $this->access->getSessionUser(), $dataUpdate);
 
-					//TODO: Populate data old value and new value 
-					$arrChangeData = [];
-					foreach ($dataUpdate as $new) :
-						$old = $model->find($new[$this->primaryKey]);
+						//TODO: Populate data old value and new value 
+						$arrChangeData = [];
+						foreach ($dataUpdate as $new) :
+							$old = $model->find($new[$this->primaryKey]);
 
-						$new = (array) $new;
-						foreach (array_keys($new) as $column) :
-							if (!empty($this->allowedFields) && !in_array($column, $this->allowedFields))
-								$arrChangeData[] = [
-									'table'		=> $model->table,
-									'column'	=> $column,
-									'record_id'	=> $new[$this->primaryKey],
-									'old_value'	=> $old->{$column},
-									'new_value'	=> $new[$column]
-								];
+							$new = (array) $new;
+							foreach (array_keys($new) as $column) :
+								if (!empty($this->allowedFields) && !in_array($column, $this->allowedFields))
+									$arrChangeData[] = [
+										'table'		=> $model->table,
+										'column'	=> $column,
+										'record_id'	=> $new[$this->primaryKey],
+										'old_value'	=> $old->{$column},
+										'new_value'	=> $new[$column]
+									];
+							endforeach;
 						endforeach;
-					endforeach;
 
-					//TODO: Update line data 
-					$result = $model->builder->updateBatch($dataUpdate, $model->primaryKey);
+						//TODO: Update line data 
+						$result = $model->builder->updateBatch($dataUpdate, $model->primaryKey);
 
-					if ($result > 0) {
-						//TODO: Insert Change Log 
-						foreach ($arrChangeData as $value) :
-							$changeLog->insertLog($value['table'], $value['column'], $value['record_id'], $value['old_value'], $value['new_value'], $this->EVENTCHANGELOG_Update);
-						endforeach;
+						if ($result > 0) {
+							//TODO: Insert Change Log 
+							foreach ($arrChangeData as $value) :
+								$changeLog->insertLog($value['table'], $value['column'], $value['record_id'], $value['old_value'], $value['new_value'], $this->EVENTCHANGELOG_Update);
+							endforeach;
+						}
 					}
 				}
 			}
 
+			if (isset($data['delete'])) {
+				$dataDelete = $data['delete'];
+
+				//TODO: Update line data 
+				$result = $model->delete($dataDelete['id']);
+
+				if ($result) {
+					$fields = $model->db->getFieldNames($model->table);
+
+					//TODO: Insert Change Log 
+					foreach ($dataDelete['data'] as $value) :
+						foreach ($fields as $column) :
+							$changeLog->insertLog($model->table, $column, $value->{$this->primaryKey}, $value->{$column}, null, $this->EVENTCHANGELOG_Delete);
+						endforeach;
+					endforeach;
+
+					$result = 1;
+				} else {
+					$result = 0;
+				}
+			}
+
 			return $result > 0 ? true : false;
+		}
+
+		return $result;
+	}
+
+	public function delete(int $id): bool
+	{
+		$changeLog = new M_ChangeLog($this->request);
+
+		$row = $this->model->find($id);
+		$result = $this->model->delete($id);
+
+		if ($result) {
+			$this->primaryKey = $this->model->primaryKey;
+			$modelTable = $this->model->table;
+
+			$fields = $this->model->db->getFieldNames($modelTable);
+
+			//TODO: Insert Change Log 
+			foreach ($fields as $column) :
+				$changeLog->insertLog($modelTable, $column, $row->{$this->primaryKey}, $row->{$column}, null, $this->EVENTCHANGELOG_Delete);
+			endforeach;
+
+			if ($this->modelDetail) {
+				$primaryKey = $this->modelDetail->primaryKey;
+				$detailTable = $this->modelDetail->table;
+
+				$line = $this->modelDetail->where($this->primaryKey, $id)->findAll();
+
+				$this->modelDetail->where($this->primaryKey, $id)->delete();
+
+				$fields = $this->modelDetail->db->getFieldNames($detailTable);
+
+				//TODO: Insert Change Log 
+				foreach ($line as $value) :
+					foreach ($fields as $column) :
+						$changeLog->insertLog($detailTable, $column, $value->{$primaryKey}, $value->{$column}, null, $this->EVENTCHANGELOG_Delete);
+					endforeach;
+				endforeach;
+			}
 		}
 
 		return $result;
@@ -688,7 +751,7 @@ class BaseController extends Controller
 	}
 
 	/**
-	 * Split of data (insert|update)
+	 * Split of data (insert|update|update)
 	 *
 	 * @param array $data Data
 	 * @return array
@@ -696,6 +759,7 @@ class BaseController extends Controller
 	protected function doSplitData(array $data): array
 	{
 		$result = [];
+		$id = [];
 
 		foreach ($data as $value) :
 			if (empty($value[$this->primaryKey])) {
@@ -704,8 +768,25 @@ class BaseController extends Controller
 				$result['insert'][] = $value;
 			} else {
 				$result['update'][] = $value;
+				$id[] = $value[$this->primaryKey];
 			}
 		endforeach;
+
+		if (!empty($this->getID())) {
+			$foreignKey = $this->model->primaryKey;
+
+			if ($id)
+				$list = $this->modelDetail->where($foreignKey, $this->getID())
+					->whereNotIn($this->primaryKey, $id)
+					->findAll();
+			else
+				$list = $this->modelDetail->where($foreignKey, $this->getID())->findAll();
+
+			foreach ($list as $row) :
+				$result['delete']['id'][] = $row->{$this->primaryKey};
+				$result['delete']['data'][] = $row;
+			endforeach;
+		}
 
 		return $result;
 	}
