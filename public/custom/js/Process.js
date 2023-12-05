@@ -1383,12 +1383,9 @@ function Destroy(id) {
 
 _tableLine.on("click", ".btn_delete", function (evt) {
   evt.preventDefault();
-  const form = $(evt.currentTarget).closest("form");
   const tr = _tableLine.$(this).closest("tr");
   const row = _tableLine.row(tr);
   let id = this.id;
-
-  let url = CURRENT_URL + DELETE_LINE + id;
 
   let _this = $(this);
   let oriElement = _this.html();
@@ -1416,32 +1413,7 @@ _tableLine.on("click", ".btn_delete", function (evt) {
       reverseButtons: true,
     }).then((data) => {
       if (data.value)
-        $.getJSON(url, function (result) {
-          if (result[0].success) {
-            Swal.fire({
-              title: "Deleted!",
-              text: "Your data has been deleted.",
-              type: "success",
-              showConfirmButton: false,
-              timer: 1000,
-            });
-
-            // Update field grand total
-            if (form.find('input[name="grandtotal"]').length > 0)
-              form
-                .find('input[name="grandtotal"]')
-                .val(formatRupiah(result[0].message));
-
-            row.remove().draw(false);
-          } else {
-            Toast.fire({
-              type: "error",
-              title: result[0].message,
-            });
-          }
-        }).fail(function (jqXHR, exception) {
-          showError(jqXHR, exception);
-        });
+        row.remove().draw(false);
     });
 
     $(_this).html(oriElement).prop("disabled", false);
@@ -3027,10 +2999,7 @@ function clearForm(evt) {
   // clear field data on the form
   form[0].reset();
 
-  // Get data default logic
-  let urlDefault = "/quotation/defaultLogic";
-
-  let defaultLogic = getLogic(urlDefault);
+  let defaultLogic = [];
 
   // clear data, attribute readonly, attribute disabled on the field and remove class invalid
   for (let i = 0; i < field.length; i++) {
