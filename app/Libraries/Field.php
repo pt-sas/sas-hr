@@ -178,121 +178,117 @@ class Field
     }
 
     /**
-     * fieldTable
-     * $tag => Tag element HTML
-     * $type => Jenis type input tag
-     * $name => Nama tag element
-     * $class => Jenis class input atau select
-     * $required => Mandatory field
-     * $readonly => Readonly field
-     * $checked => Checked value untuk type checkbox
-     * $data => array data
-     * $defaultValue => Default value input
-     * $length => Panjang tag element
+     * entity adalah DTO (Data Transfer Object berdasarkan Entities)
      */
-    function fieldTable($tag, $type = null, $name, $class = null, $required = false, $readonly = null, $checked = null, $list = [], $defaultValue = null, $length = 50, $field = 'id', $field2 = 'name')
+    function fieldTable($entity)
     {
+        $name = $entity->getName();
+        $type = $entity->getType();
+        $class = $entity->getClass();
+        $id = $entity->getId();
+        $value = $entity->getValue();
+        $required = $entity->getIsRequired();
+        $readonly = $entity->getIsReadonly();
+        $checked = $entity->getIsChecked();
+        $length = $entity->getLength();
+        $status = $entity->getStatus();
+        $data = $entity->getList();
+        $field = $entity->getField();
+        $attribute = $entity->getAttribute();
+
+        if (is_null($name) || is_null($type))
+            return "";
+
         $div = '<div class="form-group">';
 
         $element = '';
+        $arrClass = [];
 
-        if ($tag === 'input') {
-            if ($type === 'number' || $class === 'number') {
-                $element .= '<input type="' . $type . '" class="form-control line ' . $class . '" name="' . $name . '" value="' . $defaultValue . '" ' . $readonly . ' ' . $required . ' style="width: ' . $length . 'px;">';
-            } else if ($type === 'checkbox') {
-                $disabled = '';
+        if (!is_null($class))
+            $arrClass = explode(" ", $class);
 
-                if ($readonly == 'readonly') {
-                    $disabled = 'disabled';
-                }
+        if (!is_null($status) && $status === "DR")
+            $readonly = null;
 
-                $div = '<div class="form-check">';
-                $element .= '<label class="form-check-label">';
+        $strAttr = "";
+        if (is_array($attribute))
+            $strAttr = implode(' ', array_map(
+                function ($v, $k) {
+                    return sprintf("%s='%s'", $k, $v);
+                },
+                $attribute,
+                array_keys($attribute)
+            ));
 
-                // Check default value is not null
-                if (!empty($defaultValue)) {
-                    if ($defaultValue === 'Y')
-                        $element .= '<input type="' . $type . '" class="form-check-input line ' . $class . '" name="' . $name . '" checked ' . $disabled . '>';
-                    else if ($defaultValue === 'N')
-                        $element .= '<input type="' . $type . '" class="form-check-input line ' . $class . '" name="' . $name . '" ' . $disabled . '>';
-                    else
-                        $element .= '<input type="' . $type . '" class="form-check-input line ' . $class . '" name="' . $name . '" value="' . $defaultValue . '">';
-                } else {
-                    $element .= '<input type="' . $type . '" class="form-check-input line ' . $class . '" name="' . $name . '" ' . $checked . ' ' . $disabled . '>';
-                }
+        if ($type === "checkbox") {
+            $div = '<div class="form-check">';
+            $element .= '<label class="form-check-label">';
 
-                $element .= '<span class="form-check-sign"></span></label></div>';
+            $element .= '<input type="' . $type . '" class="form-check-input line ' . $class . '" name="' . $name . '" value="' . $value . '" ' . $strAttr . ' ' . $checked . ' ' . $readonly . '>';
+
+            $element .= '<span class="form-check-sign"></span>';
+            $element .= '</label>';
+            $element .= '</div>';
+        } else if ($type === "text") {
+            if (in_array("rupiah", $arrClass))
+                $class .= " text-right";
+
+            if (in_array("search", $arrClass)) {
+                $element .= '<div class="input-icon">
+                            <input type="' . $type . '" class="form-control line ' . $class . '" name="' . $name . '" value="' . $value . '" style="width: ' . $length . 'px;" ' . $strAttr . ' ' . $readonly . ' ' . $required . '>
+                                <span class="input-icon-addon btn_search">
+                                    <i class="fa fa-search"></i>
+                                </span>
+                            </div>';
             } else {
-                if ($class === 'rupiah') {
-                    $element .= '<input type="' . $type . '" class="form-control text-right line ' . $class . '" name="' . $name . '" value="' . $defaultValue . '" ' . $readonly . ' ' . $required . ' style="width: ' . $length . 'px;">';
-                } else {
-                    $element .= '<input type="' . $type . '" class="form-control line ' . $class . '" name="' . $name . '" value="' . $defaultValue . '" ' . $readonly . ' ' . $required . ' style="width: ' . $length . 'px;">';
-                }
+                $element .= '<input type="' . $type . '" class="form-control line ' . $class . '" name="' . $name . '" value="' . $value . '" style="width: ' . $length . 'px;" ' . $strAttr . ' ' . $readonly . ' ' . $required . '>';
             }
-        }
+        } else if ($type === "select") {
+            $element .= '<select class="form-control line ' . $class . '" name="' . $name . '" style="width: ' . $length . 'px;" ' . $strAttr . ' ' . $readonly . ' ' . $required . '>';
+            $element .= '<option value=""></option>';
 
-        if ($tag === 'select') {
-            $disabled = '';
-            $select = 'select2';
+            if (!$arrClass)
+                return "";
 
-            if ($readonly == 'readonly') {
-                $disabled = 'disabled';
-            }
+            if (in_array("select2", $arrClass)) {
+                if (!is_array($field))
+                    return "";
 
-            // Condition to merge select2 and another class
-            if (!empty($class)) {
-                $class = $select . ' ' . $class;
-            } else {
-                $class = $select;
-            }
+                foreach ($data as $val) :
+                    $fieldName = $val->{$field['text']};
 
-            $element .= '<select class="form-control line ' . $class . '" name="' . $name . '" ' . $disabled . ' ' . $required . ' style="width: ' . $length . 'px;">';
-
-            if (is_array($list) && count($list) > 0) {
-                $element .= '<option value=""></option>';
-
-                $field2 = str_replace(" ", "", $field2);
-                $field2 = explode(",", $field2);
-
-                foreach ($list as $row) :
-                    if (count($field2) == 1)
-                        $fieldName = $row->{$field2[0]};
-
-                    if (count($field2) == 2)
-                        $fieldName = $row->{$field2[0]} . " (" . $row->{$field2[1]} . ")";
+                    if (isset($field['text2']))
+                        $fieldName .= " (" . $val->{$field['text2']} . ")";
 
                     // Check default value is not null and default value equal $field
-                    if (!empty($defaultValue) && ((is_string($defaultValue) && strtoupper($defaultValue) == strtoupper($row->{$field2[0]})) || ($defaultValue == $row->$field)))
-                        $element .= '<option value="' . $row->$field . '" selected>' . $fieldName . '</option>';
+                    if (!is_null($value) && ((is_string($value) && strtoupper($value) === strtoupper($fieldName)) || ($value == $val->{$field['id']})))
+                        $element .= '<option value="' . $val->{$field['id']} . '" selected>' . $fieldName . '</option>';
                     else
-                        $element .= '<option value="' . $row->$field . '">' . $fieldName . '</option>';
+                        $element .= '<option value="' . $val->{$field['id']} . '">' . $fieldName . '</option>';
                 endforeach;
             }
 
+            if (!is_null($id))
+                $element .= '<option value="' . $id . '" selected>' . $value . '</option>';
+
             $element .= '</select>';
-        }
+        } else if ($type === 'button') {
+            $refValue = null;
 
-        if ($tag === 'button') {
-            if ($field !== 'id') {
-                // To set value on the variable field
-                $field = $defaultValue;
-
-                // defaultValue to empty value
-                $defaultValue = "";
+            if (in_array("reference-key", $arrClass)) {
+                $refValue = $value;
+                $value = null;
             }
 
-            if ($checked) {
-                $icon = '<i class="fas fa-check fa-lg"></i>';
-                $title = 'Accept';
-            } else {
-                $class = $class . ' btn-danger btn_delete';
+            if (in_array("delete", $arrClass)) {
+                $class .= ' btn-danger btn_delete';
                 $icon = '<i class="fas fa-trash-alt"></i>';
-                $title = 'Delete';
+                $title = "Delete";
             }
 
-            $element .= '<button type="button" title="' . $title . '" class="btn btn-link line ' . $class . '" id="' . $defaultValue . '" name="' . $name . '" value="' . $field . '">
-                                ' . $icon . '
-                                </button>';
+            $element .= '<button type="button" title="' . $title . '" class="btn btn-link line ' . $class . '" id="' . $value . '" name="' . $name . '" value="' . $refValue . '">
+                                    ' . $icon . '
+                                    </button>';
         }
 
         $div .= $element;
