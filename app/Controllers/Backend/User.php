@@ -12,7 +12,6 @@ class User extends BaseController
 	public function __construct()
 	{
 		$this->request = Services::request();
-		$this->validation = Services::validation();
 		$this->model = new M_User($this->request);
 		$this->entity = new \App\Entities\User();
 	}
@@ -122,7 +121,7 @@ class User extends BaseController
 	{
 		if ($this->request->isAJAX()) {
 			try {
-				$result = $this->model->delete($id);
+				$result = $this->delete($id);
 				$response = message('success', true, $result);
 			} catch (\Exception $e) {
 				$response = message('error', false, $e->getMessage());

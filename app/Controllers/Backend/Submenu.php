@@ -127,7 +127,7 @@ class Submenu extends BaseController
 	{
 		if ($this->request->isAJAX()) {
 			try {
-				$result = $this->model->delete($id);
+				$result = $this->delete($id);
 				$response = message('success', true, $result);
 			} catch (\Exception $e) {
 				$response = message('error', false, $e->getMessage());
