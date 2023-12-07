@@ -9,13 +9,13 @@
             <tr>
                 <th>ID</th>
                 <th>No</th>
-                <th>Branch Code</th>
-                <th>Name</th>
-                <th>Address</th>
+                <th>Kode Cabang</th>
+                <th>Nama</th>
+                <th>Alamat</th>
                 <th>PIC</th>
                 <th>Telephone</th>
-                <th>Active</th>
-                <th>Actions</th>
+                <th>Aktif</th>
+                <th>Aksi</th>
             </tr>
         </thead>
     </table>

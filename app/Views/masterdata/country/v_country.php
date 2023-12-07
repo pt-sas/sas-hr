@@ -9,11 +9,11 @@
             <tr>
                 <th>ID</th>
                 <th>No</th>
-                <th>Country Code</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Active</th>
-                <th>Actions</th>
+                <th>Kode Negara</th>
+                <th>Nama</th>
+                <th>Deskripsi</th>
+                <th>Aktif</th>
+                <th>Aksi</th>
             </tr>
         </thead>
     </table>
