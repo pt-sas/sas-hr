@@ -136,42 +136,35 @@ class Country extends BaseController
         }
     }
 
-    // public function getList()
-    // {
-    //     $employee = new M_Employee($this->request);
+    public function getList()
+    {
+        if ($this->request->isAjax()) {
+            $post = $this->request->getVar();
 
-    //     if ($this->request->isAjax()) {
-    //         $post = $this->request->getVar();
+            $response = [];
 
-    //         $response = [];
+            try {
+                if (isset($post['search'])) {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->like('name', $post['search'])
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
+                } else {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
+                }
 
-    //         try {
-    //             if (isset($post['search'])) {
-    //                 $list = $this->model->where('isactive', 'Y')
-    //                     ->like('name', $post['search'])
-    //                     ->orderBy('name', 'ASC')
-    //                     ->findAll();
-    //             } else {
-    //                 $list = $this->model->where('isactive', 'Y')
-    //                     ->orderBy('name', 'ASC')
-    //                     ->findAll();
-    //             }
+                foreach ($list as $key => $row) :
+                    $response[$key]['id'] = $row->getCountryId();
+                    $response[$key]['text'] = $row->getName();
 
-    //             if (!empty($post['reference']))
-    //                 $value = $employee->find($post['reference']);
+                endforeach;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
 
-    //             foreach ($list as $key => $row) :
-    //                 $response[$key]['id'] = $row->getCountryId();
-    //                 $response[$key]['text'] = $row->getName();
-
-    //                 if (!empty($post['reference']))
-    //                     $response[$key]['key'] = $value->getCountryId();
-    //             endforeach;
-    //         } catch (\Exception $e) {
-    //             $response = message('error', false, $e->getMessage());
-    //         }
-
-    //         return $this->response->setJSON($response);
-    //     }
-    // }
+            return $this->response->setJSON($response);
+        }
+    }
 }
