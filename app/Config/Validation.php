@@ -256,7 +256,7 @@ class Validation
     public $country = [
         'value'             => [
             'label'             => 'Country Code',
-            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_religion.value,md_religion_id,{id}]',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_country.value,md_country_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
                 'required'    => 'Please Fill {field} first'
@@ -322,6 +322,115 @@ class Validation
         'name'                 => [
             'label'            => 'Status Name',
             'rules'            =>    'required|is_unique[md_status.name,md_status_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
+
+    public $province = [
+        'value'             => [
+            'label'             => 'Kode Provinsi',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_province.value,md_province_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Provinsi',
+            'rules'            =>    'required|is_unique[md_province.name,md_province_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ],
+        'md_country_id'     => [
+            'label'         => 'Negara',
+            'rules'         => 'required',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+
+        ]
+    ];
+
+    public $city = [
+        'value'             => [
+            'label'             => 'Kode Kota',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_city.value,md_city_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Kota',
+            'rules'            =>    'required|is_unique[md_city.name,md_city_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ],
+        'md_province_id'     => [
+            'label'         => 'Provinsi',
+            'rules'         => 'required',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
+
+    public $district = [
+        'value'             => [
+            'label'             => 'Kode Kecamatan',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_district.value,md_district_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Kota',
+            'rules'            =>    'required|is_unique[md_district.name,md_district_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ],
+        'md_city_id'     => [
+            'label'         => 'kota',
+            'rules'         => 'required',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
+
+    public $subdistrict = [
+        'value'             => [
+            'label'             => 'Kode Kelurahan',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_subdistrict.value,md_subdistrict_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Kelurahan',
+            'rules'            =>    'required|is_unique[md_subdistrict.name,md_subdistrict_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ],
+        'md_district_id'     => [
+            'label'         => 'Kecamatan',
+            'rules'         => 'required',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
                 'required'    => 'Please Insert the {field} first'
