@@ -10,7 +10,6 @@ class Status extends Entity
     protected $value;
     protected $name;
     protected $description;
-    protected $isline;
     protected $isactive;
     protected $created_by;
     protected $updated_by;
@@ -59,16 +58,6 @@ class Status extends Entity
     public function setDescription($description)
     {
         $this->attributes['description'] = $description;
-    }
-
-    public function getIsline()
-    {
-        return $this->attributes['isline'];
-    }
-
-    public function setIsline($isline)
-    {
-        $this->attributes['isline'] = $isline;
     }
 
     public function getIsActive()
