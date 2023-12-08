@@ -175,6 +175,14 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('subdistrict/destroy/(:any)', 'Backend\SubDistrict::destroy/$1');
     $routes->get('subdistrict/getSeqCode', 'Backend\SubDistrict::getSeqCode');
     $routes->match(['get', 'post'], 'subdistrict/getList', 'Backend\SubDistrict::getList');
+
+    $routes->add('leveling', 'Backend\Leveling::index');
+    $routes->match(['get', 'post'], 'leveling/showAll', 'Backend\Leveling::showAll');
+    $routes->post('leveling/create', 'Backend\Leveling::create');
+    $routes->get('leveling/show/(:any)', 'Backend\Leveling::show/$1');
+    $routes->get('leveling/destroy/(:any)', 'Backend\Leveling::destroy/$1');
+    $routes->get('leveling/getSeqCode', 'Backend\Leveling::getSeqCode');
+    $routes->match(['get', 'post'], 'leveling/getList', 'Backend\Leveling::getList');
 });
 
 /*

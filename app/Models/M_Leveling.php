@@ -5,11 +5,11 @@ namespace App\Models;
 use CodeIgniter\Model;
 use CodeIgniter\HTTP\RequestInterface;
 
-class M_Position extends Model
+class M_Leveling extends Model
 {
-    protected $table            = 'md_position';
-    protected $primaryKey       = 'md_position_id';
-    protected $returnType       = 'App\Entities\Position';
+    protected $table            = 'md_leveling';
+    protected $primaryKey       = 'md_leveling_id';
+    protected $returnType       = 'App\Entities\Leveling';
     protected $allowedFields    =
     [
         'value',
@@ -24,16 +24,16 @@ class M_Position extends Model
     protected $column_order = [
         '', // Hide column
         '', // Number column
-        'md_position.value',
-        'md_position.name',
-        'md_position.description',
-        'md_position.isactive'
+        'md_leveling.value',
+        'md_leveling.name',
+        'md_leveling.description',
+        'md_leveling.isactive'
     ];
     protected $column_search = [
-        'md_position.value',
-        'md_position.name',
-        'md_position.description',
-        'md_position.isactive'
+        'md_leveling.value',
+        'md_leveling.name',
+        'md_leveling.description',
+        'md_leveling.isactive'
     ];
     protected $order = ['value' => 'ASC'];
     protected $request;
