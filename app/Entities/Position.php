@@ -4,9 +4,9 @@ namespace App\Entities;
 
 use CodeIgniter\Entity;
 
-class Status extends Entity
+class Position extends Entity
 {
-    protected $md_status_id;
+    protected $md_position_id;
     protected $value;
     protected $name;
     protected $description;
@@ -17,17 +17,16 @@ class Status extends Entity
     protected $dates   = [
         'created_at',
         'updated_at',
-        'deleted_at',
     ];
 
-    public function getStatusId()
+    public function getPositionId()
     {
-        return $this->attributes['md_status_id'];
+        return $this->attributes['md_position_id'];
     }
 
-    public function setStatusId($md_status_id)
+    public function setPositionId($md_position_id)
     {
-        $this->attributes['md_status_id'] = $md_status_id;
+        $this->attributes['md_position_id'] = $md_position_id;
     }
 
     public function getValue()

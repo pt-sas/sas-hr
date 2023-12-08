@@ -2,18 +2,16 @@
 
 <?= $this->section('content'); ?>
 
-<?= $this->include('masterdata/branch/form_branch'); ?>
+<?= $this->include('masterdata/country/form_country'); ?>
 <div class="card-body card-main">
     <table class="table table-striped table-hover tb_display">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>No</th>
-                <th>Kode Cabang</th>
+                <th>Kode Negara</th>
                 <th>Nama</th>
-                <th>Alamat</th>
-                <th>PIC</th>
-                <th>Telephone</th>
+                <th>Deskripsi</th>
                 <th>Aktif</th>
                 <th>Aksi</th>
             </tr>

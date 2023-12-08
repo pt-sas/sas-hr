@@ -4,12 +4,13 @@ namespace App\Entities;
 
 use CodeIgniter\Entity;
 
-class Status extends Entity
+class Province extends Entity
 {
-    protected $md_status_id;
+    protected $md_province_id;
     protected $value;
     protected $name;
     protected $description;
+    protected $md_country_id;
     protected $isactive;
     protected $created_by;
     protected $updated_by;
@@ -17,17 +18,26 @@ class Status extends Entity
     protected $dates   = [
         'created_at',
         'updated_at',
-        'deleted_at',
     ];
 
-    public function getStatusId()
+    public function getProvinceId()
     {
-        return $this->attributes['md_status_id'];
+        return $this->attributes['md_province_id'];
     }
 
-    public function setStatusId($md_status_id)
+    public function setProvinceId($md_province_id)
     {
-        $this->attributes['md_status_id'] = $md_status_id;
+        $this->attributes['md_province_id'] = $md_province_id;
+    }
+
+    public function getCountryId()
+    {
+        return $this->attributes['md_country_id'];
+    }
+
+    public function setCountryId($md_country_id)
+    {
+        $this->attributes['md_country_id'] = $md_country_id;
     }
 
     public function getValue()
