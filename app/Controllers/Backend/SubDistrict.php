@@ -168,7 +168,7 @@ class SubDistrict extends BaseController
                 }
 
                 foreach ($list as $key => $row) :
-                    $response[$key]['id'] = $row->getDistrictId();
+                    $response[$key]['id'] = $row->getSubDistrictId();
                     $response[$key]['text'] = $row->getName();
 
                 endforeach;

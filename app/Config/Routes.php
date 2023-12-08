@@ -110,6 +110,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('religion/show/(:any)', 'Backend\Religion::show/$1');
     $routes->get('religion/destroy/(:any)', 'Backend\Religion::destroy/$1');
     $routes->get('religion/getSeqCode', 'Backend\Religion::getSeqCode');
+    $routes->match(['get', 'post'], 'religion/getList', 'Backend\Religion::getList');
 
     $routes->add('country', 'Backend\Country::index');
     $routes->match(['get', 'post'], 'country/showAll', 'Backend\Country::showAll');
@@ -125,6 +126,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('bloodtype/show/(:any)', 'Backend\BloodType::show/$1');
     $routes->get('bloodtype/destroy/(:any)', 'Backend\BloodType::destroy/$1');
     $routes->get('bloodtype/getSeqCode', 'Backend\BloodType::getSeqCode');
+    $routes->match(['get', 'post'], 'bloodtype/getList', 'Backend\BloodType::getList');
 
     $routes->add('position', 'Backend\Position::index');
     $routes->match(['get', 'post'], 'position/showAll', 'Backend\Position::showAll');
@@ -132,6 +134,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('position/show/(:any)', 'Backend\Position::show/$1');
     $routes->get('position/destroy/(:any)', 'Backend\Position::destroy/$1');
     $routes->get('position/getSeqCode', 'Backend\Position::getSeqCode');
+    $routes->match(['get', 'post'], 'position/getList', 'Backend\Position::getList');
 
     $routes->add('status', 'Backend\Status::index');
     $routes->match(['get', 'post'], 'status/showAll', 'Backend\Status::showAll');
@@ -139,6 +142,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('status/show/(:any)', 'Backend\Status::show/$1');
     $routes->get('status/destroy/(:any)', 'Backend\Status::destroy/$1');
     $routes->get('status/getSeqCode', 'Backend\Status::getSeqCode');
+    $routes->match(['get', 'post'], 'status/getList', 'Backend\Status::getList');
 
     $routes->add('province', 'Backend\Province::index');
     $routes->match(['get', 'post'], 'province/showAll', 'Backend\Province::showAll');

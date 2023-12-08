@@ -135,4 +135,36 @@ class Position extends BaseController
             return $this->response->setJSON($response);
         }
     }
+
+    public function getList()
+    {
+        if ($this->request->isAjax()) {
+            $post = $this->request->getVar();
+
+            $response = [];
+
+            try {
+                if (isset($post['search'])) {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->like('name', $post['search'])
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
+                } else {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
+                }
+
+                foreach ($list as $key => $row) :
+                    $response[$key]['id'] = $row->getPositionId();
+                    $response[$key]['text'] = $row->getName();
+
+                endforeach;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
 }
