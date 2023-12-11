@@ -437,4 +437,23 @@ class Validation
             ]
         ]
     ];
+
+    public $leveling = [
+        'value'             => [
+            'label'             => 'Kode Jabatan',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_leveling.value,md_leveling_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Jabatan',
+            'rules'            =>    'required|is_unique[md_leveling.name,md_leveling_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
 }
