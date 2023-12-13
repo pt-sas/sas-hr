@@ -25,6 +25,7 @@ class AddColumnsValue extends Migration
         $this->forge->addColumn('md_status', $fields);
         $this->forge->addColumn('md_province', $fields);
         $this->forge->addColumn('md_district', $fields);
+        $this->forge->addColumn('md_subdistrict', $fields);
     }
 
     public function down()
@@ -36,8 +37,9 @@ class AddColumnsValue extends Migration
         $this->forge->dropColumn('md_bloodtype', $fields);
         $this->forge->dropColumn('md_city', $fields);
         $this->forge->dropColumn('md_position', $fields);
-        $this->forge->dropColumnn('md_status', $fields);
+        $this->forge->dropColumn('md_status', $fields);
         $this->forge->dropColumn('md_province', $fields);
         $this->forge->dropColumn('md_district', $fields);
+        $this->forge->dropColumn('md_subdistrict', $fields);
     }
 }

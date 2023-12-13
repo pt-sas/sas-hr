@@ -4,30 +4,41 @@ namespace App\Entities;
 
 use CodeIgniter\Entity;
 
-class Status extends Entity
+class SubDistrict extends Entity
 {
-    protected $md_status_id;
+    protected $md_subdistrict_id;
     protected $value;
     protected $name;
+    protected $md_district_id;
     protected $description;
     protected $isactive;
     protected $created_by;
     protected $updated_by;
 
-    protected $dates   = [
-        'created_at',
-        'updated_at',
-        'deleted_at',
+    protected $dates = [
+        'created_by',
+        'updated_by',
+        'deleted_by'
     ];
 
-    public function getStatusId()
+    public function getSubDistrictId()
     {
-        return $this->attributes['md_status_id'];
+        return $this->attributes['md_subdistrict_id'];
     }
 
-    public function setStatusId($md_status_id)
+    public function setSubDisctrictId($md_subdistrict_id)
     {
-        $this->attributes['md_status_id'] = $md_status_id;
+        $this->attributes['md_subdistrict_id'] = $md_subdistrict_id;
+    }
+
+    public function getDistrictId()
+    {
+        return $this->attributes['md_district_id'];
+    }
+
+    public function setDistrictId($md_district_id)
+    {
+        $this->attributes['md_district_id'] = $md_district_id;
     }
 
     public function getValue()
@@ -67,7 +78,7 @@ class Status extends Entity
 
     public function setIsActive($isactive)
     {
-        return $this->attributes['isactive'] = $isactive;
+        $this->attributes['isactive'] = $isactive;
     }
 
     public function getCreatedAt()

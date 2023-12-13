@@ -96,8 +96,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('reference/tableLine', 'Backend\Reference::tableLine');
     $routes->match(['get', 'post'], 'reference/getList', 'Backend\Reference::getList');
 
-
-
     $routes->add('division', 'Backend\Division::index');
     $routes->match(['get', 'post'], 'division/showAll', 'Backend\Division::showAll');
     $routes->post('division/create', 'Backend\Division::create');
@@ -112,6 +110,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('religion/show/(:any)', 'Backend\Religion::show/$1');
     $routes->get('religion/destroy/(:any)', 'Backend\Religion::destroy/$1');
     $routes->get('religion/getSeqCode', 'Backend\Religion::getSeqCode');
+    $routes->match(['get', 'post'], 'religion/getList', 'Backend\Religion::getList');
 
     $routes->add('country', 'Backend\Country::index');
     $routes->match(['get', 'post'], 'country/showAll', 'Backend\Country::showAll');
@@ -119,6 +118,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('country/show/(:any)', 'Backend\Country::show/$1');
     $routes->get('country/destroy/(:any)', 'Backend\Country::destroy/$1');
     $routes->get('country/getSeqCode', 'Backend\Country::getSeqCode');
+    $routes->match(['get', 'post'], 'country/getList', 'Backend\Country::getList');
 
     $routes->add('bloodtype', 'Backend\BloodType::index');
     $routes->match(['get', 'post'], 'bloodtype/showAll', 'Backend\BloodType::showAll');
@@ -126,6 +126,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('bloodtype/show/(:any)', 'Backend\BloodType::show/$1');
     $routes->get('bloodtype/destroy/(:any)', 'Backend\BloodType::destroy/$1');
     $routes->get('bloodtype/getSeqCode', 'Backend\BloodType::getSeqCode');
+    $routes->match(['get', 'post'], 'bloodtype/getList', 'Backend\BloodType::getList');
 
     $routes->add('position', 'Backend\Position::index');
     $routes->match(['get', 'post'], 'position/showAll', 'Backend\Position::showAll');
@@ -133,6 +134,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('position/show/(:any)', 'Backend\Position::show/$1');
     $routes->get('position/destroy/(:any)', 'Backend\Position::destroy/$1');
     $routes->get('position/getSeqCode', 'Backend\Position::getSeqCode');
+    $routes->match(['get', 'post'], 'position/getList', 'Backend\Position::getList');
 
     $routes->add('status', 'Backend\Status::index');
     $routes->match(['get', 'post'], 'status/showAll', 'Backend\Status::showAll');
@@ -140,6 +142,47 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('status/show/(:any)', 'Backend\Status::show/$1');
     $routes->get('status/destroy/(:any)', 'Backend\Status::destroy/$1');
     $routes->get('status/getSeqCode', 'Backend\Status::getSeqCode');
+    $routes->match(['get', 'post'], 'status/getList', 'Backend\Status::getList');
+
+    $routes->add('province', 'Backend\Province::index');
+    $routes->match(['get', 'post'], 'province/showAll', 'Backend\Province::showAll');
+    $routes->post('province/create', 'Backend\Province::create');
+    $routes->get('province/show/(:any)', 'Backend\Province::show/$1');
+    $routes->get('province/destroy/(:any)', 'Backend\Province::destroy/$1');
+    $routes->get('province/getSeqCode', 'Backend\Province::getSeqCode');
+    $routes->match(['get', 'post'], 'province/getList', 'Backend\Province::getList');
+
+    $routes->add('city', 'Backend\City::index');
+    $routes->match(['get', 'post'], 'city/showAll', 'Backend\City::showAll');
+    $routes->post('city/create', 'Backend\City::create');
+    $routes->get('city/show/(:any)', 'Backend\City::show/$1');
+    $routes->get('city/destroy/(:any)', 'Backend\City::destroy/$1');
+    $routes->get('city/getSeqCode', 'Backend\City::getSeqCode');
+    $routes->match(['get', 'post'], 'city/getList', 'Backend\City::getList');
+
+    $routes->add('district', 'Backend\District::index');
+    $routes->match(['get', 'post'], 'district/showAll', 'Backend\District::showAll');
+    $routes->post('district/create', 'Backend\District::create');
+    $routes->get('district/show/(:any)', 'Backend\District::show/$1');
+    $routes->get('district/destroy/(:any)', 'Backend\District::destroy/$1');
+    $routes->get('district/getSeqCode', 'Backend\District::getSeqCode');
+    $routes->match(['get', 'post'], 'district/getList', 'Backend\District::getList');
+
+    $routes->add('subdistrict', 'Backend\SubDistrict::index');
+    $routes->match(['get', 'post'], 'subdistrict/showAll', 'Backend\SubDistrict::showAll');
+    $routes->post('subdistrict/create', 'Backend\SubDistrict::create');
+    $routes->get('subdistrict/show/(:any)', 'Backend\SubDistrict::show/$1');
+    $routes->get('subdistrict/destroy/(:any)', 'Backend\SubDistrict::destroy/$1');
+    $routes->get('subdistrict/getSeqCode', 'Backend\SubDistrict::getSeqCode');
+    $routes->match(['get', 'post'], 'subdistrict/getList', 'Backend\SubDistrict::getList');
+
+    $routes->add('leveling', 'Backend\Leveling::index');
+    $routes->match(['get', 'post'], 'leveling/showAll', 'Backend\Leveling::showAll');
+    $routes->post('leveling/create', 'Backend\Leveling::create');
+    $routes->get('leveling/show/(:any)', 'Backend\Leveling::show/$1');
+    $routes->get('leveling/destroy/(:any)', 'Backend\Leveling::destroy/$1');
+    $routes->get('leveling/getSeqCode', 'Backend\Leveling::getSeqCode');
+    $routes->match(['get', 'post'], 'leveling/getList', 'Backend\Leveling::getList');
 });
 
 /*

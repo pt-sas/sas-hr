@@ -4,9 +4,9 @@ namespace App\Entities;
 
 use CodeIgniter\Entity;
 
-class Status extends Entity
+class Religion extends Entity
 {
-    protected $md_status_id;
+    protected $md_religion_id;
     protected $value;
     protected $name;
     protected $description;
@@ -17,17 +17,16 @@ class Status extends Entity
     protected $dates   = [
         'created_at',
         'updated_at',
-        'deleted_at',
     ];
 
-    public function getStatusId()
+    public function getReligionId()
     {
-        return $this->attributes['md_status_id'];
+        return $this->attributes['md_religion_id'];
     }
 
-    public function setStatusId($md_status_id)
+    public function setReligionId($md_religion_id)
     {
-        $this->attributes['md_status_id'] = $md_status_id;
+        $this->attributes['md_religion_id'] = $md_religion_id;
     }
 
     public function getValue()
