@@ -456,4 +456,45 @@ class Validation
             ]
         ]
     ];
+
+    public $day = [
+        'value'             => [
+            'label'             => 'Kode Hari',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_day.value,md_day_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Hari',
+            'rules'            =>    'required|is_unique[md_day.name,md_day_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
+
+    public $holiday = [
+        'name'                 => [
+            'label'            => 'Nama Holiday',
+            'rules'            =>    'required|is_unique[md_holiday.name,md_holiday_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
+
+    public $leavetype = [
+        'name'                 => [
+            'label'            => 'Nama Tipe Cuti',
+            'rules'            =>    'required|is_unique[md_leavetype.name,md_leavetype_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
 }
