@@ -23,5 +23,5 @@ function format_idn($date)
 
 function format_dmy($date, $separator)
 {
-    return date('d' . $separator . 'm' . $separator . 'Y', strtotime($date));
+    return date('d' . $separator . 'M' . $separator . 'Y', strtotime($date));
 }
