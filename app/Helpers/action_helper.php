@@ -32,6 +32,41 @@ function active($string)
         '<center><span class="badge badge-danger">No</span></center>';
 }
 
+function gender(string $str)
+{
+    if ($str === 'L') {
+        $msg = '<span>Laki-Laki</span>';
+    } else if ($str === 'P') {
+        $msg = '<span>Perempuan</span>';
+    } else {
+        $msg = '<span>Semua</span>';
+    }
+
+    return $msg;
+}
+
+function durationtype(string $str)
+{
+    if ($str === 'D') {
+        $msg = '<span>Hari</span>';
+    } else {
+        $msg = '<span>Bulan</span>';
+    }
+
+    return $msg;
+}
+
+function formatyesno(string $str)
+{
+    if ($str === 'Y') {
+        $msg = '<span>Ya</span>';
+    } else {
+        $msg = '<span>Tidak</span>';
+    }
+
+    return $msg;
+}
+
 function truncate($string, $length = 50, $append = "...")
 {
     $string = trim($string);

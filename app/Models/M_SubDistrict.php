@@ -27,21 +27,19 @@ class M_SubDistrict extends Model
         '',
         'md_subdistrict.value',
         'md_subdistrict.name',
-        'md_district.name',
         'md_subdistrict.description',
+        'md_district.name',
         'md_subdistrict.isactive'
     ];
     protected $column_search = [
-        '',
-        '',
         'md_subdistrict.value',
         'md_subdistrict.name',
-        'md_district.name',
         'md_subdistrict.description',
+        'md_district.name',
         'md_subdistrict.isactive'
     ];
 
-    protected $order = ['name' => 'ASC'];
+    protected $order = ['value' => 'ASC'];
     protected $request;
     protected $db;
     protected $builder;

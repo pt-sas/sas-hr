@@ -27,18 +27,18 @@ class M_City extends Model
         '', // Number column
         'md_city.value',
         'md_city.name',
-        'md_province.name',
         'md_city.description',
+        'md_province.name',
         'md_city.isactive'
     ];
     protected $column_search = [
         'md_city.value',
         'md_city.name',
-        'md_province.name',
         'md_city.description',
+        'md_province.name',
         'md_city.isactive'
     ];
-    protected $order = ['name' => 'ASC'];
+    protected $order = ['value' => 'ASC'];
     protected $request;
     protected $db;
     protected $builder;

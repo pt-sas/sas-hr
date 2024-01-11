@@ -35,7 +35,7 @@ class M_Country extends Model
         'md_country.description',
         'md_country.isactive'
     ];
-    protected $order = ['name' => 'ASC'];
+    protected $order = ['value' => 'ASC'];
     protected $request;
     protected $db;
     protected $builder;

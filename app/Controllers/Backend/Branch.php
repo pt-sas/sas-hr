@@ -81,14 +81,13 @@ class Branch extends BaseController
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
-
             return $this->response->setJSON($response);
         }
     }
 
     public function show($id)
     {
-        $employee = new M_Employee($this->request);
+        // $employee = new M_Employee($this->request);
 
         if ($this->request->isAJAX()) {
             try {
@@ -97,7 +96,7 @@ class Branch extends BaseController
                 if (!empty($list[0]->getLeaderId())) {
                     $rowEmp = $employee->find($list[0]->getLeaderId());
 
-                    $list = $this->field->setDataSelect($employee->table, $list, 'leader_id', $rowEmp->getEmployeeId(), $rowEmp->getName());
+                    // $list = $this->field->setDataSelect($employee->table, $list, 'leader_id', $rowEmp->getEmployeeId(), $rowEmp->getName());
                 }
 
                 $result = [
@@ -117,7 +116,7 @@ class Branch extends BaseController
     {
         if ($this->request->isAJAX()) {
             try {
-                $result = $this->model->delete($id);
+                $result = $this->delete($id);
                 $response = message('success', true, $result);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -151,8 +150,6 @@ class Branch extends BaseController
 
     public function getList()
     {
-        $employee = new M_Employee($this->request);
-
         if ($this->request->isAjax()) {
             $post = $this->request->getVar();
 
@@ -170,15 +167,10 @@ class Branch extends BaseController
                         ->findAll();
                 }
 
-                if (!empty($post['reference']))
-                    $value = $employee->find($post['reference']);
-
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getBranchId();
                     $response[$key]['text'] = $row->getName();
 
-                    if (!empty($post['reference']))
-                        $response[$key]['key'] = $value->getBranchId();
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

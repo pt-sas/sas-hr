@@ -27,18 +27,18 @@ class M_Province extends Model
         '', // Number column
         'md_province.value',
         'md_province.name',
-        'md_country.name',
         'md_province.description',
+        'md_country.name',
         'md_province.isactive'
     ];
     protected $column_search = [
         'md_province.value',
         'md_province.name',
-        'md_country.name',
         'md_province.description',
+        'md_country.name',
         'md_province.isactive'
     ];
-    protected $order = ['name' => 'ASC'];
+    protected $order = ['value' => 'ASC'];
     protected $request;
     protected $db;
     protected $builder;
