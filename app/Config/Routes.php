@@ -223,6 +223,13 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('pulang-cepat/destroy/(:any)', 'Backend\PermissionLeaveEarly::destroy/$1');
     $routes->get('pulang-cepat/processIt', 'Backend\PermissionLeaveEarly::processIt');
 
+    $routes->add('tugas-kantor', 'Backend\OfficeDuties::index');
+    $routes->match(['get', 'post'], 'tugas-kantor/showAll', 'Backend\OfficeDuties::showAll');
+    $routes->post('tugas-kantor/create', 'Backend\OfficeDuties::create');
+    $routes->get('tugas-kantor/show/(:any)', 'Backend\OfficeDuties::show/$1');
+    $routes->get('tugas-kantor/destroy/(:any)', 'Backend\OfficeDuties::destroy/$1');
+    $routes->get('tugas-kantor/processIt', 'Backend\OfficeDuties::processIt');
+
     $routes->add('day', 'Backend\Day::index');
     $routes->match(['get', 'post'], 'day/showAll', 'Backend\Day::showAll');
     $routes->post('day/create', 'Backend\Day::create');
