@@ -23,83 +23,54 @@ class Field
     /**
      * Retrieve field and data from database
      *
-     * $table
-     * $data result from database
-     * $query type join table or not
+     * @param object $entity
+     * @return array
      */
-    public function store($table, $data, $query = null)
+    public function store(object $entity): array
     {
         $result = [];
 
-        if ($this->db->fieldExists('code', $table)) {
-            $result[] = [
-                'field' => 'title',
-                'label' => $data[0]->code
-            ];
-        } else if ($this->db->fieldExists('value', $table) && $this->db->fieldExists('name', $table)) {
-            $result[] = [
-                'field' => 'title',
-                'label' => $data[0]->value . '_' . $data[0]->name
-            ];
-        } else if ($this->db->fieldExists('value', $table)) {
-            $result[] = [
-                'field' => 'title',
-                'label' => $data[0]->value
-            ];
-        } else if ($this->db->fieldExists('name', $table)) {
-            $result[] = [
-                'field' => 'title',
-                'label' => $data[0]->name
-            ];
-        } else if ($this->db->fieldExists('title', $table)) {
-            $result[] = [
-                'field' => 'title',
-                'label' => $data[0]->title
-            ];
-        } else if ($this->db->fieldExists('documentno', $table)) {
-            $result[] = [
-                'field' => 'title',
-                'label' => $data[0]->documentno
-            ];
-        } else if ($this->db->fieldExists('assetcode', $table)) {
-            $result[] = [
-                'field' => 'title',
-                'label' => $data[0]->assetcode
-            ];
-        } else {
-            $result[] = [
-                'field' => 'title',
-                'label' => 'Title not found'
-            ];
-        }
+        $title = $entity->getTitle();
+        $table = $entity->getTable();
+        $query = $entity->getQuery();
+        $data = $entity->getList();
+        $primaryKey = $entity->getPrimaryKey();
+
+        $result[] = [
+            'field' => 'title',
+            'label' => $title ?: ''
+        ];
 
         /**
          * Check generating data using query or modeling data
          * #empty query using modeling data
          */
-        if (empty($query)) {
+        $fields = [];
+
+        if (is_null($query))
             $fields = $this->db->getFieldData($table);
-            foreach ($fields as $field) :
-                foreach ($data as $row) :
-                    $result[] = [
-                        'field' => $field->name,
-                        'label' => $row->{$field->name},
-                        'primarykey' => $field->primary_key == 1 ? true : false
-                    ];
-                endforeach;
-            endforeach;
-        } else if (is_object($query)) {
+        else if (!is_null($query) && is_object($query))
             $fields = $query->getFieldNames();
+        else if (!is_null($query) && is_string($query))
+            $result = $data;
+
+        if ($fields) {
             foreach ($fields as $field) :
                 foreach ($data as $row) :
-                    $result[] = [
-                        'field' => $field,
-                        'label' => $row->$field
-                    ];
+                    if (is_null($query))
+                        $result[] = [
+                            'field' => $field->name,
+                            'label' => $row->{$field->name},
+                            'primarykey' => $field->primary_key == 1 ? true : false
+                        ];
+                    else
+                        $result[] = [
+                            'field'         => $field,
+                            'label'         => $row->$field,
+                            'primarykey'    => $field === $primaryKey ? true : false
+                        ];
                 endforeach;
             endforeach;
-        } else if (is_string($query)) {
-            $result = $data;
         }
 
         return $result;
@@ -180,7 +151,13 @@ class Field
     /**
      * entity adalah DTO (Data Transfer Object berdasarkan Entities)
      */
-    function fieldTable($entity)
+
+    /**
+     * Get field element html based on data transfer object
+     *
+     * @param object $entity
+     */
+    function fieldTable(object $entity)
     {
         $name = $entity->getName();
         $type = $entity->getType();
@@ -306,20 +283,29 @@ class Field
      * @param string $field
      * @param [type] $value
      * @param [type] $text
-     * @return void
+     * @param array $array
      */
-    public function setDataSelect($table, $data, $field = 'id', $value, $text)
+    public function setDataSelect($table, $data, $field = 'id', $value, $text, array $array = [])
     {
+        if ($array) {
+            $value = null;
+            $value = (array) $value;
+
+            foreach ($array as $row) :
+                $value[] = $row->{$field};
+            endforeach;
+        }
+
         foreach ($data as $row) :
             if ($this->db->fieldExists($field, $table))
                 $row->{$field} = ([
-                    'id' => $value,
-                    'name' => $text
+                    'id'    => $value,
+                    'name'  => $text
                 ]);
             else
                 $row->{$field} = ([
-                    'id' => $value,
-                    'name' => $text
+                    'id'    => $value,
+                    'name'  => $text
                 ]);
         endforeach;
 
