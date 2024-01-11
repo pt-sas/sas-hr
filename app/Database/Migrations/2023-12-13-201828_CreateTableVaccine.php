@@ -19,7 +19,7 @@ class CreateTableVaccine extends Migration
             'updated_by'            => ['type' => 'INT', 'constraint' => 11, 'null' => false],
             'md_employee_id'        => ['type' => 'INT', 'constraint' => 11, 'null' => false],
             'vaccinetype'           => ['type' => 'VARCHAR', 'constraint' => 40, 'null' => false],
-            'vaccinedate'           => ['type' => 'timestamp', 'null' => false],
+            'vaccinedate'           => ['type' => 'timestamp', 'null' => true],
             'description'           => ['type' => 'VARCHAR', 'constraint' => 255, 'null' => false]
         ]);
         $this->forge->addKey('md_employee_vaccine_id', true);
