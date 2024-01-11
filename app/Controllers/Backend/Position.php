@@ -4,7 +4,9 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_Position;
+use App\Models\M_Division;
 use Config\Services;
+use EmptyIterator;
 
 class Position extends BaseController
 {
@@ -24,7 +26,8 @@ class Position extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
-            $select = $this->model->findAll();
+            $select = $this->model->getSelect();
+            $join = $this->model->getJoin();
             $order = $this->model->column_order;
             $sort = $this->model->order;
             $search = $this->model->column_search;
@@ -32,7 +35,7 @@ class Position extends BaseController
             $data = [];
 
             $number = $this->request->getPost('start');
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search);
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
 
             foreach ($list as $value) :
                 $row = [];
@@ -45,6 +48,7 @@ class Position extends BaseController
                 $row[] = $value->value;
                 $row[] = $value->name;
                 $row[] = $value->description;
+                $row[] = $value->division;
                 $row[] = active($value->isactive);
                 $row[] = $this->template->tableButton($ID);
                 $data[] = $row;
@@ -53,7 +57,7 @@ class Position extends BaseController
             $result = [
                 'draw'              => $this->request->getPost('draw'),
                 'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search),
-                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search),
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join),
                 'data'              => $data
             ];
 
@@ -83,9 +87,17 @@ class Position extends BaseController
 
     public function show($id)
     {
+        $division = new M_Division($this->request);
+
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+
+                if (!empty($list[0]->getDivisionId())) {
+                    $rowEmp = $division->find($list[0]->getDivisionId());
+
+                    $list = $this->field->setDataSelect($division->table, $list, 'md_division_id', $rowEmp->getDivisionId(), $rowEmp->getName());
+                }
 
                 $result = [
                     'header'   => $this->field->store($this->model->table, $list)
@@ -104,7 +116,7 @@ class Position extends BaseController
     {
         if ($this->request->isAJAX()) {
             try {
-                $result = $this->model->delete($id);
+                $result = $this->delete($id);
                 $response = message('success', true, $result);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
