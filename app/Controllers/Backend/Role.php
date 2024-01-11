@@ -120,12 +120,22 @@ class Role extends BaseController
 			try {
 				$list = $this->model->where($this->model->primaryKey, $id)->findAll();
 				$line = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
-				$accroles = $acessMenu->where($this->model->primaryKey, $id)->findAll();
+				$accRoles = $acessMenu->where($this->model->primaryKey, $id)->findAll();
+
+				$fieldHeader = new \App\Entities\Table();
+				$fieldHeader->setTitle($list[0]->getName());
+				$fieldHeader->setTable($this->model->table);
+				$fieldHeader->setList($list);
+
+				$fieldRole = new \App\Entities\Table();
+				$fieldRole->setTable($acessMenu->table);
+				$fieldRole->setList($accRoles);
+				$fieldRole->setQuery("table");
 
 				$result = [
-					'header'	=> $this->field->store($this->model->table, $list),
+					'header'	=> $this->field->store($fieldHeader),
 					'line'    	=> $this->tableLine('edit', $line),
-					'role'		=> $this->field->store($acessMenu->table, $accroles, 'table')
+					'role'		=> $this->field->store($fieldRole)
 				];
 
 				$response = message('success', true, $result);
@@ -212,8 +222,36 @@ class Role extends BaseController
 	{
 		$mRef = new M_Reference($this->request);
 		$mSub = new M_Submenu($this->request);
+		$mDocAction = new M_DocAction($this->request);
 
-		//* Data Reference List 
+		$table = [];
+
+		$fieldMenu = new \App\Entities\TableLine();
+		$fieldMenu->setName("menu");
+		$fieldMenu->setType("select");
+		$fieldMenu->setClass("select2");
+		$fieldMenu->setField([
+			"id"    => "url",
+			"text"  => "name"
+		]);
+
+		$menuList = $mSub->where([
+			'sys_menu_id'	=> 3,
+			'isactive'		=> 'Y'
+		])->orderBy('name', 'ASC')->findAll();
+
+		$fieldMenu->setList($menuList);
+		$fieldMenu->setLength(170);
+
+		$fieldRefList = new \App\Entities\TableLine();
+		$fieldRefList->setName("ref_list");
+		$fieldRefList->setType("select");
+		$fieldRefList->setClass("select2");
+		$fieldRefList->setField([
+			"id"    => "value",
+			"text"  => "name"
+		]);
+
 		$refList = $mRef->findBy([
 			'sys_reference.name'              => '_DocAction',
 			'sys_reference.isactive'          => 'Y',
@@ -223,30 +261,34 @@ class Role extends BaseController
 			'option'    => 'ASC'
 		])->getResult();
 
-		//* Data Menu 
-		$menu = $mSub->where([
-			'sys_menu_id'	=> 3,
-			'isactive'		=> 'Y'
-		])->orderBy('name', 'ASC')->findAll();
+		$fieldRefList->setList($refList);
+		$fieldRefList->setLength(300);
 
-		$table = [];
+		$btnDelete = new \App\Entities\TableLine();
+		$btnDelete->setName($mDocAction->primaryKey);
+		$btnDelete->setType("button");
+		$btnDelete->setClass("delete");
 
 		//? Create
 		if (empty($set)) {
 			$table = [
-				$this->field->fieldTable('select', null, 'menu', null, null, null, null, $menu, null, 170, 'url', 'name'),
-				$this->field->fieldTable('select', null, 'ref_list', null, null, null, null, $refList, null, 300, 'value', 'name'),
-				$this->field->fieldTable('button', 'button', 'sys_docaction_id')
+				$this->field->fieldTable($fieldMenu),
+				$this->field->fieldTable($fieldRefList),
+				$this->field->fieldTable($btnDelete)
 			];
 		}
 
 		//? Update
 		if (!empty($set) && count($detail) > 0) {
 			foreach ($detail as $row) :
+				$fieldMenu->setValue($row->getMenu());
+				$fieldRefList->setValue($row->getRefList());
+				$btnDelete->setValue($row->getDocActionId());
+
 				$table[] = [
-					$this->field->fieldTable('select', null, 'menu', null, null, null, null, $menu, $row->menu, 170, 'url', 'name'),
-					$this->field->fieldTable('select', null, 'ref_list', null, null, null, null, $refList, $row->ref_list, 300, 'value', 'name'),
-					$this->field->fieldTable('button', 'button', 'sys_docaction_id', null, null, null, null, null, $row->sys_docaction_id)
+					$this->field->fieldTable($fieldMenu),
+					$this->field->fieldTable($fieldRefList),
+					$this->field->fieldTable($btnDelete)
 				];
 			endforeach;
 		}
