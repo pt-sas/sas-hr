@@ -23,7 +23,7 @@ $(document).ready(function () {
   });
 });
 
-$("#md_employee_id").change(function (e) {
+$(".form-absent").on("change", "#md_employee_id", function (e) {
   let _this = $(this);
   const form = _this.closest("form");
   let value = this.value;
@@ -93,11 +93,10 @@ function getOptionBranch(elem, branch) {
   const form = elem.closest("form");
   let formData = new FormData();
   const field = form.find("select[name=md_branch_id]");
-
   const id = branch.id;
 
   let url = ADMIN_URL + "branch/getList";
-  formData.append("md_branch_id", branch.id);
+  formData.append("md_branch_id", id);
 
   field.empty();
 
