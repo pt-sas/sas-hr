@@ -65,6 +65,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'role/getList', 'Backend\Role::getList');
     $routes->post('role/tableLine', 'Backend\Role::tableLine');
     $routes->get('role/destroyLine/(:any)', 'Backend\Role::destroyLine/$1');
+    $routes->post('docaction/getDocaction', 'Backend\DocAction::getDocaction');
 
     $routes->add('menu', 'Backend\Menu::index');
     $routes->match(['get', 'post'], 'menu/showAll', 'Backend\Menu::showAll');
@@ -183,6 +184,40 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('leveling/destroy/(:any)', 'Backend\Leveling::destroy/$1');
     $routes->get('leveling/getSeqCode', 'Backend\Leveling::getSeqCode');
     $routes->match(['get', 'post'], 'leveling/getList', 'Backend\Leveling::getList');
+
+    $routes->match(['get', 'post'], 'karyawan/getDetail', 'Backend\Employee::getDetailEmployee');
+    $routes->match(['get', 'post'], 'karyawan/getList', 'Backend\Employee::getList');
+
+    $routes->add('sakit', 'Backend\SickLeave::index');
+    $routes->match(['get', 'post'], 'sakit/showAll', 'Backend\SickLeave::showAll');
+    $routes->post('sakit/create', 'Backend\SickLeave::create');
+    $routes->get('sakit/show/(:any)', 'Backend\SickLeave::show/$1');
+    $routes->get('sakit/destroy/(:any)', 'Backend\SickLeave::destroy/$1');
+    $routes->get('sakit/processIt', 'Backend\SickLeave::processIt');
+
+    $routes->add('cuti', 'Backend\Leave::index');
+    $routes->match(['get', 'post'], 'cuti/showAll', 'Backend\Leave::showAll');
+    $routes->post('cuti/create', 'Backend\Leave::create');
+    $routes->get('cuti/show/(:any)', 'Backend\Leave::show/$1');
+    $routes->get('cuti/destroy/(:any)', 'Backend\Leave::destroy/$1');
+    $routes->get('cuti/processIt', 'Backend\Leave::processIt');
+
+    $routes->add('alpa', 'Backend\Alpha::index');
+    $routes->match(['get', 'post'], 'alpa/showAll', 'Backend\Alpha::showAll');
+    $routes->post('alpa/create', 'Backend\Alpha::create');
+    $routes->get('alpa/show/(:any)', 'Backend\Alpha::show/$1');
+    $routes->get('alpa/destroy/(:any)', 'Backend\Alpha::destroy/$1');
+    $routes->get('alpa/processIt', 'Backend\Alpha::processIt');
+
+    $routes->add('datang-terlambat', 'Backend\PermissionArrived::index');
+    $routes->match(['get', 'post'], 'datang-terlambat/showAll', 'Backend\PermissionArrived::showAll');
+    $routes->post('datang-terlambat/create', 'Backend\PermissionArrived::create');
+    $routes->get('datang-terlambat/show/(:any)', 'Backend\PermissionArrived::show/$1');
+    $routes->get('datang-terlambat/destroy/(:any)', 'Backend\PermissionArrived::destroy/$1');
+    $routes->get('datang-terlambat/processIt', 'Backend\PermissionArrived::processIt');
+
+    $routes->add('laporan-tkh', 'Backend\AllowanceAtt::reportIndex');
+    $routes->match(['get', 'post'], 'laporan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
 });
 
 /*

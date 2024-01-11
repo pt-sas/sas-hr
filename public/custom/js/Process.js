@@ -130,11 +130,66 @@ $(document).ready(function (e) {
   });
 
   $(".datepicker").datetimepicker({
-    format: "YYYY-MM-DD",
+    format: "DD-MMM-YYYY",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    useCurrent: false,
   });
 
-  $(".timepicker").datetimepicker({
-    format: "H:mm:ss",
+  $(".datepicker-start").datetimepicker({
+    format: "DD-MMM-YYYY",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    daysOfWeekDisabled: [0, 6],
+    useCurrent: false,
+  });
+
+  $(".datepicker-end").datetimepicker({
+    format: "DD-MMM-YYYY",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    daysOfWeekDisabled: [0, 6],
+    useCurrent: false,
+  });
+
+  //* start date picker on change event [select minimun date for end date datepicker]
+  $(".datepicker-start").on("dp.change", function (e) {
+    $(".datepicker-end").data("DateTimePicker").minDate(e.date);
+  });
+
+  //* Start date picker on change event [select maximum date for start date datepicker]
+  $(".datepicker-end").on("dp.change", function (e) {
+    if ($(".datepicker-start").val() !== "") {
+      $(".datepicker-start").data("DateTimePicker").maxDate(e.date);
+    } else {
+      $(".datepicker-start")
+        .data("DateTimePicker")
+        .useCurrent(true)
+        .maxDate(e.date);
+    }
+  });
+
+  $(".daterange").daterangepicker({
+    autoUpdateInput: false,
+    locale: {
+      format: "YYYY-MM-DD",
+      cancelLabel: "Clear",
+    },
+  });
+
+  $(".daterange").on("apply.daterangepicker", function (ev, picker) {
+    $(this).val(
+      picker.startDate.format("YYYY-MM-DD") +
+        " - " +
+        picker.endDate.format("YYYY-MM-DD")
+    );
+  });
+
+  $(".daterange").on("cancel.daterangepicker", function (ev, picker) {
+    $(this).val("");
   });
 
   $(".summernote-product").summernote({
@@ -224,41 +279,6 @@ $(document).ready(function (e) {
 
     _table.buttons().container().appendTo($("#dt-button"));
   }
-
-  $(".daterange").daterangepicker({
-    autoUpdateInput: false,
-    locale: {
-      format: "YYYY-MM-DD",
-      cancelLabel: "Clear",
-    },
-  });
-
-  $(".daterange").on("apply.daterangepicker", function (ev, picker) {
-    $(this).val(
-      picker.startDate.format("YYYY-MM-DD") +
-        " - " +
-        picker.endDate.format("YYYY-MM-DD")
-    );
-  });
-
-  $(".daterange").on("cancel.daterangepicker", function (ev, picker) {
-    $(this).val("");
-  });
-
-  $("[name='scan_assetcode']").scannerDetection({
-    timeBeforeScanTest: 100, // wait for the next character for upto 100ms
-    avgTimeByChar: 40, // it's not a barcode if a character takes longer than 100ms
-    preventDefault: true,
-    endChar: [13],
-    onComplete: function (barcode, qty) {
-      $("[name='scan_assetcode']").val(barcode).focus();
-    },
-    onError: function (string, qty) {
-      $("[name='scan_assetcode']").val(
-        $("[name='scan_assetcode']").val() + string
-      );
-    },
-  });
 });
 
 /**
@@ -673,13 +693,16 @@ $(".save_form").click(function (evt) {
         }
 
         //* Field containing class datepicker
-        if (className.includes("datepicker")) {
+        if (
+          className.includes("datepicker") ||
+          className.includes("datepicker-start") ||
+          className.includes("datepicker-end")
+        ) {
           let date = field[i].value;
-          let time = "00:00:00";
 
           if (date !== "") {
-            let timeAndDate = moment(date + " " + time);
-            formData.append(field[i].name, timeAndDate._i);
+            let dateTime = moment(date).format("YYYY-MM-DD HH:mm:ss");
+            formData.append(field[i].name, dateTime);
           }
         }
 
@@ -1412,8 +1435,7 @@ _tableLine.on("click", ".btn_delete", function (evt) {
       cancelButtonText: "Close",
       reverseButtons: true,
     }).then((data) => {
-      if (data.value)
-        row.remove().draw(false);
+      if (data.value) row.remove().draw(false);
     });
 
     $(_this).html(oriElement).prop("disabled", false);
@@ -3174,6 +3196,15 @@ function clearForm(evt) {
       form.find("small[id=" + errorText[l].id + "]").html("");
   }
 
+  if (form.find(".datepicker").length)
+    form.find(".datepicker").data("DateTimePicker").clear();
+
+  if (form.find(".datepicker-start").length)
+    form.find(".datepicker-start").data("DateTimePicker").clear();
+
+  if (form.find(".datepicker-end").length)
+    form.find(".datepicker-end").data("DateTimePicker").clear();
+
   // Set to empty array option
   option = [];
   arrMultiSelect = [];
@@ -4104,10 +4135,11 @@ function putFieldData(form, data) {
           let className = field[i].className.split(/\s+/);
 
           if (className.includes("datepicker")) {
-            form
-              .find("input:text[name=" + fieldName + "]")
-              .not(".line")
-              .val(moment(label).format("Y-MM-DD"));
+            if (label !== null)
+              form
+                .find("input:text[name=" + fieldName + "]")
+                .not(".line")
+                .val(moment(label).format("DD-MMM-Y"));
           } else if (className.includes("rupiah")) {
             form
               .find("input:text[name=" + fieldName + "]")

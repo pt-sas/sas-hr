@@ -92,10 +92,10 @@ class BaseController extends Controller
 	protected $Movement_In = 'M+';
 	/** Movement Out */
 	protected $Movement_Out = 'M-';
-	/** Movement In */
-	protected $Movement_Kirim = 'KIRIM';
-	/** Movement Out */
-	protected $Movement_Terima = 'TERIMA';
+	/** Form Kelengkapan Absent */
+	protected $Form_Kelengkapan_Absent = 'FK';
+	/** Form Absent */
+	protected $Form_Absent = 'FA';
 
 	/**
 	 * The column used for primaryKey int
@@ -273,6 +273,9 @@ class BaseController extends Controller
 							$data[$key] = 0;
 					endforeach;
 
+					if (is_null($row->{$key}))
+						$row->{$key} = "";
+
 					if ((gettype($data[$key]) === 'integer' && $data[$key] != $row->{$key}) ||
 						(gettype($data[$key]) === 'string' && $data[$key] !== $row->{$key})
 					) {
@@ -376,8 +379,6 @@ class BaseController extends Controller
 	{
 		$changeLog = new M_ChangeLog($this->request);
 
-		$this->primaryKey = $model->primaryKey;
-
 		$result = false;
 
 		if (!is_array($data))
@@ -387,7 +388,7 @@ class BaseController extends Controller
 			return false;
 
 		if (!empty($this->allowedFields))
-			array_push($this->allowedFields, $this->primaryKey);
+			array_push($this->allowedFields, $model->primaryKey);
 
 		if (is_array($data)) {
 			//* Convert object to array 
@@ -401,7 +402,7 @@ class BaseController extends Controller
 				$data = $model->doChangeValueField($data, $this->getID());
 
 			//* Split data
-			$data = $this->doSplitData($data);
+			$data = $this->doSplitData($data, $model->primaryKey);
 
 			/**
 			 * TODO: Insert Data
@@ -414,11 +415,14 @@ class BaseController extends Controller
 					$result = $this->model->save($obj);
 					$this->insertID = $this->model->getInsertID();
 				} else {
+					if (count($arrDataHeader) > 1) //* Update data
+						$result = $this->model->save($obj);
+
 					$this->insertID = $this->getID();
 				}
 
 				//* Set Foreign Key Field from header table 
-				$foreignKey = $this->model->primaryKey;
+				$foreignKey = $this->primaryKey;
 				$dataInsert = $this->doSetField($foreignKey, $this->insertID, $dataInsert);
 
 				//* Set Created_By Field 
@@ -434,7 +438,7 @@ class BaseController extends Controller
 				//? Check old data is exist
 				if ($oldData)
 					foreach ($oldData as $row) :
-						$lineId[] = $row->{$this->primaryKey};
+						$lineId[] = $row->{$model->primaryKey};
 					endforeach;
 
 				//TODO: Insert line data 
@@ -445,14 +449,14 @@ class BaseController extends Controller
 					if (empty($lineId)) {
 						$newData = $model->where($foreignKey, $this->insertID)->findAll();
 					} else {
-						$newData = $model->whereNotIn($this->primaryKey, $lineId)
+						$newData = $model->whereNotIn($model->primaryKey, $lineId)
 							->where($foreignKey, $this->insertID)
 							->findAll();
 					}
 
 					//TODO: Insert Change Log
 					foreach ($newData as $new) :
-						$changeLog->insertLog($model->table, $this->primaryKey, $new->{$this->primaryKey}, null, $new->{$this->primaryKey}, $this->EVENTCHANGELOG_Insert);
+						$changeLog->insertLog($model->table, $model->primaryKey, $new->{$model->primaryKey}, null, $new->{$model->primaryKey}, $this->EVENTCHANGELOG_Insert);
 					endforeach;
 				}
 			}
@@ -468,7 +472,7 @@ class BaseController extends Controller
 					$dataUpdate = $data['update'];
 
 					//TODO: Check value change 
-					$dataUpdate = $this->getValueChange($model, $dataUpdate);
+					$dataUpdate = $this->getValueChange($model, $dataUpdate, $model->primaryKey);
 
 					//? Header no data to update and Line No data and Not set property insert when submit data
 					if (count($arrDataHeader) == 1 && empty($dataUpdate) && !isset($data['insert']) && !isset($data['delete']))
@@ -489,7 +493,7 @@ class BaseController extends Controller
 						//TODO: Populate data old value and new value 
 						$arrChangeData = [];
 						foreach ($dataUpdate as $new) :
-							$old = $model->find($new[$this->primaryKey]);
+							$old = $model->find($new[$model->primaryKey]);
 
 							$new = (array) $new;
 							foreach (array_keys($new) as $column) :
@@ -497,7 +501,7 @@ class BaseController extends Controller
 									$arrChangeData[] = [
 										'table'		=> $model->table,
 										'column'	=> $column,
-										'record_id'	=> $new[$this->primaryKey],
+										'record_id'	=> $new[$model->primaryKey],
 										'old_value'	=> $old->{$column},
 										'new_value'	=> $new[$column]
 									];
@@ -529,7 +533,7 @@ class BaseController extends Controller
 					//TODO: Insert Change Log 
 					foreach ($dataDelete['data'] as $value) :
 						foreach ($fields as $column) :
-							$changeLog->insertLog($model->table, $column, $value->{$this->primaryKey}, $value->{$column}, null, $this->EVENTCHANGELOG_Delete);
+							$changeLog->insertLog($model->table, $column, $value->{$model->primaryKey}, $value->{$column}, null, $this->EVENTCHANGELOG_Delete);
 						endforeach;
 					endforeach;
 
@@ -756,34 +760,34 @@ class BaseController extends Controller
 	 * @param array $data Data
 	 * @return array
 	 */
-	protected function doSplitData(array $data): array
+	protected function doSplitData(array $data, string $primaryKey): array
 	{
 		$result = [];
 		$id = [];
 
 		foreach ($data as $value) :
-			if (empty($value[$this->primaryKey])) {
-				unset($value[$this->primaryKey]);
+			if (empty($value[$primaryKey])) {
+				unset($value[$primaryKey]);
 
 				$result['insert'][] = $value;
 			} else {
 				$result['update'][] = $value;
-				$id[] = $value[$this->primaryKey];
+				$id[] = $value[$primaryKey];
 			}
 		endforeach;
 
 		if (!empty($this->getID())) {
-			$foreignKey = $this->model->primaryKey;
+			$foreignKey = $this->primaryKey;
 
 			if ($id)
 				$list = $this->modelDetail->where($foreignKey, $this->getID())
-					->whereNotIn($this->primaryKey, $id)
+					->whereNotIn($primaryKey, $id)
 					->findAll();
 			else
 				$list = $this->modelDetail->where($foreignKey, $this->getID())->findAll();
 
 			foreach ($list as $row) :
-				$result['delete']['id'][] = $row->{$this->primaryKey};
+				$result['delete']['id'][] = $row->{$primaryKey};
 				$result['delete']['data'][] = $row;
 			endforeach;
 		}
@@ -820,7 +824,7 @@ class BaseController extends Controller
 	 * @param array $data Data
 	 * @return array
 	 */
-	protected function getValueChange($model, array $data): array
+	protected function getValueChange($model, array $data, string $primaryKey): array
 	{
 		$result = [];
 
@@ -834,7 +838,7 @@ class BaseController extends Controller
 			$newV = new stdClass();
 
 			//TODO: Get old value based on primary key data 
-			$oldValue = $model->find($value[$this->primaryKey]);
+			$oldValue = $model->find($value[$primaryKey]);
 
 			$data = (array) $value;
 
@@ -849,7 +853,7 @@ class BaseController extends Controller
 				if ((gettype($value[$key]) === 'integer' && $value[$key] != $oldValue->{$key}) ||
 					(gettype($value[$key]) === 'string' && $value[$key] !== $oldValue->{$key})
 				) {
-					$newV->{$this->primaryKey} = $value[$this->primaryKey];
+					$newV->{$primaryKey} = $value[$primaryKey];
 					$newV->{$key} = $value[$key];
 				}
 			endforeach;
