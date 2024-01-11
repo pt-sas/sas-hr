@@ -4,9 +4,9 @@ namespace App\Entities;
 
 use CodeIgniter\Entity;
 
-class Leveling extends Entity
+class Levelling extends Entity
 {
-    protected $md_leveling_id;
+    protected $md_levelling_id;
     protected $value;
     protected $name;
     protected $description;
@@ -20,14 +20,14 @@ class Leveling extends Entity
         'deleted_at'
     ];
 
-    public function getLevelingId()
+    public function getLevellingId()
     {
-        return $this->attributes['md_leveling_id'];
+        return $this->attributes['md_levelling_id'];
     }
 
-    public function setLevelingId($md_leveling_id)
+    public function setLevellingId($md_levelling_id)
     {
-        $this->attributes['md_leveling_id'] = $md_leveling_id;
+        $this->attributes['md_levelling_id'] = $md_levelling_id;
     }
 
     public function getValue()

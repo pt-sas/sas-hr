@@ -1,5 +1,5 @@
 <div class="card-body card-form">
-    <form class="form-horizontal" id="form_leveling">
+    <form class="form-horizontal" id="form_levelling">
         <?= csrf_field(); ?>
         <div class="row">
             <div class="col-md-6">
