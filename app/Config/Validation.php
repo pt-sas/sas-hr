@@ -438,10 +438,10 @@ class Validation
         ]
     ];
 
-    public $leveling = [
+    public $levelling = [
         'value'             => [
             'label'             => 'Kode Jabatan',
-            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_leveling.value,md_leveling_id,{id}]',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_levelling.value,md_levelling_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
                 'required'    => 'Please Fill {field} first'
@@ -449,7 +449,7 @@ class Validation
         ],
         'name'                 => [
             'label'            => 'Nama Jabatan',
-            'rules'            =>    'required|is_unique[md_leveling.name,md_leveling_id,{id}]',
+            'rules'            =>    'required|is_unique[md_leveling.name,md_levelling_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
                 'required'    => 'Please Insert the {field} first'
@@ -484,6 +484,14 @@ class Validation
                 'is_unique' => 'This {field} already exists.',
                 'required'    => 'Please Insert the {field} first'
             ]
+        ],
+
+        'startdate'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Please Insert the {field} first'
+            ]
         ]
     ];
 
@@ -493,6 +501,49 @@ class Validation
             'rules'            =>    'required|is_unique[md_leavetype.name,md_leavetype_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ],
+        'duration'                 => [
+            'label'            => 'Durasi',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
+
+    public $skill = [
+        'value'             => [
+            'label'             => 'Kode Keterampilan',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_skill.value,md_skill_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Keterampilan',
+            'rules'            =>    'required|is_unique[md_skill.name,md_skill_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
+
+    public $massleave = [
+        'name'                 => [
+            'label'            => 'Nama Cuti Massal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Please Insert the {field} first'
+            ]
+        ],
+        'startdate'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
                 'required'    => 'Please Insert the {field} first'
             ]
         ]

@@ -176,13 +176,54 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('subdistrict/getSeqCode', 'Backend\SubDistrict::getSeqCode');
     $routes->match(['get', 'post'], 'subdistrict/getList', 'Backend\SubDistrict::getList');
 
-    $routes->add('leveling', 'Backend\Leveling::index');
-    $routes->match(['get', 'post'], 'leveling/showAll', 'Backend\Leveling::showAll');
-    $routes->post('leveling/create', 'Backend\Leveling::create');
-    $routes->get('leveling/show/(:any)', 'Backend\Leveling::show/$1');
-    $routes->get('leveling/destroy/(:any)', 'Backend\Leveling::destroy/$1');
-    $routes->get('leveling/getSeqCode', 'Backend\Leveling::getSeqCode');
-    $routes->match(['get', 'post'], 'leveling/getList', 'Backend\Leveling::getList');
+    $routes->add('levelling', 'Backend\Levelling::index');
+    $routes->match(['get', 'post'], 'levelling/showAll', 'Backend\Levelling::showAll');
+    $routes->post('levelling/create', 'Backend\Levelling::create');
+    $routes->get('levelling/show/(:any)', 'Backend\Levelling::show/$1');
+    $routes->get('levelling/destroy/(:any)', 'Backend\Levelling::destroy/$1');
+    $routes->get('levelling/getSeqCode', 'Backend\Levelling::getSeqCode');
+    $routes->match(['get', 'post'], 'levelling/getList', 'Backend\Levelling::getList');
+
+    $routes->add('day', 'Backend\Day::index');
+    $routes->match(['get', 'post'], 'day/showAll', 'Backend\Day::showAll');
+    $routes->post('day/create', 'Backend\Day::create');
+    $routes->get('day/show/(:any)', 'Backend\Day::show/$1');
+    $routes->get('day/destroy/(:any)', 'Backend\Day::destroy/$1');
+    $routes->get('day/getSeqCode', 'Backend\Day::getSeqCode');
+    $routes->match(['get', 'post'], 'day/getList', 'Backend\Day::getList');
+
+    $routes->add('holiday', 'Backend\Holiday::index');
+    $routes->match(['get', 'post'], 'holiday/showAll', 'Backend\Holiday::showAll');
+    $routes->post('holiday/create', 'Backend\Holiday::create');
+    $routes->get('holiday/show/(:any)', 'Backend\Holiday::show/$1');
+    $routes->get('holiday/destroy/(:any)', 'Backend\Holiday::destroy/$1');
+    $routes->match(['get', 'post'], 'holiday/getList', 'Backend\Holiday::getList');
+
+    $routes->add('leavetype', 'Backend\LeaveType::index');
+    $routes->match(['get', 'post'], 'leavetype/showAll', 'Backend\LeaveType::showAll');
+    $routes->post('leavetype/create', 'Backend\LeaveType::create');
+    $routes->get('leavetype/show/(:any)', 'Backend\LeaveType::show/$1');
+    $routes->get('leavetype/destroy/(:any)', 'Backend\LeaveType::destroy/$1');
+    $routes->get('leavetype/getSeqCode', 'Backend\LeaveType::getSeqCode');
+    $routes->match(['get', 'post'], 'leavetype/getList', 'Backend\LeaveType::getList');
+
+    $routes->add('skill', 'Backend\Skill::index');
+    $routes->match(['get', 'post'], 'skill/showAll', 'Backend\Skill::showAll');
+    $routes->post('skill/create', 'Backend\Skill::create');
+    $routes->get('skill/show/(:any)', 'Backend\Skill::show/$1');
+    $routes->get('skill/destroy/(:any)', 'Backend\Skill::destroy/$1');
+    $routes->get('skill/getSeqCode', 'Backend\Skill::getSeqCode');
+    $routes->match(['get', 'post'], 'skill/getList', 'Backend\Skill::getList');
+
+    $routes->add('massleave', 'Backend\MassLeave::index');
+    $routes->match(['get', 'post'], 'massleave/showAll', 'Backend\MassLeave::showAll');
+    $routes->post('massleave/create', 'Backend\MassLeave::create');
+    $routes->get('massleave/show/(:any)', 'Backend\MassLeave::show/$1');
+    $routes->get('massleave/destroy/(:any)', 'Backend\MassLeave::destroy/$1');
+    $routes->match(['get', 'post'], 'massleave/getList', 'Backend\MassLeave::getList');
+
+    $routes->add('rpt_saldotkh', 'Backend\Rpt_SaldoTKH::index');
+    $routes->match(['get', 'post'], 'rpt_saldotkh/showAll', 'Backend\Rpt_SaldoTKH::showAll');
 });
 
 /*
