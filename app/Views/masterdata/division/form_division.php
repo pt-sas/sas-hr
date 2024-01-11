@@ -18,6 +18,14 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
+                    <label for="md_branch_id">Cabang </label>
+                    <select class="form-control select-data" id="md_branch_id" name="md_branch_id" data-url="branch/getList">
+                        <option value="">Pilih Cabang</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
                     <label for="description">Deskripsi </label>
                     <textarea type="text" class="form-control" id="description" name="description" rows="2"></textarea>
                 </div>

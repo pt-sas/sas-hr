@@ -4,7 +4,7 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_Division;
-use App\Models\M_Employee;
+use App\Models\M_Branch;
 use Config\Services;
 
 class Division extends BaseController
@@ -25,7 +25,8 @@ class Division extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
-            $select = $this->model->findAll();
+            $select = $this->model->getSelect();
+            $join = $this->model->getJoin();
             $order = $this->model->column_order;
             $sort = $this->model->order;
             $search = $this->model->column_search;
@@ -33,7 +34,7 @@ class Division extends BaseController
             $data = [];
 
             $number = $this->request->getPost('start');
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search);
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
 
             foreach ($list as $value) :
                 $row = [];
@@ -46,6 +47,7 @@ class Division extends BaseController
                 $row[] = $value->value;
                 $row[] = $value->name;
                 $row[] = $value->description;
+                $row[] = $value->branch;
                 $row[] = active($value->isactive);
                 $row[] = $this->template->tableButton($ID);
                 $data[] = $row;
@@ -54,7 +56,7 @@ class Division extends BaseController
             $result = [
                 'draw'              => $this->request->getPost('draw'),
                 'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search),
-                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search),
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join),
                 'data'              => $data
             ];
 
@@ -85,9 +87,17 @@ class Division extends BaseController
 
     public function show($id)
     {
+        $branch = new M_Branch($this->request);
+
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+
+                if (!empty($list[0]->getBranchId())) {
+                    $rowEmp = $branch->find($list[0]->getBranchId());
+
+                    $list = $this->field->setDataSelect($branch->table, $list, 'md_branch_id', $rowEmp->getBranchId(), $rowEmp->getName());
+                }
 
                 $result = [
                     'header'   => $this->field->store($this->model->table, $list)
@@ -106,7 +116,7 @@ class Division extends BaseController
     {
         if ($this->request->isAJAX()) {
             try {
-                $result = $this->model->delete($id);
+                $result = $this->delete($id);
                 $response = message('success', true, $result);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -140,7 +150,7 @@ class Division extends BaseController
 
     public function getList()
     {
-        $employee = new M_Employee($this->request);
+        // $employee = new M_Employee($this->request);
 
         if ($this->request->isAjax()) {
             $post = $this->request->getVar();
@@ -159,15 +169,15 @@ class Division extends BaseController
                         ->findAll();
                 }
 
-                if (!empty($post['reference']))
-                    $value = $employee->find($post['reference']);
+                // if (!empty($post['reference']))
+                //     $value = $employee->find($post['reference']);
 
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getDivisionId();
                     $response[$key]['text'] = $row->getName();
 
-                    if (!empty($post['reference']))
-                        $response[$key]['key'] = $value->getDivisionId();
+                // if (!empty($post['reference']))
+                //     $response[$key]['key'] = $value->getDivisionId();
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
