@@ -3,8 +3,6 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use App\Models\M_Employee;
-use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
 use Config\Services;
 
