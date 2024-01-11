@@ -698,11 +698,11 @@ $(".save_form").click(function (evt) {
           className.includes("datepicker-start") ||
           className.includes("datepicker-end")
         ) {
-          let date = textField[i].value;
+          let date = field[i].value;
 
           if (date !== "") {
             let dateTime = moment(date).format("YYYY-MM-DD HH:mm:ss");
-            formData.append(textField[i].name, dateTime);
+            formData.append(field[i].name, dateTime);
           }
         }
 
