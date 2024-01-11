@@ -161,6 +161,13 @@ class Branch extends BaseController
                         ->like('name', $post['search'])
                         ->orderBy('name', 'ASC')
                         ->findAll();
+                } else if (isset($post[$this->model->primaryKey])) {
+                    $id = explode(",", $post[$this->model->primaryKey]);
+
+                    $list = $this->model->where('isactive', 'Y')
+                        ->whereIn($this->model->primaryKey, $id)
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
                 } else {
                     $list = $this->model->where('isactive', 'Y')
                         ->orderBy('name', 'ASC')
@@ -170,7 +177,6 @@ class Branch extends BaseController
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getBranchId();
                     $response[$key]['text'] = $row->getName();
-
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

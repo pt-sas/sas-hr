@@ -99,8 +99,12 @@ class Division extends BaseController
                     $list = $this->field->setDataSelect($branch->table, $list, 'md_branch_id', $rowEmp->getBranchId(), $rowEmp->getName());
                 }
 
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);
@@ -161,6 +165,13 @@ class Division extends BaseController
                 if (isset($post['search'])) {
                     $list = $this->model->where('isactive', 'Y')
                         ->like('name', $post['search'])
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
+                } else if (isset($post[$this->model->primaryKey])) {
+                    $id = explode(",", $post[$this->model->primaryKey]);
+
+                    $list = $this->model->where('isactive', 'Y')
+                        ->whereIn($this->model->primaryKey, $id)
                         ->orderBy('name', 'ASC')
                         ->findAll();
                 } else {

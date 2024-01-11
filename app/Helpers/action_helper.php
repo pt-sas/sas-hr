@@ -260,3 +260,31 @@ function replaceStrBracket(string $str)
 {
     return trim(preg_replace("[\(.*?\)]", "", $str));
 }
+
+/**
+ * Function to get date list from range date
+ *
+ * @param [type] $start
+ * @param [type] $end
+ * @param string $format
+ * @return array
+ */
+function getDatesFromRange($start, $end, $format = 'Y-m-d H:i:s'): array
+{
+    $array = [];
+
+    // Variable that store the date interval 
+    // of period 1 day 
+    $interval = new DateInterval('P1D');
+
+    $realEnd = new DateTime($end);
+    $realEnd->add($interval);
+
+    $period = new DatePeriod(new DateTime($start), $interval, $realEnd);
+
+    foreach ($period as $date) {
+        $array[] = $date->format($format);
+    }
+
+    return $array;
+}
