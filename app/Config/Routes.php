@@ -230,6 +230,13 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('tugas-kantor/destroy/(:any)', 'Backend\OfficeDuties::destroy/$1');
     $routes->get('tugas-kantor/processIt', 'Backend\OfficeDuties::processIt');
 
+    $routes->add('izin-resmi', 'Backend\OfficialPermission::index');
+    $routes->match(['get', 'post'], 'izin-resmi/showAll', 'Backend\OfficialPermission::showAll');
+    $routes->post('izin-resmi/create', 'Backend\OfficialPermission::create');
+    $routes->get('izin-resmi/show/(:any)', 'Backend\OfficialPermission::show/$1');
+    $routes->get('izin-resmi/destroy/(:any)', 'Backend\OfficialPermission::destroy/$1');
+    $routes->get('izin-resmi/processIt', 'Backend\OfficialPermission::processIt');
+
     $routes->add('day', 'Backend\Day::index');
     $routes->match(['get', 'post'], 'day/showAll', 'Backend\Day::showAll');
     $routes->post('day/create', 'Backend\Day::create');
