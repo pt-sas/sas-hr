@@ -98,8 +98,10 @@ class Division extends BaseController
 
                     $list = $this->field->setDataSelect($branch->table, $list, 'md_branch_id', $rowEmp->getBranchId(), $rowEmp->getName());
                 }
+                $title = 'Divisi';
 
                 $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
                 $fieldHeader->setList($list);
 

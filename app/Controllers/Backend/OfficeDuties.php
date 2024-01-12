@@ -35,10 +35,10 @@ class OfficeDuties extends BaseController
                 'field'     => 'sys_ref_detail.value',
                 'option'    => 'ASC'
             ])->getResult(),
-            'ref_default' => $this->Form_Kelengkapan_Absent
+            'ref_default' => $this->Form_Absent
         ];
 
-        return $this->template->render('transaction/permission/arrived/v_permission_arrived', $data);
+        return $this->template->render('transaction/officeduties/v_office_duties', $data);
     }
 
     public function showAll()

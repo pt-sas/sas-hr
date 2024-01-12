@@ -99,8 +99,15 @@ class District extends BaseController
                     $list = $this->field->setDataSelect($city->table, $list, 'md_city_id', $rowEmp->getCityId(), $rowEmp->getName());
                 }
 
+                $title = 'Kecamatan';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);

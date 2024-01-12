@@ -87,7 +87,7 @@ class Branch extends BaseController
 
     public function show($id)
     {
-        // $employee = new M_Employee($this->request);
+        $employee = new M_Employee($this->request);
 
         if ($this->request->isAJAX()) {
             try {
@@ -96,11 +96,18 @@ class Branch extends BaseController
                 if (!empty($list[0]->getLeaderId())) {
                     $rowEmp = $employee->find($list[0]->getLeaderId());
 
-                    // $list = $this->field->setDataSelect($employee->table, $list, 'leader_id', $rowEmp->getEmployeeId(), $rowEmp->getName());
+                    $list = $this->field->setDataSelect($employee->table, $list, 'leader_id', $rowEmp->getEmployeeId(), $rowEmp->getFullName());
                 }
 
+                $title = 'Cabang';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);

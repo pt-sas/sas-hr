@@ -99,8 +99,15 @@ class Position extends BaseController
                     $list = $this->field->setDataSelect($division->table, $list, 'md_division_id', $rowEmp->getDivisionId(), $rowEmp->getName());
                 }
 
+                $title = 'Posisi';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);

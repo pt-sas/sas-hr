@@ -38,7 +38,7 @@ class PermissionLeaveEarly extends BaseController
             'ref_default' => $this->Form_Kelengkapan_Absent
         ];
 
-        return $this->template->render('transaction/permission/arrived/v_permission_arrived', $data);
+        return $this->template->render('transaction/permission/leaveearly/v_permission_leave_early', $data);
     }
 
     public function showAll()

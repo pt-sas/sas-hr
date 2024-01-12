@@ -99,8 +99,15 @@ class City extends BaseController
                     $list = $this->field->setDataSelect($province->table, $list, 'md_province_id', $rowEmp->getProvinceId(), $rowEmp->getName());
                 }
 
+                $title = 'Kota';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);

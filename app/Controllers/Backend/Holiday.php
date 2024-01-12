@@ -57,7 +57,7 @@ class Holiday extends BaseController
             $result = [
                 'draw'              => $this->request->getPost('draw'),
                 'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search),
-                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search),
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join),
                 'data'              => $data
             ];
 
@@ -99,8 +99,15 @@ class Holiday extends BaseController
                     $list = $this->field->setDataSelect($religion->table, $list, 'md_religion_id', $rowEmp->getReligionId(), $rowEmp->getName());
                 }
 
+                $title = 'Hari Libur';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);
