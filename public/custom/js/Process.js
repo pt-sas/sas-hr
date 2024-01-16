@@ -792,7 +792,7 @@ $(".save_form").click(function (evt) {
     }
 
     //? Check in form exists Table Line
-    if (form.find("table.tb_displayline").length > 0) {
+    if (_tableLine.context.length) {
       const rows = _tableLine.rows().nodes().to$();
       const th = $(rows).closest("table").find("th");
 
@@ -1161,12 +1161,10 @@ function Edit(id, status, last_url) {
               if (arrMsg.line) {
                 let arrLine = arrMsg.line;
 
-                if (form.find("table.tb_displayline").length > 0) {
+                if (_tableLine.context.length) {
                   let line = JSON.parse(arrLine);
 
-                  $.each(line, function (idx, elem) {
-                    _tableLine.row.add(elem).draw(false);
-                  });
+                  _tableLine.rows.add(line).draw(false);
 
                   let btnAction = _tableLine
                     .rows()
@@ -2865,7 +2863,7 @@ function errorForm(parent, data) {
       }
 
       // Check datatable line for get validation
-      if (parent.find("table.tb_displayline").length > 0) {
+      if (_tableLine.context.length) {
         // Error validation for datatable line
         if (field === "line")
           Toast.fire({
@@ -3154,7 +3152,7 @@ function clearForm(evt) {
       }
 
       // Exist table display line
-      if (form.find("table.tb_displayline").length > 0) {
+      if (_tableLine.context.length) {
         _tableLine.clear().draw();
 
         const btnAction = _tableLine.rows().to$().find("button");
