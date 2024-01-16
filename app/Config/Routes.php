@@ -230,12 +230,26 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('tugas-kantor/destroy/(:any)', 'Backend\OfficeDuties::destroy/$1');
     $routes->get('tugas-kantor/processIt', 'Backend\OfficeDuties::processIt');
 
+    $routes->add('tugas-kantor-fka', 'Backend\HalfDayOfficeDuties::index');
+    $routes->match(['get', 'post'], 'tugas-kantor-fka/showAll', 'Backend\HalfDayOfficeDuties::showAll');
+    $routes->post('tugas-kantor-fka/create', 'Backend\HalfDayOfficeDuties::create');
+    $routes->get('tugas-kantor-fka/show/(:any)', 'Backend\HalfDayOfficeDuties::show/$1');
+    $routes->get('tugas-kantor-fka/destroy/(:any)', 'Backend\HalfDayOfficeDuties::destroy/$1');
+    $routes->get('tugas-kantor-fka/processIt', 'Backend\HalfDayOfficeDuties::processIt');
+
     $routes->add('izin-resmi', 'Backend\OfficialPermission::index');
     $routes->match(['get', 'post'], 'izin-resmi/showAll', 'Backend\OfficialPermission::showAll');
     $routes->post('izin-resmi/create', 'Backend\OfficialPermission::create');
     $routes->get('izin-resmi/show/(:any)', 'Backend\OfficialPermission::show/$1');
     $routes->get('izin-resmi/destroy/(:any)', 'Backend\OfficialPermission::destroy/$1');
     $routes->get('izin-resmi/processIt', 'Backend\OfficialPermission::processIt');
+
+    $routes->add('lain-lain', 'Backend\OtherPermission::index');
+    $routes->match(['get', 'post'], 'lain-lain/showAll', 'Backend\OtherPermission::showAll');
+    $routes->post('lain-lain/create', 'Backend\OtherPermission::create');
+    $routes->get('lain-lain/show/(:any)', 'Backend\OtherPermission::show/$1');
+    $routes->get('lain-lain/destroy/(:any)', 'Backend\OtherPermission::destroy/$1');
+    $routes->get('lain-lain/processIt', 'Backend\OtherPermission::processIt');
 
     $routes->add('day', 'Backend\Day::index');
     $routes->match(['get', 'post'], 'day/showAll', 'Backend\Day::showAll');
