@@ -126,19 +126,19 @@ class OfficialPermission extends BaseController
             try {
                 $this->entity->fill($post);
 
-                // if (!$this->validation->run($post, 'absent')) {
-                //     $response = $this->field->errorValidation($this->model->table, $post);
-                // } else {
+                if (!$this->validation->run($post, 'absent')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
 
-                if ($this->isNew()) {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    if ($this->isNew()) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    $docNo = $this->model->getInvNumber("submissiontype", $this->Izin_Resmi);
-                    $this->entity->setDocumentNo($docNo);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Izin_Resmi);
+                        $this->entity->setDocumentNo($docNo);
+                    }
+
+                    $response = $this->save();
                 }
-
-                $response = $this->save();
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -222,7 +222,7 @@ class OfficialPermission extends BaseController
                                 "submissiontype"    => $row->getSubmissionType(),
                                 "submissiondate"    => $date,
                                 "md_employee_id"    => $row->getEmployeeId(),
-                                "amount"            => 0.5,
+                                "amount"            => 1,
                                 "created_by"        => $this->access->getSessionUser(),
                                 "updated_by"        => $this->access->getSessionUser(),
                             ];

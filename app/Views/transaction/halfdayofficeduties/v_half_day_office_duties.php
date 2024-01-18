@@ -1,6 +1,6 @@
 <?= $this->extend('backend/_partials/overview') ?>
 
-<?= $this->section('content') ?>
+<?= $this->section('content'); ?>
 
 <?= $this->include('transaction/halfdayofficeduties/form_half_day_office_duties'); ?>
 <div class="card-body card-main">

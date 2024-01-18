@@ -5,7 +5,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="karyawan/getList">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
+                        data-url="karyawan/getList">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -21,7 +22,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form <span class="required">*</span></label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -45,7 +47,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?> readonly>
+                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                        value=<?= $today ?> readonly>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
@@ -62,11 +65,11 @@
                     <select class="form-control select2" id="necessary" name="necessary" disabled>
                         <option value="">Select Pengajuan</option>
                         <?php foreach ($ref_list as $row) : ?>
-                            <?php if ($ref_default === $row->value) : ?>
-                                <option value="<?= $row->value ?>" selected><?= $row->name ?> </option>
-                            <?php else : ?>
-                                <option value="<?= $row->value ?>"><?= $row->name ?> </option>
-                            <?php endif; ?>
+                        <?php if ($ref_default === $row->value) : ?>
+                        <option value="<?= $row->value ?>" selected><?= $row->name ?> </option>
+                        <?php else : ?>
+                        <option value="<?= $row->value ?>"><?= $row->name ?> </option>
+                        <?php endif; ?>
                         <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_necessary"></small>
@@ -75,7 +78,8 @@
             <div class="col-md-3">
                 <div class=" form-check mt-4">
                     <label class="form-radio-label">
-                        <input class="form-radio-input" type="radio" id="submissiontype" name="submissiontype" value="tugas kantor" checked disabled>
+                        <input class="form-radio-input" type="radio" id="submissiontype" name="submissiontype"
+                            value="tugas kantor fka" checked disabled>
                         <span class="form-radio-sign">Tugas Kantor</span>
                     </label>
                 </div>
@@ -85,10 +89,12 @@
                     <label for="date">Tanggal <span class="required">*</span></label>
                     <div class="row">
                         <div class="col-md-6">
-                            <input type="text" class="form-control datepicker-start" name="startdate" placeholder="Tanggal Mulai">
+                            <input type="text" class="form-control datetimepicker-start" name="startdate"
+                                placeholder="Tanggal Mulai">
                         </div>
                         <div class="col-md-6">
-                            <input type="text" class="form-control datepicker-end" name="enddate" placeholder="Tanggal Selesai">
+                            <input type="text" class="form-control datetimepicker-end" name="enddate"
+                                placeholder="Tanggal Selesai">
                         </div>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
