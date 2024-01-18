@@ -84,7 +84,7 @@ class M_Employee extends Model
 		'md_employee.pob',
 		'md_employee.birthday',
 		'sys_ref_detail.name',
-		'md_employee.religion',
+		'md_religion.name',
 		'md_employee.isactive'
 	];
 	protected $column_search = [
@@ -93,7 +93,7 @@ class M_Employee extends Model
 		'md_employee.pob',
 		'md_employee.birthday',
 		'sys_ref_detail.name',
-		'md_employee.religion',
+		'md_religion.name',
 		'md_employee.isactive'
 	];
 	protected $order = ['fullname' => 'ASC'];

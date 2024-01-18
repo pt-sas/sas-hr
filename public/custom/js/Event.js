@@ -1,4 +1,50 @@
 $(document).ready(function () {
+  $(".multiple-select-branch").select2({
+    placeholder: "Select an option",
+    width: "100%",
+    theme: "bootstrap",
+    multiple: true,
+    ajax: {
+      dataType: "JSON",
+      url: ADMIN_URL + "branch/getList",
+      delay: 250,
+      data: function (params) {
+        return {
+          search: params.term,
+        };
+      },
+      processResults: function (data, page) {
+        return {
+          results: data,
+        };
+      },
+      cache: true,
+    },
+  });
+
+  $(".multiple-select-division").select2({
+    placeholder: "Select an option",
+    width: "100%",
+    theme: "bootstrap",
+    multiple: true,
+    ajax: {
+      dataType: "JSON",
+      url: ADMIN_URL + "division/getList",
+      delay: 250,
+      data: function (params) {
+        return {
+          search: params.term,
+        };
+      },
+      processResults: function (data, page) {
+        return {
+          results: data,
+        };
+      },
+      cache: true,
+    },
+  });
+
   $(".multiple-select-employee").select2({
     placeholder: "Select an option",
     width: "100%",
@@ -72,6 +118,7 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
+        console.log(result);
         if (result.length) {
           if (form.find("input[name=nik]").length)
             form.find("input[name=nik]").val(result[0].nik);
@@ -254,3 +301,14 @@ function getOptionDivision(elem, division) {
     },
   });
 }
+
+$(".tb_displaytab").on("change", "select[name=status]", function (e) {
+  const tr = $(this).closest("tr");
+  let value = this.value;
+
+  if (value === "MENINGGAL") {
+    tr.find("input[name=dateofdeath]").removeAttr("disabled");
+  } else {
+    tr.find("input[name=dateofdeath]").attr("disabled", true);
+  }
+});

@@ -52,6 +52,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('user', 'Backend\User::index');
     $routes->match(['get', 'post'], 'user/showAll', 'Backend\User::showAll');
     $routes->post('user/create', 'Backend\User::create');
+    $routes->get('user/show', 'Backend\User::show');
     $routes->get('user/show/(:any)', 'Backend\User::show/$1');
     $routes->get('user/destroy/(:any)', 'Backend\User::destroy/$1');
     $routes->match(['get', 'post'], 'user/getList', 'Backend\User::getList');
@@ -216,6 +217,74 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('datang-terlambat/destroy/(:any)', 'Backend\PermissionArrived::destroy/$1');
     $routes->get('datang-terlambat/processIt', 'Backend\PermissionArrived::processIt');
 
+    $routes->add('laporan-potongan-tkh', 'Backend\AllowanceAtt::reportIndex');
+    $routes->match(['get', 'post'], 'laporan-potongan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
+
+    $routes->add('karyawan', 'Backend\Employee::index');
+    $routes->match(['get', 'post'], 'karyawan/showAll', 'Backend\Employee::showAll');
+    $routes->get('karyawan/getDataBy/(:num)', 'Backend\Employee::getBy/$1');
+    $routes->match(['get', 'post'], 'karyawan/getDetail', 'Backend\Employee::getDetailEmployee');
+    $routes->match(['get', 'post'], 'karyawan/getList', 'Backend\Employee::getList');
+    $routes->match(['get', 'post'], 'karyawan/superior', 'Backend\Employee::getSuperior');
+    $routes->get('karyawan/destroy/(:any)', 'Backend\Employee::destroy/$1');
+    $routes->post('karyawan/create', 'Backend\Employee::create');
+    $routes->get('karyawan/show/(:any)', 'Backend\Employee::show/$1');
+
+    $routes->post('keluarga-inti/create', 'Backend\EmpFamilyCore::create');
+    $routes->get('keluarga-inti/show', 'Backend\EmpFamilyCore::show');
+    $routes->get('keluarga-inti/show/(:any)', 'Backend\EmpFamilyCore::show/$1');
+    $routes->post('keluarga-inti/tableLine', 'Backend\EmpFamilyCore::tableLine');
+
+    $routes->post('keluarga/create', 'Backend\EmpFamily::create');
+    $routes->get('keluarga/show', 'Backend\EmpFamily::show');
+    $routes->get('keluarga/show/(:any)', 'Backend\EmpFamily::show/$1');
+    $routes->post('keluarga/tableLine', 'Backend\EmpFamily::tableLine');
+
+    $routes->post('riwayat-pendidikan/create', 'Backend\EmpEducation::create');
+    $routes->get('riwayat-pendidikan/show', 'Backend\EmpEducation::show');
+    $routes->get('riwayat-pendidikan/show/(:any)', 'Backend\EmpEducation::show/$1');
+    $routes->post('riwayat-pendidikan/tableLine', 'Backend\EmpEducation::tableLine');
+
+    $routes->post('riwayat-pekerjaan/create', 'Backend\EmpJob::create');
+    $routes->get('riwayat-pekerjaan/show', 'Backend\EmpJob::show');
+    $routes->get('riwayat-pekerjaan/show/(:any)', 'Backend\EmpJob::show/$1');
+    $routes->post('riwayat-pekerjaan/tableLine', 'Backend\EmpJob::tableLine');
+
+    $routes->post('riwayat-vaksin/tableLine', 'Backend\EmpVaccine::tableLine');
+    $routes->post('riwayat-vaksin/create', 'Backend\EmpVaccine::create');
+    $routes->get('riwayat-vaksin/show', 'Backend\EmpVaccine::show');
+    $routes->get('riwayat-vaksin/show/(:any)', 'Backend\EmpVaccine::show/$1');
+
+    $routes->post('keterampilan/tableLine', 'Backend\EmpSkill::tableLine');
+    $routes->post('keterampilan/create', 'Backend\EmpSkill::create');
+    $routes->get('keterampilan/show', 'Backend\EmpSkill::show');
+    $routes->get('keterampilan/show/(:any)', 'Backend\EmpSkill::show/$1');
+
+    $routes->post('kursus/tableLine', 'Backend\EmpCourse::tableLine');
+    $routes->post('kursus/create', 'Backend\EmpCourse::create');
+    $routes->get('kursus/show', 'Backend\EmpCourse::show');
+    $routes->get('kursus/show/(:any)', 'Backend\EmpCourse::show/$1');
+
+    $routes->post('penguasaan-bahasa/tableLine', 'Backend\EmpLanguage::tableLine');
+    $routes->post('penguasaan-bahasa/create', 'Backend\EmpLanguage::create');
+    $routes->get('penguasaan-bahasa/show', 'Backend\EmpLanguage::show');
+    $routes->get('penguasaan-bahasa/show/(:any)', 'Backend\EmpLanguage::show/$1');
+
+    $routes->post('kontak-darurat/tableLine', 'Backend\EmpContact::tableLine');
+    $routes->post('kontak-darurat/create', 'Backend\EmpContact::create');
+    $routes->get('kontak-darurat/show', 'Backend\EmpContact::show');
+    $routes->get('kontak-darurat/show/(:any)', 'Backend\EmpContact::show/$1');
+
+    $routes->post('sim/tableLine', 'Backend\EmpLicense::tableLine');
+    $routes->post('sim/create', 'Backend\EmpLicense::create');
+    $routes->get('sim/show', 'Backend\EmpLicense::show');
+    $routes->get('sim/show/(:any)', 'Backend\EmpLicense::show/$1');
+
+    $routes->post('kontak-darurat/tableLine', 'Backend\EmergencyContact::tableLine');
+    $routes->post('kontak-darurat/create', 'Backend\EmergencyContact::create');
+    $routes->get('kontak-darurat/show', 'Backend\EmergencyContact::show');
+    $routes->get('kontak-darurat/show/(:any)', 'Backend\EmergencyContact::show/$1');
+  
     $routes->add('pulang-cepat', 'Backend\PermissionLeaveEarly::index');
     $routes->match(['get', 'post'], 'pulang-cepat/showAll', 'Backend\PermissionLeaveEarly::showAll');
     $routes->post('pulang-cepat/create', 'Backend\PermissionLeaveEarly::create');

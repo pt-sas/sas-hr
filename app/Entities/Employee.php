@@ -145,7 +145,10 @@ class Employee extends Entity
 
 	public function setBirthday($birthday)
 	{
-		$this->attributes['birthday'] = $birthday;
+		if (empty($birthday))
+			$this->attributes['birthday'] = null;
+		else
+			$this->attributes['birthday'] = $birthday;
 	}
 
 	public function getOfficePhone()
@@ -445,7 +448,10 @@ class Employee extends Entity
 
 	public function setRegisterDate($registerdate)
 	{
-		$this->attributes['registerdate'] = $registerdate;
+		if (empty($registerdate))
+			$this->attributes['registerdate'] = null;
+		else
+			$this->attributes['registerdate'] = $registerdate;
 	}
 
 	public function getChildNumber()
@@ -545,7 +551,10 @@ class Employee extends Entity
 
 	public function setBpjsKesPeriod($bpjs_kes_period)
 	{
-		$this->attributes['bpjs_kes_period'] = $bpjs_kes_period;
+		if (empty($bpjs_kes_period))
+			$this->attributes['bpjs_kes_period'] = null;
+		else
+			$this->attributes['bpjs_kes_period'] = $bpjs_kes_period;
 	}
 
 	public function getBpjsTenagaNo()
@@ -565,7 +574,10 @@ class Employee extends Entity
 
 	public function setBpjsTenagaPeriod($bpjs_tenaga_period)
 	{
-		$this->attributes['bpjs_tenaga_period'] = $bpjs_tenaga_period;
+		if (empty($bpjs_tenaga_period))
+			$this->attributes['bpjs_tenaga_period'] = null;
+		else
+			$this->attributes['bpjs_tenaga_period'] = $bpjs_tenaga_period;
 	}
 
 	public function getImage()
