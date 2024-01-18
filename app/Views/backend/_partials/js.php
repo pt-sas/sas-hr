@@ -24,7 +24,7 @@
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.colVis.min.js"></script>
 <!-- DateTimePicker -->
-<script src="<?= base_url('custom\js\bootstrap-datetimepicker.min.js') ?>"></script>
+<script src="<?= base_url('custom/js/bootstrap-datetimepicker.min.js') ?>"></script>
 <!-- DateRangePicker -->
 <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <!-- Summernote -->
