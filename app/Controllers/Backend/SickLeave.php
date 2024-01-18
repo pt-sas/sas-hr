@@ -8,7 +8,6 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
-use DateTime;
 
 class SickLeave extends BaseController
 {
@@ -127,19 +126,19 @@ class SickLeave extends BaseController
             try {
                 $this->entity->fill($post);
 
-                // if (!$this->validation->run($post, 'absent')) {
-                //     $response = $this->field->errorValidation($this->model->table, $post);
-                // } else {
+                if (!$this->validation->run($post, 'absent')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
 
-                if ($this->isNew()) {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    if ($this->isNew()) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Sakit);
-                    $this->entity->setDocumentNo($docNo);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Sakit);
+                        $this->entity->setDocumentNo($docNo);
+                    }
+
+                    $response = $this->save();
                 }
-
-                $response = $this->save();
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

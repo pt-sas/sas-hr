@@ -4,40 +4,42 @@ namespace App\Entities;
 
 use CodeIgniter\Entity;
 
-class Leveling extends Entity
+class Holiday extends Entity
 {
-    protected $md_leveling_id;
-    protected $value;
+    protected $md_holiday_id;
     protected $name;
     protected $description;
     protected $isactive;
     protected $created_by;
     protected $updated_by;
+    protected $startdate;
+    protected $enddate;
+    protected $md_religion_id;
+
 
     protected $dates   = [
         'created_at',
-        'updated_at',
-        'deleted_at'
+        'updated_at'
     ];
 
-    public function getLevelingId()
+    public function getHolidayId()
     {
-        return $this->attributes['md_leveling_id'];
+        return $this->attributes['md_holiday_id'];
     }
 
-    public function setLevelingId($md_leveling_id)
+    public function setHolidayId($md_holiday_id)
     {
-        $this->attributes['md_leveling_id'] = $md_leveling_id;
+        $this->attributes['md_holiday_id'] = $md_holiday_id;
     }
 
-    public function getValue()
+    public function getReligionId()
     {
-        return $this->attributes['value'];
+        return $this->attributes['md_religion_id'];
     }
 
-    public function setValue($value)
+    public function setReligionId($md_religion_id)
     {
-        $this->attributes['value'] = $value;
+        $this->attributes['md_religion_id'] = $md_religion_id;
     }
 
     public function getName()
@@ -100,8 +102,23 @@ class Leveling extends Entity
         $this->attributes['updated_by'] = $updated_by;
     }
 
-    public function getDeletedAt()
+    public function getStartDate()
     {
-        return $this->attributes['deleted_at'];
+        return $this->attributes['startdate'];
+    }
+
+    public function setStartDate($startdate)
+    {
+        $this->attributes['startdate'] = $startdate;
+    }
+
+    public function getEndDate()
+    {
+        return $this->attributes['enddate'];
+    }
+
+    public function setEndDate($enddate)
+    {
+        $this->attributes['enddate'] = $enddate;
     }
 }

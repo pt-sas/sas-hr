@@ -1,10 +1,10 @@
 <div class="card-body card-form">
-    <form class="form-horizontal" id="form_leveling">
+    <form class="form-horizontal" id="form_day">
         <?= csrf_field(); ?>
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="value">Kode Jabatan <span class="required">*</span></label>
+                    <label for="value">Kode Hari <span class="required">*</span></label>
                     <input type="text" class="form-control code" id="value" name="value" readonly>
                     <small class="form-text text-danger" id="error_value"></small>
                 </div>

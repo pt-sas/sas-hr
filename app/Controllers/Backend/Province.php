@@ -99,8 +99,15 @@ class Province extends BaseController
                     $list = $this->field->setDataSelect($country->table, $list, 'md_country_id', $rowEmp->getCountryId(), $rowEmp->getName());
                 }
 
+                $title = 'Provinsi';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);
@@ -116,7 +123,7 @@ class Province extends BaseController
     {
         if ($this->request->isAJAX()) {
             try {
-                $result = $this->model->delete($id);
+                $result = $this->delete($id);
                 $response = message('success', true, $result);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

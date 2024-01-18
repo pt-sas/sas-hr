@@ -12,6 +12,7 @@
                 <th>Kode Divisi</th>
                 <th>Nama</th>
                 <th>Deskripsi</th>
+                <th>Cabang</th>
                 <th>Aktif</th>
                 <th>Aksi</th>
             </tr>

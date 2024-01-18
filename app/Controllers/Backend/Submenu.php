@@ -110,8 +110,15 @@ class Submenu extends BaseController
 				$rowMenu = $menu->find($list[0]->getMenuId());
 				$list = $this->field->setDataSelect($menu->table, $list, $menu->primaryKey, $rowMenu->getMenuId(), $rowMenu->getName());
 
+				$title = 'Sub Menu';
+
+				$fieldHeader = new \App\Entities\Table();
+				$fieldHeader->setTitle($title);
+				$fieldHeader->setTable($this->model->table);
+				$fieldHeader->setList($list);
+
 				$result = [
-					'header'    => $this->field->store($this->model->table, $list)
+					'header'    => $this->field->store($fieldHeader)
 				];
 
 				$response = message('success', true, $result);

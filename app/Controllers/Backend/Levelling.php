@@ -3,21 +3,21 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use App\Models\M_Leveling;
+use App\Models\M_Levelling;
 use Config\Services;
 
-class Leveling extends BaseController
+class Levelling extends BaseController
 {
     public function __construct()
     {
         $this->request = Services::request();
-        $this->model = new M_Leveling($this->request);
-        $this->entity = new \App\Entities\Leveling();
+        $this->model = new M_Levelling($this->request);
+        $this->entity = new \App\Entities\Levelling();
     }
 
     public function index()
     {
-        return $this->template->render('masterdata/leveling/v_leveling');
+        return $this->template->render('masterdata/levelling/v_levelling');
     }
 
     public function showAll()
@@ -36,7 +36,7 @@ class Leveling extends BaseController
 
             foreach ($list as $value) :
                 $row = [];
-                $ID = $value->md_leveling_id;
+                $ID = $value->md_levelling_id;
 
                 $number++;
 
@@ -69,7 +69,7 @@ class Leveling extends BaseController
             try {
                 $this->entity->fill($post);
 
-                if (!$this->validation->run($post, 'leveling')) {
+                if (!$this->validation->run($post, 'levelling')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $response = $this->save();
@@ -87,8 +87,15 @@ class Leveling extends BaseController
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
 
+                $title = 'Level';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);
@@ -156,7 +163,7 @@ class Leveling extends BaseController
                 }
 
                 foreach ($list as $key => $row) :
-                    $response[$key]['id'] = $row->getLevelingId();
+                    $response[$key]['id'] = $row->getlevellingId();
                     $response[$key]['text'] = $row->getName();
 
                 endforeach;

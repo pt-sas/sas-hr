@@ -8,6 +8,7 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
+use App\Models\M_Rule;
 
 class PermissionArrived extends BaseController
 {
@@ -98,7 +99,7 @@ class PermissionArrived extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
+                $row[] = format_dmytime($value->startdate, '-');
                 $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
@@ -126,19 +127,19 @@ class PermissionArrived extends BaseController
             try {
                 $this->entity->fill($post);
 
-                // if (!$this->validation->run($post, 'absent')) {
-                //     $response = $this->field->errorValidation($this->model->table, $post);
-                // } else {
+                if (!$this->validation->run($post, 'izinpulangcepat')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
 
-                if ($this->isNew()) {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    if ($this->isNew()) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Datang_Terlambat);
-                    $this->entity->setDocumentNo($docNo);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Datang_Terlambat);
+                        $this->entity->setDocumentNo($docNo);
+                    }
+
+                    $response = $this->save();
                 }
-
-                $response = $this->save();
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -195,6 +196,7 @@ class PermissionArrived extends BaseController
     public function processIt()
     {
         $mAllowance = new M_AllowanceAtt($this->request);
+        // $rule = new M_Rule($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -203,6 +205,17 @@ class PermissionArrived extends BaseController
             $_DocAction = $post['docaction'];
 
             $row = $this->model->find($_ID);
+            // $hour = format_time($row->getStartDate());
+            // $timeLimit1 = \DateTime::createFromFormat('H:i', '08:30');
+            // $timeLimit2 = \DateTime::createFromFormat('H:i', '13:00');
+            // $amount = '0';
+
+
+            // if ($hour > $timeLimit1) {
+            //     $amount = 0.5;
+            // } else if ($hour > $timeLimit2) {
+            //     $amount = 1;
+            // }
 
             try {
                 if (!empty($_DocAction)) {
@@ -212,21 +225,16 @@ class PermissionArrived extends BaseController
                         $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                         $response = $this->save();
 
-                        $range = getDatesFromRange($row->getStartDate(), $row->getEndDate());
-
-                        $arr = [];
-                        foreach ($range as $date) {
-                            $arr[] = [
-                                "record_id"         => $_ID,
-                                "table"             => $this->model->table,
-                                "submissiontype"    => $row->getSubmissionType(),
-                                "submissiondate"    => $date,
-                                "md_employee_id"    => $row->getEmployeeId(),
-                                "amount"            => 0.5,
-                                "created_by"        => $this->access->getSessionUser(),
-                                "updated_by"        => $this->access->getSessionUser(),
-                            ];
-                        }
+                        $arr[] = [
+                            "record_id"         => $_ID,
+                            "table"             => $this->model->table,
+                            "submissiontype"    => $row->getSubmissionType(),
+                            "submissiondate"    => $row->getStartDate(),
+                            "md_employee_id"    => $row->getEmployeeId(),
+                            "amount"            => 0.5,
+                            "created_by"        => $this->access->getSessionUser(),
+                            "updated_by"        => $this->access->getSessionUser(),
+                        ];
 
                         $mAllowance->builder->insertBatch($arr);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {

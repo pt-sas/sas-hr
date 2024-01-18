@@ -99,8 +99,15 @@ class SubDistrict extends BaseController
                     $list = $this->field->setDataSelect($district->table, $list, 'md_district_id', $rowEmp->getDistrictId(), $rowEmp->getName());
                 }
 
+                $title = 'Kelurahan';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'   => $this->field->store($this->model->table, $list)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);

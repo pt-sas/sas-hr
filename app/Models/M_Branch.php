@@ -28,7 +28,7 @@ class M_Branch extends Model
         'md_branch.value',
         'md_branch.name',
         'md_branch.address',
-        'md_employee.name',
+        'md_employee.fullname',
         'md_branch.phone',
         'md_branch.isactive'
     ];
@@ -36,7 +36,7 @@ class M_Branch extends Model
         'md_branch.value',
         'md_branch.name',
         'md_branch.address',
-        'md_employee.name',
+        'md_employee.fullname',
         'md_branch.phone',
         'md_branch.isactive'
     ];
@@ -56,7 +56,7 @@ class M_Branch extends Model
     public function getSelect()
     {
         $sql = $this->table . '.*,
-                md_employee.name as leader';
+                md_employee.fullname as leader';
 
         return $sql;
     }
