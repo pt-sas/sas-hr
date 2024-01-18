@@ -155,9 +155,31 @@ $(document).ready(function (e) {
     useCurrent: false,
   });
 
+  $(".datetimepicker-start").datetimepicker({
+    format: "DD-MMM-YYYY hh:mm",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    daysOfWeekDisabled: [0, 6],
+    useCurrent: false,
+  });
+
+  $(".datetimepicker-end").datetimepicker({
+    format: "DD-MMM-YYYY hh:mm",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    daysOfWeekDisabled: [0, 6],
+    useCurrent: false,
+  });
+
   //* start date picker on change event [select minimun date for end date datepicker]
   $(".datepicker-start").on("dp.change", function (e) {
     $(".datepicker-end").data("DateTimePicker").minDate(e.date);
+  });
+
+  $(".datetimepicker-start").on("dp.change", function (e) {
+    $(".datetimepicker-end").data("DateTimePicker").minDate(e.date);
   });
 
   //* Start date picker on change event [select maximum date for start date datepicker]
@@ -166,6 +188,17 @@ $(document).ready(function (e) {
       $(".datepicker-start").data("DateTimePicker").maxDate(e.date);
     } else {
       $(".datepicker-start")
+        .data("DateTimePicker")
+        .useCurrent(true)
+        .maxDate(e.date);
+    }
+  });
+
+  $(".datetimepicker-end").on("dp.change", function (e) {
+    if ($(".datetimepicker-start").val() !== "") {
+      $(".datetimepicker-start").data("DateTimePicker").maxDate(e.date);
+    } else {
+      $(".datetimepicker-start")
         .data("DateTimePicker")
         .useCurrent(true)
         .maxDate(e.date);
@@ -3202,6 +3235,12 @@ function clearForm(evt) {
 
   if (form.find(".datepicker-end").length)
     form.find(".datepicker-end").data("DateTimePicker").clear();
+
+  if (form.find(".datetimepicker-start").length)
+    form.find(".dateptimeicker-start").data("DateTimePicker").clear();
+  
+  if (form.find(".datetimepicker-end").length)
+    form.find(".dattimeepicker-end").data("DateTimePicker").clear();
 
   // Set to empty array option
   option = [];

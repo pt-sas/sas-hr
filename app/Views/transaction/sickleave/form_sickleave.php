@@ -80,18 +80,18 @@
                     </label>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <div class="form-group">
-                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker-start" name="startdate" placeholder="Tanggal Mulai">
+                    <label for="date">Tanggal <span class="required">*</span></label>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control datepicker-start" name="startdate" placeholder="Tanggal Mulai">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control datepicker-end" name="enddate" placeholder="Tanggal Selesai">
+                        </div>
+                    </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="date">Tanggal Selesai <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker-end" name="enddate" placeholder="Tanggal Selesai">
-                    <small class="form-text text-danger" id="error_enddate"></small>
                 </div>
             </div>
             <div class="col-md-6">
