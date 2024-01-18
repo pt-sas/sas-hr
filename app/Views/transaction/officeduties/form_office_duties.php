@@ -5,7 +5,7 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="karyawan/getList">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
