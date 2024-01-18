@@ -586,4 +586,35 @@ class Validation
             ]
         ],
     ];
+
+    public $izinpulangcepat = [
+        'md_employee_id'                 => [
+            'label'            => 'Karyawan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'                 => [
+            'label'            => 'Cabang',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'                 => [
+            'label'            => 'Divisi',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'startdate'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
 }
