@@ -25,3 +25,8 @@ function format_dmy($date, $separator)
 {
     return date('d' . $separator . 'M' . $separator . 'Y', strtotime($date));
 }
+
+function format_dmytime($date, $separator)
+{
+    return date('d' . $separator . 'M' . $separator . 'Y' . ' H:i', strtotime($date));
+}
