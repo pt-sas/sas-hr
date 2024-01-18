@@ -204,7 +204,7 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="md_levelling_id">Level <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id" data-url="leveling/getList">
+                <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id" data-url="levelling/getList">
                     <option value="">Select Level</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_levelling_id"></small>
