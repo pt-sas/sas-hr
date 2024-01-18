@@ -24,6 +24,7 @@
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.colVis.min.js"></script>
 <!-- DateTimePicker -->
 <script src="<?= base_url('atlantis-pro/js/plugin/datepicker/bootstrap-datetimepicker.min.js') ?>"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
 <!-- DateRangePicker -->
 <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <!-- Summernote -->
@@ -47,6 +48,6 @@
 <!-- Websocket Pusher -->
 <script src="https://js.pusher.com/7.2/pusher.min.js"></script>
 <!-- Custom Process -->
-<script src="<?= base_url('custom/js/Process.min.js') ?>"></script>
+<script src="<?= base_url('custom/js/Process.js') ?>"></script>
 <!-- Event For Table Line -->
 <script src="<?= base_url('custom/js/Event.js') ?>"></script>

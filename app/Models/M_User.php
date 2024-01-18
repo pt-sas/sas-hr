@@ -21,7 +21,8 @@ class M_User extends Model
 		'datepasswordchange',
 		'updated_at',
 		'created_by',
-		'updated_by'
+		'updated_by',
+		'md_employee_id'
 	];
 	protected $useTimestamps        = true;
 	protected $returnType           = 'App\Entities\User';

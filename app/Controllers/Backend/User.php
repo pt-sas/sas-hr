@@ -3,6 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Employee;
 use App\Models\M_User;
 use App\Models\M_Role;
 use Config\Services;
@@ -85,28 +86,68 @@ class User extends BaseController
 			try {
 				$this->entity->fill($post);
 
-				if (!$this->validation->run($post, 'user')) {
-					$response =	$this->field->errorValidation($this->model->table, $post);
-				} else {
-					$response = $this->save();
+				// 	// if (!$this->validation->run($post, 'user')) {
+				// 	// 	$response =	$this->field->errorValidation($this->model->table, $post);
+				// 	// } else {
+				$response = $this->save();
+
+				if (isset($response[0]["success"])) {
+					$id = $this->getID();
+
+					if ($this->isNew()) {
+						$id = $this->insertID;
+						$response[0]["primarykey"] = $id;
+					}
+
+					$response[0]["header"] = $this->getData($id);
 				}
+				// 	// }
 			} catch (\Exception $e) {
 				$response = message('error', false, $e->getMessage());
 			}
 
-			return $this->response->setJSON($response);
+			// return $this->response->setJSON($response);
+			return json_encode($response);
 		}
 	}
 
-	public function show($id)
+	public function show($id = null)
 	{
 		if ($this->request->isAJAX()) {
+			$get = $this->request->getGet();
+
+			$result = [];
+
 			try {
+				$mEmployee = new M_Employee($this->request);
+				$get = $this->request->getGet();
+
 				$list = $this->model->detail([], $this->model->table . '.' . $this->model->primaryKey, $id);
 
-				$result = [
-					'header'    => $this->field->store($this->model->table, $list->getResult(), $list)
-				];
+				if (isset($get["md_employee_id"])) {
+					$list = $this->model->detail([], $this->model->table . '.md_employee_id', $get["md_employee_id"]);
+				}
+
+				$data = $list->getResult();
+
+				if ($data) {
+
+					if (!empty($data[0]->md_employee_id)) {
+						$rowEmp = $mEmployee->find($data[0]->md_employee_id);
+						$data[0]->md_employee_id = $rowEmp->getFullName();
+					}
+
+					$fieldHeader = new \App\Entities\Table();
+					$fieldHeader->setTitle($data[0]->username);
+					$fieldHeader->setTable($this->model->table);
+					$fieldHeader->setPrimaryKey($this->model->primaryKey);
+					$fieldHeader->setQuery($list);
+					$fieldHeader->setList($data);
+
+					$result = [
+						'header'    => $this->field->store($fieldHeader)
+					];
+				}
 
 				$response = message('success', true, $result);
 			} catch (\Exception $e) {
@@ -115,6 +156,34 @@ class User extends BaseController
 
 			return $this->response->setJSON($response);
 		}
+	}
+
+	private function getData($id)
+	{
+		$mEmployee = new M_Employee($this->request);
+		$get = $this->request->getGet();
+
+		$list = $this->model->detail([], $this->model->table . '.' . $this->model->primaryKey, $id);
+
+		if (isset($get["md_employee_id"])) {
+			$list = $this->model->detail([], $this->model->table . '.md_employee_id', $get["md_employee_id"]);
+		}
+
+		$data = $list->getResult();
+
+		if (!empty($data[0]->md_employee_id)) {
+			$rowEmp = $mEmployee->find($data[0]->md_employee_id);
+			$data[0]->md_employee_id = $rowEmp->getFullName();
+		}
+
+		$fieldHeader = new \App\Entities\Table();
+		$fieldHeader->setTitle($data[0]->username);
+		$fieldHeader->setTable($this->model->table);
+		$fieldHeader->setPrimaryKey($this->model->primaryKey);
+		$fieldHeader->setQuery($list);
+		$fieldHeader->setList($data);
+
+		return $this->field->store($fieldHeader);
 	}
 
 	public function destroy($id)

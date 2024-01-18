@@ -34,6 +34,7 @@ class Field
         $table = $entity->getTable();
         $query = $entity->getQuery();
         $data = $entity->getList();
+        $column = $entity->getField();
         $primaryKey = $entity->getPrimaryKey();
 
         $result[] = [
@@ -55,13 +56,13 @@ class Field
             $result = $data;
 
         if ($fields) {
-            foreach ($fields as $field) :
-                foreach ($data as $row) :
+            foreach ($data as $row) :
+                foreach ($fields as $field) :
                     if (is_null($query))
                         $result[] = [
-                            'field' => $field->name,
-                            'label' => $row->{$field->name},
-                            'primarykey' => $field->primary_key == 1 ? true : false
+                            'field'         => $field->name,
+                            'label'         => $row->{$field->name},
+                            'primarykey'    => $field->primary_key == 1 ? true : false
                         ];
                     else
                         $result[] = [
@@ -70,6 +71,23 @@ class Field
                             'primarykey'    => $field === $primaryKey ? true : false
                         ];
                 endforeach;
+
+
+                if (is_array($column)) {
+                    foreach ($column as $val) :
+                        $result[] = [
+                            'field'         => $val,
+                            'label'         => $row->$val,
+                            'primarykey'    => false
+                        ];
+                    endforeach;
+                } else {
+                    $result[] = [
+                        'field'         => $column,
+                        'label'         => $row->$column,
+                        'primarykey'    => false
+                    ];
+                }
             endforeach;
         }
 

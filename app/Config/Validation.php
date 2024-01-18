@@ -456,4 +456,19 @@ class Validation
             ]
         ]
     ];
+
+    public $employee = [
+        'value'                 => [
+            'rules'             => 'required|is_unique[md_employee.value,md_employee_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+            // ],
+            // 'birthday'              => [
+            //     'rules'             => 'required',
+            //     'errors'            => [
+            //         'required'      => 'Mohon mengisi {field} dahulu'
+            //     ]
+        ]
+    ];
 }

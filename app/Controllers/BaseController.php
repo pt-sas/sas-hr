@@ -96,6 +96,10 @@ class BaseController extends Controller
 	protected $Form_Kelengkapan_Absent = 'FK';
 	/** Form Absent */
 	protected $Form_Absent = 'FA';
+	/** Status HIDUP*/
+	protected $Status_Hidup = 'HIDUP';
+	/** Form MENINGGAL */
+	protected $Status_Meninggal = 'MENINGGAL';
 
 	/**
 	 * The column used for primaryKey int

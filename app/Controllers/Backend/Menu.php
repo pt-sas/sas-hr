@@ -103,8 +103,13 @@ class Menu extends BaseController
 			try {
 				$list = $this->model->where($this->model->primaryKey, $id)->findAll();
 
+				$fieldHeader = new \App\Entities\Table();
+				$fieldHeader->setTitle($list[0]->getName());
+				$fieldHeader->setTable($this->model->table);
+				$fieldHeader->setList($list);
+
 				$result = [
-					'header'    => $this->field->store($this->model->table, $list)
+					'header'    => $this->field->store($fieldHeader)
 				];
 
 				$response = message('success', true, $result);

@@ -12,8 +12,7 @@ let ORI_URL = window.location.origin,
   ADMIN_URL = ORI_URL + ADMIN,
   SITE_URL = ADMIN_URL + LAST_URL;
 
-let ID,
-  _table,
+let _table,
   _tableLine,
   setSave,
   ul,
@@ -22,6 +21,8 @@ let ID,
   formReport,
   _tableReport,
   _tableApproval;
+
+let ID = 0;
 
 let clear = false;
 
@@ -137,6 +138,14 @@ $(document).ready(function (e) {
     useCurrent: false,
   });
 
+  $(".datetimepicker").datetimepicker({
+    format: "DD-MMM-YYYY HH:mm:ss",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    useCurrent: false,
+  });
+
   $(".datepicker-start").datetimepicker({
     format: "DD-MMM-YYYY",
     showTodayButton: true,
@@ -203,6 +212,12 @@ $(document).ready(function (e) {
         .useCurrent(true)
         .maxDate(e.date);
     }
+  });
+
+  $(".monthyear").datetimepicker({
+    format: "MMM-YYYY",
+    showClear: true,
+    useCurrent: false,
   });
 
   $(".daterange").daterangepicker({
@@ -607,39 +622,62 @@ function reloadTable() {
  *
  */
 $(".save_form").click(function (evt) {
-  const container = $(evt.target).closest(".container");
-  const parent = $(evt.target).closest(".row");
-  cardForm =
-    parent.find(".card-form").length > 0
-      ? parent.find(".card-form")
-      : parent.find(".card-main");
-  const form = cardForm.find("form");
+  const _this = $(this);
+  const target = $(evt.target);
+  const container = target.closest(".container");
+  const parent = target.closest(".row");
   const card = container.find(".card");
   const actionMenu = card.attr("data-action-menu");
   const div = cardForm.find("div");
-
-  let field;
-
-  let _this = $(this);
+  const navTab = parent.find("ul.nav-tabs");
   let oriElement = _this.html();
   let oriTitle = container.find(".page-title").text();
+
+  cardForm = parent.find(".card-form").length
+    ? parent.find(".card-form")
+    : parent.find(".card-main");
+
+  let form = cardForm.find("form");
+  let tabPane = null;
+
+  let url = CURRENT_URL + CREATE;
+
+  if (navTab.length) {
+    const cardTab = parent.find("div.card-tab");
+    let a = navTab.find("li a.active");
+    let href = a.attr("href");
+    tabPane = cardTab.find(".tab-pane.active");
+
+    if (a.prop("classList").contains("dropdown-toggle")) {
+      a = a.closest("li").find("div a.active");
+      href = a.attr("href");
+    }
+
+    form = tabPane.find("form");
+
+    href = href.substring(1, href.length);
+    url = `${ADMIN_URL}${href}${CREATE}`;
+  }
 
   let action = "create";
   let checkAccess = isAccess(action, LAST_URL);
 
   let formData = new FormData();
-  let url = CURRENT_URL + CREATE;
 
   if (checkAccess[0].success && checkAccess[0].message == "Y") {
+    let field;
+
     //* Populate field form header
     $.each(form, function () {
-      const formHeader = $(this).find(".row")[0];
+      const formHeader = $(this).find(".row");
       field = $(formHeader).find("input, select, textarea").not(".line");
     });
 
     //? Remove attribute disabled when submit data
     for (let i = 0; i < field.length; i++) {
       if (field[i].name !== "") {
+        let className = field[i].className.split(/\s+/);
+
         form
           .find(
             "input:checkbox[name=" +
@@ -650,13 +688,6 @@ $(".save_form").click(function (evt) {
           )
           .not(".line")
           .removeAttr("disabled");
-      }
-    }
-
-    //* Form Header
-    for (let i = 0; i < field.length; i++) {
-      if (field[i].name !== "") {
-        let className = field[i].className.split(/\s+/);
 
         //* Set field and value to formData
         if (
@@ -670,9 +701,7 @@ $(".save_form").click(function (evt) {
 
         //* Field type input radio
         if (field[i].type == "radio") {
-          if (field[i].checked) {
-            formData.append(field[i].name, field[i].value);
-          }
+          if (field[i].checked) formData.append(field[i].name, field[i].value);
         }
 
         //* Field type input file and containing class control-upload-image
@@ -685,13 +714,10 @@ $(".save_form").click(function (evt) {
             formData.append(field[i].name, field[i].files[0]);
           } else {
             let source = form.find(".img-result").attr("src");
-            let imgSrc;
+            let imgSrc = source;
 
-            if (source !== "") {
+            if (typeof source !== "undefined" && source !== "")
               imgSrc = source.substr(source.lastIndexOf("/") + 1);
-            } else {
-              imgSrc = source;
-            }
 
             formData.append(field[i].name, imgSrc);
           }
@@ -699,10 +725,7 @@ $(".save_form").click(function (evt) {
 
         //* Field type textarea class summernote isEmpty to set value null
         if (
-          (form.find("textarea.summernote[name=" + field[i].name + "]").length >
-            0 ||
-            form.find("textarea.summernote-product[name=" + field[i].name + "]")
-              .length > 0) &&
+          form.find("textarea.summernote[name=" + field[i].name + "]").length &&
           $("[name =" + field[i].name + "]").summernote("isEmpty")
         ) {
           formData.append(field[i].name, "");
@@ -718,11 +741,9 @@ $(".save_form").click(function (evt) {
 
         //* Field type input checkbox
         if (field[i].type == "checkbox") {
-          if (field[i].checked) {
-            formData.append(field[i].name, "Y");
-          } else {
-            formData.append(field[i].name, "N");
-          }
+          let checked = field[i].checked ? "Y" : "N";
+
+          formData.append(field[i].name, checked);
         }
 
         //* Field containing class datepicker
@@ -731,7 +752,8 @@ $(".save_form").click(function (evt) {
           className.includes("datepicker-start") ||
           className.includes("datetimepicker-start") ||
           className.includes("datepicker-end") ||
-          className.includes("datetimepicker-end")
+          className.includes("datetimepicker-end") ||
+          className.includes("datetimepicker")
         ) {
           let date = field[i].value;
 
@@ -744,6 +766,11 @@ $(".save_form").click(function (evt) {
         //* Field containing class rupiah
         if (className.includes("rupiah")) {
           formData.append(field[i].name, replaceRupiah(field[i].value));
+        }
+
+        //* Field containing class foreignkey
+        if (className.includes("foreignkey")) {
+          formData.append(field[i].name, $(field[i]).attr("set-id"));
         }
       }
     }
@@ -805,7 +832,6 @@ $(".save_form").click(function (evt) {
             menu: menu,
           });
         }
-
         if (setSave !== "add")
           accessID.push({
             row: row_index,
@@ -856,12 +882,23 @@ $(".save_form").click(function (evt) {
           let name = $(this).attr("name");
           let value = this.value;
           let id = $(this).attr("id");
+          const foreignkey = form.find("input.foreignkey");
 
           //* Field containing class rupiah
-          if (className.includes("rupiah")) value = replaceRupiah(this.value);
+          if (className.includes("rupiah")) value = replaceRupiah(value);
 
           if (this.type === "text" || this.type === "select-one") {
-            row[name] = value;
+            //* Field containing class datepicker
+            if (className.includes("datepicker")) {
+              let date = value;
+
+              if (date !== "") {
+                let dateTime = moment(date).format("YYYY-MM-DD HH:mm:ss");
+                row[name] = dateTime;
+              }
+            } else {
+              row[name] = value;
+            }
           } else if (this.type === "checkbox") {
             row[name] = $(this).is(":checked") ? "Y" : "N";
           } else if (typeof name !== "undefined") {
@@ -869,13 +906,14 @@ $(".save_form").click(function (evt) {
             else row[name] = "";
 
             if (className.includes("reference-key")) row[name] = value; // Get value reference key
+          } else {
+            row[foreignkey.attr("name")] = foreignkey.attr("set-id");
           }
         });
 
         //* Table cell data
         $.each(td, function (i, item) {
           let txtValue = $(item).text();
-
           $.each(tableHead, function (idx, column) {
             if (i == column.position) row[column.name] = txtValue;
           });
@@ -888,7 +926,13 @@ $(".save_form").click(function (evt) {
     }
 
     //* Set primary key on the property "id"
-    if (setSave !== "add") formData.append("id", ID);
+    if (
+      (tabPane == null && setSave !== "add") ||
+      (tabPane != null &&
+        typeof tabPane.attr("set-save") !== "undefined" &&
+        tabPane.attr("set-save") === "update")
+    )
+      formData.append("id", ID);
 
     $.ajax({
       url: url,
@@ -915,36 +959,70 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
+        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
             title: result[0].message,
           });
 
-          if (actionMenu !== "F") {
-            clearForm(evt);
+          //? Action menu is form
+          if (actionMenu === "F") {
+            //TODO: Call function and set data
+            showFormData(form);
+            clearErrorForm(form);
+          } else {
+            if (container.find(".modal").length) {
+              let modal = parent.find(".modal");
+              let modalID = modal.attr("id");
 
-            if (!cardForm.prop("classList").contains("modal")) {
-              const parent = cardForm.closest(".container");
-              const cardBody = parent.find(".card-body");
+              if (parent.find(".modal-tab").length) {
+                const tabPaneAll = parent.find(".tab-pane");
+                const navLink = navTab.find("li.nav-item a");
+                tabPane.attr("set-save", "update");
+
+                if (typeof result[0].foreignkey !== "undefined") {
+                  ID = result[0].foreignkey;
+
+                  tabPane.attr("set-id", ID);
+
+                  $.each(navLink, function () {
+                    if (!this.classList.contains("active"))
+                      $(this).removeClass("disabled");
+                  });
+
+                  $.each(tabPaneAll, function () {
+                    const form = $(this).find("form");
+                    form.find("input.foreignkey").attr("set-id", ID);
+                  });
+                }
+
+                if (typeof result[0].primarykey !== "undefined")
+                  ID = result[0].primarykey;
+
+                if (typeof result[0].header !== "undefined")
+                  putFieldData(form, result[0].header);
+              } else {
+                $(`#${modalID}`).modal("hide");
+                clearForm(evt);
+              }
+            } else {
+              clearForm(evt);
+              const cardBody = container.find(".card-body");
 
               $.each(cardBody, function (idx, elem) {
                 let className = elem.className.split(/\s+/);
-
                 if (className.includes("card-main")) {
                   $(this).css("display", "block");
-
                   // Remove breadcrumb list
                   let li = ul.find("li");
                   $.each(li, function (idx, elem) {
                     if (idx > 2) elem.remove();
                   });
-
                   if (parent.find("div.filter_page").length > 0) {
                     parent.find("div.filter_page").css("display", "block");
                   }
                 }
-
                 if (className.includes("card-form")) {
                   const cardHeader = parent.find(".card-header");
                   cardHeader.find("button").show();
@@ -959,19 +1037,12 @@ $(".save_form").click(function (evt) {
 
               if (btnList.contains("new_form"))
                 cardHeader.find("button").css("display", "block");
-            } else {
-              modalForm.modal("hide");
+
+              cardTitle.html(oriTitle);
+
+              //TODO: Call reloadTable();
+              $(".btn_requery").click();
             }
-
-            cardTitle.html(oriTitle);
-
-            //TODO: Call reloadTable();
-            $(".btn_requery").click();
-          } else {
-            //TODO: Call function and set data
-            showFormData(form);
-
-            clearErrorForm(form);
           }
         } else if (result[0].error) {
           errorForm(form, result);
@@ -986,7 +1057,6 @@ $(".save_form").click(function (evt) {
             type: "error",
             title: result[0].message,
           });
-
           clearErrorForm(form);
         }
       },
@@ -998,11 +1068,9 @@ $(".save_form").click(function (evt) {
     // logic after insert / update data to set attribute based on field isactive condition
     for (let i = 0; i < field.length; i++) {
       let fieldActive = form.find("input.active");
-
       // Check element name is not null and any field checkbox active
       if (field[i].name !== "" && fieldActive.length > 0) {
         let className = field[i].className.split(/\s+/);
-
         if (form.find("input.active").is(":checked")) {
           if (!fieldReadOnly.includes(field[i].name)) {
             form
@@ -1080,8 +1148,9 @@ function Edit(id, status, last_url) {
   const parent = $(".container");
   const cardBody = parent.find(".card-body");
   const cardForm = parent.find(".card-form");
-  const form = cardForm.find("form");
+  let form = cardForm.find("form");
   const main_page = parent.find(".main_page");
+  const modalTab = parent.find(".modal-tab");
   let s = parent.find(".card");
 
   ID = id;
@@ -1149,13 +1218,27 @@ function Edit(id, status, last_url) {
               cardBtn.css("display", "block");
               formList = $(this).prop("classList");
             }
-          } else {
-            openModalForm();
-            Scrollmodal();
-            form = modalForm.find("form");
-            formList = cardForm.prop("classList");
           }
         });
+
+        if (modalTab.length) {
+          let modalID = modalTab.attr("id");
+
+          $(`#${modalID}`).modal({
+            backdrop: "static",
+            keyboard: false,
+          });
+
+          const navLink = modalTab.find("li.nav-item a");
+
+          $.each(navLink, function () {
+            if (!this.classList.contains("active"))
+              $(this).addClass("disabled");
+          });
+
+          Scrollmodal();
+          form = modalTab.find("form");
+        }
 
         let url = CURRENT_URL + SHOW + ID;
 
@@ -1189,6 +1272,7 @@ function Edit(id, status, last_url) {
             hideLoadingForm(form.prop("id"));
           },
           success: function (result) {
+            console.log(result);
             if (result[0].success) {
               let arrMsg = result[0].message;
 
@@ -1327,14 +1411,34 @@ function Edit(id, status, last_url) {
                 let data = arrMsg.header;
                 putFieldData(form, data);
 
-                for (let i = 0; i < data.length; i++) {
-                  let fieldInput = data[i].field;
-                  let label = data[i].label;
+                if (modalTab.length) {
+                  const navLink = modalTab.find("li.nav-item a");
+                  const tabPaneAll = modalTab.find(".tab-pane");
 
-                  if (formList.contains("modal") && fieldInput === "title") {
-                    modalTitle.html(capitalize(label));
-                  } else if (fieldInput === "title") {
-                    cardTitle.html(capitalize(label));
+                  $.each(navLink, function () {
+                    if (!this.classList.contains("active"))
+                      $(this).removeClass("disabled");
+                  });
+
+                  $.each(tabPaneAll, function () {
+                    const form = $(this).find("form");
+                    form.find("input.foreignkey").attr("set-id", id);
+
+                    if ($(this).prop("classList").contains("active")) {
+                      $(this).attr("set-save", setSave);
+                      $(this).attr("set-id", id);
+                    }
+                  });
+                } else {
+                  for (let i = 0; i < data.length; i++) {
+                    let fieldInput = data[i].field;
+                    let label = data[i].label;
+
+                    if (formList.contains("modal") && fieldInput === "title") {
+                      modalTitle.html(capitalize(label));
+                    } else if (fieldInput === "title") {
+                      cardTitle.html(capitalize(label));
+                    }
                   }
                 }
               }
@@ -1608,11 +1712,12 @@ function docProcess(id, status) {
  * @close_form button in card-action
  */
 $(document).on("click", ".x_form, .close_form, .reset_form", function (evt) {
-  let target = $(evt.currentTarget);
+  const target = $(evt.currentTarget);
   const container = target.closest(".container");
   const card = container.find(".card");
   const actionMenu = card.attr("data-action-menu");
   const div = card.find("div");
+  const modalTab = target.closest(".modal-tab");
 
   let oriTitle = container.find(".page-title").text();
 
@@ -1664,6 +1769,34 @@ $(document).on("click", ".x_form, .close_form, .reset_form", function (evt) {
     );
   }
 
+  if (modalTab.length) {
+    const tabPaneAll = modalTab.find(".tab-pane");
+    const navLink = modalTab.find("li.nav-item a");
+
+    $.each(navLink, function (i) {
+      if (i == 0) {
+        $(this).addClass("show active");
+      } else {
+        $(this).removeClass("active");
+      }
+    });
+
+    $.each(tabPaneAll, function (i) {
+      const form = $(this).find("form");
+      form.find("input.foreignkey").removeAttr("set-id");
+      $(this).removeAttr("set-save");
+      $(this).removeAttr("set-id");
+
+      if (i == 0) {
+        $(this).addClass("show active");
+      } else {
+        $(this).removeClass("show active");
+      }
+    });
+  }
+
+  ID = 0;
+
   clearForm(evt);
 
   //TODO: Hide content there is attribute show-after-save
@@ -1681,265 +1814,269 @@ $(document).on("click", ".x_form, .close_form, .reset_form", function (evt) {
 /**
  * Button new data
  */
-$(".new_form").click(function (evt) {
-  const parent = $(evt.target).closest(".container");
+$(document).on("click", ".new_form", function (evt) {
+  const target = $(evt.target);
+  const parent = target.closest(".container");
   const cardBody = parent.find(".card-body");
   const main_page = parent.find(".main_page");
+  const modalTab = parent.find(".modal-tab");
   let s = parent.find(".card");
 
   let form;
   let action = "create";
   let oriTitle = parent.find(".page-title").text();
-  let checkAccess = isAccess(action, LAST_URL);
   let _this = $(this);
   let oriElement = _this.html();
   let textElement = _this.text().trim();
 
+  let checkAccess = isAccess(action, LAST_URL);
   $(this).tooltip("hide");
 
-  if (checkAccess[0].success && checkAccess[0].message == "Y") {
-    $(_this)
-      .html(
-        '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>' +
-          textElement
-      )
-      .prop("disabled", true);
+  // if (checkAccess[0].success && checkAccess[0].message == "Y") {
+  $(_this)
+    .html(
+      '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>' +
+        textElement
+    )
+    .prop("disabled", true);
 
-    //? Identified card is more than 1 page
-    if (s.length > 1) s = parent.find(".page-inner");
-    else s = main_page.find(".card");
+  //? Identified card is more than 1 page
+  if (s.length > 1) s = parent.find(".page-inner");
+  else s = main_page.find(".card");
 
-    s.length &&
-      (s.addClass("is-loading"),
-      setTimeout(function () {
-        $.each(cardBody, function (idx, elem) {
-          let className = elem.className.split(/\s+/);
+  s.length &&
+    (s.addClass("is-loading"),
+    setTimeout(function () {
+      $.each(cardBody, function (idx, elem) {
+        let className = elem.className.split(/\s+/);
 
-          if (cardBody.length > 1) {
-            if (className.includes("card-main")) {
-              $(this).css("display", "none");
+        if (cardBody.length > 1) {
+          if (className.includes("card-main")) {
+            $(this).css("display", "none");
 
-              const pageHeader = parent.find(".page-header");
-              ul = pageHeader.find("ul.breadcrumbs");
+            ul = parent.find(".page-header > ul.breadcrumbs");
 
-              // Append list separator and text create
-              ul.find("li.nav-item > a").attr("href", CURRENT_URL);
+            // Append list separator and text create
+            ul.find("li.nav-item > a").attr("href", CURRENT_URL);
 
-              let list =
-                '<li class="separator">' +
-                '<i class="flaticon-right-arrow"></i>' +
-                "</li>";
+            let list =
+              '<li class="separator">' +
+              '<i class="flaticon-right-arrow"></i>' +
+              "</li>";
 
-              list +=
-                '<li class="nav-item">' +
-                '<a class="text-primary font-weight-bold">Create</a>' +
-                "</li>";
+            list +=
+              '<li class="nav-item">' +
+              '<a class="text-primary font-weight-bold">Create</a>' +
+              "</li>";
 
-              ul.append(list);
+            ul.append(list);
 
-              if (parent.find("div.filter_page").length > 0) {
-                parent.find("div.filter_page").css("display", "none");
-              }
-            }
-
-            if (className.includes("card-form")) {
-              const cardHeader = $(evt.target).closest(".card-header");
-              cardHeader.find("button").css("display", "none");
-              $(this).css("display", "block");
-              cardBtn.css("display", "block");
-
-              cardTitle.html("New " + oriTitle);
-
-              form = $(this).find("form");
-
-              if (form.find("input:file.control-upload-image").length > 0) {
-                form.find(".img-result").attr("src", "");
-              }
-
-              const field = parent.find("input, textarea, select");
-
-              for (let i = 0; i < field.length; i++) {
-                let fields = [];
-
-                if (field[i].name !== "") {
-                  // set field is readonly or disabled by default
-                  if (field[i].readOnly || field[i].disabled)
-                    fieldReadOnly.push(field[i].name);
-
-                  // set field is checked by default from set attribute on the field
-                  if (
-                    field[i].type == "checkbox" &&
-                    fieldChecked.includes(field[i].name)
-                  )
-                    form
-                      .find("input:checkbox[name=" + field[i].name + "]")
-                      .prop("checked", true);
-
-                  //? Condition field and contain attribute hide-field
-                  if ($(field[i]).attr("hide-field")) {
-                    fields = $(field[i])
-                      .attr("hide-field")
-                      .split(",")
-                      .map((element) => element.trim());
-
-                    if (field[i].type === "checkbox") {
-                      if (field[i].checked) {
-                        for (let i = 0; i < fields.length; i++) {
-                          let formGroup = form
-                            .find(
-                              "input[name=" +
-                                fields[i] +
-                                "], textarea[name=" +
-                                fields[i] +
-                                "], select[name=" +
-                                fields[i] +
-                                "]"
-                            )
-                            .closest(".form-group, .form-check");
-                          formGroup.hide();
-                        }
-                      } else {
-                        for (let i = 0; i < fields.length; i++) {
-                          let formGroup = form
-                            .find(
-                              "input[name=" +
-                                fields[i] +
-                                "], textarea[name=" +
-                                fields[i] +
-                                "], select[name=" +
-                                fields[i] +
-                                "]"
-                            )
-                            .closest(".form-group, .form-check");
-                          formGroup.show();
-                        }
-                      }
-                    } else {
-                      for (let i = 0; i < fields.length; i++) {
-                        let formGroup = form
-                          .find(
-                            "input[name=" +
-                              fields[i] +
-                              "], textarea[name=" +
-                              fields[i] +
-                              "], select[name=" +
-                              fields[i] +
-                              "]"
-                          )
-                          .closest(".form-group, .form-check");
-                        formGroup.hide();
-                      }
-                    }
-                  }
-
-                  //? Condition field and contain attribute show-field
-                  if ($(field[i]).attr("show-field")) {
-                    fields = $(field[i])
-                      .attr("show-field")
-                      .split(",")
-                      .map((element) => element.trim());
-
-                    if (field[i].type === "checkbox") {
-                      if (field[i].checked) {
-                        for (let i = 0; i < fields.length; i++) {
-                          let formGroup = form
-                            .find(
-                              "input[name=" +
-                                fields[i] +
-                                "], textarea[name=" +
-                                fields[i] +
-                                "], select[name=" +
-                                fields[i] +
-                                "]"
-                            )
-                            .closest(".form-group, .form-check");
-                          formGroup.show();
-                        }
-                      } else if (field[i].type === "checkbox") {
-                        for (let i = 0; i < fields.length; i++) {
-                          let formGroup = form
-                            .find(
-                              "input[name=" +
-                                fields[i] +
-                                "], textarea[name=" +
-                                fields[i] +
-                                "], select[name=" +
-                                fields[i] +
-                                "]"
-                            )
-                            .closest(".form-group, .form-check");
-                          formGroup.hide();
-                        }
-                      }
-                    } else {
-                      for (let i = 0; i < fields.length; i++) {
-                        let formGroup = form
-                          .find(
-                            "input[name=" +
-                              fields[i] +
-                              "], textarea[name=" +
-                              fields[i] +
-                              "], select[name=" +
-                              fields[i] +
-                              "]"
-                          )
-                          .closest(".form-group, .form-check");
-                        formGroup.show();
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          } else {
-            openModalForm();
-            Scrollmodal();
-            modalTitle.html("New " + capitalize(LAST_URL));
-
-            form = modalForm.find("form");
-
-            if (form.find("input:file.control-upload-image").length > 0) {
-              form.find(".img-result").attr("src", "");
-            }
+            if (parent.find("div.filter_page").length)
+              parent.find("div.filter_page").css("display", "none");
           }
+
+          if (className.includes("card-form")) {
+            const cardHeader = target.closest(".card-header");
+            cardHeader.find("button").css("display", "none");
+
+            $(this).css("display", "block");
+            cardBtn.css("display", "block");
+
+            cardTitle.html("New " + oriTitle);
+
+            form = $(this).find("form");
+          }
+        }
+      });
+
+      if (modalTab.length) {
+        let modalID = modalTab.attr("id");
+
+        $(`#${modalID}`).modal({
+          backdrop: "static",
+          keyboard: false,
         });
 
-        if (form.find("input.code").length > 0) {
-          setSeqCode(form);
-        }
+        const navLink = modalTab.find("li.nav-item a");
 
-        if (form.find("select.select-data").length > 0) {
-          let select = form.find("select.select-data");
-          initSelectData(select);
-        }
+        $.each(navLink, function () {
+          if (!this.classList.contains("active")) $(this).addClass("disabled");
+        });
 
-        if (form.find(".summernote").length > 0) {
-          let summernote = form.find(".summernote");
-          initSummerNote(summernote);
-        }
+        Scrollmodal();
+        form = modalTab.find("form");
+      }
 
+      const field = form.find("input, textarea, select");
+
+      for (let i = 0; i < field.length; i++) {
+        let fields = [];
+
+        if (field[i].name !== "") {
+          // set field is readonly or disabled by default
+          if (field[i].readOnly || field[i].disabled)
+            fieldReadOnly.push(field[i].name);
+
+          // set field is checked by default from set attribute on the field
+          if (
+            field[i].type == "checkbox" &&
+            fieldChecked.includes(field[i].name)
+          )
+            form
+              .find("input:checkbox[name=" + field[i].name + "]")
+              .prop("checked", true);
+
+          //? Condition field and contain attribute hide-field
+          if ($(field[i]).attr("hide-field")) {
+            fields = $(field[i])
+              .attr("hide-field")
+              .split(",")
+              .map((element) => element.trim());
+
+            if (field[i].type === "checkbox") {
+              if (field[i].checked) {
+                for (let i = 0; i < fields.length; i++) {
+                  let formGroup = form
+                    .find(
+                      "input[name=" +
+                        fields[i] +
+                        "], textarea[name=" +
+                        fields[i] +
+                        "], select[name=" +
+                        fields[i] +
+                        "]"
+                    )
+                    .closest(".form-group, .form-check");
+                  formGroup.hide();
+                }
+              } else {
+                for (let i = 0; i < fields.length; i++) {
+                  let formGroup = form
+                    .find(
+                      "input[name=" +
+                        fields[i] +
+                        "], textarea[name=" +
+                        fields[i] +
+                        "], select[name=" +
+                        fields[i] +
+                        "]"
+                    )
+                    .closest(".form-group, .form-check");
+                  formGroup.show();
+                }
+              }
+            } else {
+              for (let i = 0; i < fields.length; i++) {
+                let formGroup = form
+                  .find(
+                    "input[name=" +
+                      fields[i] +
+                      "], textarea[name=" +
+                      fields[i] +
+                      "], select[name=" +
+                      fields[i] +
+                      "]"
+                  )
+                  .closest(".form-group, .form-check");
+                formGroup.hide();
+              }
+            }
+          }
+
+          //? Condition field and contain attribute show-field
+          if ($(field[i]).attr("show-field")) {
+            fields = $(field[i])
+              .attr("show-field")
+              .split(",")
+              .map((element) => element.trim());
+
+            if (field[i].type === "checkbox") {
+              if (field[i].checked) {
+                for (let i = 0; i < fields.length; i++) {
+                  let formGroup = form
+                    .find(
+                      "input[name=" +
+                        fields[i] +
+                        "], textarea[name=" +
+                        fields[i] +
+                        "], select[name=" +
+                        fields[i] +
+                        "]"
+                    )
+                    .closest(".form-group, .form-check");
+                  formGroup.show();
+                }
+              } else if (field[i].type === "checkbox") {
+                for (let i = 0; i < fields.length; i++) {
+                  let formGroup = form
+                    .find(
+                      "input[name=" +
+                        fields[i] +
+                        "], textarea[name=" +
+                        fields[i] +
+                        "], select[name=" +
+                        fields[i] +
+                        "]"
+                    )
+                    .closest(".form-group, .form-check");
+                  formGroup.hide();
+                }
+              }
+            } else {
+              for (let i = 0; i < fields.length; i++) {
+                let formGroup = form
+                  .find(
+                    "input[name=" +
+                      fields[i] +
+                      "], textarea[name=" +
+                      fields[i] +
+                      "], select[name=" +
+                      fields[i] +
+                      "]"
+                  )
+                  .closest(".form-group, .form-check");
+                formGroup.show();
+              }
+            }
+          }
+        }
+      }
+
+      if (form.find("input:file.control-upload-image").length)
+        form.find(".img-result").attr("src", "");
+
+      if (form.find("input.code").length) setSeqCode(form);
+
+      if (form.find("select.select-data").length)
+        initSelectData(form.find("select.select-data"));
+
+      if (form.find(".summernote").length)
+        initSummerNote(form.find(".summernote"));
+
+      if (form.find('input[type="checkbox"].active').length)
         form.find('input[type="checkbox"].active').prop("checked", true);
 
+      if (form.find("button.delete_line").length)
         form.find("button.delete_line").hide();
 
-        $(".check-all").parent().hide();
+      $(".check-all").parent().hide();
 
-        setSave = "add";
+      setSave = "add";
 
-        $(_this).html(oriElement).prop("disabled", false);
-        s.removeClass("is-loading");
-      }, 200));
-  } else if (checkAccess[0].success && checkAccess[0].message == "N") {
-    Toast.fire({
-      type: "warning",
-      title: "You are role don't have permission, please reload !!",
-    });
-  } else {
-    Toast.fire({
-      type: "error",
-      title: checkAccess[0].message,
-    });
-  }
+      $(_this).html(oriElement).prop("disabled", false);
+      s.removeClass("is-loading");
+    }, 200));
+  // } else if (checkAccess[0].success && checkAccess[0].message == "N") {
+  //   Toast.fire({
+  //     type: "warning",
+  //     title: "You are role don't have permission, please reload !!",
+  //   });
+  // } else {
+  //   Toast.fire({
+  //     type: "error",
+  //     title: checkAccess[0].message,
+  //   });
+  // }
 });
 
 /**
@@ -2031,18 +2168,34 @@ $(".btn_requery").click(function () {
  * Event add row table line
  */
 $(".add_row").click(function (evt) {
-  let form = $(evt.target).closest("form");
-
-  let url = CURRENT_URL + TABLE_LINE;
-
+  const target = $(evt.target);
+  const modal = target.closest(".modal");
+  const navTab = modal.find("ul.nav-tabs");
+  const form = target.closest("form");
   let action = "create";
-
   let checkAccess = isAccess(action, LAST_URL);
 
   if (checkAccess[0].success && checkAccess[0].message == "Y") {
     let _this = $(this);
     let oriElement = _this.html();
     let textElement = _this.text().trim();
+
+    let url = CURRENT_URL + TABLE_LINE;
+
+    if (navTab.length) {
+      const cardTab = modal.find("div.card-tab");
+      let a = navTab.find("li a.active");
+      let href = a.attr("href");
+      tabPane = cardTab.find(".tab-pane.active");
+
+      if (a.prop("classList").contains("dropdown-toggle")) {
+        a = a.closest("li").find("div a.active");
+        href = a.attr("href");
+      }
+
+      href = href.substring(1, href.length);
+      url = `${ADMIN_URL}${href}${TABLE_LINE}`;
+    }
 
     const field = form.find("input, textarea, select").not(".line");
     const errorText = form.find("small");
@@ -3258,7 +3411,10 @@ function clearForm(evt) {
   if (form.find(".datetimepicker-end").length)
     form.find(".datetimepicker-end").data("DateTimePicker").clear();
 
-  // Set to empty array option
+  if (form.find(".datetimepicker").length)
+    form.find(".datetimepicker").data("DateTimePicker").clear();
+
+  //TODO: Set to empty array option
   option = [];
   arrMultiSelect = [];
 }
@@ -3496,7 +3652,7 @@ function showError(xhr, exception) {
 function loadingForm(selectorID, effect) {
   $("#" + selectorID + "").waitMe({
     effect: effect,
-    text: "Please wait...",
+    text: "Harap tunggu...",
     bg: "rgba(255,255,255,0.7)",
     color: "#000",
     maxSize: "",
@@ -4198,7 +4354,7 @@ function putFieldData(form, data) {
               .find("input:text[name=" + fieldName + "]")
               .not(".line")
               .val(formatRupiah(label));
-          } else {
+          } else if (field[i].type !== "file") {
             form
               .find(
                 "input:text[name=" +
@@ -4264,22 +4420,34 @@ function putFieldData(form, data) {
 
           if (field[i].type === "select-multiple" && label !== null) {
             // array label explode into array
-            let arrLabel = label.split(",");
+            if (typeof label === "object") {
+              label = label.id;
 
-            // Condition data length more than 1
-            if (arrLabel.length > 1) {
-              form
-                .find("select[name=" + fieldName + "]")
-                .not(".line")
-                .val(arrLabel)
-                .change();
-            } else {
               arrMultiSelect.push(label);
               form
                 .find("select[name=" + fieldName + "]")
                 .not(".line")
                 .val(arrMultiSelect)
                 .change();
+            }
+
+            if (typeof label === "string") {
+              let arrLabel = label.split(",");
+
+              if (arrLabel.length > 1) {
+                form
+                  .find("select[name=" + fieldName + "]")
+                  .not(".line")
+                  .val(arrLabel)
+                  .change();
+              } else {
+                arrMultiSelect.push(label);
+                form
+                  .find("select[name=" + fieldName + "]")
+                  .not(".line")
+                  .val(arrMultiSelect)
+                  .change();
+              }
             }
           }
 
@@ -4866,62 +5034,233 @@ function Accept(id) {
   }
 }
 
-_tableLine.on("click", ".btn_accept", function (evt) {
-  evt.preventDefault();
-  const form = $(evt.currentTarget).closest("form");
-  const tr = _tableLine.$(this).closest("tr");
-  const row = _tableLine.row(tr);
-  let id = this.id;
+$('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
+  const target = $(e.target);
+  const modal = target.closest(".modal");
+  const navTab = modal.find("ul.nav-tabs");
+  const tabPane = modal.find(".tab-pane.active");
+  const form = tabPane.find("form");
+  const tableTab = form.find("table.tb_displaytab");
+  const inputForeign = form.find("input.foreignkey");
 
-  let url = CURRENT_URL + "/acceptline/" + id;
+  if (tableTab.length) {
+    const tableID = tableTab.attr("id");
+    _tableLine.clear().draw().destroy();
 
-  let _this = $(this);
-  let oriElement = _this.html();
-
-  $(_this)
-    .html(
-      '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
-    )
-    .prop("disabled", true);
-
-  if (id === "") {
-    setTimeout(function () {
-      row.remove().draw(false);
-      $(_this).html(oriElement).prop("disabled", false);
-    }, 100);
-  } else {
-    Swal.fire({
-      text: "Are you sure you want to receive data ? ? ",
-      type: "warning",
-      showCancelButton: true,
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Ok",
-      cancelButtonText: "Close",
-      reverseButtons: true,
-    }).then((data) => {
-      if (data.value)
-        $.getJSON(url, function (result) {
-          if (result[0].success) {
-            Swal.fire({
-              title: "Success !!",
-              text: "Your data has been process",
-              type: "success",
-              showConfirmButton: false,
-              timer: 1000,
-            });
-
-            $(".btn_accept").css("display", "none");
-          } else {
-            Toast.fire({
-              type: "error",
-              title: result[0].message,
-            });
-          }
-        }).fail(function (jqXHR, exception) {
-          showError(jqXHR, exception);
+    _tableLine = $(`#${tableID}`).DataTable({
+      drawCallback: function (settings) {
+        $(this)
+          .find(".number")
+          .on("keypress keyup blur", function (evt) {
+            $(this).val(
+              $(this)
+                .val()
+                .replace(/[^\d-].+/, "")
+            );
+            if (
+              (evt.which < 48 && evt.which != 45) ||
+              (evt.which > 57 && evt.which != 189)
+            ) {
+              evt.preventDefault();
+            }
+          });
+        $(this).find(".select2").select2({
+          placeholder: "Select an option",
+          theme: "bootstrap",
+          allowClear: true,
         });
+        $(this).find(".datepicker").datepicker({
+          format: "dd-M-yyyy",
+          autoclose: true,
+          clearBtn: true,
+          todayHighlight: true,
+          todayBtn: true,
+        });
+        $(this).find(".yearpicker").datepicker({
+          format: "yyyy",
+          viewMode: "years",
+          minViewMode: "years",
+          autoclose: true,
+          clearBtn: true,
+        });
+      },
+      columnDefs: [
+        {
+          targets: 0,
+          visible: false, //hide column
+        },
+      ],
+      lengthChange: false,
+      pageLength: 10,
+      searching: false,
+      ordering: false,
+      autoWidth: false,
+      scrollX: true,
+      scrollY: "50vh",
+      scrollCollapse: true,
+    });
+  }
+
+  if (inputForeign.length) {
+    let id = inputForeign.attr("set-id");
+    let a = navTab.find("li a.active");
+    let href = a.attr("href");
+
+    if (a.prop("classList").contains("dropdown-toggle")) {
+      a = a.closest("li").find("div a.active");
+      href = a.attr("href");
+    }
+
+    href = href.substring(1, href.length);
+    let SHOW = "/show";
+    let url = `${ADMIN_URL}${href}${SHOW}`;
+
+    let name = inputForeign.attr("name");
+
+    $.ajax({
+      url: url,
+      type: "GET",
+      data: {
+        [name]: id,
+      },
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".save_form").prop("disabled", true);
+        $(".x_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "ios");
+      },
+      complete: function () {
+        $(".save_form").removeAttr("disabled");
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        console.log(result);
+        if (result[0].success) {
+          let arrMsg = result[0].message;
+
+          // Show datatable line
+          if (arrMsg.line) {
+            let arrLine = arrMsg.line;
+
+            if (_tableLine.context.length) {
+              let line = JSON.parse(arrLine);
+
+              _tableLine.rows.add(line).draw(false);
+            }
+          }
+
+          if (arrMsg.header) {
+            let data = arrMsg.header;
+            putFieldData(form, data);
+
+            for (let i = 0; i < data.length; i++) {
+              let fieldInput = data[i].field;
+              let label = data[i].label;
+              let primarykey = data[i].primarykey;
+
+              if (primarykey) {
+                ID = label;
+                tabPane.attr("set-save", "update");
+              }
+            }
+          }
+        } else {
+          Toast.fire({
+            type: "error",
+            title: result[0].message,
+          });
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
     });
 
-    $(_this).html(oriElement).prop("disabled", false);
+    url = inputForeign.attr("data-url");
+    showForeignKey(url, id, inputForeign);
+  } else {
+    let id = tabPane.attr("set-id");
+    let a = navTab.find("li a.active");
+    let href = a.attr("href");
+
+    if (a.prop("classList").contains("dropdown-toggle")) {
+      a = a.closest("li").find("div a.active");
+      href = a.attr("href");
+    }
+
+    href = href.substring(1, href.length);
+    let url = `${ADMIN_URL}${href}${SHOW}${id}`;
+
+    console.log(url);
+    $.ajax({
+      url: url,
+      type: "GET",
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".save_form").prop("disabled", true);
+        $(".x_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "ios");
+      },
+      complete: function () {
+        $(".save_form").removeAttr("disabled");
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        console.log(result);
+        if (result[0].success) {
+          let arrMsg = result[0].message;
+
+          // Show datatable line
+          if (arrMsg.line) {
+            let arrLine = arrMsg.line;
+
+            if (_tableLine.context.length) {
+              let line = JSON.parse(arrLine);
+
+              _tableLine.rows.add(line).draw(false);
+            }
+          }
+
+          if (arrMsg.header) {
+            let data = arrMsg.header;
+            putFieldData(form, data);
+
+            for (let i = 0; i < data.length; i++) {
+              let fieldInput = data[i].field;
+              let label = data[i].label;
+              let primarykey = data[i].primarykey;
+
+              if (primarykey) ID = label;
+            }
+          }
+        } else {
+          Toast.fire({
+            type: "error",
+            title: result[0].message,
+          });
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
   }
 });
+
+function showForeignKey(url, id, field) {
+  url = `${ADMIN_URL}${url}/${id}`;
+
+  $.getJSON(url, function (result) {
+    field.val(result.text);
+  }).fail(function (jqXHR, textStatus, errorThrown) {
+    console.info(errorThrown);
+  });
+}
