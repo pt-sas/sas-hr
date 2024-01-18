@@ -288,3 +288,20 @@ function getDatesFromRange($start, $end, $format = 'Y-m-d H:i:s'): array
 
     return $array;
 }
+
+function imageShow($path = null, $image = null)
+{
+    $result = '<center>';
+    $result .= '<div class="avatar avatar-xl">';
+
+    if (!empty($image) && file_exists($path . $image)) {
+        $result .= '<img class="avatar-img rounded" src="' . site_url() . $path . $image . '" />';
+    } else {
+        $result .= '<img class="avatar-img rounded-circle" src="https://via.placeholder.com/200/808080/ffffff?text=No+Image">';
+    }
+
+    $result .= '</div>';
+    $result .= '</center>';
+
+    return $result;
+}

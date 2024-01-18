@@ -10,7 +10,7 @@ use App\Models\M_Division;
 use App\Models\M_Employee;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
-use App\Models\M_Leveling;
+use App\Models\M_Levelling;
 use App\Models\M_Position;
 use App\Models\M_Reference;
 use App\Models\M_ReferenceDetail;
@@ -81,9 +81,11 @@ class Employee extends BaseController
 
                 $number++;
 
+                $path = 'upload/' . $this->folder . '/';
+
                 $row[] = $ID;
                 $row[] = $number;
-                $row[] = $value->image;
+                $row[] = imageShow($path, $value->image);
                 $row[] = $value->value;
                 $row[] = $value->fullname;
                 $row[] = $value->pob;
@@ -172,7 +174,7 @@ class Employee extends BaseController
         $mBlood = new M_BloodType($this->request);
         $mStatus = new M_Status($this->request);
         $mPosition = new M_Position($this->request);
-        $mLeveling = new M_Leveling($this->request);
+        $mLeveling = new M_Levelling($this->request);
         $mCountry = new M_Country($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDiv = new M_EmpDivision($this->request);
