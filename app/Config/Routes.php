@@ -178,16 +178,16 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('subdistrict/getSeqCode', 'Backend\SubDistrict::getSeqCode');
     $routes->match(['get', 'post'], 'subdistrict/getList', 'Backend\SubDistrict::getList');
 
-    $routes->add('leveling', 'Backend\Leveling::index');
-    $routes->match(['get', 'post'], 'leveling/showAll', 'Backend\Leveling::showAll');
-    $routes->post('leveling/create', 'Backend\Leveling::create');
-    $routes->get('leveling/show/(:any)', 'Backend\Leveling::show/$1');
-    $routes->get('leveling/destroy/(:any)', 'Backend\Leveling::destroy/$1');
-    $routes->get('leveling/getSeqCode', 'Backend\Leveling::getSeqCode');
-    $routes->match(['get', 'post'], 'leveling/getList', 'Backend\Leveling::getList');
+    $routes->add('levelling', 'Backend\Levelling::index');
+    $routes->match(['get', 'post'], 'levelling/showAll', 'Backend\Levelling::showAll');
+    $routes->post('levelling/create', 'Backend\Levelling::create');
+    $routes->get('levelling/show/(:any)', 'Backend\Levelling::show/$1');
+    $routes->get('levelling/destroy/(:any)', 'Backend\Levelling::destroy/$1');
+    $routes->get('levelling/getSeqCode', 'Backend\Levelling::getSeqCode');
+    $routes->match(['get', 'post'], 'levelling/getList', 'Backend\Levelling::getList');
 
     $routes->match(['get', 'post'], 'karyawan/getDetail', 'Backend\Employee::getDetailEmployee');
-    $routes->match(['get', 'post'], 'karyawan/getList', 'Backend\Employee::getList');
+    $routes->match(['get', 'post'], 'employee/getList', 'Backend\Employee::getList');
 
     $routes->add('sakit', 'Backend\SickLeave::index');
     $routes->match(['get', 'post'], 'sakit/showAll', 'Backend\SickLeave::showAll');
@@ -284,6 +284,82 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('kontak-darurat/create', 'Backend\EmergencyContact::create');
     $routes->get('kontak-darurat/show', 'Backend\EmergencyContact::show');
     $routes->get('kontak-darurat/show/(:any)', 'Backend\EmergencyContact::show/$1');
+  
+    $routes->add('pulang-cepat', 'Backend\PermissionLeaveEarly::index');
+    $routes->match(['get', 'post'], 'pulang-cepat/showAll', 'Backend\PermissionLeaveEarly::showAll');
+    $routes->post('pulang-cepat/create', 'Backend\PermissionLeaveEarly::create');
+    $routes->get('pulang-cepat/show/(:any)', 'Backend\PermissionLeaveEarly::show/$1');
+    $routes->get('pulang-cepat/destroy/(:any)', 'Backend\PermissionLeaveEarly::destroy/$1');
+    $routes->get('pulang-cepat/processIt', 'Backend\PermissionLeaveEarly::processIt');
+
+    $routes->add('tugas-kantor', 'Backend\OfficeDuties::index');
+    $routes->match(['get', 'post'], 'tugas-kantor/showAll', 'Backend\OfficeDuties::showAll');
+    $routes->post('tugas-kantor/create', 'Backend\OfficeDuties::create');
+    $routes->get('tugas-kantor/show/(:any)', 'Backend\OfficeDuties::show/$1');
+    $routes->get('tugas-kantor/destroy/(:any)', 'Backend\OfficeDuties::destroy/$1');
+    $routes->get('tugas-kantor/processIt', 'Backend\OfficeDuties::processIt');
+
+    $routes->add('tugas-kantor-fka', 'Backend\HalfDayOfficeDuties::index');
+    $routes->match(['get', 'post'], 'tugas-kantor-fka/showAll', 'Backend\HalfDayOfficeDuties::showAll');
+    $routes->post('tugas-kantor-fka/create', 'Backend\HalfDayOfficeDuties::create');
+    $routes->get('tugas-kantor-fka/show/(:any)', 'Backend\HalfDayOfficeDuties::show/$1');
+    $routes->get('tugas-kantor-fka/destroy/(:any)', 'Backend\HalfDayOfficeDuties::destroy/$1');
+    $routes->get('tugas-kantor-fka/processIt', 'Backend\HalfDayOfficeDuties::processIt');
+
+    $routes->add('izin-resmi', 'Backend\OfficialPermission::index');
+    $routes->match(['get', 'post'], 'izin-resmi/showAll', 'Backend\OfficialPermission::showAll');
+    $routes->post('izin-resmi/create', 'Backend\OfficialPermission::create');
+    $routes->get('izin-resmi/show/(:any)', 'Backend\OfficialPermission::show/$1');
+    $routes->get('izin-resmi/destroy/(:any)', 'Backend\OfficialPermission::destroy/$1');
+    $routes->get('izin-resmi/processIt', 'Backend\OfficialPermission::processIt');
+
+    $routes->add('lain-lain', 'Backend\OtherPermission::index');
+    $routes->match(['get', 'post'], 'lain-lain/showAll', 'Backend\OtherPermission::showAll');
+    $routes->post('lain-lain/create', 'Backend\OtherPermission::create');
+    $routes->get('lain-lain/show/(:any)', 'Backend\OtherPermission::show/$1');
+    $routes->get('lain-lain/destroy/(:any)', 'Backend\OtherPermission::destroy/$1');
+    $routes->get('lain-lain/processIt', 'Backend\OtherPermission::processIt');
+
+    $routes->add('day', 'Backend\Day::index');
+    $routes->match(['get', 'post'], 'day/showAll', 'Backend\Day::showAll');
+    $routes->post('day/create', 'Backend\Day::create');
+    $routes->get('day/show/(:any)', 'Backend\Day::show/$1');
+    $routes->get('day/destroy/(:any)', 'Backend\Day::destroy/$1');
+    $routes->get('day/getSeqCode', 'Backend\Day::getSeqCode');
+    $routes->match(['get', 'post'], 'day/getList', 'Backend\Day::getList');
+
+    $routes->add('holiday', 'Backend\Holiday::index');
+    $routes->match(['get', 'post'], 'holiday/showAll', 'Backend\Holiday::showAll');
+    $routes->post('holiday/create', 'Backend\Holiday::create');
+    $routes->get('holiday/show/(:any)', 'Backend\Holiday::show/$1');
+    $routes->get('holiday/destroy/(:any)', 'Backend\Holiday::destroy/$1');
+    $routes->match(['get', 'post'], 'holiday/getList', 'Backend\Holiday::getList');
+
+    $routes->add('leavetype', 'Backend\LeaveType::index');
+    $routes->match(['get', 'post'], 'leavetype/showAll', 'Backend\LeaveType::showAll');
+    $routes->post('leavetype/create', 'Backend\LeaveType::create');
+    $routes->get('leavetype/show/(:any)', 'Backend\LeaveType::show/$1');
+    $routes->get('leavetype/destroy/(:any)', 'Backend\LeaveType::destroy/$1');
+    $routes->get('leavetype/getSeqCode', 'Backend\LeaveType::getSeqCode');
+    $routes->match(['get', 'post'], 'leavetype/getList', 'Backend\LeaveType::getList');
+
+    $routes->add('skill', 'Backend\Skill::index');
+    $routes->match(['get', 'post'], 'skill/showAll', 'Backend\Skill::showAll');
+    $routes->post('skill/create', 'Backend\Skill::create');
+    $routes->get('skill/show/(:any)', 'Backend\Skill::show/$1');
+    $routes->get('skill/destroy/(:any)', 'Backend\Skill::destroy/$1');
+    $routes->get('skill/getSeqCode', 'Backend\Skill::getSeqCode');
+    $routes->match(['get', 'post'], 'skill/getList', 'Backend\Skill::getList');
+
+    $routes->add('massleave', 'Backend\MassLeave::index');
+    $routes->match(['get', 'post'], 'massleave/showAll', 'Backend\MassLeave::showAll');
+    $routes->post('massleave/create', 'Backend\MassLeave::create');
+    $routes->get('massleave/show/(:any)', 'Backend\MassLeave::show/$1');
+    $routes->get('massleave/destroy/(:any)', 'Backend\MassLeave::destroy/$1');
+    $routes->match(['get', 'post'], 'massleave/getList', 'Backend\MassLeave::getList');
+
+    $routes->add('laporan-tkh', 'Backend\AllowanceAtt::reportIndex');
+    $routes->match(['get', 'post'], 'laporan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
 });
 
 /*

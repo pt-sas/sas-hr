@@ -40,4 +40,6 @@
 		<!-- DateRangePicker -->
 		<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker3.min.css">
+    <!-- DateTimePicker -->
+    <link rel="stylesheet" href="<?= base_url('custom/css/bootstrap-datetimepicker.min.css') ?>">
 	</head>

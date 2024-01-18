@@ -7,6 +7,7 @@ use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_Reference;
+use App\Models\M_AllowanceAtt;
 
 class Leave extends BaseController
 {
@@ -125,19 +126,19 @@ class Leave extends BaseController
             try {
                 $this->entity->fill($post);
 
-                // if (!$this->validation->run($post, 'absent')) {
-                //     $response = $this->field->errorValidation($this->model->table, $post);
-                // } else {
+                if (!$this->validation->run($post, 'absent')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
 
-                if ($this->isNew()) {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    if ($this->isNew()) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Cuti);
-                    $this->entity->setDocumentNo($docNo);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Cuti);
+                        $this->entity->setDocumentNo($docNo);
+                    }
+
+                    $response = $this->save();
                 }
-
-                $response = $this->save();
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -193,7 +194,7 @@ class Leave extends BaseController
 
     public function processIt()
     {
-        // $cWfs = new WScenario();
+        $mAllowance = new M_AllowanceAtt($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -210,6 +211,24 @@ class Leave extends BaseController
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                         $response = $this->save();
+
+                        $range = getDatesFromRange($row->getStartDate(), $row->getEndDate());
+
+                        $arr = [];
+                        foreach ($range as $date) {
+                            $arr[] = [
+                                "record_id"         => $_ID,
+                                "table"             => $this->model->table,
+                                "submissiontype"    => $row->getSubmissionType(),
+                                "submissiondate"    => $date,
+                                "md_employee_id"    => $row->getEmployeeId(),
+                                "amount"            => 1,
+                                "created_by"        => $this->access->getSessionUser(),
+                                "updated_by"        => $this->access->getSessionUser(),
+                            ];
+                        }
+
+                        $mAllowance->builder->insertBatch($arr);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();

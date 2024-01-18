@@ -12,8 +12,8 @@ class M_District extends Model
 
     protected $returnType       = 'App\Entities\District';
     protected $allowedFields    = [
-        'name',
         'value',
+        'name',
         'description',
         'created_by',
         'updated_by',
@@ -27,21 +27,19 @@ class M_District extends Model
         '',
         'md_district.value',
         'md_district.name',
-        'md_city.name',
         'md_district.description',
+        'md_city.name',
         'md_district.isactive'
     ];
     protected $column_search = [
-        '',
-        '',
         'md_district.value',
         'md_district.name',
-        'md_city.name',
         'md_district.description',
+        'md_city.name',
         'md_district.isactive'
     ];
 
-    protected $order = ['name' => 'ASC'];
+    protected $order = ['value' => 'ASC'];
     protected $request;
     protected $db;
     protected $builder;
