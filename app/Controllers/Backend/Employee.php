@@ -81,7 +81,7 @@ class Employee extends BaseController
 
                 $number++;
 
-                $path = 'upload/' . $this->folder . '/';
+                $path = 'upload/';
 
                 $row[] = $ID;
                 $row[] = $number;
@@ -126,7 +126,7 @@ class Employee extends BaseController
                 if (!$this->validation->run($post, 'employee')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $path = FCPATH . 'uploads/' . $this->folder;
+                    $path = FCPATH . 'upload';
                     // $path = WRITEPATH . "uploads/" . $this->folder;
 
                     if (!is_dir($path))
@@ -187,7 +187,7 @@ class Employee extends BaseController
 
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
 
-                $list[0]->image = 'upload/' . $this->folder . '/' . $list[0]->image;
+                $list[0]->image = 'upload/' . $list[0]->image;
 
                 if (!empty($list[0]->getReligionId())) {
                     $rowFeligion = $mReligion->find($list[0]->getReligionId());
