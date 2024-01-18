@@ -146,8 +146,26 @@ $(document).ready(function (e) {
     useCurrent: false,
   });
 
+  $(".datetimepicker-start").datetimepicker({
+    format: "DD-MMM-YYYY HH:mm:ss",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    daysOfWeekDisabled: [0, 6],
+    useCurrent: false,
+  });
+
   $(".datepicker-end").datetimepicker({
     format: "DD-MMM-YYYY",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    daysOfWeekDisabled: [0, 6],
+    useCurrent: false,
+  });
+
+  $(".datetimepicker-end").datetimepicker({
+    format: "DD-MMM-YYYY HH:mm:ss",
     showTodayButton: true,
     showClear: true,
     showClose: true,
@@ -160,12 +178,27 @@ $(document).ready(function (e) {
     $(".datepicker-end").data("DateTimePicker").minDate(e.date);
   });
 
+  $(".datetimepicker-start").on("dp.change", function (e) {
+    $(".datetimepicker-end").data("DateTimePicker").minDate(e.date);
+  });
+
   //* Start date picker on change event [select maximum date for start date datepicker]
   $(".datepicker-end").on("dp.change", function (e) {
     if ($(".datepicker-start").val() !== "") {
       $(".datepicker-start").data("DateTimePicker").maxDate(e.date);
     } else {
       $(".datepicker-start")
+        .data("DateTimePicker")
+        .useCurrent(true)
+        .maxDate(e.date);
+    }
+  });
+
+  $(".datetimepicker-end").on("dp.change", function (e) {
+    if ($(".datetimepicker-start").val() !== "") {
+      $(".datetimepicker-start").data("DateTimePicker").maxDate(e.date);
+    } else {
+      $(".datetimepicker-start")
         .data("DateTimePicker")
         .useCurrent(true)
         .maxDate(e.date);
@@ -696,7 +729,9 @@ $(".save_form").click(function (evt) {
         if (
           className.includes("datepicker") ||
           className.includes("datepicker-start") ||
-          className.includes("datepicker-end")
+          className.includes("datetimepicker-start") ||
+          className.includes("datepicker-end") ||
+          className.includes("datetimepicker-end")
         ) {
           let date = field[i].value;
 
@@ -3125,12 +3160,29 @@ function clearForm(evt) {
               .closest(".form-group")
               .removeClass("has-error");
           } else {
-            form
-              .find("select[name=" + field[i].name + "]")
-              .val(null)
-              .change()
-              .closest(".form-group")
-              .removeClass("has-error");
+            if (form.find("select[name=" + field[i].name + "]").length) {
+              let value = form.find("select[name=" + field[i].name + "]").val();
+
+              if (value === "")
+                form
+                  .find("select[name=" + field[i].name + "]")
+                  .val(null)
+                  .change()
+                  .closest(".form-group")
+                  .removeClass("has-error");
+            }
+
+            if (form.find(".datepicker[name=" + field[i].name + "]").length) {
+              let value = form
+                .find(".datepicker[name=" + field[i].name + "]")
+                .val();
+
+              if (value === "")
+                form
+                  .find(".datepicker[name=" + field[i].name + "]")
+                  .data("DateTimePicker")
+                  .clear();
+            }
           }
         }
       }
@@ -3194,14 +3246,17 @@ function clearForm(evt) {
       form.find("small[id=" + errorText[l].id + "]").html("");
   }
 
-  if (form.find(".datepicker").length)
-    form.find(".datepicker").data("DateTimePicker").clear();
-
   if (form.find(".datepicker-start").length)
     form.find(".datepicker-start").data("DateTimePicker").clear();
 
+  if (form.find(".datetimepicker-start").length)
+    form.find(".datetimepicker-start").data("DateTimePicker").clear();
+
   if (form.find(".datepicker-end").length)
     form.find(".datepicker-end").data("DateTimePicker").clear();
+
+  if (form.find(".datetimepicker-end").length)
+    form.find(".datetimepicker-end").data("DateTimePicker").clear();
 
   // Set to empty array option
   option = [];
