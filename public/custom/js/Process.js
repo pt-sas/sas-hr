@@ -137,6 +137,14 @@ $(document).ready(function (e) {
     useCurrent: false,
   });
 
+  $(".datetimepicker").datetimepicker({
+    format: "DD-MMM-YYYY HH:mm:ss",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    useCurrent: false,
+  });
+
   $(".datepicker-start").datetimepicker({
     format: "DD-MMM-YYYY",
     showTodayButton: true,
@@ -731,7 +739,8 @@ $(".save_form").click(function (evt) {
           className.includes("datepicker-start") ||
           className.includes("datetimepicker-start") ||
           className.includes("datepicker-end") ||
-          className.includes("datetimepicker-end")
+          className.includes("datetimepicker-end") ||
+          className.includes("datetimepicker")
         ) {
           let date = field[i].value;
 
@@ -3257,6 +3266,9 @@ function clearForm(evt) {
 
   if (form.find(".datetimepicker-end").length)
     form.find(".datetimepicker-end").data("DateTimePicker").clear();
+
+  if (form.find(".datetimepicker").length)
+    form.find(".datetimepicker").data("DateTimePicker").clear();
 
   // Set to empty array option
   option = [];

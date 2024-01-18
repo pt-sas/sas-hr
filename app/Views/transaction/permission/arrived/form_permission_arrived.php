@@ -80,17 +80,10 @@
                     </label>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal <span class="required">*</span></label>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <input type="text" class="form-control datetimepicker-start" name="startdate" placeholder="Tanggal Mulai">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" class="form-control datetimepicker-end" name="enddate" placeholder="Tanggal Selesai">
-                        </div>
-                    </div>
+                    <input type="text" class="form-control datetimepicker" name="startdate" placeholder="Tanggal Mulai">
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
             </div>

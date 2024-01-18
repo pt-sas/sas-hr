@@ -98,7 +98,7 @@ class PermissionLeaveEarly extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = format_dmytime($value->startdate, '-') . " s/d " . format_dmytime($value->enddate, '-');
+                $row[] = format_dmytime($value->startdate, '-');
                 $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
@@ -126,7 +126,7 @@ class PermissionLeaveEarly extends BaseController
             try {
                 $this->entity->fill($post);
 
-                if (!$this->validation->run($post, 'absent')) {
+                if (!$this->validation->run($post, 'izinpulangcepat')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
 
@@ -212,22 +212,16 @@ class PermissionLeaveEarly extends BaseController
                         $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                         $response = $this->save();
 
-                        $range = getDatesFromRange($row->getStartDate(), $row->getEndDate());
-
-                        $arr = [];
-                        foreach ($range as $date) {
-                            $arr[] = [
-                                "record_id"         => $_ID,
-                                "table"             => $this->model->table,
-                                "submissiontype"    => $row->getSubmissionType(),
-                                "submissiondate"    => $date,
-                                "md_employee_id"    => $row->getEmployeeId(),
-                                "amount"            => 0.5,
-                                "created_by"        => $this->access->getSessionUser(),
-                                "updated_by"        => $this->access->getSessionUser(),
-                            ];
-                        }
-
+                        $arr[] = [
+                            "record_id"         => $_ID,
+                            "table"             => $this->model->table,
+                            "submissiontype"    => $row->getSubmissionType(),
+                            "submissiondate"    => $row->getStartDate(),
+                            "md_employee_id"    => $row->getEmployeeId(),
+                            "amount"            => 0.5,
+                            "created_by"        => $this->access->getSessionUser(),
+                            "updated_by"        => $this->access->getSessionUser(),
+                        ];
                         $mAllowance->builder->insertBatch($arr);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
