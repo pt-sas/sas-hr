@@ -85,10 +85,10 @@
                     <label for="date">Tanggal <span class="required">*</span></label>
                     <div class="row">
                         <div class="col-md-6">
-                            <input type="text" class="form-control datepicker-start" name="startdate" placeholder="Tanggal Mulai">
+                            <input type="text" class="form-control datetimepicker-start" name="startdate" placeholder="Tanggal Mulai">
                         </div>
                         <div class="col-md-6">
-                            <input type="text" class="form-control datepicker-end" name="enddate" placeholder="Tanggal Selesai">
+                            <input type="text" class="form-control datetimepicker-end" name="enddate" placeholder="Tanggal Selesai">
                         </div>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>

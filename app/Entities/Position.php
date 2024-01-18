@@ -13,6 +13,7 @@ class Position extends Entity
     protected $isactive;
     protected $created_by;
     protected $updated_by;
+    protected $md_division_id;
 
     protected $dates   = [
         'created_at',
@@ -97,5 +98,15 @@ class Position extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
+    }
+
+    public function getDivisionId()
+    {
+        return $this->attributes['md_division_id'];
+    }
+
+    public function setDivisionId($md_division_id)
+    {
+        $this->attributes['md_division_id'] = $md_division_id;
     }
 }

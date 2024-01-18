@@ -105,7 +105,7 @@ class Validation
             'label'         => 'Username',
             'rules'         => 'required|is_unique[sys_user.username,sys_user_id,{id}]',
             'errors'        => [
-                'required'  => 'Please Insert the {field} first',
+                'required'  => 'Mohon mengisi {field} dahulu',
                 'is_unique' => 'This {field} already exists.'
             ]
         ],
@@ -113,7 +113,7 @@ class Validation
             'label'         => 'Name',
             'rules'         => 'required|is_unique[sys_user.name,sys_user_id,{id}]',
             'errors'        => [
-                'required'  => 'Please Insert the {field} first',
+                'required'  => 'Mohon mengisi {field} dahulu',
                 'is_unique' => 'This {field} already exists.'
             ]
         ],
@@ -121,7 +121,7 @@ class Validation
             'label'         => 'Password',
             'rules'         => 'required',
             'errors'        => [
-                'required'  => 'Please Insert the {field} first'
+                'required'  => 'Mohon mengisi {field} dahulu'
 
             ]
         ]
@@ -156,7 +156,7 @@ class Validation
             'rules'             => 'required|is_unique[sys_reference.name,sys_reference_id,{id}]',
             'errors'            => [
                 'is_unique'     => 'This {field} already exists.',
-                'required'      => 'Please Insert the {field} first'
+                'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'validationtype'        => [
@@ -170,7 +170,7 @@ class Validation
             'label'             => 'Reference List',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Please Insert the {field} first.'
+                'required'      => 'Mohon mengisi {field} dahulu.'
             ]
         ],
         'detail.table.*.value_line'  => [
@@ -195,7 +195,7 @@ class Validation
             'rules'            => 'required|min_length[7]|max_length[7]|is_unique[md_branch.value,md_branch_id,{id}]',
             'errors'           => [
                 'is_unique'    => 'This {field} already exists.',
-                'required'     => 'Please Insert the {field} first'
+                'required'     => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'name'                 => [
@@ -203,14 +203,14 @@ class Validation
             'rules'            => 'required|is_unique[md_branch.name,md_branch_id,{id}]',
             'errors'           => [
                 'is_unique'    => 'This {field} already exists.',
-                'required'     => 'Please Insert the {field} first'
+                'required'     => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'address'              => [
             'label'            => 'Address',
             'rules'            => 'required',
             'errors'           => [
-                'required'     => 'Please Insert the {field} first'
+                'required'     => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -229,7 +229,7 @@ class Validation
             'rules'            => 'required|is_unique[md_division.name,md_division_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -248,7 +248,7 @@ class Validation
             'rules'            => 'required|is_unique[md_religion.name,md_religion_id,{id}]',
             'errors'           => [
                 'is_unique'    => 'This {field} already exists.',
-                'required'     => 'Please Insert the {field} first'
+                'required'     => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -267,7 +267,7 @@ class Validation
             'rules'            => 'required|is_unique[md_country.name,md_country_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -286,7 +286,7 @@ class Validation
             'rules'            => 'required|is_unique[md_bloodtype.name,md_bloodtype_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -305,7 +305,7 @@ class Validation
             'rules'            =>    'required|is_unique[md_position.name,md_position_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -324,7 +324,7 @@ class Validation
             'rules'            =>    'required|is_unique[md_status.name,md_status_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -343,7 +343,7 @@ class Validation
             'rules'            =>    'required|is_unique[md_province.name,md_province_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'md_country_id'     => [
@@ -351,7 +351,7 @@ class Validation
             'rules'         => 'required',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
 
         ]
@@ -371,7 +371,7 @@ class Validation
             'rules'            =>    'required|is_unique[md_city.name,md_city_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'md_province_id'     => [
@@ -379,7 +379,7 @@ class Validation
             'rules'         => 'required',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -398,7 +398,7 @@ class Validation
             'rules'            =>    'required|is_unique[md_district.name,md_district_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'md_city_id'     => [
@@ -406,7 +406,7 @@ class Validation
             'rules'         => 'required',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
@@ -425,7 +425,7 @@ class Validation
             'rules'            =>    'required|is_unique[md_subdistrict.name,md_subdistrict_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'md_district_id'     => [
@@ -433,15 +433,15 @@ class Validation
             'rules'         => 'required',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
 
-    public $leveling = [
+    public $levelling = [
         'value'             => [
             'label'             => 'Kode Jabatan',
-            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_leveling.value,md_leveling_id,{id}]',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_levelling.value,md_levelling_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
                 'required'    => 'Please Fill {field} first'
@@ -449,11 +449,141 @@ class Validation
         ],
         'name'                 => [
             'label'            => 'Nama Jabatan',
-            'rules'            =>    'required|is_unique[md_leveling.name,md_leveling_id,{id}]',
+            'rules'            =>    'required|is_unique[md_leveling.name,md_levelling_id,{id}]',
             'errors'        => [
                 'is_unique' => 'This {field} already exists.',
-                'required'    => 'Please Insert the {field} first'
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
+    ];
+
+    public $day = [
+        'value'             => [
+            'label'             => 'Kode Hari',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_day.value,md_day_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Hari',
+            'rules'            =>    'required|is_unique[md_day.name,md_day_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $holiday = [
+        'name'                 => [
+            'label'            => 'Nama Holiday',
+            'rules'            =>    'required|is_unique[md_holiday.name,md_holiday_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+
+        'startdate'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $leavetype = [
+        'name'                 => [
+            'label'            => 'Nama Tipe Cuti',
+            'rules'            =>    'required|is_unique[md_leavetype.name,md_leavetype_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'duration'                 => [
+            'label'            => 'Durasi',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $skill = [
+        'value'             => [
+            'label'             => 'Kode Keterampilan',
+            'rules'             => 'required|min_length[7]|max_length[7]|is_unique[md_skill.value,md_skill_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Please Fill {field} first'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Nama Keterampilan',
+            'rules'            =>    'required|is_unique[md_skill.name,md_skill_id,{id}]',
+            'errors'        => [
+                'is_unique' => 'This {field} already exists.',
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $massleave = [
+        'name'                 => [
+            'label'            => 'Nama Cuti Massal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'startdate'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $absent = [
+        'md_employee_id'                 => [
+            'label'            => 'Karyawan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'                 => [
+            'label'            => 'Cabang',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'                 => [
+            'label'            => 'Divisi',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'startdate'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'enddate'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
     ];
 }

@@ -12,6 +12,7 @@
                 <th>Kode Posisi</th>
                 <th>Nama</th>
                 <th>Deskripsi</th>
+                <th>Divisi</th>
                 <th>Aktif</th>
                 <th>Aksi</th>
             </tr>

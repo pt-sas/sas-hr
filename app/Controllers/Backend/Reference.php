@@ -111,8 +111,15 @@ class Reference extends BaseController
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
                 $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
 
+                $title = 'Reference';
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
                 $result = [
-                    'header'    => $this->field->store($this->model->table, $list),
+                    'header'    => $this->field->store($fieldHeader),
                     'line'      => $this->tableLine('edit', $detail)
                 ];
 

@@ -13,6 +13,7 @@ class Division extends Entity
     protected $isactive;
     protected $created_by;
     protected $updated_by;
+    protected $md_branch_id;
 
     protected $dates   = [
         'created_at',
@@ -98,5 +99,15 @@ class Division extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
+    }
+
+    public function getBranchId()
+    {
+        return $this->attributes['md_branch_id'];
+    }
+
+    public function setBranchId($md_branch_id)
+    {
+        $this->attributes['md_branch_id'] = $md_branch_id;
     }
 }

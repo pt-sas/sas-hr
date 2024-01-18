@@ -98,7 +98,7 @@ class PermissionArrived extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
+                $row[] = format_dmytime($value->startdate, '-') . " s/d " . format_dmytime($value->enddate, '-');
                 $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
@@ -126,19 +126,19 @@ class PermissionArrived extends BaseController
             try {
                 $this->entity->fill($post);
 
-                // if (!$this->validation->run($post, 'absent')) {
-                //     $response = $this->field->errorValidation($this->model->table, $post);
-                // } else {
+                if (!$this->validation->run($post, 'absent')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
 
-                if ($this->isNew()) {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    if ($this->isNew()) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Datang_Terlambat);
-                    $this->entity->setDocumentNo($docNo);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Datang_Terlambat);
+                        $this->entity->setDocumentNo($docNo);
+                    }
+
+                    $response = $this->save();
                 }
-
-                $response = $this->save();
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
