@@ -98,7 +98,7 @@ class HalfDayOfficeDuties extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
+                $row[] = format_dmytime($value->startdate, '-') . " s/d " . format_dmytime($value->enddate, '-');
                 $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
