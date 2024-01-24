@@ -318,3 +318,21 @@ $(".tb_displaytab").on("change", "select[name=status]", function (e) {
     tr.find("input[name=dateofdeath]").attr("disabled", true);
   }
 });
+
+$("#form_employee").on("change", "select[name=marital_status]", function (e) {
+  const target = $(e.target);
+  const modalTab = target.closest(".modal-tab");
+  const a = modalTab.find("li>div.dropdown-menu a");
+  let value = this.value.toUpperCase();
+  const BELUM_KAWIN = "BELUM KAWIN";
+
+  $.each(a, function () {
+    let href = $(this).attr("href");
+
+    if (value !== BELUM_KAWIN && href === "#keluarga")
+      $(this).removeClass("d-none");
+
+    if (value === BELUM_KAWIN && href === "#keluarga")
+      $(this).addClass("d-none");
+  });
+});
