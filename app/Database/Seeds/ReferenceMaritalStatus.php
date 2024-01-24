@@ -46,7 +46,7 @@ class ReferenceMaritalStatus extends Seeder
             [
                 'created_by'    => 1,
                 'updated_by'    => 1,
-                'value'         => 'Cerai',
+                'value'         => 'Cerai Mati',
                 'name'          => 'Cerai Mati',
                 'isactive'      => 'Y',
                 'sys_reference_id' => $this->db->insertID()
