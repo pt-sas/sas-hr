@@ -229,6 +229,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('karyawan/destroy/(:any)', 'Backend\Employee::destroy/$1');
     $routes->post('karyawan/create', 'Backend\Employee::create');
     $routes->get('karyawan/show/(:any)', 'Backend\Employee::show/$1');
+    $routes->get('karyawan/get-nik/', 'Backend\Employee::getNik');
 
     $routes->post('keluarga-inti/create', 'Backend\EmpFamilyCore::create');
     $routes->get('keluarga-inti/show', 'Backend\EmpFamilyCore::show');
@@ -284,7 +285,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('kontak-darurat/create', 'Backend\EmergencyContact::create');
     $routes->get('kontak-darurat/show', 'Backend\EmergencyContact::show');
     $routes->get('kontak-darurat/show/(:any)', 'Backend\EmergencyContact::show/$1');
-  
+
     $routes->add('pulang-cepat', 'Backend\PermissionLeaveEarly::index');
     $routes->match(['get', 'post'], 'pulang-cepat/showAll', 'Backend\PermissionLeaveEarly::showAll');
     $routes->post('pulang-cepat/create', 'Backend\PermissionLeaveEarly::create');

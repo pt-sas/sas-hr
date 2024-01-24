@@ -67,6 +67,12 @@ $(document).ready(function () {
       cache: true,
     },
   });
+
+  $("#form_employee input[name=nik]").autocomplete({
+    serviceUrl: ADMIN_URL + "karyawan/get-nik",
+    dataType: "JSON",
+    tabDisabled: false,
+  });
 });
 
 $(".form-absent").on("change", "#md_employee_id", function (e) {
