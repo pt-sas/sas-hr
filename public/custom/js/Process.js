@@ -890,6 +890,7 @@ $(".save_form").click(function (evt) {
             //* Field containing class datepicker
             if (className.includes("datepicker")) {
               let date = value;
+              row[name] = date;
 
               if (date !== "") {
                 let dateTime = moment(date).format("YYYY-MM-DD HH:mm:ss");
