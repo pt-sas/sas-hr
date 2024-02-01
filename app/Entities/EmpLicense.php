@@ -63,9 +63,6 @@ class EmpLicense extends Entity
 
     public function getExpiredDate()
     {
-        if (!empty($this->attributes['expireddate']))
-            return format_dmy($this->attributes['expireddate'], "-");
-
         return $this->attributes['expireddate'];
     }
 

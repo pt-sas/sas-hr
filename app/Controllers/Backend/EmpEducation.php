@@ -35,21 +35,19 @@ class EmpEducation extends BaseController
                 if ($this->isNew())
                     $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                //     if (!$this->validation->run($post, 'reference')) {
-                //         $response = $this->field->errorValidation($this->model->table, $post);
-                //     } else {
-                $response = $this->save();
+                if (!$this->validation->run($post, 'employee_education')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-
-
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -105,7 +103,8 @@ class EmpEducation extends BaseController
         $fieldEducation->setName("education");
         $fieldEducation->setType("select");
         $fieldEducation->setClass("select2");
-        $fieldEducation->setLength(200);
+        $fieldEducation->setIsRequired(true);
+        $fieldEducation->setLength(100);
         $fieldEducation->setField([
             "id"    => "value",
             "text"  => "name"
@@ -126,11 +125,12 @@ class EmpEducation extends BaseController
         $fieldSchool->setName("school");
         $fieldSchool->setType("text");
         $fieldSchool->setIsRequired(true);
-        $fieldSchool->setLength(200);
+        $fieldSchool->setLength(300);
 
         $fieldCity = new \App\Entities\Table();
         $fieldCity->setName("city");
         $fieldCity->setType("text");
+        $fieldCity->setIsRequired(true);
         $fieldCity->setLength(200);
 
         $fieldStartYear = new \App\Entities\Table();
@@ -154,6 +154,7 @@ class EmpEducation extends BaseController
         $fieldStatus->setName("status");
         $fieldStatus->setType("select");
         $fieldStatus->setClass("select2");
+        $fieldStatus->setIsRequired(true);
         $fieldStatus->setLength(140);
         $fieldStatus->setField([
             "id"    => "value",

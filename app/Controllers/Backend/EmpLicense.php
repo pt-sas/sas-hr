@@ -35,21 +35,19 @@ class EmpLicense extends BaseController
                 if ($this->isNew())
                     $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                //     if (!$this->validation->run($post, 'reference')) {
-                //         $response = $this->field->errorValidation($this->model->table, $post);
-                //     } else {
-                $response = $this->save();
+                if (!$this->validation->run($post, 'employee_license')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-
-
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -105,6 +103,7 @@ class EmpLicense extends BaseController
         $fieldLicenseType->setName("licensetype");
         $fieldLicenseType->setType("select");
         $fieldLicenseType->setClass("select2");
+        $fieldLicenseType->setIsRequired(true);
         $fieldLicenseType->setLength(200);
         $fieldLicenseType->setField([
             "id"    => "value",
@@ -156,10 +155,11 @@ class EmpLicense extends BaseController
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
                 $id = $row->getEmpLicenseId();
+                $expiredDate = $row->getExpiredDate() ? format_dmy($row->getExpiredDate(), "-") : null;
 
                 $fieldLicenseType->setValue($row->getLicenseType());
                 $fieldLicenseNo->setValue($row->getLicenseNo());
-                $fieldExpiredDate->setValue($row->getExpiredDate());
+                $fieldExpiredDate->setValue($expiredDate);
                 $btnDelete->setValue($id);
 
                 $table[] = [

@@ -1,10 +1,12 @@
-<!--   Core JS Files   -->
+<!-- Core JS Files -->
 <script src="<?= base_url('atlantis-pro/js/core/jquery.3.2.1.min.js') ?>"></script>
 <script src="<?= base_url('atlantis-pro/js/core/popper.min.js') ?>"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <!-- jQuery UI -->
 <script src="<?= base_url('atlantis-pro/js/plugin/jquery-ui-1.12.1.custom/jquery-ui.min.js') ?>"></script>
 <script src="<?= base_url('atlantis-pro/js/plugin/jquery-ui-touch-punch/jquery.ui.touch-punch.min.js') ?>"></script>
+<!-- jQuery Auto Complete -->
+<script src="<?= base_url('atlantis-pro/js/core/jquery.autocomplete.js') ?>"></script>
 <!-- jQuery Scrollbar -->
 <script src="<?= base_url('atlantis-pro/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js') ?>"></script>
 <!-- Moment JS -->
@@ -14,8 +16,7 @@
 <!-- Datatables -->
 <script src="<?= base_url('atlantis-pro/js/plugin/datatables/datatables.min.js') ?>"></script>
 <script src="<?= base_url('atlantis-pro/js/plugin/datatables-bs4/js/dataTables.bootstrap4.js') ?>"></script>
-<script src="<?= base_url('atlantis-pro/js/plugin/datatables-fixedcolumns/js/dataTables.fixedColumns.min.js') ?>">
-</script>
+<script src="<?= base_url('atlantis-pro/js/plugin/datatables-fixedcolumns/js/dataTables.fixedColumns.min.js') ?>"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
