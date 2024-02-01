@@ -229,7 +229,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('karyawan/destroy/(:any)', 'Backend\Employee::destroy/$1');
     $routes->post('karyawan/create', 'Backend\Employee::create');
     $routes->get('karyawan/show/(:any)', 'Backend\Employee::show/$1');
-    $routes->get('karyawan/get-nik/', 'Backend\Employee::getNik');
+    $routes->get('karyawan/get-nik', 'Backend\Employee::getNik');
 
     $routes->post('keluarga-inti/create', 'Backend\EmpFamilyCore::create');
     $routes->get('keluarga-inti/show', 'Backend\EmpFamilyCore::show');
