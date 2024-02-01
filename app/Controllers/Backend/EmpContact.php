@@ -35,21 +35,19 @@ class EmpContact extends BaseController
                 if ($this->isNew())
                     $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                //     if (!$this->validation->run($post, 'reference')) {
-                //         $response = $this->field->errorValidation($this->model->table, $post);
-                //     } else {
-                $response = $this->save();
+                if (!$this->validation->run($post, 'employee_contact')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-
-
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -102,17 +100,20 @@ class EmpContact extends BaseController
         $fieldMember = new \App\Entities\Table();
         $fieldMember->setName("member");
         $fieldMember->setType("text");
+        $fieldMember->setIsRequired(true);
         $fieldMember->setLength(200);
 
         $fieldName = new \App\Entities\Table();
         $fieldName->setName("name");
         $fieldName->setType("text");
+        $fieldName->setIsRequired(true);
         $fieldName->setLength(200);
 
         $fieldPhone = new \App\Entities\Table();
         $fieldPhone->setName("phone");
         $fieldPhone->setType("text");
         $fieldPhone->setClass("number");
+        $fieldPhone->setIsRequired(true);
         $fieldPhone->setLength(150);
 
         $btnDelete = new \App\Entities\Table();

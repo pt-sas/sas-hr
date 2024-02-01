@@ -53,9 +53,6 @@ class EmpVaccine extends Entity
 
     public function getVaccineDate()
     {
-        if (!empty($this->attributes['vaccinedate']))
-            return format_dmy($this->attributes['vaccinedate'], "-");
-
         return $this->attributes['vaccinedate'];
     }
 

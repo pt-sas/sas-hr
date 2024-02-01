@@ -34,22 +34,22 @@ class EmpFamily extends BaseController
             try {
                 $this->entity->fill($post);
 
-                // if (!$this->validation->run($post, 'reference')) {
-                //     $response = $this->field->errorValidation($this->model->table, $post);
-                // } else {
-                if ($this->isNew())
-                    $this->entity->setEmployeeId($post["md_employee_id"]);
+                if (!$this->validation->run($post, 'employee_family')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    if ($this->isNew())
+                        $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                $response = $this->save();
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -133,6 +133,7 @@ class EmpFamily extends BaseController
         $fieldGender->setName("gender");
         $fieldGender->setType("select");
         $fieldGender->setClass("select2");
+        $fieldGender->setIsRequired(true);
         $fieldGender->setLength(140);
         $fieldGender->setField([
             "id"    => "value",
@@ -143,6 +144,7 @@ class EmpFamily extends BaseController
             'sys_reference.name'              => 'Gender',
             'sys_reference.isactive'          => 'Y',
             'sys_ref_detail.isactive'         => 'Y',
+            'sys_ref_detail.value <>'         => 'A',
         ], null, [
             'field'     => 'sys_ref_detail.name',
             'option'    => 'ASC'
@@ -154,12 +156,14 @@ class EmpFamily extends BaseController
         $fieldAge->setName("age");
         $fieldAge->setType("text");
         $fieldAge->setClass("number");
+        $fieldAge->setIsRequired(true);
         $fieldAge->setLength(70);
 
         $fieldEducation = new \App\Entities\Table();
         $fieldEducation->setName("education");
         $fieldEducation->setType("select");
         $fieldEducation->setClass("select2");
+        $fieldEducation->setIsRequired(true);
         $fieldEducation->setLength(140);
         $fieldEducation->setField([
             "id"    => "value",
@@ -238,6 +242,7 @@ class EmpFamily extends BaseController
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
                 $id = $row->getEmpFamilyId();
+                $dateOfDeath = $row->getDateOfDeath() ? format_dmy($row->getDateOfDeath(), "-") : null;
 
                 $fieldMember->setValue($row->getMember());
                 $fieldName->setValue($row->getName());
@@ -246,7 +251,7 @@ class EmpFamily extends BaseController
                 $fieldEducation->setValue($row->getEducation());
                 $fieldJob->setValue($row->getJob());
                 $fieldStatus->setValue($row->getStatus());
-                $fieldDateOfDeath->setValue($row->getDateOfDeath());
+                $fieldDateOfDeath->setValue($dateOfDeath);
 
                 if ($row->getStatus() === $this->Status_Hidup)
                     $fieldDateOfDeath->setIsReadonly(true);

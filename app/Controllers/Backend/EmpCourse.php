@@ -7,6 +7,7 @@ use Config\Services;
 use App\Models\M_Employee;
 use App\Models\M_EmpCourse;
 use App\Models\M_Reference;
+use App\Models\M_Skill;
 
 class EmpCourse extends BaseController
 {
@@ -35,21 +36,19 @@ class EmpCourse extends BaseController
                 if ($this->isNew())
                     $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                //     if (!$this->validation->run($post, 'reference')) {
-                //         $response = $this->field->errorValidation($this->model->table, $post);
-                //     } else {
-                $response = $this->save();
+                if (!$this->validation->run($post, 'employee_course')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-
-
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -116,20 +115,21 @@ class EmpCourse extends BaseController
         $fieldLevel = new \App\Entities\Table();
         $fieldLevel->setName("level");
         $fieldLevel->setType("text");
+        $fieldLevel->setIsRequired(true);
         $fieldLevel->setLength(200);
 
         $fieldStartDate = new \App\Entities\Table();
         $fieldStartDate->setName("startdate");
         $fieldStartDate->setType("text");
-        $fieldStartDate->setIsRequired(true);
         $fieldStartDate->setClass("datepicker");
+        $fieldStartDate->setIsRequired(true);
         $fieldStartDate->setLength(150);
 
         $fieldEndDate = new \App\Entities\Table();
         $fieldEndDate->setName("enddate");
         $fieldEndDate->setType("text");
-        $fieldEndDate->setIsRequired(true);
         $fieldEndDate->setClass("datepicker");
+        $fieldEndDate->setIsRequired(true);
         $fieldEndDate->setLength(150);
 
         $fieldStatus = new \App\Entities\Table();
@@ -137,6 +137,7 @@ class EmpCourse extends BaseController
         $fieldStatus->setType("select");
         $fieldStatus->setClass("select2");
         $fieldStatus->setLength(140);
+        $fieldStatus->setIsRequired(true);
         $fieldStatus->setField([
             "id"    => "value",
             "text"  => "name"
@@ -176,12 +177,14 @@ class EmpCourse extends BaseController
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
                 $id = $row->getEmpCoursesId();
+                $startDate = $row->getStartDate() ? format_dmy($row->getStartDate(), "-") : null;
+                $endDate = $row->getEndDate() ? format_dmy($row->getEndDate(), "-") : null;
 
                 $fieldCourse->setValue($row->getCourse());
                 $fieldIntitution->setValue($row->getIntitution());
                 $fieldLevel->setValue($row->getLevel());
-                $fieldStartDate->setValue($row->getStartDate());
-                $fieldEndDate->setValue($row->getEndDate());
+                $fieldStartDate->setValue($startDate);
+                $fieldEndDate->setValue($endDate);
                 $fieldStatus->setValue($row->getStatus());
                 $btnDelete->setValue($id);
 

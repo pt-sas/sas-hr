@@ -10,11 +10,13 @@
     <div class="form-group row">
         <label for="name" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Anak Ke <span class="required-label">*</span></label>
         <div class="col-lg-2 col-md-4 col-sm-4">
-            <input type="text" class="form-control" id="childnumber" name="childnumber">
+            <input type="text" class="form-control number" id="childnumber" name="childnumber">
+            <small class="form-text text-danger" id="error_childnumber"></small>
         </div>
         <label for="name" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Jumlah saudara (termasuk diri sendiri) <span class="required-label">*</span></label>
         <div class="col-lg-2 col-md-4 col-sm-4">
-            <input type="text" class="form-control" id="nos" name="nos">
+            <input type="text" class="form-control number" id="nos" name="nos">
+            <small class="form-text text-danger" id="error_nos"></small>
         </div>
     </div>
     <div class="row">

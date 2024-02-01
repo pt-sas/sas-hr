@@ -118,9 +118,6 @@ class EmpFamily extends Entity
 
     public function getDateOfDeath()
     {
-        if (!empty($this->attributes['dateofdeath']))
-            return format_dmy($this->attributes['dateofdeath'], "-");
-
         return $this->attributes['dateofdeath'];
     }
 
@@ -128,7 +125,6 @@ class EmpFamily extends Entity
     {
         $this->attributes['dateofdeath'] = $dateofdeath;
     }
-
 
     public function getIsActive()
     {

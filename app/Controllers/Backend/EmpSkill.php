@@ -7,6 +7,7 @@ use Config\Services;
 use App\Models\M_Employee;
 use App\Models\M_EmpSkill;
 use App\Models\M_Reference;
+use App\Models\M_Skill;
 
 class EmpSkill extends BaseController
 {
@@ -35,21 +36,19 @@ class EmpSkill extends BaseController
                 if ($this->isNew())
                     $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                //     if (!$this->validation->run($post, 'reference')) {
-                //         $response = $this->field->errorValidation($this->model->table, $post);
-                //     } else {
-                $response = $this->save();
+                if (!$this->validation->run($post, 'employee_skill')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-
-
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -103,14 +102,23 @@ class EmpSkill extends BaseController
     public function tableLine($set = null, $detail = [])
     {
         $reference = new M_Reference($this->request);
+        $mSkill = new M_Skill($this->request);
 
         $table = [];
         $id = 0;
 
         $fieldName = new \App\Entities\Table();
         $fieldName->setName("name");
-        $fieldName->setType("text");
+        $fieldName->setType("select");
+        $fieldName->setClass("select2");
         $fieldName->setIsRequired(true);
+        $fieldName->setField([
+            "id"    => "name",
+            "text"  => "name"
+        ]);
+
+        $skills = $mSkill->where("isactive", "Y")->orderBy("name", "ASC")->findAll();
+        $fieldName->setList($skills);
         $fieldName->setLength(200);
 
         $fieldAbility = new \App\Entities\Table();
@@ -139,7 +147,7 @@ class EmpSkill extends BaseController
         $fieldSkillType->setName("skilltype");
         $fieldSkillType->setType("select");
         $fieldSkillType->setClass("select2");
-        $fieldSkillType->setLength(140);
+        $fieldSkillType->setIsReadonly(true);
         $fieldSkillType->setField([
             "id"    => "value",
             "text"  => "name"
@@ -156,12 +164,13 @@ class EmpSkill extends BaseController
 
         $fieldSkillType->setList($skillList);
         $fieldSkillType->setValue("K");
-        $fieldSkillType->setIsReadonly(true);
+        $fieldSkillType->setLength(140);
 
         $fieldDesc = new \App\Entities\Table();
         $fieldDesc->setName("description");
         $fieldDesc->setType("text");
-        $fieldDesc->setLength(200);
+        $fieldDesc->setIsRequired(true);
+        $fieldDesc->setLength(300);
 
         $btnDelete = new \App\Entities\Table();
         $btnDelete->setName($this->modelDetail->primaryKey);
