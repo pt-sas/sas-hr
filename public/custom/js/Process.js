@@ -138,15 +138,7 @@ $(document).ready(function (e) {
     useCurrent: false,
   });
 
-  $(".datetimepicker").datetimepicker({
-    format: "DD-MMM-YYYY HH:mm:ss",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    useCurrent: false,
-  });
-
-  $(".datepicker-start").datetimepicker({
+  $(".datepick").datetimepicker({
     format: "DD-MMM-YYYY",
     showTodayButton: true,
     showClear: true,
@@ -155,8 +147,26 @@ $(document).ready(function (e) {
     useCurrent: false,
   });
 
-  $(".datetimepicker-start").datetimepicker({
-    format: "DD-MMM-YYYY HH:mm:ss",
+  $(".datepick-start").datetimepicker({
+    format: "DD-MMM-YYYY",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    daysOfWeekDisabled: [0, 6],
+    useCurrent: false,
+  });
+
+  $(".datepick-end").datetimepicker({
+    format: "DD-MMM-YYYY",
+    showTodayButton: true,
+    showClear: true,
+    showClose: true,
+    daysOfWeekDisabled: [0, 6],
+    useCurrent: false,
+  });
+
+  $(".datepicker-start").datetimepicker({
+    format: "DD-MMM-YYYY",
     showTodayButton: true,
     showClear: true,
     showClose: true,
@@ -170,16 +180,7 @@ $(document).ready(function (e) {
     showClear: true,
     showClose: true,
     daysOfWeekDisabled: [0, 6],
-    useCurrent: false,
-  });
-
-  $(".datetimepicker-end").datetimepicker({
-    format: "DD-MMM-YYYY HH:mm:ss",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    useCurrent: false,
+    useCurrent: false
   });
 
   //* start date picker on change event [select minimun date for end date datepicker]
@@ -187,8 +188,8 @@ $(document).ready(function (e) {
     $(".datepicker-end").data("DateTimePicker").minDate(e.date);
   });
 
-  $(".datetimepicker-start").on("dp.change", function (e) {
-    $(".datetimepicker-end").data("DateTimePicker").minDate(e.date);
+  $(".datepick-start").on("dp.change", function (e) {
+    $(".datepick-end").data("DateTimePicker").date(e.date);
   });
 
   //* Start date picker on change event [select maximum date for start date datepicker]
@@ -197,17 +198,6 @@ $(document).ready(function (e) {
       $(".datepicker-start").data("DateTimePicker").maxDate(e.date);
     } else {
       $(".datepicker-start")
-        .data("DateTimePicker")
-        .useCurrent(true)
-        .maxDate(e.date);
-    }
-  });
-
-  $(".datetimepicker-end").on("dp.change", function (e) {
-    if ($(".datetimepicker-start").val() !== "") {
-      $(".datetimepicker-start").data("DateTimePicker").maxDate(e.date);
-    } else {
-      $(".datetimepicker-start")
         .data("DateTimePicker")
         .useCurrent(true)
         .maxDate(e.date);
@@ -750,10 +740,13 @@ $(".save_form").click(function (evt) {
         if (
           className.includes("datepicker") ||
           className.includes("datepicker-start") ||
-          className.includes("datetimepicker-start") ||
           className.includes("datepicker-end") ||
+          className.includes("datetimepicker") ||
+          className.includes("datetimepicker-start") ||
           className.includes("datetimepicker-end") ||
-          className.includes("datetimepicker")
+          className.includes("datepick") ||
+          className.includes("datepick-start") ||
+          className.includes("datepick-end")
         ) {
           let date = field[i].value;
 
@@ -3413,6 +3406,12 @@ function clearForm(evt) {
 
   if (form.find(".datetimepicker").length)
     form.find(".datetimepicker").data("DateTimePicker").clear();
+
+  if (form.find(".datepick-start").length)
+    form.find(".datepick-start").data("DateTimePicker").clear();
+
+  if (form.find(".datepick-end").length)
+    form.find(".datepick-end").data("DateTimePicker").clear();
 
   //TODO: Set to empty array option
   option = [];
