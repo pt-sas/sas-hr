@@ -444,3 +444,22 @@ table.dataTable tbody tr.selected>* {
     font-weight: normal;
     color: #1572E8;
 }
+
+@media all and (min-width: 992px) {
+	.nav-tabs .nav-item .dropdown-menu { 
+        display: none; 
+    }
+
+	.nav-tabs .nav-item:hover .dropdown-menu { 
+        display: block;
+    }
+
+	.nav-tabs .nav-item .dropdown-menu { 
+        margin-top:0; 
+    }
+
+    .nav-tabs .nav-item .dropdown-menu a:hover {
+        color: #F0F0F0;
+        background-color: #1d7af3;
+    }
+}
