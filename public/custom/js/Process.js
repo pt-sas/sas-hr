@@ -1016,6 +1016,8 @@ $(".save_form").click(function (evt) {
                 $(`#${modalID}`).modal("hide");
                 clearForm(evt);
               }
+
+              clearErrorForm(form);
             } else {
               clearForm(evt);
               const cardBody = container.find(".card-body");
@@ -3043,21 +3045,39 @@ function errorForm(parent, data) {
     if (labelMsg !== "" && j > 0) {
       if (error !== "error_table") {
         parent.find("small[id=" + textName + "]").html(labelMsg);
-        parent
-          .find(
-            "input:text[name=" +
-              inputName +
-              "], select[name=" +
-              inputName +
-              "], textarea[name=" +
-              inputName +
-              "], input:password[name=" +
-              inputName +
-              "]"
-          )
-          .not(".line")
-          .closest(".form-group")
-          .addClass("has-error");
+
+        if (!parent.find("div.form-group").prop("classList").contains("row"))
+          parent
+            .find(
+              "input:text[name=" +
+                inputName +
+                "], select[name=" +
+                inputName +
+                "], textarea[name=" +
+                inputName +
+                "], input:password[name=" +
+                inputName +
+                "]"
+            )
+            .not(".line")
+            .closest(".form-group")
+            .addClass("has-error");
+        else
+          parent
+            .find(
+              "input:text[name=" +
+                inputName +
+                "], select[name=" +
+                inputName +
+                "], textarea[name=" +
+                inputName +
+                "], input:password[name=" +
+                inputName +
+                "]"
+            )
+            .not(".line")
+            .closest("div")
+            .addClass("has-error");
       }
 
       // Check datatable line for get validation
@@ -3093,7 +3113,7 @@ function errorForm(parent, data) {
                 $(this).closest(".form-group").addClass("has-error");
                 Toast.fire({
                   type: "error",
-                  title: labelMsg + " : " + row,
+                  title: `#${row} : ${labelMsg}`,
                 });
               } else if (name === field && value !== "") {
                 arrValue.push(value);
@@ -3138,21 +3158,39 @@ function errorForm(parent, data) {
       }
     } else {
       parent.find("small[id=" + textName + "]:not(.line)").html("");
-      parent
-        .find(
-          "input:text[name=" +
-            inputName +
-            "]:not(.line), select[name=" +
-            inputName +
-            "], textarea[name=" +
-            inputName +
-            "], input:password[name=" +
-            inputName +
-            "]"
-        )
-        .not(".line")
-        .closest(".form-group")
-        .removeClass("has-error");
+
+      if (!parent.find("div.form-group").prop("classList").contains("row"))
+        parent
+          .find(
+            "input:text[name=" +
+              inputName +
+              "]:not(.line), select[name=" +
+              inputName +
+              "], textarea[name=" +
+              inputName +
+              "], input:password[name=" +
+              inputName +
+              "]"
+          )
+          .not(".line")
+          .closest(".form-group")
+          .removeClass("has-error");
+      else
+        parent
+          .find(
+            "input:text[name=" +
+              inputName +
+              "]:not(.line), select[name=" +
+              inputName +
+              "], textarea[name=" +
+              inputName +
+              "], input:password[name=" +
+              inputName +
+              "]"
+          )
+          .not(".line")
+          .closest("div")
+          .removeClass("has-error");
     }
   }
 }
@@ -3168,18 +3206,32 @@ function clearErrorForm(form) {
   //* Remove class has-error
   for (let i = 0; i < field.length; i++) {
     if (field[i].name !== "") {
-      form
-        .find(
-          "input[name=" +
-            field[i].name +
-            "], textarea[name=" +
-            field[i].name +
-            "], select[name=" +
-            field[i].name +
-            "]"
-        )
-        .closest(".form-group")
-        .removeClass("has-error");
+      if (!form.find("div.form-group").prop("classList").contains("row"))
+        form
+          .find(
+            "input[name=" +
+              field[i].name +
+              "], textarea[name=" +
+              field[i].name +
+              "], select[name=" +
+              field[i].name +
+              "]"
+          )
+          .closest(".form-group")
+          .removeClass("has-error");
+      else
+        form
+          .find(
+            "input[name=" +
+              field[i].name +
+              "], textarea[name=" +
+              field[i].name +
+              "], select[name=" +
+              field[i].name +
+              "]"
+          )
+          .closest("div")
+          .removeClass("has-error");
     }
   }
 
@@ -5271,6 +5323,8 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
       [inputForeign.attr("name")]: id,
     };
   }
+
+  clearErrorForm(form);
 
   $.ajax({
     url: url,
