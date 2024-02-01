@@ -9,7 +9,7 @@
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Keluarga</a>
                         <div class="dropdown-menu animated fadeIn">
                             <a class="dropdown-item" data-toggle="tab" href="#keluarga-inti" role="tab" aria-selected="false">Data Keluarga</a>
-                            <a class="dropdown-item" data-toggle="tab" href="#keluarga" role="tab" aria-selected="false">Data Keluarga Setelah Menikah</a>
+                            <a class="dropdown-item d-none" data-toggle="tab" href="#keluarga" role="tab" aria-selected="false">Data Keluarga Setelah Menikah</a>
                         </div>
                     </li>
                     <li class="nav-item dropdown">
