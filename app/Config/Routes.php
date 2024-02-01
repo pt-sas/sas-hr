@@ -186,9 +186,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('levelling/getSeqCode', 'Backend\Levelling::getSeqCode');
     $routes->match(['get', 'post'], 'levelling/getList', 'Backend\Levelling::getList');
 
-    $routes->match(['get', 'post'], 'karyawan/getDetail', 'Backend\Employee::getDetailEmployee');
-    $routes->match(['get', 'post'], 'employee/getList', 'Backend\Employee::getList');
-
     $routes->add('sakit', 'Backend\SickLeave::index');
     $routes->match(['get', 'post'], 'sakit/showAll', 'Backend\SickLeave::showAll');
     $routes->post('sakit/create', 'Backend\SickLeave::create');
