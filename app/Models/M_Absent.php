@@ -28,7 +28,8 @@ class M_Absent extends Model
         'approveddate',
         'sys_wfscenario_id',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'md_leavetype_id'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';
@@ -71,7 +72,8 @@ class M_Absent extends Model
                 md_branch.name as branch,
                 md_division.name as division,
                 sys_ref_detail.name as necessarytype,
-                sys_user.name as createdby';
+                sys_user.name as createdby,
+                md_leavetype.name as leavetype';
 
         return $sql;
     }
@@ -84,7 +86,8 @@ class M_Absent extends Model
             $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
             $this->setDataJoin('sys_reference', 'sys_reference.name = "NecessaryType"', 'left'),
             $this->setDataJoin('sys_ref_detail', 'sys_ref_detail.value = ' . $this->table . '.necessary AND sys_reference.sys_reference_id = sys_ref_detail.sys_reference_id', 'left'),
-            $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left')
+            $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left'),
+            $this->setDataJoin('md_leavetype', 'md_leavetype.md_leavetype_id = ' . $this->table . '.md_leavetype_id', 'left')
         ];
 
         return $sql;
@@ -99,12 +102,13 @@ class M_Absent extends Model
         ];
     }
 
-    public function getInvNumber($field, $where)
+    public function getInvNumber($field, $where, $form)
     {
         $post = $this->request->getPost();
 
         $year = date("Y", strtotime($post['submissiondate']));
         $month = date("m", strtotime($post['submissiondate']));
+        $post["necessary"] = $form;
 
         $this->builder->select('MAX(RIGHT(documentno,4)) AS documentno');
         $this->builder->where("DATE_FORMAT(submissiondate, '%m')", $month);
@@ -120,7 +124,6 @@ class M_Absent extends Model
         } else {
             $code = "0001";
         }
-
         $first = $post["necessary"];
 
         $prefix = $first . "/" . $year . "/" . $month . "/" . $code;

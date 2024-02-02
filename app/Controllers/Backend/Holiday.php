@@ -164,4 +164,20 @@ class Holiday extends BaseController
             return $this->response->setJSON($response);
         }
     }
+
+    public function getHolidayDate() {
+        // if ($this->request->isAJAX()) {
+            try {
+                $list = $this->model->findAll();
+
+                foreach ($list as  $row) :
+                    $response[] = $row->getStartDate();
+                endforeach;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        // }
+    }
 }
