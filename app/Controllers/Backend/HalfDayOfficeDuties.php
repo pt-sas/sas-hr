@@ -8,11 +8,12 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
+use DateTime;
 
 class HalfDayOfficeDuties extends BaseController
 {
-    /** Pengajuan Ijin Pulang Cepat */
-    protected $Tugas_Kantor_FKA = 'tugas kantor fka';
+    /** Pengajuan Tugas Kantor Setengah Hari */
+    protected $Tipe_Pengajuan = 'tugas kantor fka';
 
     public function __construct()
     {
@@ -77,7 +78,7 @@ class HalfDayOfficeDuties extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Tugas_Kantor_FKA;
+            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
 
             $data = [];
 
@@ -123,17 +124,24 @@ class HalfDayOfficeDuties extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
+            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["necessary"] = $this->Form_Kelengkapan_Absent;
+            $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
+            $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
+
+
+
             try {
                 $this->entity->fill($post);
 
-                if (!$this->validation->run($post, 'absent')) {
+                if (!$this->validation->run($post, 'pengajuantugas')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
 
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tugas_Kantor_FKA);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 
@@ -160,9 +168,18 @@ class HalfDayOfficeDuties extends BaseController
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
+                //Need to set data into date field in form
+                $list[0]->starttime = format_time($list[0]->startdate);
+                $list[0]->endtime = format_time($list[0]->enddate);
+                $list[0]->datestart = format_dmy($list[0]->startdate, "-");
+                $list[0]->dateend = format_dmy($list[0]->enddate, "-");
+
+
+
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setField(["starttime", "endtime", "datestart", "dateend"]);
                 $fieldHeader->setList($list);
 
                 $result = [
