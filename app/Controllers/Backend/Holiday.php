@@ -166,7 +166,7 @@ class Holiday extends BaseController
     }
 
     public function getHolidayDate() {
-        if ($this->request->isAJAX()) {
+        // if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->findAll();
 
@@ -178,6 +178,6 @@ class Holiday extends BaseController
             }
 
             return $this->response->setJSON($response);
-        }
+        // }
     }
 }
