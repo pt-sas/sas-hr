@@ -13,7 +13,7 @@ use App\Models\M_Rule;
 class PermissionArrived extends BaseController
 {
     /** Pengajuan Ijin Datang Terlambat */
-    protected $Pengajuan_Datang_Terlambat = 'datang terlambat';
+    protected $Tipe_Pengajuan = 'datang terlambat';
 
     public function __construct()
     {
@@ -78,7 +78,7 @@ class PermissionArrived extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Datang_Terlambat;
+            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
 
             $data = [];
 
@@ -124,17 +124,21 @@ class PermissionArrived extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
+            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["necessary"] = $this->Form_Kelengkapan_Absent;
+            $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
+
             try {
                 $this->entity->fill($post);
 
-                if (!$this->validation->run($post, 'izinpulangcepat')) {
+                if (!$this->validation->run($post, 'pengajuan')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
 
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Datang_Terlambat);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 
@@ -161,9 +165,14 @@ class PermissionArrived extends BaseController
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
+                //Need to set data into date field in form
+                $list[0]->starttime = format_time($list[0]->startdate);
+                $list[0]->datestart = format_dmy($list[0]->startdate, "-");
+
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setField(["starttime", "datestart"]);
                 $fieldHeader->setList($list);
 
                 $result = [
@@ -205,18 +214,6 @@ class PermissionArrived extends BaseController
             $_DocAction = $post['docaction'];
 
             $row = $this->model->find($_ID);
-            // $hour = format_time($row->getStartDate());
-            // $timeLimit1 = \DateTime::createFromFormat('H:i', '08:30');
-            // $timeLimit2 = \DateTime::createFromFormat('H:i', '13:00');
-            // $amount = '0';
-
-
-            // if ($hour > $timeLimit1) {
-            //     $amount = 0.5;
-            // } else if ($hour > $timeLimit2) {
-            //     $amount = 1;
-            // }
-
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
