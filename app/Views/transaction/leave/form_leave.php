@@ -5,7 +5,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
+                        data-url="employee/getList">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -20,8 +21,9 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="documentno">No Form <span class="required">*</span></label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
+                    <label for="documentno">No Form</label>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -45,13 +47,14 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?> readonly>
+                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                        value=<?= $today ?> readonly>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="receiveddate">Tanggal Diterima <span class="required">*</span></label>
+                    <label for="receiveddate">Tanggal Diterima</label>
                     <input type="text" class="form-control datepicker" id="receiveddate" name="receiveddate" readonly>
                     <small class="form-text text-danger" id="error_receiveddate"></small>
                 </div>
