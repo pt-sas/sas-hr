@@ -203,6 +203,14 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('cuti/destroy/(:any)', 'Backend\Leave::destroy/$1');
     $routes->get('cuti/processIt', 'Backend\Leave::processIt');
 
+    $routes->add('ijin-resmi', 'Backend\OfficialPermission::index');
+    $routes->match(['get', 'post'], 'ijin-resmi/showAll', 'Backend\OfficialPermission::showAll');
+    $routes->post('ijin-resmi/create', 'Backend\OfficialPermission::create');
+    $routes->get('ijin-resmi/show/(:any)', 'Backend\OfficialPermission::show/$1');
+    $routes->get('ijin-resmi/destroy/(:any)', 'Backend\OfficialPermission::destroy/$1');
+    $routes->get('ijin-resmi/processIt', 'Backend\OfficialPermission::processIt');
+    $routes->post('ijin-resmi/getEndDate', 'Backend\OfficialPermission::getEndDate');
+
     $routes->add('alpa', 'Backend\Alpha::index');
     $routes->match(['get', 'post'], 'alpa/showAll', 'Backend\Alpha::showAll');
     $routes->post('alpa/create', 'Backend\Alpha::create');
@@ -216,6 +224,20 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('datang-terlambat/show/(:any)', 'Backend\PermissionArrived::show/$1');
     $routes->get('datang-terlambat/destroy/(:any)', 'Backend\PermissionArrived::destroy/$1');
     $routes->get('datang-terlambat/processIt', 'Backend\PermissionArrived::processIt');
+
+    $routes->add('lupa-absen-masuk', 'Backend\ForgotAbsentLeave::index');
+    $routes->match(['get', 'post'], 'lupa-absen-masuk/showAll', 'Backend\ForgotAbsentLeave::showAll');
+    $routes->post('lupa-absen-masuk/create', 'Backend\ForgotAbsentLeave::create');
+    $routes->get('lupa-absen-masuk/show/(:any)', 'Backend\ForgotAbsentLeave::show/$1');
+    $routes->get('lupa-absen-masuk/destroy/(:any)', 'Backend\ForgotAbsentLeave::destroy/$1');
+    $routes->get('lupa-absen-masuk/processIt', 'Backend\ForgotAbsentLeave::processIt');
+
+    $routes->add('lupa-absen-pulang', 'Backend\ForgotAbsentArrive::index');
+    $routes->match(['get', 'post'], 'lupa-absen-pulang/showAll', 'Backend\ForgotAbsentArrive::showAll');
+    $routes->post('lupa-absen-pulang/create', 'Backend\ForgotAbsentArrive::create');
+    $routes->get('lupa-absen-pulang/show/(:any)', 'Backend\ForgotAbsentArrive::show/$1');
+    $routes->get('lupa-absen-pulang/destroy/(:any)', 'Backend\ForgotAbsentArrive::destroy/$1');
+    $routes->get('lupa-absen-pulang/processIt', 'Backend\ForgotAbsentArrive::processIt');
 
     $routes->add('laporan-potongan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-potongan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
@@ -334,6 +356,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('holiday/show/(:any)', 'Backend\Holiday::show/$1');
     $routes->get('holiday/destroy/(:any)', 'Backend\Holiday::destroy/$1');
     $routes->match(['get', 'post'], 'holiday/getList', 'Backend\Holiday::getList');
+    $routes->get('holiday/getHolidayDate', 'Backend\Holiday::getHolidayDate');
 
     $routes->add('leavetype', 'Backend\LeaveType::index');
     $routes->match(['get', 'post'], 'leavetype/showAll', 'Backend\LeaveType::showAll');
