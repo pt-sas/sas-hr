@@ -12,7 +12,7 @@ use App\Models\M_AllowanceAtt;
 class PermissionLeaveEarly extends BaseController
 {
     /** Pengajuan Ijin Pulang Cepat */
-    protected $Pengajuan_Pulang_Cepat = 'pulang cepat';
+    protected $Tipe_Pengajuan = 'pulang cepat';
 
     public function __construct()
     {
@@ -77,7 +77,7 @@ class PermissionLeaveEarly extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Pulang_Cepat;
+            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
 
             $data = [];
 
@@ -123,17 +123,21 @@ class PermissionLeaveEarly extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
+            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["necessary"] = $this->Form_Kelengkapan_Absent;
+            $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
+
             try {
                 $this->entity->fill($post);
 
-                if (!$this->validation->run($post, 'izinpulangcepat')) {
+                if (!$this->validation->run($post, 'pengajuan')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
 
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Pulang_Cepat);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 
@@ -160,9 +164,14 @@ class PermissionLeaveEarly extends BaseController
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
+                //Need to set data into date field in form
+                $list[0]->starttime = format_time($list[0]->startdate);
+                $list[0]->datestart = format_dmy($list[0]->startdate, "-");
+
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setField(["starttime", "datestart"]);
                 $fieldHeader->setList($list);
 
                 $result = [
