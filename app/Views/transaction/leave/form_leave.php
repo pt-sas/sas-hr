@@ -58,37 +58,27 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="necessary">Jenis Form <span class="required">*</span></label>
-                    <select class="form-control select2" id="necessary" name="necessary" disabled>
-                        <option value="">Select Pengajuan</option>
-                        <?php foreach ($ref_list as $row) : ?>
-                            <?php if ($ref_default === $row->value) : ?>
-                                <option value="<?= $row->value ?>" selected><?= $row->name ?> </option>
-                            <?php else : ?>
-                                <option value="<?= $row->value ?>"><?= $row->name ?> </option>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-text text-danger" id="error_necessary"></small>
+                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control datepicker-start" name="startdate">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="fa fa-calendar"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class=" form-check mt-4">
-                    <label class="form-radio-label">
-                        <input class="form-radio-input" type="radio" id="submissiontype" name="submissiontype" value="cuti" checked disabled>
-                        <span class="form-radio-sign">Cuti</span>
-                    </label>
-                </div>
-            </div>
-            <div class="col-md-6">
                 <div class="form-group">
-                    <label for="date">Tanggal <span class="required">*</span></label>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <input type="text" class="form-control datepicker-start" name="startdate" placeholder="Tanggal Mulai">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" class="form-control datepicker-end" name="enddate" placeholder="Tanggal Selesai">
+                    <label for="date">Tanggal Selesai <span class="required">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control datepicker-end" name="enddate">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="fa fa-calendar"></i>
+                            </span>
                         </div>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
@@ -96,7 +86,7 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="reason">Alasan </label>
+                    <label for="reason">Alasan <span class="required">*</span></label>
                     <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
                     <small class="form-text text-danger" id="error_reason"></small>
                 </div>
