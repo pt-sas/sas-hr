@@ -35,21 +35,19 @@ class EmpLanguage extends BaseController
                 if ($this->isNew())
                     $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                //     if (!$this->validation->run($post, 'reference')) {
-                //         $response = $this->field->errorValidation($this->model->table, $post);
-                //     } else {
-                $response = $this->save();
+                if (!$this->validation->run($post, 'employee_language')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-
-
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

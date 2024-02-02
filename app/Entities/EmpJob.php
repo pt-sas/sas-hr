@@ -56,9 +56,6 @@ class EmpJob extends Entity
 
     public function getStartDate()
     {
-        if (!empty($this->attributes['startdate']))
-            return format_dmy($this->attributes['startdate'], "-");
-
         return $this->attributes['startdate'];
     }
 
@@ -69,9 +66,6 @@ class EmpJob extends Entity
 
     public function getEndDate()
     {
-        if (!empty($this->attributes['enddate']))
-            return format_dmy($this->attributes['enddate'], "-");
-
         return $this->attributes['enddate'];
     }
 

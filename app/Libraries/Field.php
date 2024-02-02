@@ -72,22 +72,22 @@ class Field
                         ];
                 endforeach;
 
-
-                if (is_array($column)) {
-                    foreach ($column as $val) :
+                if ($column)
+                    if (is_array($column)) {
+                        foreach ($column as $val) :
+                            $result[] = [
+                                'field'         => $val,
+                                'label'         => $row->$val,
+                                'primarykey'    => false
+                            ];
+                        endforeach;
+                    } else {
                         $result[] = [
-                            'field'         => $val,
-                            'label'         => $row->$val,
+                            'field'         => $column,
+                            'label'         => $row->$column,
                             'primarykey'    => false
                         ];
-                    endforeach;
-                } else {
-                    $result[] = [
-                        'field'         => $column,
-                        'label'         => $row->$column,
-                        'primarykey'    => false
-                    ];
-                }
+                    }
             endforeach;
         }
 
@@ -165,10 +165,6 @@ class Field
 
         return $result;
     }
-
-    /**
-     * entity adalah DTO (Data Transfer Object berdasarkan Entities)
-     */
 
     /**
      * Get field element html based on data transfer object

@@ -35,21 +35,19 @@ class EmpVaccine extends BaseController
                 if ($this->isNew())
                     $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                //     if (!$this->validation->run($post, 'reference')) {
-                //         $response = $this->field->errorValidation($this->model->table, $post);
-                //     } else {
-                $response = $this->save();
+                if (!$this->validation->run($post, 'employee_vaccine')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-
-
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -105,6 +103,7 @@ class EmpVaccine extends BaseController
         $fieldVaccineType->setName("vaccinetype");
         $fieldVaccineType->setType("select");
         $fieldVaccineType->setClass("select2");
+        $fieldVaccineType->setIsRequired(true);
         $fieldVaccineType->setLength(200);
         $fieldVaccineType->setField([
             "id"    => "value",
@@ -125,9 +124,9 @@ class EmpVaccine extends BaseController
         $fieldVaccineDate = new \App\Entities\Table();
         $fieldVaccineDate->setName("vaccinedate");
         $fieldVaccineDate->setType("text");
-        $fieldVaccineDate->setIsRequired(true);
         $fieldVaccineDate->setClass("datepicker");
-        $fieldVaccineDate->setLength(150);
+        $fieldVaccineDate->setIsRequired(true);
+        $fieldVaccineDate->setLength(130);
 
         $fieldDesc = new \App\Entities\Table();
         $fieldDesc->setName("description");
@@ -154,9 +153,10 @@ class EmpVaccine extends BaseController
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
                 $id = $row->getEmpVaccineId();
+                $vaccineDate = $row->getVaccineDate() ? format_dmy($row->getVaccineDate(), "-") : null;
 
                 $fieldVaccineType->setValue($row->getVaccineType());
-                $fieldVaccineDate->setValue($row->getVaccineDate());
+                $fieldVaccineDate->setValue($vaccineDate);
                 $fieldDesc->setValue($row->getDescription());
                 $btnDelete->setValue($id);
 

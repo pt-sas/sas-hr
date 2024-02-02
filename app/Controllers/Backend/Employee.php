@@ -405,4 +405,25 @@ class Employee extends BaseController
             return $this->response->setJSON($response);
         }
     }
+
+    public function getNik()
+    {
+        if ($this->request->isAjax()) {
+
+            $response = [];
+
+            try {
+                $nik = $this->model->getLastNik();
+
+                $response["suggestions"][] = [
+                    'value' => $nik,
+                    'name'  => $nik,
+                ];
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
 }

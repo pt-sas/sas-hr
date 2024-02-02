@@ -34,21 +34,19 @@ class EmpJob extends BaseController
                 if ($this->isNew())
                     $this->entity->setEmployeeId($post["md_employee_id"]);
 
-                //     if (!$this->validation->run($post, 'reference')) {
-                //         $response = $this->field->errorValidation($this->model->table, $post);
-                //     } else {
-                $response = $this->save();
+                if (!$this->validation->run($post, 'employee_job')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $response = $this->save();
 
-                if (isset($response[0]["success"])) {
-                    if (!isset($post["id"]))
-                        $response = message('success', true, notification("insert"));
+                    if (isset($response[0]["success"])) {
+                        if (!isset($post["id"]))
+                            $response = message('success', true, notification("insert"));
 
-                    $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
-                    $response[0]["line"] = $this->tableLine('edit', $detail);
+                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $response[0]["line"] = $this->tableLine('edit', $detail);
+                    }
                 }
-
-
-                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -107,22 +105,22 @@ class EmpJob extends BaseController
         $fieldStartDate = new \App\Entities\Table();
         $fieldStartDate->setName("startdate");
         $fieldStartDate->setType("text");
-        $fieldStartDate->setIsRequired(true);
         $fieldStartDate->setClass("datepicker");
-        $fieldStartDate->setLength(150);
+        $fieldStartDate->setIsRequired(true);
+        $fieldStartDate->setLength(130);
 
         $fieldEndDate = new \App\Entities\Table();
         $fieldEndDate->setName("enddate");
         $fieldEndDate->setType("text");
-        $fieldEndDate->setIsRequired(true);
         $fieldEndDate->setClass("datepicker");
-        $fieldEndDate->setLength(150);
+        $fieldEndDate->setIsRequired(true);
+        $fieldEndDate->setLength(130);
 
         $fieldPosition = new \App\Entities\Table();
         $fieldPosition->setName("position");
         $fieldPosition->setType("text");
         $fieldPosition->setIsRequired(true);
-        $fieldPosition->setLength(200);
+        $fieldPosition->setLength(250);
 
         $fieldReason = new \App\Entities\Table();
         $fieldReason->setName("reason");
@@ -151,10 +149,12 @@ class EmpJob extends BaseController
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
                 $id = $row->getEmpJobId();
+                $startDate = $row->getStartDate() ? format_dmy($row->getStartDate(), "-") : null;
+                $endDate = $row->getEndDate() ? format_dmy($row->getEndDate(), "-") : null;
 
                 $fieldCompany->setValue($row->getCompany());
-                $fieldStartDate->setValue($row->getStartDate());
-                $fieldEndDate->setValue($row->getEndDate());
+                $fieldStartDate->setValue($startDate);
+                $fieldEndDate->setValue($endDate);
                 $fieldPosition->setValue($row->getPosition());
                 $fieldReason->setValue($row->getReason());
                 $btnDelete->setValue($id);

@@ -76,9 +76,6 @@ class EmpCourse extends Entity
 
     public function getStartDate()
     {
-        if (!empty($this->attributes['startdate']))
-            return format_dmy($this->attributes['startdate'], "-");
-
         return $this->attributes['startdate'];
     }
 

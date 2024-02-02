@@ -183,4 +183,28 @@ class M_Employee extends Model
 		$query = $this->builder->get();
 		return $query;
 	}
+
+	public function getLastNik()
+	{
+		$year = date("y");
+		$month = date("m");
+
+		$this->builder->select('MAX(RIGHT(nik,2)) AS nik');
+		$this->builder->where("DATE_FORMAT(created_at, '%Y-%m')", date("Y") . '-' . $month);
+		$sql = $this->builder->get();
+
+		$code = "";
+		if ($sql->getNumRows() > 0) {
+			foreach ($sql->getResult() as $row) {
+				$doc = ((int)$row->nik + 1);
+				$code = sprintf("%02s", $doc);
+			}
+		} else {
+			$code = "01";
+		}
+
+		$prefix = $year . $month . $code;
+
+		return $prefix;
+	}
 }
