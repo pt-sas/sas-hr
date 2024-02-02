@@ -11,7 +11,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="startdate">Start Date <span class="required">*</span></label>
+                    <label for="startdate">Tanggal <span class="required">*</span></label>
                     <input type="text" class="form-control datepicker" id="startdate" name="startdate">
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
@@ -19,8 +19,7 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_religion_id">Agama</label>
-                    <select class="form-control select-data" name="md_religion_id" id="md_religion_id"
-                        data-url="religion/getList">
+                    <select class="form-control select-data" name="md_religion_id" id="md_religion_id" data-url="religion/getList">
                         <option value="">Pilih Agama</option>
                     </select>
 

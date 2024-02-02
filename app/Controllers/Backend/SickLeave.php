@@ -12,7 +12,7 @@ use App\Models\M_AllowanceAtt;
 class SickLeave extends BaseController
 {
     /** Pengajuan Sakit */
-    protected $Pengajuan_Sakit = 'sakit';
+    protected $Tipe_Pengajuan = 'sakit';
 
     public function __construct()
     {
@@ -77,7 +77,7 @@ class SickLeave extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Sakit;
+            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
 
             $data = [];
 
@@ -123,6 +123,9 @@ class SickLeave extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
+            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["necessary"] = $this->Form_Absent;
+
             try {
                 $this->entity->fill($post);
 
@@ -133,7 +136,7 @@ class SickLeave extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Sakit);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 
@@ -159,6 +162,10 @@ class SickLeave extends BaseController
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
+
+                //Need to set data into date field in form
+                $list[0]->startdate = format_dmy($list[0]->startdate, "-");
+                $list[0]->enddate = format_dmy($list[0]->enddate, "-");
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);

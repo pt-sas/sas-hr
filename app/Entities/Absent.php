@@ -27,6 +27,7 @@ class Absent extends Entity
     protected $isactive;
     protected $created_by;
     protected $updated_by;
+    protected $md_leavetype_id;
 
     protected $dates   = [
         'created_at',
@@ -139,8 +140,8 @@ class Absent extends Entity
 
     public function getStartDate()
     {
-        if (!empty($this->attributes['startdate']))
-            return format_dmy($this->attributes['startdate'], "-");
+        // if (!empty($this->attributes['startdate']))
+        // return format_dmy($this->attributes['startdate'], "-");
 
         return $this->attributes['startdate'];
     }
@@ -152,8 +153,8 @@ class Absent extends Entity
 
     public function getEndDate()
     {
-        if (!empty($this->attributes['enddate']))
-            return format_dmy($this->attributes['enddate'], "-");
+        // if (!empty($this->attributes['enddate']))
+        //     return format_dmy($this->attributes['enddate'], "-");
 
         return $this->attributes['enddate'];
     }
@@ -267,5 +268,15 @@ class Absent extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
+    }
+
+    public function getLeaveTypeId()
+    {
+        return $this->attributes['md_leavetype_id'];
+    }
+
+    public function setLeaveTypeId($md_leavetype_id)
+    {
+        $this->attributes['md_leavetype_id'] = $md_leavetype_id;
     }
 }

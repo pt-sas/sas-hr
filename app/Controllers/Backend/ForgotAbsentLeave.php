@@ -9,10 +9,10 @@ use App\Models\M_Employee;
 use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
 
-class PermissionLeaveEarly extends BaseController
+class ForgotAbsentLeave extends BaseController
 {
-    /** Pengajuan Ijin Pulang Cepat */
-    protected $Tipe_Pengajuan = 'pulang cepat';
+    /** Pengajuan Lupa Absen Pulang */
+    protected $Tipe_Pengajuan = 'lupa absen pulang';
 
     public function __construct()
     {
@@ -38,7 +38,7 @@ class PermissionLeaveEarly extends BaseController
             'ref_default' => $this->Form_Kelengkapan_Absent
         ];
 
-        return $this->template->render('transaction/permission/leaveearly/v_permission_leave_early', $data);
+        return $this->template->render('transaction/forgetabsent/leave/v_forgot_absent_leave', $data);
     }
 
     public function showAll()

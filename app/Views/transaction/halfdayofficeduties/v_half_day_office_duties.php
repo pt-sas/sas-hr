@@ -15,7 +15,7 @@
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Tanggal Pengajuan</th>
-                <th>Tanggal Tidak Masuk</th>
+                <th>Tanggal Tugas Kantor</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>

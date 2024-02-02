@@ -1,5 +1,5 @@
 <div class="card-body card-form">
-    <form class="form-horizontal form-absent" id="form_leave">
+    <form class="form-horizontal form-absent" id="form_forgot_absent_arrive">
         <?= csrf_field(); ?>
         <div class="row">
             <div class="col-md-3">
@@ -61,30 +61,30 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
+                    <label for="datestart">Tanggal <span class="required">*</span></label>
                     <div class="input-group">
-                        <input type="text" class="form-control datepicker-start" name="startdate">
+                        <input type="text" class="form-control datepick" name="datestart" placeholder="Tanggal Mulai">
                         <div class="input-group-append">
                             <span class="input-group-text">
                                 <i class="fa fa-calendar"></i>
                             </span>
                         </div>
                     </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
+                    <small class="form-text text-danger" id="error_datestart"></small>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="date">Tanggal Selesai <span class="required">*</span></label>
+                    <label for="starttime">Jam <span class="required">*</span></label>
                     <div class="input-group">
-                        <input type="text" class="form-control datepicker-end" name="enddate">
+                        <input type="text" class="form-control timepicker" name="starttime" placeholder="Jam Mulai">
                         <div class="input-group-append">
                             <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
+                                <i class="fa fa-clock"></i>
                             </span>
                         </div>
                     </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
+                    <small class="form-text text-danger" id="error_starttime"></small>
                 </div>
             </div>
             <div class="col-md-6">

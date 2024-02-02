@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 
-<?= $this->include('transaction/sickleave/form_sickleave'); ?>
+<?= $this->include('transaction/forgetabsent/arrive/form_forgot_absent_arrive'); ?>
 <div class="card-body card-main">
     <table class="table table-striped table-hover tb_display" style="width: 100%">
         <thead>
@@ -15,7 +15,7 @@
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Tanggal Pengajuan</th>
-                <th>Tanggal Sakit</th>
+                <th>Tanggal Lupa Absen Masuk</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>
