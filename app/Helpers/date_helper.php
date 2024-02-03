@@ -30,3 +30,8 @@ function format_dmytime($date, $separator)
 {
     return date('d' . $separator . 'M' . $separator . 'Y' . ' H:i', strtotime($date));
 }
+
+function format_time($date)
+{
+    return date('H:i', strtotime($date));
+}
