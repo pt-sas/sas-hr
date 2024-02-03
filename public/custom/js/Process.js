@@ -5336,6 +5336,8 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
 
   clearErrorForm(form);
 
+  if (_tableLine.context.length) _tableLine.clear().draw();
+
   $.ajax({
     url: url,
     type: "GET",
@@ -5361,8 +5363,6 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
           let arrLine = arrMsg.line;
 
           if (_tableLine.context.length) {
-            _tableLine.clear().draw();
-
             let line = JSON.parse(arrLine);
             _tableLine.rows.add(line).draw(false);
           }
@@ -5413,5 +5413,31 @@ function showForeignKey(url, id, field) {
     field.val(result.text);
   }).fail(function (jqXHR, textStatus, errorThrown) {
     console.info(errorThrown);
+  });
+}
+
+function Print(id) {
+  const parent = $(".container");
+  const main_page = parent.find(".main_page");
+  let s = parent.find(".card");
+
+  if (s.length > 1) s = parent.find(".page-inner");
+  else s = main_page.find(".card");
+
+  $.ajax({
+    url: CURRENT_URL + PRINT + id,
+    type: "POST",
+    data: formData,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      s.addClass("is-loading");
+    },
+    complete: function () {
+      s.removeClass("is-loading");
+    },
+    success: function (response) {
+      downloadFile(response);
+    },
   });
 }
