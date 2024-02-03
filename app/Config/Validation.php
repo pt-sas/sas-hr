@@ -622,21 +622,21 @@ class Validation
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
             ]
-            ],
+        ],
         'starttime'                 => [
-                'label'            => 'Jam',
-                'rules'            =>    'required',
-                'errors'        => [
-                    'required'    => 'Mohon mengisi {field} dahulu'
-                ]
-                ],
-                'reason'                 => [
-                    'label'            => 'Alasan',
-                    'rules'            =>    'required',
-                    'errors'        => [
-                        'required'    => 'Mohon mengisi {field} dahulu'
-                    ]
-                ]
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                 => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 
     public $pengajuantugas = [
@@ -674,28 +674,28 @@ class Validation
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
             ]
-            ],
+        ],
         'starttime'                 => [
-                'label'            => 'Jam',
-                'rules'            =>    'required',
-                'errors'        => [
-                    'required'    => 'Mohon mengisi {field} dahulu'
-                ]
-                ],
-                'endtime'                 => [
-                    'label'            => 'Jam',
-                    'rules'            =>    'required',
-                    'errors'        => [
-                        'required'    => 'Mohon mengisi {field} dahulu'
-                    ]
-                    ],
-                'reason'                 => [
-                    'label'            => 'Alasan',
-                    'rules'            =>    'required',
-                    'errors'        => [
-                        'required'    => 'Mohon mengisi {field} dahulu'
-                    ]
-                ]
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'endtime'                 => [
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                 => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 
     public $employee = [
@@ -1241,5 +1241,71 @@ class Validation
                 'required'      => 'Mohon mengisi detail {field} dahulu'
             ]
         ]
+    ];
+
+    public $rule = [
+        'menu_url'              => [
+            'label'             => 'menu',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'name'                  => [
+            'label'             => 'nama',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'priority'              => [
+            'label'             => 'prioritas',
+            'rules'             => 'required|is_unique[md_rule.priority,md_rule_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ]
+    ];
+
+    public $rule_detail = [
+        'line'                  => [
+            'label'             => 'rule detail',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.name_line'  => [
+            'label'             => 'nama',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+    ];
+
+    public $rule_value = [
+        'line'                  => [
+            'label'             => 'rule value',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.name_line'  => [
+            'label'             => 'nama',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.value_line'  => [
+            'label'             => 'value',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
     ];
 }

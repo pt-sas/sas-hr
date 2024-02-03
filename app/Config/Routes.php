@@ -381,6 +381,24 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('laporan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
+
+    $routes->add('rule-inti', 'Backend\Rule::index');
+    $routes->match(['get', 'post'], 'rule-inti/showAll', 'Backend\Rule::showAll');
+    $routes->post('rule-inti/create', 'Backend\Rule::create');
+    $routes->get('rule-inti/show/(:any)', 'Backend\Rule::show/$1');
+    $routes->get('rule-inti/destroy/(:any)', 'Backend\Rule::destroy/$1');
+    $routes->get('rule-inti/getDataBy/(:num)', 'Backend\Rule::getBy/$1');
+
+    $routes->post('rule-detail/create', 'Backend\RuleDetail::create');
+    $routes->get('rule-detail/show', 'Backend\RuleDetail::show');
+    $routes->get('rule-detail/show/(:any)', 'Backend\RuleDetail::show/$1');
+    $routes->post('rule-detail/tableLine', 'Backend\RuleDetail::tableLine');
+    $routes->get('rule-detail/getDataBy/(:num)', 'Backend\RuleDetail::getBy/$1');
+
+    $routes->post('rule-value/create', 'Backend\RuleValue::create');
+    $routes->get('rule-value/show', 'Backend\RuleValue::show');
+    $routes->get('rule-value/show/(:any)', 'Backend\RuleValue::show/$1');
+    $routes->post('rule-value/tableLine', 'Backend\RuleValue::tableLine');
 });
 
 /*
