@@ -420,6 +420,8 @@ $(".tb_displaytab").on("click", ".btn_isdetail", function (e) {
       };
     }
 
+    if (_tableLine.context.length) _tableLine.clear().draw();
+
     $.ajax({
       url: url,
       type: "GET",
@@ -445,8 +447,6 @@ $(".tb_displaytab").on("click", ".btn_isdetail", function (e) {
             let arrLine = arrMsg.line;
 
             if (_tableLine.context.length) {
-              _tableLine.clear().draw();
-
               tabPane.attr("set-save", "update");
 
               let line = JSON.parse(arrLine);
@@ -576,6 +576,8 @@ $(".close_rule_value").on("click", function (e) {
       };
     }
 
+    if (_tableLine.context.length) _tableLine.clear().draw();
+
     $.ajax({
       url: url,
       type: "GET",
@@ -600,8 +602,6 @@ $(".close_rule_value").on("click", function (e) {
             let arrLine = arrMsg.line;
 
             if (_tableLine.context.length) {
-              _tableLine.clear().draw();
-
               let line = JSON.parse(arrLine);
               _tableLine.rows.add(line).draw(false);
             }
