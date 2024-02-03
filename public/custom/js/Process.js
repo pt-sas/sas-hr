@@ -626,7 +626,7 @@ $(".save_form").click(function (evt) {
   const card = container.find(".card");
   const actionMenu = card.attr("data-action-menu");
   const div = cardForm.find("div");
-  const navTab = parent.find("ul.nav-tabs");
+  let navTab = parent.find("ul.nav-tabs");
   let oriElement = _this.html();
   let oriTitle = container.find(".page-title").text();
 
@@ -640,7 +640,9 @@ $(".save_form").click(function (evt) {
   let url = CURRENT_URL + CREATE;
 
   if (navTab.length) {
+    const parent = target.parent().parent();
     const cardTab = parent.find("div.card-tab");
+    navTab = parent.find("ul.nav-tabs");
     let a = navTab.find("li a.active");
     let href = a.attr("href");
     tabPane = cardTab.find(".tab-pane.active");
@@ -906,9 +908,10 @@ $(".save_form").click(function (evt) {
             else row[name] = "";
 
             if (className.includes("reference-key")) row[name] = value; // Get value reference key
-          } else {
-            row[foreignkey.attr("name")] = foreignkey.attr("set-id");
           }
+
+          if (foreignkey.length)
+            row[foreignkey.attr("name")] = foreignkey.attr("set-id");
         });
 
         //* Table cell data
@@ -976,7 +979,8 @@ $(".save_form").click(function (evt) {
               let modal = parent.find(".modal");
               let modalID = modal.attr("id");
 
-              if (parent.find(".modal-tab").length) {
+              if (parent.find(".modal-tab").length || navTab.length) {
+                const parent = target.parent().parent();
                 const tabPaneAll = parent.find(".tab-pane");
                 const navLink = navTab.find("li.nav-item a");
                 tabPane.attr("set-save", "update");
@@ -5121,16 +5125,19 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
 
   changeTab = true;
 
-  let url = `${ADMIN_URL}${href}${SHOW}${id}`;
   let tableID = tableTab.attr("id");
+
+  let url = `${ADMIN_URL}${href}${SHOW}${id}`;
+
+  if (typeof id === "undefined") url = `${ADMIN_URL}${href}${SHOW}`;
 
   if (tableTab.length > 1) tableID = $(tableTab[1]).attr("id");
 
-  if (tableTab.length) {
-    _tableLine.destroy();
+  _tableLine.destroy();
 
-    _tableLine = form.find(`#${tableID}`).DataTable({
-      drawCallback: function (settings) {
+  _tableLine = form.find(`#${tableID}`).DataTable({
+    drawCallback: function (settings) {
+      if ($(this).find(".select2").length)
         $(this)
           .find(".number")
           .on("keypress keyup blur", function (evt) {
@@ -5147,12 +5154,14 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
             }
           });
 
+      if ($(this).find(".select2").length)
         $(this).find(".select2").select2({
           placeholder: "Select an option",
           theme: "bootstrap",
           allowClear: true,
         });
 
+      if ($(this).find(".datepicker").length)
         $(this).find(".datepicker").datepicker({
           format: "dd-M-yyyy",
           autoclose: true,
@@ -5161,6 +5170,7 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
           todayBtn: true,
         });
 
+      if ($(this).find(".yearpicker").length)
         $(this).find(".yearpicker").datepicker({
           format: "yyyy",
           viewMode: "years",
@@ -5168,23 +5178,22 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
           autoclose: true,
           clearBtn: true,
         });
+    },
+    columnDefs: [
+      {
+        targets: 0,
+        visible: false, //hide column
       },
-      columnDefs: [
-        {
-          targets: 0,
-          visible: false, //hide column
-        },
-      ],
-      lengthChange: false,
-      pageLength: 10,
-      searching: false,
-      ordering: false,
-      autoWidth: false,
-      scrollX: true,
-      scrollY: "50vh",
-      scrollCollapse: true,
-    });
-  }
+    ],
+    lengthChange: false,
+    pageLength: 10,
+    searching: false,
+    ordering: false,
+    autoWidth: false,
+    scrollX: true,
+    scrollY: "50vh",
+    scrollCollapse: true,
+  });
 
   const field = form.find("input, textarea, select").not(".line");
 

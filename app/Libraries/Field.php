@@ -173,6 +173,7 @@ class Field
      */
     function fieldTable(object $entity)
     {
+        $title = $entity->getTitle();
         $name = $entity->getName();
         $type = $entity->getType();
         $class = $entity->getClass();
@@ -275,11 +276,15 @@ class Field
                 $class .= ' btn-danger btn_delete';
                 $icon = '<i class="fas fa-trash-alt"></i>';
                 $title = "Delete";
-            }
 
-            $element .= '<button type="button" title="' . $title . '" class="btn btn-link line ' . $class . '" id="' . $value . '" name="' . $name . '" value="' . $refValue . '">
-                                    ' . $icon . '
-                                    </button>';
+                $element .= '<button type="button" title="' . $title . '" class="btn btn-link line ' . $class . '" id="' . $value . '" name="' . $name . '" value="' . $refValue . '">
+                                        ' . $icon . '
+                                        </button>';
+            } else if (in_array("numeric", $arrClass)) {
+                $value = $value ?? 0;
+
+                $element .= '<button type="button" title="' . $title . '" class="btn btn-sm btn-round line ' . $class . '" id="' . $id . '" name="' . $name . '" value="' . $value . '" ' . $readonly . '> ' . $value . ' </button>';
+            }
         }
 
         $div .= $element;

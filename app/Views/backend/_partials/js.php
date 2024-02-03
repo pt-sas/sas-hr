@@ -28,6 +28,8 @@
 <script src="<?= base_url('atlantis-pro/js/plugin/datepicker/bootstrap-datetimepicker.min.js') ?>"></script>
 <!-- DateRangePicker -->
 <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<!-- DatePicker -->
+<script src="<?= base_url('atlantis-pro/js/plugin/bootstrap-datepicker/js/bootstrap-datepicker.min.js') ?>"></script>
 <!-- Summernote -->
 <script src="<?= base_url('atlantis-pro/js/plugin/summernote/summernote-bs4.min.js') ?>"></script>
 <!-- Select2 -->

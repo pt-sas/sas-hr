@@ -93,7 +93,7 @@ class Table extends Entity
 		if (empty($this->attributes['isreadonly']))
 			return null;
 
-		if ($this->attributes['isreadonly'] && ($this->getType() === "select" || $this->getType() === "checkbox" || $this->getClass() === "datepicker" || $this->getType() === "yearpicker"))
+		if ($this->attributes['isreadonly'] && ($this->getType() === "select" || $this->getType() === "checkbox" || $this->getClass() === "datepicker" || $this->getType() === "yearpicker" || $this->getType() === "button"))
 			return "disabled";
 
 		return "readonly";
