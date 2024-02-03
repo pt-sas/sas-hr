@@ -336,3 +336,26 @@ $("#form_employee").on("change", "select[name=marital_status]", function (e) {
       $(this).addClass("d-none");
   });
 });
+
+$("#form_rule").on("change", "select[name=isdetail]", function (e) {
+  const target = $(e.target);
+  const modalTab = target.closest(".modal-tab");
+  const a = modalTab.find("li a");
+  let value = this.value;
+
+  if (value !== "" && value === "Y")
+    $.each(a, function () {
+      let href = $(this).attr("href");
+      const li = $(this).closest("li");
+
+      if (li.prop("classList").contains("d-none") && href === "#rule-detail")
+        li.removeClass("d-none");
+    });
+  else
+    $.each(a, function () {
+      let href = $(this).attr("href");
+      const li = $(this).closest("li");
+
+      if (href === "#rule-detail") li.addClass("d-none");
+    });
+});
