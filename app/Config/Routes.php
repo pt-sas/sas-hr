@@ -382,6 +382,14 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('massleave/destroy/(:any)', 'Backend\MassLeave::destroy/$1');
     $routes->match(['get', 'post'], 'massleave/getList', 'Backend\MassLeave::getList');
 
+    $routes->add('ijin-keluar-kantor', 'Backend\PermissionLeaveOffice::index');
+    $routes->match(['get', 'post'], 'ijin-keluar-kantor/showAll', 'Backend\PermissionLeaveOffice::showAll');
+    $routes->post('ijin-keluar-kantor/create', 'Backend\PermissionLeaveOffice::create');
+    $routes->get('ijin-keluar-kantor/show/(:any)', 'Backend\PermissionLeaveOffice::show/$1');   
+    $routes->get('ijin-keluar-kantor/destroy/(:any)', 'Backend\PermissionLeaveOffice::destroy/$1');
+    $routes->match(['get', 'post'], 'ijin-keluar-kantor/getList', 'Backend\PermissionLeaveOffice::getList');
+    $routes->get('ijin-keluar-kantor/exportPDF', 'Backend\PermissionLeaveOffice::exportPDF');
+
     $routes->add('laporan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
 });
