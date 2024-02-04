@@ -414,6 +414,12 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('rule-value/show', 'Backend\RuleValue::show');
     $routes->get('rule-value/show/(:any)', 'Backend\RuleValue::show/$1');
     $routes->post('rule-value/tableLine', 'Backend\RuleValue::tableLine');
+
+    $routes->add('responsible', 'Backend\Responsible::index');
+    $routes->match(['get', 'post'], 'responsible/showAll', 'Backend\Responsible::showAll');
+    $routes->post('responsible/create', 'Backend\Responsible::create');
+    $routes->get('responsible/show/(:any)', 'Backend\Responsible::show/$1');
+    $routes->get('responsible/destroy/(:any)', 'Backend\Responsible::destroy/$1');
 });
 
 /*
