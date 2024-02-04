@@ -431,6 +431,18 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('notifikasi-text/create', 'Backend\NotificationText::create');
     $routes->get('notifikasi-text/show/(:any)', 'Backend\NotificationText::show/$1');
     $routes->get('notifikasi-text/destroy/(:any)', 'Backend\NotificationText::destroy/$1');
+
+    $routes->add('wscenario', 'Backend\WScenario::index');
+    $routes->match(['get', 'post'], 'wscenario/showAll', 'Backend\WScenario::showAll');
+    $routes->post('wscenario/create', 'Backend\WScenario::create');
+    $routes->get('wscenario/show/(:any)', 'Backend\WScenario::show/$1');
+    $routes->get('wscenario/destroy/(:any)', 'Backend\WScenario::destroy/$1');
+    $routes->post('wscenario/tableLine', 'Backend\WScenario::tableLine');
+    $routes->get('wscenario/destroyLine/(:any)', 'Backend\WScenario::destroyLine/$1');
+
+    $routes->get('wactivity/showNotif', 'Backend\WActivity::showNotif');
+    $routes->post('wactivity/create', 'Backend\WActivity::create');
+    $routes->match(['get', 'post'], 'wactivity/showActivityInfo', 'Backend\WActivity::showActivityInfo');
 });
 
 /*
