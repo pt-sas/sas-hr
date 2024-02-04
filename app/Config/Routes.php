@@ -243,7 +243,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'karyawan/showAll', 'Backend\Employee::showAll');
     $routes->get('karyawan/getDataBy/(:num)', 'Backend\Employee::getBy/$1');
     $routes->match(['get', 'post'], 'karyawan/getDetail', 'Backend\Employee::getDetailEmployee');
-    $routes->match(['get', 'post'], 'karyawan/getList', 'Backend\Employee::getList');
+    $routes->match(['get', 'post'], 'employee/getList', 'Backend\Employee::getList');
     $routes->match(['get', 'post'], 'karyawan/superior', 'Backend\Employee::getSuperior');
     $routes->get('karyawan/destroy/(:any)', 'Backend\Employee::destroy/$1');
     $routes->post('karyawan/create', 'Backend\Employee::create');
@@ -382,7 +382,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('ijin-keluar-kantor', 'Backend\PermissionLeaveOffice::index');
     $routes->match(['get', 'post'], 'ijin-keluar-kantor/showAll', 'Backend\PermissionLeaveOffice::showAll');
     $routes->post('ijin-keluar-kantor/create', 'Backend\PermissionLeaveOffice::create');
-    $routes->get('ijin-keluar-kantor/show/(:any)', 'Backend\PermissionLeaveOffice::show/$1');   
+    $routes->get('ijin-keluar-kantor/show/(:any)', 'Backend\PermissionLeaveOffice::show/$1');
     $routes->get('ijin-keluar-kantor/destroy/(:any)', 'Backend\PermissionLeaveOffice::destroy/$1');
     $routes->match(['get', 'post'], 'ijin-keluar-kantor/getList', 'Backend\PermissionLeaveOffice::getList');
     $routes->get('ijin-keluar-kantor/exportPDF', 'Backend\PermissionLeaveOffice::exportPDF');
@@ -390,7 +390,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('ijin', 'Backend\Permission::index');
     $routes->match(['get', 'post'], 'ijin/showAll', 'Backend\Permission::showAll');
     $routes->post('ijin/create', 'Backend\Permission::create');
-    $routes->get('ijin/show/(:any)', 'Backend\Permission::show/$1');   
+    $routes->get('ijin/show/(:any)', 'Backend\Permission::show/$1');
     $routes->get('ijin/destroy/(:any)', 'Backend\Permission::destroy/$1');
     $routes->match(['get', 'post'], 'ijin/getList', 'Backend\Permission::getList');
 
