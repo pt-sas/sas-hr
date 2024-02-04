@@ -1340,4 +1340,49 @@ class Validation
             ]
         ]
     ];
+
+    public $mail = [
+        'smtphost'              => [
+            'label'             => 'Mail Host',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} first'
+            ]
+        ],
+        'smtpport'              => [
+            'label'             => 'SMTP Port',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} first'
+            ]
+        ],
+        'smtpcrypto'            => [
+            'label'             => 'SMTP Crypto',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} first'
+            ]
+        ],
+        'smtpuser'              => [
+            'label'             => 'Request User',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} first'
+            ]
+        ],
+        'smtppassword'          => [
+            'label'             => 'Request User Password',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} first'
+            ]
+        ],
+        'requestemail'          => [
+            'label'             => 'Request Email',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} first'
+            ]
+        ]
+    ];
 }
