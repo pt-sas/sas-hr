@@ -16,8 +16,6 @@ class Template
     protected $isCreate = 'iscreate';
     protected $isUpdate = 'isupdate';
     protected $isDelete = 'isdelete';
-    protected $Movement_Kirim = 'KIRIM';
-    protected $Movement_Terima = 'TERIMA';
 
     public function __construct()
     {
