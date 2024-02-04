@@ -977,7 +977,11 @@ $(".save_form").click(function (evt) {
             showFormData(form);
             clearErrorForm(form);
           } else {
-            if (container.find(".modal").length) {
+            //? Check exist modal and modal must have there is attribute id
+            if (
+              container.find(".modal").length &&
+              typeof container.find(".modal").attr("id") !== "undefined"
+            ) {
               let modal = parent.find(".modal");
               let modalID = modal.attr("id");
 

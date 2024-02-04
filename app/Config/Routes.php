@@ -420,6 +420,17 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('responsible/create', 'Backend\Responsible::create');
     $routes->get('responsible/show/(:any)', 'Backend\Responsible::show/$1');
     $routes->get('responsible/destroy/(:any)', 'Backend\Responsible::destroy/$1');
+
+    $routes->add('mail', 'Backend\Mail::index');
+    $routes->match(['get', 'post'], 'mail/showAll', 'Backend\Mail::showAll');
+    $routes->post('mail/create', 'Backend\Mail::create');
+    $routes->post('mail/createTestEmail', 'Backend\Mail::createTestEmail');
+
+    $routes->add('notifikasi-text', 'Backend\NotificationText::index');
+    $routes->match(['get', 'post'], 'notifikasi-text/showAll', 'Backend\NotificationText::showAll');
+    $routes->post('notifikasi-text/create', 'Backend\NotificationText::create');
+    $routes->get('notifikasi-text/show/(:any)', 'Backend\NotificationText::show/$1');
+    $routes->get('notifikasi-text/destroy/(:any)', 'Backend\NotificationText::destroy/$1');
 });
 
 /*
