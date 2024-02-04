@@ -52,8 +52,11 @@ class Template
         if (!empty($this->session->get('md_employee_id'))) {
             $PATH_Karyawan = "karyawan/";
             $rowEmp = $mEmployee->find($this->session->get('md_employee_id'));
-            $picture = $rowEmp->getImage();
-            $picture = base_url($this->PATH_UPLOAD . $PATH_Karyawan . $picture);
+            $image = $rowEmp->getImage();
+            $path = $this->PATH_UPLOAD . $PATH_Karyawan . $image;
+
+            if (file_exists(FCPATH . $path))
+                $picture = base_url($path);
         }
 
         $view_data['foto'] = $picture;
