@@ -1308,4 +1308,36 @@ class Validation
             ]
         ],
     ];
+
+    public $responsible = [
+        'name'                  => [
+            'label'             => 'Nama',
+            'rules'             => 'required|is_unique[sys_wfresponsible.name,sys_wfresponsible_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'responsibletype'       => [
+            'label'             => 'tipe responsible',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'sys_role_id'           => [
+            'label'             => 'role',
+            'rules'             => 'required_based_field_value[responsibletype, R]',
+            'errors'            => [
+                'required_based_field_value'    => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'sys_user_id'           => [
+            'label'             => 'user',
+            'rules'             => 'required_based_field_value[responsibletype, H]',
+            'errors'            => [
+                'required_based_field_value'    => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
 }
