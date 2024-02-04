@@ -8,12 +8,13 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
-use App\Models\M_LeaveType;
+use DateTime;
+use TCPDF;
 
-class OfficialPermission extends BaseController
+class PermissionLeaveOffice extends BaseController
 {
-    /** Pengajuan Ijin Pulang Cepat */
-    protected $Tipe_Pengajuan = 'izin resmi';
+    /** Pengajuan Tugas Kantor Setengah Hari */
+    protected $Tipe_Pengajuan = 'ijin keluar kantor';
 
     public function __construct()
     {
@@ -36,10 +37,10 @@ class OfficialPermission extends BaseController
                 'field'     => 'sys_ref_detail.value',
                 'option'    => 'ASC'
             ])->getResult(),
-            'ref_default' => $this->Form_Absent
+            'ref_default' => $this->Form_Kelengkapan_Absent
         ];
 
-        return $this->template->render('transaction/officialpermission/v_official_permission', $data);
+        return $this->template->render('transaction/permissionleaveoffice/v_permission_leave_office.php', $data);
     }
 
     public function showAll()
@@ -99,7 +100,7 @@ class OfficialPermission extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
+                $row[] = format_dmytime($value->startdate, '-') . " s/d " . format_dmytime($value->enddate, '-');
                 $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
@@ -125,12 +126,16 @@ class OfficialPermission extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Tipe_Pengajuan;
-            $post["necessary"] = $this->Form_Absent;
+            $post["necessary"] = $this->Form_Kelengkapan_Absent;
+            $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
+            $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
+
+
 
             try {
                 $this->entity->fill($post);
 
-                if (!$this->validation->run($post, 'absent')) {
+                if (!$this->validation->run($post, 'pengajuantugas')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
 
@@ -165,13 +170,17 @@ class OfficialPermission extends BaseController
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
                 //Need to set data into date field in form
-                $list[0]->startdate = format_dmy($list[0]->startdate, "-");
-                $list[0]->enddate = format_dmy($list[0]->enddate, "-");
-        
+                $list[0]->starttime = format_time($list[0]->startdate);
+                $list[0]->endtime = format_time($list[0]->enddate);
+                $list[0]->datestart = format_dmy($list[0]->startdate, "-");
+                $list[0]->dateend = format_dmy($list[0]->enddate, "-");
+
+
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setField(["starttime", "endtime", "datestart", "dateend"]);
                 $fieldHeader->setList($list);
 
                 $result = [
@@ -231,7 +240,7 @@ class OfficialPermission extends BaseController
                                 "submissiontype"    => $row->getSubmissionType(),
                                 "submissiondate"    => $date,
                                 "md_employee_id"    => $row->getEmployeeId(),
-                                "amount"            => 1,
+                                "amount"            => 0,
                                 "created_by"        => $this->access->getSessionUser(),
                                 "updated_by"        => $this->access->getSessionUser(),
                             ];
@@ -258,28 +267,16 @@ class OfficialPermission extends BaseController
         }
     }
 
-    public function getEndDate() {
-        if ($this->request->isAJAX()) {
-            
-        $leave = new M_LeaveType($this->request);
-        $post = $this->request->getVar();
-        
-            try {
-                $leavetype = $leave->find($post["md_leavetype_id"]);
+    public function exportPDF() {
+        // $id = $this->model->getAbsentId();
 
-                if($leavetype->duration_type === "D"){
-                    $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "days"));
-                } else if ($leavetype->duration_type === "M") {
-                    $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "month - 1 days"));
-                }
+        $view = view('printformat\print_permission_leave_office');
+        $pdf = new TCPDF('L', PDF_UNIT, 'A5'); 
+        $pdf->AddPage();
+        $pdf->writeHTML($view);
+        $this->response->setContentType('application/pdf');
+        $pdf->Output('detail-laporan,pdf','I'); 
 
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
 
-            // return $this->response->setJSON($response);
-
-            return json_encode($response);
-        }
     }
 }

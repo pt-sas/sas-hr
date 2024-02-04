@@ -196,7 +196,8 @@ $(document).ready(function (e) {
   });
 
   $(".datepick-start").on("dp.change", function (e) {
-    $(".datepick-end").data("DateTimePicker").date(e.date);
+    $(".datepick-end").data("DateTimePicker").date(moment(e.date));
+    console.log(e.date);
   });
 
   //* Start date picker on change event [select maximum date for start date datepicker]
@@ -754,7 +755,9 @@ $(".save_form").click(function (evt) {
           className.includes("datetimepicker-end") ||
           className.includes("datepick") ||
           className.includes("datepick-start") ||
-          className.includes("datepick-end")
+          className.includes("datepick-end") ||
+          className.includes("date-start") ||
+          className.includes("date-end")
         ) {
           let date = field[i].value;
 

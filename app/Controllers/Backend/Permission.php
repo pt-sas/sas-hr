@@ -8,12 +8,11 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
-use App\Models\M_LeaveType;
 
-class OfficialPermission extends BaseController
+class Permission extends BaseController
 {
-    /** Pengajuan Ijin Pulang Cepat */
-    protected $Tipe_Pengajuan = 'izin resmi';
+    /** Pengajuan Cuti */
+    protected $Tipe_Pengajuan = 'ijin';
 
     public function __construct()
     {
@@ -39,7 +38,7 @@ class OfficialPermission extends BaseController
             'ref_default' => $this->Form_Absent
         ];
 
-        return $this->template->render('transaction/officialpermission/v_official_permission', $data);
+        return $this->template->render('transaction/permission/permission/v_permission', $data);
     }
 
     public function showAll()
@@ -167,7 +166,6 @@ class OfficialPermission extends BaseController
                 //Need to set data into date field in form
                 $list[0]->startdate = format_dmy($list[0]->startdate, "-");
                 $list[0]->enddate = format_dmy($list[0]->enddate, "-");
-        
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
@@ -255,31 +253,6 @@ class OfficialPermission extends BaseController
             }
 
             return $this->response->setJSON($response);
-        }
-    }
-
-    public function getEndDate() {
-        if ($this->request->isAJAX()) {
-            
-        $leave = new M_LeaveType($this->request);
-        $post = $this->request->getVar();
-        
-            try {
-                $leavetype = $leave->find($post["md_leavetype_id"]);
-
-                if($leavetype->duration_type === "D"){
-                    $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "days"));
-                } else if ($leavetype->duration_type === "M") {
-                    $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "month - 1 days"));
-                }
-
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
-
-            // return $this->response->setJSON($response);
-
-            return json_encode($response);
         }
     }
 }
