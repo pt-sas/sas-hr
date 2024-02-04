@@ -61,11 +61,9 @@ class M_NotificationText extends Model
 
     public function getJoin()
     {
-        //* SYS_Notification Type
-        $defaultID = 5;
-
         $sql = [
-            $this->setDataJoin('sys_ref_detail', 'sys_ref_detail.sys_reference_id = ' . $defaultID . ' AND sys_ref_detail.value = ' . $this->table . '.notiftype', 'left')
+            $this->setDataJoin('sys_reference', 'sys_reference.name = "SYS_NotificationType"', 'left'),
+            $this->setDataJoin('sys_ref_detail', 'sys_ref_detail.value = ' . $this->table . '.notiftype AND sys_reference.sys_reference_id = sys_ref_detail.sys_reference_id', 'left')
         ];
 
         return $sql;
