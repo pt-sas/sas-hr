@@ -9,13 +9,13 @@
             <tr>
                 <th>ID</th>
                 <th>No</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Responsible Type</th>
+                <th>Nama</th>
+                <th>Keterangan</th>
+                <th>Tipe Responsible</th>
                 <th>Role</th>
                 <th>User</th>
-                <th>Active</th>
-                <th>Actions</th>
+                <th>Aktif</th>
+                <th>Aksi</th>
             </tr>
         </thead>
     </table>
