@@ -148,30 +148,30 @@ class Reference extends BaseController
     {
         $table = [];
 
-        $fieldValue = new \App\Entities\TableLine();
+        $fieldValue = new \App\Entities\Table();
         $fieldValue->setName("value");
         $fieldValue->setType("text");
         $fieldValue->setIsRequired(true);
         $fieldValue->setLength(150);
 
-        $fieldName = new \App\Entities\TableLine();
+        $fieldName = new \App\Entities\Table();
         $fieldName->setName("name");
         $fieldName->setType("text");
         $fieldName->setIsRequired(true);
         $fieldName->setLength(200);
 
-        $fieldDesc = new \App\Entities\TableLine();
+        $fieldDesc = new \App\Entities\Table();
         $fieldDesc->setName("description");
         $fieldDesc->setType("text");
         $fieldDesc->setLength(250);
 
-        $fieldActive = new \App\Entities\TableLine();
+        $fieldActive = new \App\Entities\Table();
         $fieldActive->setName("isactive");
         $fieldActive->setType("checkbox");
         $fieldActive->setClass("active");
         $fieldActive->setIsChecked(true);
 
-        $btnDelete = new \App\Entities\TableLine();
+        $btnDelete = new \App\Entities\Table();
         $btnDelete->setName("sys_ref_detail_id");
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
