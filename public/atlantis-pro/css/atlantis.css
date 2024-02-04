@@ -4314,6 +4314,7 @@ body {
   height: 100%;
   -o-object-fit: cover;
   object-fit: cover;
+  object-position: 80% 25%;
 }
 
 .avatar-title {
