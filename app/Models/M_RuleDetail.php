@@ -44,4 +44,30 @@ class M_RuleDetail extends Model
 		$this->request = $request;
 		$this->builder = $this->db->table($this->table);
 	}
+
+	/**
+	 * Change value of field data
+	 *
+	 * @param array $data Data
+	 * @return array
+	 */
+	public function doChangeValueField(array $data): array
+	{
+		$mRuleValue = new M_RuleValue($this->request);
+
+		$result = [];
+
+		foreach ($data as $row) :
+			if (!empty($row['isdetail'])) {
+				$ruleValue = $mRuleValue->where($this->primaryKey, $row['isdetail'])->first();
+				$row['isdetail'] = $ruleValue ? "Y" : "N";
+			} else {
+				$row['isdetail'] = "N";
+			}
+
+			$result[] = $row;
+		endforeach;
+
+		return $result;
+	}
 }
