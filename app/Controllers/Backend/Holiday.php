@@ -11,7 +11,6 @@ class Holiday extends BaseController
 {
     public function __construct()
     {
-
         $this->request = Services::request();
         $this->model = new M_Holiday($this->request);
         $this->entity = new \App\Entities\Holiday();
@@ -95,14 +94,11 @@ class Holiday extends BaseController
 
                 if (!empty($list[0]->getReligionId())) {
                     $rowEmp = $religion->find($list[0]->getReligionId());
-
                     $list = $this->field->setDataSelect($religion->table, $list, 'md_religion_id', $rowEmp->getReligionId(), $rowEmp->getName());
                 }
 
-                $title = 'Hari Libur';
-
                 $fieldHeader = new \App\Entities\Table();
-                $fieldHeader->setTitle($title);
+                $fieldHeader->setTitle($list[0]->getName());
                 $fieldHeader->setTable($this->model->table);
                 $fieldHeader->setList($list);
 
@@ -155,7 +151,6 @@ class Holiday extends BaseController
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getHolidayId();
                     $response[$key]['text'] = $row->getName();
-
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -165,10 +160,11 @@ class Holiday extends BaseController
         }
     }
 
-    public function getHolidayDate() {
-        // if ($this->request->isAJAX()) {
+    public function getHolidayDate()
+    {
+        if ($this->request->isAJAX()) {
             try {
-                $list = $this->model->findAll();
+                $list = $this->model->where("DATE_FORMAT(created_at, '%Y')", date("Y"))->findAll();
 
                 foreach ($list as  $row) :
                     $response[] = $row->getStartDate();
@@ -178,6 +174,6 @@ class Holiday extends BaseController
             }
 
             return $this->response->setJSON($response);
-        // }
+        }
     }
 }
