@@ -4,22 +4,21 @@
 
 <?= $this->include('backend/configuration/wscenario/form_wscenario'); ?>
 <div class="card-body card-main">
-    <table class="table table-striped table-hover tb_display" style="width: 100%">
+    <table class="table table-striped table-hover tb_display">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>No</th>
-                <th>Name </th>
+                <th>Nama</th>
                 <th>Line No</th>
                 <th>Grand Total</th>
                 <th>Menu</th>
                 <th>Status</th>
-                <th>Branch</th>
-                <th>Division</th>
-                <th>Scenario Type</th>
-                <th>Description</th>
-                <th>Active</th>
-                <th>Actions</th>
+                <th>Cabang</th>
+                <th>Divisi</th>
+                <th>Keterangan</th>
+                <th>Aktif</th>
+                <th>Aksi</th>
             </tr>
         </thead>
     </table>

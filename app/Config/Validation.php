@@ -1417,4 +1417,43 @@ class Validation
             ]
         ]
     ];
+
+    public $wscenario = [
+        'name'                  => [
+            'label'             => 'nama',
+            'rules'             => 'required|is_unique[sys_wfscenario.name,sys_wfscenario_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'menu'                  => [
+            'label'             => 'menu',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'line'                  => [
+            'label'             => 'scenario',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ],
+        'detail.table.*.sys_wfresponsible_id_line'  => [
+            'label'             => 'responsible',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ],
+        'detail.table.*.sys_notiftext_id_line'  => [
+            'label'             => 'template notifikasi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ]
+    ];
 }
