@@ -151,6 +151,7 @@ $(document).ready(function (e) {
     showClear: true,
     showClose: true,
     daysOfWeekDisabled: [0, 6],
+    disabledDates: getHolidayDate(),
     useCurrent: false,
   });
 
@@ -160,6 +161,7 @@ $(document).ready(function (e) {
     showClear: true,
     showClose: true,
     daysOfWeekDisabled: [0, 6],
+    disabledDates: getHolidayDate(),
     useCurrent: false,
   });
 
@@ -169,6 +171,7 @@ $(document).ready(function (e) {
     showClear: true,
     showClose: true,
     daysOfWeekDisabled: [0, 6],
+    disabledDates: getHolidayDate(),
     useCurrent: false,
   });
 
@@ -178,6 +181,7 @@ $(document).ready(function (e) {
     showClear: true,
     showClose: true,
     daysOfWeekDisabled: [0, 6],
+    disabledDates: getHolidayDate(),
     useCurrent: false,
   });
 
@@ -187,6 +191,7 @@ $(document).ready(function (e) {
     showClear: true,
     showClose: true,
     daysOfWeekDisabled: [0, 6],
+    disabledDates: getHolidayDate(),
     useCurrent: false,
   });
 
@@ -5446,4 +5451,28 @@ function Print(id) {
       downloadFile(response);
     },
   });
+}
+
+/**
+ * Function to get data from master holiday
+ */
+function getHolidayDate() {
+  let array = [];
+  let url = `${ADMIN_URL}holiday/get-holiday`;
+
+  $.ajax({
+    url: url,
+    type: "GET",
+    async: false,
+    cache: false,
+    dataType: "JSON",
+    success: function (result) {
+      array = result;
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+
+  return array;
 }

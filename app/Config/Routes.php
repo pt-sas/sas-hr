@@ -354,7 +354,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('holiday/show/(:any)', 'Backend\Holiday::show/$1');
     $routes->get('holiday/destroy/(:any)', 'Backend\Holiday::destroy/$1');
     $routes->match(['get', 'post'], 'holiday/getList', 'Backend\Holiday::getList');
-    $routes->get('holiday/getHolidayDate', 'Backend\Holiday::getHolidayDate');
+    $routes->get('holiday/get-holiday', 'Backend\Holiday::getHolidayDate');
 
     $routes->add('leavetype', 'Backend\LeaveType::index');
     $routes->match(['get', 'post'], 'leavetype/showAll', 'Backend\LeaveType::showAll');
