@@ -4,6 +4,7 @@ namespace App\Libraries;
 
 use App\Models\M_Menu;
 use App\Models\M_Submenu;
+use App\Models\M_Employee;
 use App\Libraries\Access;
 use Config\Services;
 
@@ -16,6 +17,7 @@ class Template
     protected $isCreate = 'iscreate';
     protected $isUpdate = 'isupdate';
     protected $isDelete = 'isdelete';
+    protected $PATH_UPLOAD = "/uploads/";
 
     public function __construct()
     {
@@ -26,7 +28,10 @@ class Template
 
     public function render($template = '', $view_data = [])
     {
+        $mEmployee = new M_Employee($this->request);
+
         $uri = $this->request->uri->getSegment(2);
+        $picture = "https://via.placeholder.com/100/808080/ffffff?text=No+Image";
 
         // Set previouse url from current url
         $this->session->set(['previous_url' => current_url()]);
@@ -43,6 +48,15 @@ class Template
         $view_data['name'] = $this->access->getUser('name');
         $view_data['email'] = $this->access->getUser('email');
         $view_data['level'] = $this->access->getRole() ? $this->access->getRole()->getName() : 'No Role';
+
+        if (!empty($this->session->get('md_employee_id'))) {
+            $PATH_Karyawan = "karyawan/";
+            $rowEmp = $mEmployee->find($this->session->get('md_employee_id'));
+            $picture = $rowEmp->getImage();
+            $picture = base_url($this->PATH_UPLOAD . $PATH_Karyawan . $picture);
+        }
+
+        $view_data['foto'] = $picture;
 
         return view($template, $view_data);
     }
