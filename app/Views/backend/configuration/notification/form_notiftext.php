@@ -4,14 +4,14 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="name">Name <span class="required">*</span></label>
+                    <label for="name">Nama <span class="required">*</span></label>
                     <input type="text" class="form-control" id="name" name="name">
                     <small class="form-text text-danger" id="error_name"></small>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="subject">Subject <span class="required">*</span></label>
+                    <label for="subject">Subjek <span class="required">*</span></label>
                     <input type="text" class="form-control" id="subject" name="subject">
                     <small class="form-text text-danger" id="error_subject"></small>
                 </div>
@@ -25,12 +25,9 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="notiftype">Notification Type <span class="required">*</span></label>
-                    <select class="form-control select2" id="notiftype" name="notiftype">
+                    <label for="notiftype">Tipe Notifikasi <span class="required">*</span></label>
+                    <select class="form-control select-data" id="notiftype" name="notiftype" data-url="reference/getList/$SYS_NotificationType">
                         <option value="">Select Notification Type</option>
-                        <?php foreach ($ref_list as $row) : ?>
-                            <option value="<?= $row->value ?>"><?= $row->name ?></option>
-                        <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_notiftype"></small>
                 </div>

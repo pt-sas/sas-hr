@@ -1346,42 +1346,74 @@ class Validation
             'label'             => 'Mail Host',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Please Insert the {field} first'
+                'required'      => 'Mohon mengisi {field} dahulu',
             ]
         ],
         'smtpport'              => [
             'label'             => 'SMTP Port',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Please Insert the {field} first'
+                'required'      => 'Mohon mengisi {field} dahulu',
             ]
         ],
         'smtpcrypto'            => [
             'label'             => 'SMTP Crypto',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Please Insert the {field} first'
+                'required'      => 'Mohon mengisi {field} dahulu',
             ]
         ],
         'smtpuser'              => [
             'label'             => 'Request User',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Please Insert the {field} first'
+                'required'      => 'Mohon mengisi {field} dahulu',
             ]
         ],
         'smtppassword'          => [
             'label'             => 'Request User Password',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Please Insert the {field} first'
+                'required'      => 'Mohon mengisi {field} dahulu',
             ]
         ],
         'requestemail'          => [
             'label'             => 'Request Email',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Please Insert the {field} first'
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
+
+    public $notifText = [
+        'name'                  => [
+            'label'             => 'nama',
+            'rules'             => 'required|is_unique[sys_notiftext.name,sys_notiftext_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'subject'               => [
+            'label'             => 'subjek',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'text'                  => [
+            'label'             => 'text',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'notiftype'             => [
+            'label'             => 'tipe notifikasi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
             ]
         ]
     ];
