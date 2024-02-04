@@ -390,6 +390,13 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'ijin-keluar-kantor/getList', 'Backend\PermissionLeaveOffice::getList');
     $routes->get('ijin-keluar-kantor/exportPDF', 'Backend\PermissionLeaveOffice::exportPDF');
 
+    $routes->add('ijin', 'Backend\Permission::index');
+    $routes->match(['get', 'post'], 'ijin/showAll', 'Backend\Permission::showAll');
+    $routes->post('ijin/create', 'Backend\Permission::create');
+    $routes->get('ijin/show/(:any)', 'Backend\Permission::show/$1');   
+    $routes->get('ijin/destroy/(:any)', 'Backend\Permission::destroy/$1');
+    $routes->match(['get', 'post'], 'ijin/getList', 'Backend\Permission::getList');
+
     $routes->add('laporan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
 });
