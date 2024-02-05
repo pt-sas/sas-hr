@@ -176,6 +176,20 @@ class BaseController extends Controller
 	protected $isNewRecord = false;
 
 	/**
+	 * PATH Folder for upload data
+	 *
+	 * @var directory
+	 */
+	protected $PATH_UPLOAD = FCPATH . "/uploads/";
+
+	/**
+	 * Button Print
+	 *
+	 * @var directory
+	 */
+	protected $BTN_Print = 'PRINT';
+
+	/**
 	 * Constructor.
 	 *
 	 * @param RequestInterface  $request

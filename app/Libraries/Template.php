@@ -18,6 +18,7 @@ class Template
     protected $isUpdate = 'isupdate';
     protected $isDelete = 'isdelete';
     protected $PATH_UPLOAD = "/uploads/";
+    protected $BTN_Print = 'PRINT';
 
     public function __construct()
     {
@@ -91,22 +92,21 @@ class Template
         $uri = $this->request->uri->getSegment(2);
         $allBtn = '';
 
+        if (!is_null($type))
+            $type = strtoupper($type);
+
         $btnUpdate = '<a class="btn" onclick="Edit(' . "'" . $btnID . "'" . ')" id="' . $btnID . '" data-toggle="tooltip" title="Edit" data-original-title="Edit"><i class="fas fa-edit text-info"></i></a>';
 
-        $btnDelete = '<a class="btn" onclick="Destroy(' . "'" . $btnID . "'" . ')" data-toggle="tooltip" title="Delete" data-original-title="Delete"><i class="fas fa-trash-alt text-danger"></i></a>';
+        $btnDelete = '<a class="btn" onclick="Destroy(' . "'" . $btnID . "'" . ')" data-toggle="tooltip" title="Hapus" data-original-title="Hapus"><i class="fas fa-trash-alt text-danger"></i></a>';
 
-        $btnProcess = '<a class="btn" onclick="docProcess(' . "'" . $btnID . "'," . "'" . $status . "'" . ')" data-toggle="tooltip" title="Document Action" data-original-title="Document Action"><i class="fas fa-cog text-primary"></i></a>';
+        $btnProcess = '<a class="btn" onclick="docProcess(' . "'" . $btnID . "'," . "'" . $status . "'" . ')" data-toggle="tooltip" title="Proses" data-original-title="Proses"><i class="fas fa-cog text-primary"></i></a>';
 
         $btnDetail = '<a class="btn" onclick="Edit(' . "'" . $btnID . "'," . "'" . $status . "'" . ')" id="' . $btnID . '" data-status="' . $status . '" data-toggle="tooltip" title="Detail" data-original-title="Detail"><i class="fas fa-file text-info"></i></a>';
 
-        $btnAccept = '<a class="btn" onclick="Accept(' . "'" . $btnID . "'" . ')" data-toggle="tooltip" title="Accept" data-original-title="Detail"><i class="fas fa-check fa-lg text-success"></i></a>';
+        $btnPrint = '<a class="btn btn_print" data-toggle="tooltip" title="Cetak" data-original-title="Cetak"><i class="fas fa-print text-default"></i></a>';
 
         $update = $this->access->checkCrud($uri, $this->isUpdate);
         $delete = $this->access->checkCrud($uri, $this->isDelete);
-
-        //? Belum di deploy 
-        // if ($update === 'Y' && strtoupper($type) === $this->Movement_Terima && ($status === 'DR' || $status === 'IP'))
-        //     $allBtn .= $btnAccept;
 
         if ($update === 'Y' && (empty($status) || $status === 'DR'))
             $allBtn .= $btnUpdate;
@@ -115,6 +115,9 @@ class Template
 
         if ($update === 'Y' && !empty($status) && ($status === 'CO' || $status === 'DR' || $status === 'NA'))
             $allBtn .= $btnProcess;
+
+        if (!is_null($type) && $type === $this->BTN_Print)
+            $allBtn .= $btnPrint;
 
         if ($delete === 'Y')
             $allBtn .= $btnDelete;

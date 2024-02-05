@@ -21,7 +21,7 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="documentno">No Form <span class="required">*</span></label>
+                    <label for="documentno">No Form</label>
                     <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
                         readonly>
                 </div>
@@ -54,7 +54,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="receiveddate">Tanggal Diterima <span class="required">*</span></label>
+                    <label for="receiveddate">Tanggal Diterima</label>
                     <input type="text" class="form-control datepicker" id="receiveddate" name="receiveddate" readonly>
                     <small class="form-text text-danger" id="error_receiveddate"></small>
                 </div>
@@ -90,7 +90,7 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="reason">Alasan </label>
+                    <label for="reason">Alasan <span class="required">*</span></label>
                     <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
                     <small class="form-text text-danger" id="error_reason"></small>
                 </div>

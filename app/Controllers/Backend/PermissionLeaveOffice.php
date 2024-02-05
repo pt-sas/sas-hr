@@ -14,7 +14,7 @@ use TCPDF;
 class PermissionLeaveOffice extends BaseController
 {
     /** Pengajuan Tugas Kantor Setengah Hari */
-    protected $Tipe_Pengajuan = 'ijin keluar kantor';
+    protected $Pengajuan_Ijin_Keluar_Kantor = 'ijin keluar kantor';
 
     public function __construct()
     {
@@ -25,19 +25,8 @@ class PermissionLeaveOffice extends BaseController
 
     public function index()
     {
-        $mReference = new M_Reference($this->request);
-
         $data = [
-            'today'     => date('d-M-Y'),
-            'ref_list'  => $mReference->findBy([
-                'sys_reference.name'              => 'NecessaryType',
-                'sys_reference.isactive'          => 'Y',
-                'sys_ref_detail.isactive'         => 'Y',
-            ], null, [
-                'field'     => 'sys_ref_detail.value',
-                'option'    => 'ASC'
-            ])->getResult(),
-            'ref_default' => $this->Form_Kelengkapan_Absent
+            'today'     => date('d-M-Y')
         ];
 
         return $this->template->render('transaction/permissionleaveoffice/v_permission_leave_office.php', $data);
@@ -79,7 +68,7 @@ class PermissionLeaveOffice extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
+            $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin_Keluar_Kantor;
 
             $data = [];
 
@@ -125,7 +114,7 @@ class PermissionLeaveOffice extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["submissiontype"] = $this->Pengajuan_Ijin_Keluar_Kantor;
             $post["necessary"] = $this->Form_Kelengkapan_Absent;
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
@@ -135,14 +124,14 @@ class PermissionLeaveOffice extends BaseController
             try {
                 $this->entity->fill($post);
 
-                if (!$this->validation->run($post, 'pengajuantugas')) {
+                if (!$this->validation->run($post, 'ijinkeluarkantor')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
 
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin_Keluar_Kantor, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 
@@ -268,12 +257,54 @@ class PermissionLeaveOffice extends BaseController
     }
 
     public function exportPDF() {
-        // $id = $this->model->getAbsentId();
+        $noform = 'FK/2402/0001';
+        $nama = 'Alvine Aditya';
+        $divisi = 'IT';
+        $tglpengajuan = format_dmy('2024-02-01 00:00:00','-');
 
-        $view = view('printformat\print_permission_leave_office');
-        $pdf = new TCPDF('L', PDF_UNIT, 'A5'); 
+        // $view = view('printformat\print_permission_leave_office');
+        
+        $pdf = new TCPDF('L', PDF_UNIT, 'A5',true,'UTF-8',false);
         $pdf->AddPage();
-        $pdf->writeHTML($view);
+        $pdf->setPrintHeader(false);
+        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera',0,0,'L',false,'',0,false);
+        $pdf->Cell(50, 0, 'No Form : '. $noform,0,1,'L',false,'',0,false );
+        $pdf->setFont('helvetica', 'B', 20);
+        $pdf->Cell(0, 25, 'FORM IJIN KELUAR KANTOR',0,1,'C');
+        $pdf->setFont('helvetica','',12);
+        //Ini untuk bagian field nama dan tanggal pengajuan
+        $pdf->Cell(30, 0, 'Nama ',0,0,'L',false,'',0,false);
+        $pdf->Cell(90, 0, ': ' . $nama,0,0,'L',false,'',0,false);
+        $pdf->Cell(40, 0, 'Tanggal Pengajuan',0,0,'L',false,'',0,false);
+        $pdf->Cell(30, 0, ': ' . $tglpengajuan,0,1,'L',false,'',0,false);
+        $pdf->Ln(2);
+        //Ini untuk bagian field divisi dan Tanggal diterima
+        $pdf->Cell(30, 0, 'Divisi ',0,0,'L',false,'',0,false);
+        $pdf->Cell(90, 0, ': ' . $divisi,0,0,'L',false,'',0,false);
+        $pdf->Cell(40, 0, 'Tanggal Diterima',0,0,'L',false,'',0,false);
+        $pdf->Cell(30, 0, ': ' . $tglpengajuan,0,1,'L',false,'',0,false);
+        $pdf->Ln(10);
+        //Ini bagian tanggal ijin dan jam
+        $pdf->Cell(30, 0, 'Tanggal Ijin',0,0,'L',false,'',0,false);
+        $pdf->Cell(40, 0, ': ' . '01-Feb-2024',0,1,'L',false,'',0,false);
+        $pdf->Cell(30, 0, 'Jam',0,0,'L',false,'',0,false);
+        $pdf->Cell(15, 0, ': ' . '09:00',0,0,'L',false,'',0,false);
+        $pdf->Cell(8, 0, 's/d ............',0,1,'L',false,'',0,false);
+        $pdf->Ln(2);
+        //Ini bagian Alasan
+        $pdf->Cell(30, 0, 'Alasan',0,0,'L');
+        $pdf->Cell(3, 0, ':',0,0,'L');
+        $pdf->MultiCell(0, 20,'BACASDASDALKJSDHJKO',0,'',false,1,null,null,false,0,false,false,20);
+        //Bagian ttd
+        $pdf->setFont('helvetica','',10);
+        $pdf->Cell(63, 0, 'Dibuat oleh,',0,0,'C');
+        $pdf->Cell(63, 0, 'Distujui oleh,',0,0,'C');
+        $pdf->Cell(63, 0, 'Diketahui oleh,',0,0,'C');
+        $pdf->Ln(25);
+        $pdf->Cell(63, 0, $nama,0,0,'C');
+        $pdf->Cell(63, 0, '(                          )',0,0,'C');
+        $pdf->Cell(63, 0, '(                          )',0,0,'C');
+
         $this->response->setContentType('application/pdf');
         $pdf->Output('detail-laporan,pdf','I'); 
 

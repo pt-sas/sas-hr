@@ -6,14 +6,13 @@ use App\Controllers\BaseController;
 use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
-use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
 use DateTime;
 
 class HalfDayOfficeDuties extends BaseController
 {
     /** Pengajuan Tugas Kantor Setengah Hari */
-    protected $Tipe_Pengajuan = 'tugas kantor fka';
+    protected $Pengajuan_Tugas_Kantor_setengah_Hari = 'tugas kantor setengah hari';
 
     public function __construct()
     {
@@ -24,19 +23,9 @@ class HalfDayOfficeDuties extends BaseController
 
     public function index()
     {
-        $mReference = new M_Reference($this->request);
 
         $data = [
-            'today'     => date('d-M-Y'),
-            'ref_list'  => $mReference->findBy([
-                'sys_reference.name'              => 'NecessaryType',
-                'sys_reference.isactive'          => 'Y',
-                'sys_ref_detail.isactive'         => 'Y',
-            ], null, [
-                'field'     => 'sys_ref_detail.value',
-                'option'    => 'ASC'
-            ])->getResult(),
-            'ref_default' => $this->Form_Kelengkapan_Absent
+            'today'     => date('d-M-Y')
         ];
 
         return $this->template->render('transaction/halfdayofficeduties/v_half_day_office_duties', $data);
@@ -78,7 +67,7 @@ class HalfDayOfficeDuties extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
+            $where['trx_absent.submissiontype'] = $this->Pengajuan_Tugas_Kantor_setengah_Hari;
 
             $data = [];
 
@@ -124,12 +113,10 @@ class HalfDayOfficeDuties extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["submissiontype"] = $this->Pengajuan_Tugas_Kantor_setengah_Hari;
             $post["necessary"] = $this->Form_Kelengkapan_Absent;
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
-
-
 
             try {
                 $this->entity->fill($post);
@@ -141,7 +128,7 @@ class HalfDayOfficeDuties extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Tugas_Kantor_setengah_Hari, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 

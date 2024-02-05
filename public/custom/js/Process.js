@@ -5456,6 +5456,17 @@ function Print(id) {
 }
 
 /**
+ * Table button print
+ */
+_table.on("click", "a.btn_print", function (evt) {
+  evt.preventDefault();
+  let id = _table.row(this).data()[0];
+  let url = `${CURRENT_URL}${PRINT}${id}`;
+
+  window.open(url, "_blank");
+});
+
+/**
  * Function to get data from master holiday
  */
 function getHolidayDate() {

@@ -6,13 +6,12 @@ use App\Controllers\BaseController;
 use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
-use App\Models\M_Reference;
 use App\Models\M_AllowanceAtt;
 
 class ForgotAbsentArrive extends BaseController
 {
     /** Pengajuan Lupa Absen Masuk */
-    protected $Tipe_Pengajuan = 'lupa absen masuk';
+    protected $Pengajuan_Lupa_Absen_Masuk = 'lupa absen masuk';
 
     public function __construct()
     {
@@ -23,19 +22,9 @@ class ForgotAbsentArrive extends BaseController
 
     public function index()
     {
-        $mReference = new M_Reference($this->request);
 
         $data = [
-            'today'     => date('d-M-Y'),
-            'ref_list'  => $mReference->findBy([
-                'sys_reference.name'              => 'NecessaryType',
-                'sys_reference.isactive'          => 'Y',
-                'sys_ref_detail.isactive'         => 'Y',
-            ], null, [
-                'field'     => 'sys_ref_detail.value',
-                'option'    => 'ASC'
-            ])->getResult(),
-            'ref_default' => $this->Form_Kelengkapan_Absent
+            'today'     => date('d-M-Y')
         ];
 
         return $this->template->render('transaction/forgetabsent/arrive/v_forgot_absent_arrive', $data);
@@ -77,7 +66,7 @@ class ForgotAbsentArrive extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
+            $where['trx_absent.submissiontype'] = $this->Pengajuan_Lupa_Absen_Masuk;
 
             $data = [];
 
@@ -123,7 +112,7 @@ class ForgotAbsentArrive extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["submissiontype"] = $this->Pengajuan_Lupa_Absen_Masuk;
             $post["necessary"] = $this->Form_Kelengkapan_Absent;
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
 
@@ -137,7 +126,7 @@ class ForgotAbsentArrive extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Lupa_Absen_Masuk, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 
