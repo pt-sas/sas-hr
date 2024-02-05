@@ -11,8 +11,8 @@ use App\Models\M_AllowanceAtt;
 
 class Permission extends BaseController
 {
-    /** Pengajuan Cuti */
-    protected $Tipe_Pengajuan = 'ijin';
+    /** Pengajuan Ijin */
+    protected $Pengajuan_Ijin = 'ijin';
 
     public function __construct()
     {
@@ -23,19 +23,9 @@ class Permission extends BaseController
 
     public function index()
     {
-        $mReference = new M_Reference($this->request);
 
         $data = [
-            'today'     => date('d-M-Y'),
-            'ref_list'  => $mReference->findBy([
-                'sys_reference.name'              => 'NecessaryType',
-                'sys_reference.isactive'          => 'Y',
-                'sys_ref_detail.isactive'         => 'Y',
-            ], null, [
-                'field'     => 'sys_ref_detail.value',
-                'option'    => 'ASC'
-            ])->getResult(),
-            'ref_default' => $this->Form_Absent
+            'today'     => date('d-M-Y')
         ];
 
         return $this->template->render('transaction/permission/permission/v_permission', $data);
@@ -77,7 +67,7 @@ class Permission extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
+            $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin;
 
             $data = [];
 
@@ -123,7 +113,7 @@ class Permission extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["submissiontype"] = $this->Pengajuan_Ijin;
             $post["necessary"] = $this->Form_Absent;
 
             try {
@@ -136,7 +126,7 @@ class Permission extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 

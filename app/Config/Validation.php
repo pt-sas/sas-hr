@@ -585,6 +585,13 @@ class Validation
                 'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'reason'                 => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 
     public $pengajuan = [
@@ -1453,6 +1460,58 @@ class Validation
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ]
+    ];
+
+    public $ijinkeluarkantor = [
+        'md_employee_id'                 => [
+            'label'            => 'Karyawan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'                 => [
+            'label'            => 'Cabang',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'                 => [
+            'label'            => 'Divisi',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'nik'                 => [
+            'label'            => 'NIK',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'datestart'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'starttime'                 => [
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                 => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
             ]
         ]
     ];
