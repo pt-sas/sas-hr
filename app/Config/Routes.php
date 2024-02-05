@@ -388,7 +388,8 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('ijin-keluar-kantor/show/(:any)', 'Backend\PermissionLeaveOffice::show/$1');   
     $routes->get('ijin-keluar-kantor/destroy/(:any)', 'Backend\PermissionLeaveOffice::destroy/$1');
     $routes->match(['get', 'post'], 'ijin-keluar-kantor/getList', 'Backend\PermissionLeaveOffice::getList');
-    $routes->get('ijin-keluar-kantor/exportPDF', 'Backend\PermissionLeaveOffice::exportPDF');
+    $routes->post('ijin-keluar-kantor/exportPDF', 'Backend\PermissionLeaveOffice::exportPDF');
+    
 
     $routes->add('ijin', 'Backend\Permission::index');
     $routes->match(['get', 'post'], 'ijin/showAll', 'Backend\Permission::showAll');
