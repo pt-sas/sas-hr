@@ -169,7 +169,7 @@ class Holiday extends BaseController
             try {
                 $list = $this->model->where([
                     "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
-                    "isaffect"                      => "Y"
+                    "isactive"                      => "Y"
                 ])->findAll();
                 foreach ($list as  $row) :
                     $holiday[] = $row->getStartDate();
@@ -177,7 +177,8 @@ class Holiday extends BaseController
 
                 $leave = $mMassLeave->where([
                     "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
-                    "isaffect"                      => "Y"
+                    "isaffect"                      => "Y",
+                    "isactive"                      => "Y"
                 ])->findAll();
                 foreach ($leave as  $row) :
                     $massLeave[] = $row->getStartDate();
