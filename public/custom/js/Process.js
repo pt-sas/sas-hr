@@ -137,63 +137,65 @@ $(document).ready(function (e) {
     timer: 4000,
   });
 
-  $(".datepicker").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    useCurrent: false,
-  });
+  if (card.length) {
+    $(".datepicker").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+    });
 
-  $(".datepick").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    disabledDates: getHolidayDate(),
-    useCurrent: false,
-  });
+    $(".datepick").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
 
-  $(".datepick-start").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    disabledDates: getHolidayDate(),
-    useCurrent: false,
-  });
+    $(".datepick-start").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
 
-  $(".datepick-end").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    disabledDates: getHolidayDate(),
-    useCurrent: false,
-  });
+    $(".datepick-end").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
 
-  $(".datepicker-start").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    disabledDates: getHolidayDate(),
-    useCurrent: false,
-  });
+    $(".datepicker-start").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
 
-  $(".datepicker-end").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    disabledDates: getHolidayDate(),
-    useCurrent: false,
-  });
+    $(".datepicker-end").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
+  }
 
   //* start date picker on change event [select minimun date for end date datepicker]
   $(".datepicker-start").on("dp.change", function (e) {
