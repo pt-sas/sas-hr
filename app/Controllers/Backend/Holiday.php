@@ -5,6 +5,7 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Holiday;
 use App\Models\M_Religion;
+use App\Models\M_MassLeave;
 use Config\Services;
 
 class Holiday extends BaseController
@@ -162,13 +163,28 @@ class Holiday extends BaseController
 
     public function getHolidayDate()
     {
+        $mMassLeave = new M_MassLeave($this->request);
+
         if ($this->request->isAJAX()) {
             try {
-                $list = $this->model->where("DATE_FORMAT(created_at, '%Y')", date("Y"))->findAll();
-
+                $list = $this->model->where([
+                    "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
+                    "isaffect"                      => "Y"
+                ])->findAll();
                 foreach ($list as  $row) :
-                    $response[] = $row->getStartDate();
+                    $holiday[] = $row->getStartDate();
                 endforeach;
+
+                $leave = $mMassLeave->where([
+                    "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
+                    "isaffect"                      => "Y"
+                ])->findAll();
+                foreach ($leave as  $row) :
+                    $massLeave[] = $row->getStartDate();
+                endforeach;
+
+                $response = array_unique(array_merge($holiday, $massLeave));
+                sort($response);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
