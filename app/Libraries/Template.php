@@ -4,6 +4,7 @@ namespace App\Libraries;
 
 use App\Models\M_Menu;
 use App\Models\M_Submenu;
+use App\Models\M_Employee;
 use App\Libraries\Access;
 use Config\Services;
 
@@ -16,8 +17,8 @@ class Template
     protected $isCreate = 'iscreate';
     protected $isUpdate = 'isupdate';
     protected $isDelete = 'isdelete';
-    protected $Movement_Kirim = 'KIRIM';
-    protected $Movement_Terima = 'TERIMA';
+    protected $PATH_UPLOAD = "/uploads/";
+    protected $BTN_Print = 'PRINT';
 
     public function __construct()
     {
@@ -28,7 +29,10 @@ class Template
 
     public function render($template = '', $view_data = [])
     {
+        $mEmployee = new M_Employee($this->request);
+
         $uri = $this->request->uri->getSegment(2);
+        $picture = "https://via.placeholder.com/100/808080/ffffff?text=No+Image";
 
         // Set previouse url from current url
         $this->session->set(['previous_url' => current_url()]);
@@ -45,6 +49,18 @@ class Template
         $view_data['name'] = $this->access->getUser('name');
         $view_data['email'] = $this->access->getUser('email');
         $view_data['level'] = $this->access->getRole() ? $this->access->getRole()->getName() : 'No Role';
+
+        if (!empty($this->session->get('md_employee_id'))) {
+            $PATH_Karyawan = "karyawan/";
+            $rowEmp = $mEmployee->find($this->session->get('md_employee_id'));
+            $image = $rowEmp->getImage();
+            $path = $this->PATH_UPLOAD . $PATH_Karyawan . $image;
+
+            if (file_exists(FCPATH . $path))
+                $picture = base_url($path);
+        }
+
+        $view_data['foto'] = $picture;
 
         return view($template, $view_data);
     }
@@ -76,22 +92,21 @@ class Template
         $uri = $this->request->uri->getSegment(2);
         $allBtn = '';
 
+        if (!is_null($type))
+            $type = strtoupper($type);
+
         $btnUpdate = '<a class="btn" onclick="Edit(' . "'" . $btnID . "'" . ')" id="' . $btnID . '" data-toggle="tooltip" title="Edit" data-original-title="Edit"><i class="fas fa-edit text-info"></i></a>';
 
-        $btnDelete = '<a class="btn" onclick="Destroy(' . "'" . $btnID . "'" . ')" data-toggle="tooltip" title="Delete" data-original-title="Delete"><i class="fas fa-trash-alt text-danger"></i></a>';
+        $btnDelete = '<a class="btn" onclick="Destroy(' . "'" . $btnID . "'" . ')" data-toggle="tooltip" title="Hapus" data-original-title="Hapus"><i class="fas fa-trash-alt text-danger"></i></a>';
 
-        $btnProcess = '<a class="btn" onclick="docProcess(' . "'" . $btnID . "'," . "'" . $status . "'" . ')" data-toggle="tooltip" title="Document Action" data-original-title="Document Action"><i class="fas fa-cog text-primary"></i></a>';
+        $btnProcess = '<a class="btn" onclick="docProcess(' . "'" . $btnID . "'," . "'" . $status . "'" . ')" data-toggle="tooltip" title="Proses" data-original-title="Proses"><i class="fas fa-cog text-primary"></i></a>';
 
         $btnDetail = '<a class="btn" onclick="Edit(' . "'" . $btnID . "'," . "'" . $status . "'" . ')" id="' . $btnID . '" data-status="' . $status . '" data-toggle="tooltip" title="Detail" data-original-title="Detail"><i class="fas fa-file text-info"></i></a>';
 
-        $btnAccept = '<a class="btn" onclick="Accept(' . "'" . $btnID . "'" . ')" data-toggle="tooltip" title="Accept" data-original-title="Detail"><i class="fas fa-check fa-lg text-success"></i></a>';
+        $btnPrint = '<a class="btn btn_print" data-toggle="tooltip" title="Cetak" data-original-title="Cetak"><i class="fas fa-print text-default"></i></a>';
 
         $update = $this->access->checkCrud($uri, $this->isUpdate);
         $delete = $this->access->checkCrud($uri, $this->isDelete);
-
-        //? Belum di deploy 
-        // if ($update === 'Y' && strtoupper($type) === $this->Movement_Terima && ($status === 'DR' || $status === 'IP'))
-        //     $allBtn .= $btnAccept;
 
         if ($update === 'Y' && (empty($status) || $status === 'DR'))
             $allBtn .= $btnUpdate;
@@ -100,6 +115,9 @@ class Template
 
         if ($update === 'Y' && !empty($status) && ($status === 'CO' || $status === 'DR' || $status === 'NA'))
             $allBtn .= $btnProcess;
+
+        if (!is_null($type) && $type === $this->BTN_Print)
+            $allBtn .= $btnPrint;
 
         if ($delete === 'Y')
             $allBtn .= $btnDelete;

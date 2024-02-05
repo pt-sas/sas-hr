@@ -4,38 +4,24 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="name">Name <span class="required">*</span></label>
+                    <label for="name">Nama <span class="required">*</span></label>
                     <input type="text" class="form-control" id="name" name="name">
                     <small class="form-text text-danger" id="error_name"></small>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="description">Description </label>
+                    <label for="description">Keterangan </label>
                     <textarea type="text" class="form-control" id="description" name="description" rows="2"></textarea>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="responsibletype">Responsible Type <span class="required">*</span></label>
-                    <select class="form-control select2" id="responsibletype" name="responsibletype" hide-field="sys_role_id, sys_user_id">
+                    <label for="responsibletype">Tipe Responsible <span class="required">*</span></label>
+                    <select class="form-control select-data" id="responsibletype" name="responsibletype" hide-field="sys_role_id, sys_user_id" data-url="reference/getList/$WF_ParticipantType">
                         <option value="">Select Responsible Type</option>
-                        <?php foreach ($ref_list as $row) : ?>
-                            <option value="<?= $row->value ?>"><?= $row->name ?></option>
-                        <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_responsibletype"></small>
-                </div>
-                <div class="form-group">
-                    <label>Alert Recipient <span class="required">*</span></label>
-                    <div class="select2-input select2-primary">
-                        <select class="form-control multiple-select" name="alert" multiple="multiple" style="width: 100%;">
-                            <?php foreach ($user as $row) : ?>
-                                <option value="<?= $row->sys_user_id; ?>"><?= $row->name; ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small class="form-text text-danger" id="error_alert"></small>
-                    </div>
                 </div>
                 <div class="form-check">
                     <label class="form-check-label">
@@ -55,7 +41,7 @@
                 <div class="form-group">
                     <label for="sys_user_id">User <span class="required">*</span></label>
                     <select class="form-control select-data" id="sys_user_id" name="sys_user_id" data-url="user/getList">
-                        <option value="">Select Role</option>
+                        <option value="">Select User</option>
                     </select>
                     <small class="form-text text-danger" id="error_sys_user_id"></small>
                 </div>

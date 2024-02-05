@@ -11,14 +11,14 @@
       <li class=" nav-item dropdown hidden-caret">
         <a class="dropdown-toggle profile-pic" data-toggle="dropdown" href="#" aria-expanded="false">
           <div class="avatar-sm">
-            <img src="<?= base_url('custom/image/undraw_profile_1.svg') ?>" alt="..." class="avatar-img rounded-circle">
+            <img src="<?= $foto ?>" alt="..." class="avatar-img rounded-circle">
           </div>
         </a>
         <ul class="dropdown-menu dropdown-user animated fadeIn">
           <div class="dropdown-user-scroll scrollbar-outer">
             <li>
               <div class="user-box">
-                <div class="avatar-lg"><img src="<?= base_url('custom/image/undraw_profile_1.svg') ?>" alt="image profile" class="avatar-img rounded"></div>
+                <div class="avatar-lg"><img src="<?= $foto ?>" alt="image profile" class="avatar-img rounded"></div>
                 <div class="u-text">
                   <h4><?= $name; ?></h4>
                   <p class="text-muted"><?= $email; ?></p>

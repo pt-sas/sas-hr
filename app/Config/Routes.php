@@ -186,9 +186,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('levelling/getSeqCode', 'Backend\Levelling::getSeqCode');
     $routes->match(['get', 'post'], 'levelling/getList', 'Backend\Levelling::getList');
 
-    $routes->match(['get', 'post'], 'karyawan/getDetail', 'Backend\Employee::getDetailEmployee');
-    $routes->match(['get', 'post'], 'employee/getList', 'Backend\Employee::getList');
-
     $routes->add('sakit', 'Backend\SickLeave::index');
     $routes->match(['get', 'post'], 'sakit/showAll', 'Backend\SickLeave::showAll');
     $routes->post('sakit/create', 'Backend\SickLeave::create');
@@ -246,7 +243,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'karyawan/showAll', 'Backend\Employee::showAll');
     $routes->get('karyawan/getDataBy/(:num)', 'Backend\Employee::getBy/$1');
     $routes->match(['get', 'post'], 'karyawan/getDetail', 'Backend\Employee::getDetailEmployee');
-    $routes->match(['get', 'post'], 'karyawan/getList', 'Backend\Employee::getList');
+    $routes->match(['get', 'post'], 'employee/getList', 'Backend\Employee::getList');
     $routes->match(['get', 'post'], 'karyawan/superior', 'Backend\Employee::getSuperior');
     $routes->get('karyawan/destroy/(:any)', 'Backend\Employee::destroy/$1');
     $routes->post('karyawan/create', 'Backend\Employee::create');
@@ -357,7 +354,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('holiday/show/(:any)', 'Backend\Holiday::show/$1');
     $routes->get('holiday/destroy/(:any)', 'Backend\Holiday::destroy/$1');
     $routes->match(['get', 'post'], 'holiday/getList', 'Backend\Holiday::getList');
-    $routes->get('holiday/getHolidayDate', 'Backend\Holiday::getHolidayDate');
+    $routes->get('holiday/get-holiday', 'Backend\Holiday::getHolidayDate');
 
     $routes->add('leavetype', 'Backend\LeaveType::index');
     $routes->match(['get', 'post'], 'leavetype/showAll', 'Backend\LeaveType::showAll');
@@ -385,7 +382,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('ijin-keluar-kantor', 'Backend\PermissionLeaveOffice::index');
     $routes->match(['get', 'post'], 'ijin-keluar-kantor/showAll', 'Backend\PermissionLeaveOffice::showAll');
     $routes->post('ijin-keluar-kantor/create', 'Backend\PermissionLeaveOffice::create');
-    $routes->get('ijin-keluar-kantor/show/(:any)', 'Backend\PermissionLeaveOffice::show/$1');   
+    $routes->get('ijin-keluar-kantor/show/(:any)', 'Backend\PermissionLeaveOffice::show/$1');
     $routes->get('ijin-keluar-kantor/destroy/(:any)', 'Backend\PermissionLeaveOffice::destroy/$1');
     $routes->match(['get', 'post'], 'ijin-keluar-kantor/getList', 'Backend\PermissionLeaveOffice::getList');
     $routes->post('ijin-keluar-kantor/exportPDF', 'Backend\PermissionLeaveOffice::exportPDF');
@@ -394,12 +391,59 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('ijin', 'Backend\Permission::index');
     $routes->match(['get', 'post'], 'ijin/showAll', 'Backend\Permission::showAll');
     $routes->post('ijin/create', 'Backend\Permission::create');
-    $routes->get('ijin/show/(:any)', 'Backend\Permission::show/$1');   
+    $routes->get('ijin/show/(:any)', 'Backend\Permission::show/$1');
     $routes->get('ijin/destroy/(:any)', 'Backend\Permission::destroy/$1');
     $routes->match(['get', 'post'], 'ijin/getList', 'Backend\Permission::getList');
 
     $routes->add('laporan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
+
+    $routes->add('rule-inti', 'Backend\Rule::index');
+    $routes->match(['get', 'post'], 'rule-inti/showAll', 'Backend\Rule::showAll');
+    $routes->post('rule-inti/create', 'Backend\Rule::create');
+    $routes->get('rule-inti/show/(:any)', 'Backend\Rule::show/$1');
+    $routes->get('rule-inti/destroy/(:any)', 'Backend\Rule::destroy/$1');
+    $routes->get('rule-inti/getDataBy/(:num)', 'Backend\Rule::getBy/$1');
+
+    $routes->post('rule-detail/create', 'Backend\RuleDetail::create');
+    $routes->get('rule-detail/show', 'Backend\RuleDetail::show');
+    $routes->get('rule-detail/show/(:any)', 'Backend\RuleDetail::show/$1');
+    $routes->post('rule-detail/tableLine', 'Backend\RuleDetail::tableLine');
+    $routes->get('rule-detail/getDataBy/(:num)', 'Backend\RuleDetail::getBy/$1');
+
+    $routes->post('rule-value/create', 'Backend\RuleValue::create');
+    $routes->get('rule-value/show', 'Backend\RuleValue::show');
+    $routes->get('rule-value/show/(:any)', 'Backend\RuleValue::show/$1');
+    $routes->post('rule-value/tableLine', 'Backend\RuleValue::tableLine');
+
+    $routes->add('responsible', 'Backend\Responsible::index');
+    $routes->match(['get', 'post'], 'responsible/showAll', 'Backend\Responsible::showAll');
+    $routes->post('responsible/create', 'Backend\Responsible::create');
+    $routes->get('responsible/show/(:any)', 'Backend\Responsible::show/$1');
+    $routes->get('responsible/destroy/(:any)', 'Backend\Responsible::destroy/$1');
+
+    $routes->add('mail', 'Backend\Mail::index');
+    $routes->match(['get', 'post'], 'mail/showAll', 'Backend\Mail::showAll');
+    $routes->post('mail/create', 'Backend\Mail::create');
+    $routes->post('mail/createTestEmail', 'Backend\Mail::createTestEmail');
+
+    $routes->add('notifikasi-text', 'Backend\NotificationText::index');
+    $routes->match(['get', 'post'], 'notifikasi-text/showAll', 'Backend\NotificationText::showAll');
+    $routes->post('notifikasi-text/create', 'Backend\NotificationText::create');
+    $routes->get('notifikasi-text/show/(:any)', 'Backend\NotificationText::show/$1');
+    $routes->get('notifikasi-text/destroy/(:any)', 'Backend\NotificationText::destroy/$1');
+
+    $routes->add('wscenario', 'Backend\WScenario::index');
+    $routes->match(['get', 'post'], 'wscenario/showAll', 'Backend\WScenario::showAll');
+    $routes->post('wscenario/create', 'Backend\WScenario::create');
+    $routes->get('wscenario/show/(:any)', 'Backend\WScenario::show/$1');
+    $routes->get('wscenario/destroy/(:any)', 'Backend\WScenario::destroy/$1');
+    $routes->post('wscenario/tableLine', 'Backend\WScenario::tableLine');
+    $routes->get('wscenario/destroyLine/(:any)', 'Backend\WScenario::destroyLine/$1');
+
+    $routes->get('wactivity/showNotif', 'Backend\WActivity::showNotif');
+    $routes->post('wactivity/create', 'Backend\WActivity::create');
+    $routes->match(['get', 'post'], 'wactivity/showActivityInfo', 'Backend\WActivity::showActivityInfo');
 });
 
 /*

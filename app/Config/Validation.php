@@ -629,21 +629,21 @@ class Validation
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
             ]
-            ],
+        ],
         'starttime'                 => [
-                'label'            => 'Jam',
-                'rules'            =>    'required',
-                'errors'        => [
-                    'required'    => 'Mohon mengisi {field} dahulu'
-                ]
-                ],
-                'reason'                 => [
-                    'label'            => 'Alasan',
-                    'rules'            =>    'required',
-                    'errors'        => [
-                        'required'    => 'Mohon mengisi {field} dahulu'
-                    ]
-                ]
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                 => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 
     public $pengajuantugas = [
@@ -681,28 +681,28 @@ class Validation
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
             ]
-            ],
+        ],
         'starttime'                 => [
-                'label'            => 'Jam',
-                'rules'            =>    'required',
-                'errors'        => [
-                    'required'    => 'Mohon mengisi {field} dahulu'
-                ]
-                ],
-                'endtime'                 => [
-                    'label'            => 'Jam',
-                    'rules'            =>    'required',
-                    'errors'        => [
-                        'required'    => 'Mohon mengisi {field} dahulu'
-                    ]
-                    ],
-                'reason'                 => [
-                    'label'            => 'Alasan',
-                    'rules'            =>    'required',
-                    'errors'        => [
-                        'required'    => 'Mohon mengisi {field} dahulu'
-                    ]
-                ]
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'endtime'                 => [
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                 => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 
     public $employee = [
@@ -1249,6 +1249,221 @@ class Validation
             ]
         ]
     ];
+
+    public $rule = [
+        'menu_url'              => [
+            'label'             => 'menu',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'name'                  => [
+            'label'             => 'nama',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'priority'              => [
+            'label'             => 'prioritas',
+            'rules'             => 'required|is_unique[md_rule.priority,md_rule_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ]
+    ];
+
+    public $rule_detail = [
+        'line'                  => [
+            'label'             => 'rule detail',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.name_line'  => [
+            'label'             => 'nama',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+    ];
+
+    public $rule_value = [
+        'line'                  => [
+            'label'             => 'rule value',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.name_line'  => [
+            'label'             => 'nama',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.value_line'  => [
+            'label'             => 'value',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+    ];
+
+    public $responsible = [
+        'name'                  => [
+            'label'             => 'Nama',
+            'rules'             => 'required|is_unique[sys_wfresponsible.name,sys_wfresponsible_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'responsibletype'       => [
+            'label'             => 'tipe responsible',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'sys_role_id'           => [
+            'label'             => 'role',
+            'rules'             => 'required_based_field_value[responsibletype, R]',
+            'errors'            => [
+                'required_based_field_value'    => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'sys_user_id'           => [
+            'label'             => 'user',
+            'rules'             => 'required_based_field_value[responsibletype, H]',
+            'errors'            => [
+                'required_based_field_value'    => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
+
+    public $mail = [
+        'smtphost'              => [
+            'label'             => 'Mail Host',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'smtpport'              => [
+            'label'             => 'SMTP Port',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'smtpcrypto'            => [
+            'label'             => 'SMTP Crypto',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'smtpuser'              => [
+            'label'             => 'Request User',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'smtppassword'          => [
+            'label'             => 'Request User Password',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'requestemail'          => [
+            'label'             => 'Request Email',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
+
+    public $notifText = [
+        'name'                  => [
+            'label'             => 'nama',
+            'rules'             => 'required|is_unique[sys_notiftext.name,sys_notiftext_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'subject'               => [
+            'label'             => 'subjek',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'text'                  => [
+            'label'             => 'text',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'notiftype'             => [
+            'label'             => 'tipe notifikasi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
+
+    public $wscenario = [
+        'name'                  => [
+            'label'             => 'nama',
+            'rules'             => 'required|is_unique[sys_wfscenario.name,sys_wfscenario_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'menu'                  => [
+            'label'             => 'menu',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'line'                  => [
+            'label'             => 'scenario',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ],
+        'detail.table.*.sys_wfresponsible_id_line'  => [
+            'label'             => 'responsible',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ],
+        'detail.table.*.sys_notiftext_id_line'  => [
+            'label'             => 'template notifikasi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ]
+    ];
+
     public $ijinkeluarkantor = [
         'md_employee_id'                 => [
             'label'            => 'Karyawan',
@@ -1284,20 +1499,20 @@ class Validation
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
             ]
-            ],
+        ],
         'starttime'                 => [
-                'label'            => 'Jam',
-                'rules'            =>    'required',
-                'errors'        => [
-                    'required'    => 'Mohon mengisi {field} dahulu'
-                ]
-                ],
-                'reason'                 => [
-                    'label'            => 'Alasan',
-                    'rules'            =>    'required',
-                    'errors'        => [
-                        'required'    => 'Mohon mengisi {field} dahulu'
-                    ]
-                ]
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                 => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 }

@@ -137,58 +137,65 @@ $(document).ready(function (e) {
     timer: 4000,
   });
 
-  $(".datepicker").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    useCurrent: false,
-  });
+  if (card.length) {
+    $(".datepicker").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+    });
 
-  $(".datepick").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    useCurrent: false,
-  });
+    $(".datepick").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
 
-  $(".datepick-start").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    useCurrent: false,
-  });
+    $(".datepick-start").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
 
-  $(".datepick-end").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    useCurrent: false,
-  });
+    $(".datepick-end").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
 
-  $(".datepicker-start").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    useCurrent: false,
-  });
+    $(".datepicker-start").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
 
-  $(".datepicker-end").datetimepicker({
-    format: "DD-MMM-YYYY",
-    showTodayButton: true,
-    showClear: true,
-    showClose: true,
-    daysOfWeekDisabled: [0, 6],
-    useCurrent: false,
-  });
+    $(".datepicker-end").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      daysOfWeekDisabled: [0, 6],
+      disabledDates: getHolidayDate(),
+      useCurrent: false,
+    });
+  }
 
   //* start date picker on change event [select minimun date for end date datepicker]
   $(".datepicker-start").on("dp.change", function (e) {
@@ -197,7 +204,6 @@ $(document).ready(function (e) {
 
   $(".datepick-start").on("dp.change", function (e) {
     $(".datepick-end").data("DateTimePicker").date(moment(e.date));
-    console.log(e.date);
   });
 
   //* Start date picker on change event [select maximum date for start date datepicker]
@@ -627,7 +633,7 @@ $(".save_form").click(function (evt) {
   const card = container.find(".card");
   const actionMenu = card.attr("data-action-menu");
   const div = cardForm.find("div");
-  const navTab = parent.find("ul.nav-tabs");
+  let navTab = parent.find("ul.nav-tabs");
   let oriElement = _this.html();
   let oriTitle = container.find(".page-title").text();
 
@@ -641,7 +647,9 @@ $(".save_form").click(function (evt) {
   let url = CURRENT_URL + CREATE;
 
   if (navTab.length) {
+    const parent = target.parent().parent();
     const cardTab = parent.find("div.card-tab");
+    navTab = parent.find("ul.nav-tabs");
     let a = navTab.find("li a.active");
     let href = a.attr("href");
     tabPane = cardTab.find(".tab-pane.active");
@@ -909,9 +917,10 @@ $(".save_form").click(function (evt) {
             else row[name] = "";
 
             if (className.includes("reference-key")) row[name] = value; // Get value reference key
-          } else {
-            row[foreignkey.attr("name")] = foreignkey.attr("set-id");
           }
+
+          if (foreignkey.length)
+            row[foreignkey.attr("name")] = foreignkey.attr("set-id");
         });
 
         //* Table cell data
@@ -975,11 +984,16 @@ $(".save_form").click(function (evt) {
             showFormData(form);
             clearErrorForm(form);
           } else {
-            if (container.find(".modal").length) {
+            //? Check exist modal and modal must have there is attribute id
+            if (
+              container.find(".modal").length &&
+              typeof container.find(".modal").attr("id") !== "undefined"
+            ) {
               let modal = parent.find(".modal");
               let modalID = modal.attr("id");
 
-              if (parent.find(".modal-tab").length) {
+              if (parent.find(".modal-tab").length || navTab.length) {
+                const parent = target.parent().parent();
                 const tabPaneAll = parent.find(".tab-pane");
                 const navLink = navTab.find("li.nav-item a");
                 tabPane.attr("set-save", "update");
@@ -5124,16 +5138,19 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
 
   changeTab = true;
 
-  let url = `${ADMIN_URL}${href}${SHOW}${id}`;
   let tableID = tableTab.attr("id");
+
+  let url = `${ADMIN_URL}${href}${SHOW}${id}`;
+
+  if (typeof id === "undefined") url = `${ADMIN_URL}${href}${SHOW}`;
 
   if (tableTab.length > 1) tableID = $(tableTab[1]).attr("id");
 
-  if (tableTab.length) {
-    _tableLine.destroy();
+  _tableLine.destroy();
 
-    _tableLine = form.find(`#${tableID}`).DataTable({
-      drawCallback: function (settings) {
+  _tableLine = form.find(`#${tableID}`).DataTable({
+    drawCallback: function (settings) {
+      if ($(this).find(".select2").length)
         $(this)
           .find(".number")
           .on("keypress keyup blur", function (evt) {
@@ -5150,12 +5167,14 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
             }
           });
 
+      if ($(this).find(".select2").length)
         $(this).find(".select2").select2({
           placeholder: "Select an option",
           theme: "bootstrap",
           allowClear: true,
         });
 
+      if ($(this).find(".datepicker").length)
         $(this).find(".datepicker").datepicker({
           format: "dd-M-yyyy",
           autoclose: true,
@@ -5164,6 +5183,7 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
           todayBtn: true,
         });
 
+      if ($(this).find(".yearpicker").length)
         $(this).find(".yearpicker").datepicker({
           format: "yyyy",
           viewMode: "years",
@@ -5171,23 +5191,22 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
           autoclose: true,
           clearBtn: true,
         });
+    },
+    columnDefs: [
+      {
+        targets: 0,
+        visible: false, //hide column
       },
-      columnDefs: [
-        {
-          targets: 0,
-          visible: false, //hide column
-        },
-      ],
-      lengthChange: false,
-      pageLength: 10,
-      searching: false,
-      ordering: false,
-      autoWidth: false,
-      scrollX: true,
-      scrollY: "50vh",
-      scrollCollapse: true,
-    });
-  }
+    ],
+    lengthChange: false,
+    pageLength: 10,
+    searching: false,
+    ordering: false,
+    autoWidth: false,
+    scrollX: true,
+    scrollY: "50vh",
+    scrollCollapse: true,
+  });
 
   const field = form.find("input, textarea, select").not(".line");
 
@@ -5330,6 +5349,8 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
 
   clearErrorForm(form);
 
+  if (_tableLine.context.length) _tableLine.clear().draw();
+
   $.ajax({
     url: url,
     type: "GET",
@@ -5355,8 +5376,6 @@ $('a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
           let arrLine = arrMsg.line;
 
           if (_tableLine.context.length) {
-            _tableLine.clear().draw();
-
             let line = JSON.parse(arrLine);
             _tableLine.rows.add(line).draw(false);
           }
@@ -5408,4 +5427,65 @@ function showForeignKey(url, id, field) {
   }).fail(function (jqXHR, textStatus, errorThrown) {
     console.info(errorThrown);
   });
+}
+
+function Print(id) {
+  const parent = $(".container");
+  const main_page = parent.find(".main_page");
+  let s = parent.find(".card");
+
+  if (s.length > 1) s = parent.find(".page-inner");
+  else s = main_page.find(".card");
+
+  $.ajax({
+    url: CURRENT_URL + PRINT + id,
+    type: "POST",
+    data: formData,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      s.addClass("is-loading");
+    },
+    complete: function () {
+      s.removeClass("is-loading");
+    },
+    success: function (response) {
+      downloadFile(response);
+    },
+  });
+}
+
+/**
+ * Table button print
+ */
+_table.on("click", "a.btn_print", function (evt) {
+  evt.preventDefault();
+  let id = _table.row(this).data()[0];
+  let url = `${CURRENT_URL}${PRINT}${id}`;
+
+  window.open(url, "_blank");
+});
+
+/**
+ * Function to get data from master holiday
+ */
+function getHolidayDate() {
+  let array = [];
+  let url = `${ADMIN_URL}holiday/get-holiday`;
+
+  $.ajax({
+    url: url,
+    type: "GET",
+    async: false,
+    cache: false,
+    dataType: "JSON",
+    success: function (result) {
+      array = result;
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+
+  return array;
 }

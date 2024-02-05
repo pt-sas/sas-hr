@@ -44,9 +44,10 @@ class Access
             if ($dataUser->isactive === $this->active() && !empty($dataUser->role)) {
                 if (password_verify($post['password'], $dataUser->password)) {
                     $this->session->set([
-                        'sys_user_id'   => $dataUser->sys_user_id,
-                        'sys_role_id'   => $dataUser->role,
-                        'logged_in'     => TRUE
+                        'sys_user_id'       => $dataUser->sys_user_id,
+                        'sys_role_id'       => $dataUser->role,
+                        'md_employee_id'    => $dataUser->md_employee_id,
+                        'logged_in'         => TRUE
                     ]);
                     return $this->correctPassword();
                 } else {

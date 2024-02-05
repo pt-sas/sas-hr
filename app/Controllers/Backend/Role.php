@@ -226,7 +226,7 @@ class Role extends BaseController
 
 		$table = [];
 
-		$fieldMenu = new \App\Entities\TableLine();
+		$fieldMenu = new \App\Entities\Table();
 		$fieldMenu->setName("menu");
 		$fieldMenu->setType("select");
 		$fieldMenu->setClass("select2");
@@ -243,7 +243,7 @@ class Role extends BaseController
 		$fieldMenu->setList($menuList);
 		$fieldMenu->setLength(170);
 
-		$fieldRefList = new \App\Entities\TableLine();
+		$fieldRefList = new \App\Entities\Table();
 		$fieldRefList->setName("ref_list");
 		$fieldRefList->setType("select");
 		$fieldRefList->setClass("select2");
@@ -264,7 +264,7 @@ class Role extends BaseController
 		$fieldRefList->setList($refList);
 		$fieldRefList->setLength(300);
 
-		$btnDelete = new \App\Entities\TableLine();
+		$btnDelete = new \App\Entities\Table();
 		$btnDelete->setName($mDocAction->primaryKey);
 		$btnDelete->setType("button");
 		$btnDelete->setClass("delete");

@@ -1,4 +1,4 @@
-<div class="logo-header" data-background-color="blue">
+<div class="logo-header" data-background-color="blue2">
 
 	<a href="<?= site_url('sas') ?>" class="logo">
 		<img src="<?= base_url('custom/image/logo-sa.png') ?>" alt="navbar brand" class="navbar-brand">

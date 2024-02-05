@@ -5,13 +5,13 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Holiday;
 use App\Models\M_Religion;
+use App\Models\M_MassLeave;
 use Config\Services;
 
 class Holiday extends BaseController
 {
     public function __construct()
     {
-
         $this->request = Services::request();
         $this->model = new M_Holiday($this->request);
         $this->entity = new \App\Entities\Holiday();
@@ -95,14 +95,11 @@ class Holiday extends BaseController
 
                 if (!empty($list[0]->getReligionId())) {
                     $rowEmp = $religion->find($list[0]->getReligionId());
-
                     $list = $this->field->setDataSelect($religion->table, $list, 'md_religion_id', $rowEmp->getReligionId(), $rowEmp->getName());
                 }
 
-                $title = 'Hari Libur';
-
                 $fieldHeader = new \App\Entities\Table();
-                $fieldHeader->setTitle($title);
+                $fieldHeader->setTitle($list[0]->getName());
                 $fieldHeader->setTable($this->model->table);
                 $fieldHeader->setList($list);
 
@@ -155,7 +152,6 @@ class Holiday extends BaseController
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getHolidayId();
                     $response[$key]['text'] = $row->getName();
-
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -165,19 +161,36 @@ class Holiday extends BaseController
         }
     }
 
-    public function getHolidayDate() {
-        // if ($this->request->isAJAX()) {
-            try {
-                $list = $this->model->findAll();
+    public function getHolidayDate()
+    {
+        $mMassLeave = new M_MassLeave($this->request);
 
+        if ($this->request->isAJAX()) {
+            try {
+                $list = $this->model->where([
+                    "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
+                    "isactive"                      => "Y"
+                ])->findAll();
                 foreach ($list as  $row) :
-                    $response[] = $row->getStartDate();
+                    $holiday[] = $row->getStartDate();
                 endforeach;
+
+                $leave = $mMassLeave->where([
+                    "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
+                    "isaffect"                      => "Y",
+                    "isactive"                      => "Y"
+                ])->findAll();
+                foreach ($leave as  $row) :
+                    $massLeave[] = $row->getStartDate();
+                endforeach;
+
+                $response = array_unique(array_merge($holiday, $massLeave));
+                sort($response);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
 
             return $this->response->setJSON($response);
-        // }
+        }
     }
 }

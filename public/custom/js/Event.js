@@ -124,7 +124,6 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
-        console.log(result);
         if (result.length) {
           if (form.find("input[name=nik]").length)
             form.find("input[name=nik]").val(result[0].nik);
@@ -336,3 +335,320 @@ $("#form_employee").on("change", "select[name=marital_status]", function (e) {
       $(this).addClass("d-none");
   });
 });
+
+$("#form_rule").on("change", "select[name=isdetail]", function (e) {
+  const target = $(e.target);
+  const modalTab = target.closest(".modal-tab");
+  const a = modalTab.find("li a");
+  let value = this.value;
+
+  if (value !== "" && value === "Y")
+    $.each(a, function () {
+      let href = $(this).attr("href");
+      const li = $(this).closest("li");
+
+      if (li.prop("classList").contains("d-none") && href === "#rule-detail")
+        li.removeClass("d-none");
+    });
+  else
+    $.each(a, function () {
+      let href = $(this).attr("href");
+      const li = $(this).closest("li");
+
+      if (href === "#rule-detail") li.addClass("d-none");
+    });
+});
+
+$(".tb_displaytab").on("click", ".btn_isdetail", function (e) {
+  e.preventDefault();
+  const _this = $(this);
+  const target = $(e.target);
+  const parent = target.closest(".container");
+  const modalTab = target.closest(".modal-tab");
+  const modal = parent.find("#modal_rule_value");
+
+  if (modal.length) {
+    let modalID = modalTab.attr("id");
+    const form = modal.find("form");
+    const tabPane = modal.find(".tab-pane.active");
+    const inputForeign = form.find("input.foreignkey");
+    const tableTab = form.find("table.tb_displaytab");
+    let href = tabPane.attr("id");
+    let tableID = tableTab.attr("id");
+    let id = _this.attr("id");
+
+    ID = id;
+
+    //TODO: Hide main modal
+    $(`#${modalID}`).modal("hide");
+
+    modalID = modal.attr("id");
+
+    $(`#${modalID}`).modal({
+      backdrop: "static",
+      keyboard: false,
+    });
+
+    if (tableTab.length > 1) tableID = $(tableTab[1]).attr("id");
+
+    if (tableTab.length) {
+      _tableLine.destroy();
+
+      _tableLine = form.find(`#${tableID}`).DataTable({
+        columnDefs: [
+          {
+            targets: 0,
+            visible: false, //hide column
+          },
+        ],
+        lengthChange: false,
+        pageLength: 10,
+        searching: false,
+        ordering: false,
+        autoWidth: false,
+      });
+    }
+
+    if (inputForeign.length) {
+      inputForeign.attr("set-id", id);
+
+      const SHOW = "/show";
+      url = `${ADMIN_URL}${href}${SHOW}`;
+
+      data = {
+        [inputForeign.attr("name")]: id,
+      };
+    }
+
+    if (_tableLine.context.length) _tableLine.clear().draw();
+
+    $.ajax({
+      url: url,
+      type: "GET",
+      data: data,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".save_form").prop("disabled", true);
+        $(".close_rule_value").prop("disabled", true);
+        loadingForm(form.prop("id"), "ios");
+      },
+      complete: function () {
+        $(".save_form").removeAttr("disabled");
+        $(".close_rule_value").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result[0].success) {
+          let arrMsg = result[0].message;
+
+          // Show datatable line
+          if (arrMsg.line) {
+            let arrLine = arrMsg.line;
+
+            if (_tableLine.context.length) {
+              tabPane.attr("set-save", "update");
+
+              let line = JSON.parse(arrLine);
+              _tableLine.rows.add(line).draw(false);
+            }
+          }
+
+          if (inputForeign.length) {
+            url = inputForeign.attr("data-url");
+            showForeignKey(url, id, inputForeign);
+          }
+        } else {
+          Toast.fire({
+            type: "error",
+            title: result[0].message,
+          });
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+  }
+});
+
+$(".close_rule_value").on("click", function (e) {
+  e.preventDefault();
+  const _this = $(this);
+  const target = $(e.target);
+  const parent = target.closest(".container");
+  const modalTab = parent.find(".modal-tab");
+  const modal = target.closest(".modal");
+
+  modal.modal("hide");
+
+  if (modalTab.length) {
+    let modalID = modalTab.attr("id");
+    const form = modalTab.find("form");
+    const tabPane = modalTab.find(".tab-pane.active");
+    const inputForeign = form.find("input.foreignkey");
+    const tableTab = form.find("table.tb_displaytab");
+    let href = tabPane.attr("id");
+    let tableID = tableTab.attr("id");
+    let id = inputForeign.attr("set-id");
+
+    ID = id;
+
+    $(`#${modalID}`).modal({
+      backdrop: "static",
+      keyboard: false,
+    });
+
+    if (tableTab.length > 1) tableID = $(tableTab[1]).attr("id");
+
+    if (tableTab.length) {
+      _tableLine.destroy();
+
+      _tableLine = form.find(`#${tableID}`).DataTable({
+        drawCallback: function (settings) {
+          if ($(this).find(".select2").length)
+            $(this)
+              .find(".number")
+              .on("keypress keyup blur", function (evt) {
+                $(this).val(
+                  $(this)
+                    .val()
+                    .replace(/[^\d-].+/, "")
+                );
+                if (
+                  (evt.which < 48 && evt.which != 45) ||
+                  (evt.which > 57 && evt.which != 189)
+                ) {
+                  evt.preventDefault();
+                }
+              });
+
+          if ($(this).find(".select2").length)
+            $(this).find(".select2").select2({
+              placeholder: "Select an option",
+              theme: "bootstrap",
+              allowClear: true,
+            });
+
+          if ($(this).find(".datepicker").length)
+            $(this).find(".datepicker").datepicker({
+              format: "dd-M-yyyy",
+              autoclose: true,
+              clearBtn: true,
+              todayHighlight: true,
+              todayBtn: true,
+            });
+
+          if ($(this).find(".yearpicker").length)
+            $(this).find(".yearpicker").datepicker({
+              format: "yyyy",
+              viewMode: "years",
+              minViewMode: "years",
+              autoclose: true,
+              clearBtn: true,
+            });
+        },
+        columnDefs: [
+          {
+            targets: 0,
+            visible: false, //hide column
+          },
+        ],
+        lengthChange: false,
+        pageLength: 10,
+        searching: false,
+        ordering: false,
+        autoWidth: false,
+        scrollX: true,
+        scrollY: "50vh",
+        scrollCollapse: true,
+      });
+    }
+
+    if (inputForeign.length) {
+      inputForeign.attr("set-id", id);
+
+      const SHOW = "/show";
+      url = `${ADMIN_URL}${href}${SHOW}`;
+
+      data = {
+        [inputForeign.attr("name")]: id,
+      };
+    }
+
+    if (_tableLine.context.length) _tableLine.clear().draw();
+
+    $.ajax({
+      url: url,
+      type: "GET",
+      data: data,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".save_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "ios");
+      },
+      complete: function () {
+        $(".save_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result[0].success) {
+          let arrMsg = result[0].message;
+          // Show datatable line
+          if (arrMsg.line) {
+            let arrLine = arrMsg.line;
+
+            if (_tableLine.context.length) {
+              let line = JSON.parse(arrLine);
+              _tableLine.rows.add(line).draw(false);
+            }
+          }
+
+          if (inputForeign.length) {
+            url = inputForeign.attr("data-url");
+            showForeignKey(url, id, inputForeign);
+          }
+        } else {
+          Toast.fire({
+            type: "error",
+            title: result[0].message,
+          });
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+  }
+});
+
+/**
+ * Event Listener Responsible Type
+ */
+$("#form_responsible").on(
+  "change",
+  "select[name=responsibletype]",
+  function (evt) {
+    const target = $(evt.target);
+    const form = target.closest("form");
+    const value = this.value;
+
+    //? Condition field and contain attribute hide-field
+    if ($(this).attr("hide-field")) {
+      if (value === "R") {
+        form.find("select[name=sys_role_id]").closest(".form-group").show();
+      } else {
+        form.find("select[name=sys_role_id]").closest(".form-group").hide();
+      }
+
+      if (value === "U") {
+        form.find("select[name=sys_user_id]").closest(".form-group").show();
+      } else {
+        form.find("select[name=sys_user_id]").closest(".form-group").hide();
+      }
+    }
+  }
+);
