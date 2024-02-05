@@ -12,7 +12,7 @@ use App\Models\M_AllowanceAtt;
 class PermissionLeaveEarly extends BaseController
 {
     /** Pengajuan Ijin Pulang Cepat */
-    protected $Tipe_Pengajuan = 'pulang cepat';
+    protected $Pengajuan_Pulang_Cepat = 'pulang cepat';
 
     public function __construct()
     {
@@ -26,16 +26,7 @@ class PermissionLeaveEarly extends BaseController
         $mReference = new M_Reference($this->request);
 
         $data = [
-            'today'     => date('d-M-Y'),
-            'ref_list'  => $mReference->findBy([
-                'sys_reference.name'              => 'NecessaryType',
-                'sys_reference.isactive'          => 'Y',
-                'sys_ref_detail.isactive'         => 'Y',
-            ], null, [
-                'field'     => 'sys_ref_detail.value',
-                'option'    => 'ASC'
-            ])->getResult(),
-            'ref_default' => $this->Form_Kelengkapan_Absent
+            'today'     => date('d-M-Y')
         ];
 
         return $this->template->render('transaction/permission/leaveearly/v_permission_leave_early', $data);
@@ -77,7 +68,7 @@ class PermissionLeaveEarly extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where['trx_absent.submissiontype'] = $this->Tipe_Pengajuan;
+            $where['trx_absent.submissiontype'] = $this->Pengajuan_Pulang_Cepat;
 
             $data = [];
 
@@ -123,7 +114,7 @@ class PermissionLeaveEarly extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Tipe_Pengajuan;
+            $post["submissiontype"] = $this->Pengajuan_Pulang_Cepat;
             $post["necessary"] = $this->Form_Kelengkapan_Absent;
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
 
@@ -137,7 +128,7 @@ class PermissionLeaveEarly extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Tipe_Pengajuan, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Pulang_Cepat, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
 
