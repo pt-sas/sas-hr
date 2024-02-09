@@ -21,7 +21,7 @@ use Config\Services;
 
 class Employee extends BaseController
 {
-    protected $folder = "karyawan/";
+    protected $PATH_Karyawan = "karyawan";
 
     public function __construct()
     {
@@ -42,6 +42,7 @@ class Employee extends BaseController
                 'sys_reference.name'              => 'Gender',
                 'sys_reference.isactive'          => 'Y',
                 'sys_ref_detail.isactive'         => 'Y',
+                'sys_ref_detail.value <>'         => 'A',
             ], null, [
                 'field'     => 'sys_ref_detail.name',
                 'option'    => 'ASC'
@@ -80,8 +81,7 @@ class Employee extends BaseController
                 $ID = $value->md_employee_id;
 
                 $number++;
-
-                $path = 'upload/';
+                $path = 'uploads/' . $this->PATH_Karyawan . '/';
 
                 $row[] = $ID;
                 $row[] = $number;
@@ -116,7 +116,10 @@ class Employee extends BaseController
 
             try {
                 $img_name = "";
-                $post['image'] = "";
+
+                //TODO: Set null data for gender combobox not choose
+                if (!isset($post['gender']))
+                    $post['gender'] = "";
 
                 if ($file && $file->isValid()) {
                     $img_name = $file->getName();
@@ -126,14 +129,20 @@ class Employee extends BaseController
                 if (!$this->validation->run($post, 'employee')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $path = FCPATH . 'upload';
-                    // $path = WRITEPATH . "uploads/" . $this->folder;
+                    $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
 
-                    if (!is_dir($path))
-                        mkdir($path);
+                    if ($this->isNew()) {
+                        uploadFile($file, $path);
+                    } else {
+                        $row = $this->model->find($this->getID());
 
-                    $file->move($path);
-                    // $response = uploadFile($file, $path, $img_name);
+                        if ($post['image'] !== $row->getImage()) {
+                            if (file_exists($path . $row->getImage())) {
+                                unlink($path . $row->getImage());
+                                $response = $file->move($path);
+                            }
+                        }
+                    }
 
                     $this->entity->fill($post);
 
@@ -162,8 +171,7 @@ class Employee extends BaseController
                 $response = message('error', false, $e->getMessage());
             }
 
-            // return $this->response->setJSON($imgName);
-            return json_encode($response);
+            return $this->response->setJSON($response);
         }
     }
 
@@ -182,12 +190,11 @@ class Employee extends BaseController
         $mDiv = new M_Division($this->request);
 
         if ($this->request->isAJAX()) {
-
             try {
-
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
 
-                $list[0]->image = 'upload/' . $list[0]->image;
+                $path = 'uploads/' . $this->PATH_Karyawan . '/';
+                $list[0]->image = $path . $list[0]->image;
 
                 if (!empty($list[0]->getReligionId())) {
                     $rowFeligion = $mReligion->find($list[0]->getReligionId());
@@ -283,7 +290,7 @@ class Employee extends BaseController
     {
         if ($this->request->isAJAX()) {
             try {
-                $result = $this->model->delete($id);
+                $result = $this->delete($id);
                 $response = message('success', true, $result);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -336,9 +343,7 @@ class Employee extends BaseController
                 $response = message('error', false, $e->getMessage());
             }
 
-            // return $this->response->setJSON($response);
-
-            return json_encode($response);
+            return $this->response->setJSON($response);
         }
     }
 
