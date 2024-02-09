@@ -295,7 +295,7 @@ function imageShow($path = null, $image = null)
     $result .= '<div class="avatar avatar-xl">';
 
     if (!empty($image) && file_exists($path . $image)) {
-        $result .= '<img class="avatar-img rounded" src="' . site_url() . $path . $image . '" />';
+        $result .= '<img class="avatar-img rounded" src="' . base_url() . '/' . $path . $image . '" />';
     } else {
         $result .= '<img class="avatar-img rounded-circle" src="https://via.placeholder.com/200/808080/ffffff?text=No+Image">';
     }
@@ -304,4 +304,14 @@ function imageShow($path = null, $image = null)
     $result .= '</center>';
 
     return $result;
+}
+
+function uploadFile($file, $path)
+{
+    if (!is_dir($path)) mkdir($path, 0777, true);
+
+    if ($file && $file->isValid())
+        return $file->move($path);
+
+    return false;
 }

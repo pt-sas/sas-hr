@@ -714,6 +714,16 @@ class Validation
                 'is_unique'     => 'Data {field} ini sudah ada'
             ]
         ],
+        'image'                 => [
+            'label'             => 'gambar',
+            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                'uploaded'      => 'Mohon upload {field} dahulu',
+                'max_size'      => 'Data {field} melebehi batas maksimum 3 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
         'nik'                   => [
             'label'             => 'nik',
             'rules'             => 'required|min_length[6]|max_length[6]|is_unique[md_employee.nik,md_employee_id,{id}]',
