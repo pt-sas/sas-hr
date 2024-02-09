@@ -13,13 +13,13 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="nik">NIK <span class="required">*</span></label>
-                        <input type="text" class="form-control" id="nik" name="nik">
+                        <input type="text" class="form-control number" id="nik" name="nik" edit-readonly="nik">
                         <small class="form-text text-danger" id="error_nik"></small>
                     </div>
                 </div>
             </div>
             <div class="form-group">
-                <label for="value">Nama Lengkap <span class="required">*</span></label>
+                <label for="fullname">Nama Lengkap <span class="required">*</span></label>
                 <input type="text" class="form-control" id="fullname" name="fullname">
                 <small class="form-text text-danger" id="error_fullname"></small>
             </div>
@@ -32,7 +32,7 @@
                         <button type="button" class="close-img" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
-                        <img class="img-result" />
+                        <img class="img-result">
                     </label>
                 </div>
                 <div class="form-upload">
@@ -40,9 +40,6 @@
                         <input type="file" class="control-upload-image" id="image" name="image" onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
                         <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                     </label>
-                    <small class="form-upload-text text-muted">
-                        Jenis file (JPG, PNG), ukuran file maksimum adalah <strong> 3 Mb</strong>
-                    </small>
                     <small class="form-text text-danger" id="error_image"></small>
                 </div>
             </div>
@@ -71,7 +68,14 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="birthday">Tanggal Lahir <span class="required">*</span></label>
-                <input type="text" class="form-control datepicker" id="birthday" name="birthday">
+                <div class="input-group">
+                    <input type="text" class="form-control datepicker" id="birthday" name="birthday">
+                    <div class="input-group-append">
+                        <span class="input-group-text">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                </div>
                 <small class="form-text text-danger" id="error_birthday"></small>
             </div>
         </div>
@@ -100,6 +104,7 @@
                         <span class="form-radio-sign"><?= $row->name ?></span>
                     </label>
                 <?php endforeach; ?>
+                <small class="form-text text-danger" id="error_gender"></small>
             </div>
         </div>
         <div class="col-md-3">
@@ -190,6 +195,7 @@
                 <select class="form-control select-data" id="superior_id" name="superior_id" data-url="karyawan/superior">
                     <option value="">Select Superior</option>
                 </select>
+                <small class="form-text text-danger" id="error_superior_id"></small>
             </div>
         </div>
         <div class="col-md-3">
@@ -219,7 +225,14 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="registerdate">Tanggal Bergabung </label>
-                <input type="text" class="form-control datepicker" id="registerdate" name="registerdate">
+                <div class="input-group">
+                    <input type="text" class="form-control datepicker" id="registerdate" name="registerdate">
+                    <div class="input-group-append">
+                        <span class="input-group-text">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-md-3">
@@ -248,44 +261,50 @@
                 <select class="form-control select-data" id="md_country_dom_id" name="md_country_dom_id" data-url="country/getList">
                     <option value="">Select Negara</option>
                 </select>
+                <small class="form-text text-danger" id="error_md_country_dom_id"></small>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_province_id">Provinsi <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_province_dom_id" name="md_province_dom_id" data-url="province/getList">
+                <select class="form-control select2" id="md_province_dom_id" name="md_province_dom_id">
                     <option value="">Select Provinsi</option>
                 </select>
+                <small class="form-text text-danger" id="error_md_province_dom_id"></small>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_city_dom_id">Kota <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_city_dom_id" name="md_city_dom_id" data-url="city/getList">
+                <select class="form-control select2" id="md_city_dom_id" name="md_city_dom_id">
                     <option value="">Select Kota</option>
                 </select>
+                <small class="form-text text-danger" id="error_md_city_dom_id"></small>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_district_dom_id">Kecamatan <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_district_dom_id" name="md_district_dom_id" data-url="district/getList">
+                <select class="form-control select2" id="md_district_dom_id" name="md_district_dom_id">
                     <option value="">Select Kecamatan</option>
                 </select>
+                <small class="form-text text-danger" id="error_md_district_dom_id"></small>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_subdistrict_dom_id">Kelurahan <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_subdistrict_dom_id" name="md_subdistrict_dom_id" data-url="subdistrict/getList">
+                <select class="form-control select2" id="md_subdistrict_dom_id" name="md_subdistrict_dom_id">
                     <option value="">Select Kelurahan</option>
                 </select>
+                <small class="form-text text-danger" id="error_md_subdistrict_dom_id"></small>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="postalcode_dom">Kode Pos <span class="required">*</span></label>
                 <input type="text" class="form-control" id="postalcode_dom" name="postalcode_dom">
+                <small class="form-text text-danger" id="error_postalcode_dom"></small>
             </div>
         </div>
         <div class="col-md-6">
@@ -313,7 +332,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_province_id">Provinsi <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_province_id" name="md_province_id" data-url="province/getList">
+                <select class="form-control select2" id="md_province_id" name="md_province_id">
                     <option value="">Select Provinsi</option>
                 </select>
             </div>
@@ -321,7 +340,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_city_id">Kota <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_city_id" name="md_city_id" data-url="city/getList">
+                <select class="form-control select2" id="md_city_id" name="md_city_id">
                     <option value="">Select Kota</option>
                 </select>
             </div>
@@ -329,7 +348,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_district_id">Kecamatan <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_district_id" name="md_district_id" data-url="district/getList">
+                <select class="form-control select2" id="md_district_id" name="md_district_id">
                     <option value="">Select Kecamatan</option>
                 </select>
             </div>
@@ -337,7 +356,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_subdistrict_id">Kelurahan <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_subdistrict_id" name="md_subdistrict_id" data-url="subdistrict/getList">
+                <select class="form-control select2" id="md_subdistrict_id" name="md_subdistrict_id">
                     <option value="">Select Kelurahan</option>
                 </select>
             </div>
@@ -353,22 +372,23 @@
     <div class="row">
         <div class="col-md-6">
             <div class="form-group">
-                <label for="card_id">KTP No</label>
+                <label for="card_id">No KTP <span class="required">*</span></label>
                 <input type="text" class="form-control number" id="card_id" name="card_id">
+                <small class="form-text text-danger" id="error_card_id"></small>
             </div>
         </div>
         <div class="col-md-6"></div>
         <div class="col-md-6">
             <div class="form-group">
-                <label for="npwp_id">NPWP No</label>
+                <label for="npwp_id">No NPWP </label>
                 <input type="text" class="form-control npwp" id="npwp_id" name="npwp_id">
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
-                <label for="ptkp_status">Status PTKP</label>
+                <label for="ptkp_status">Status PTKP </label>
                 <select class="form-control select2" id="ptkp_status" name="ptkp_status">
-                    <option value="">Select Agama</option>
+                    <option value="">Select Status PTKP</option>
                     <option value="tk0">TK/0</option>
                     <option value="tk1">TK/1</option>
                     <option value="tk1">TK/2</option>
@@ -385,7 +405,14 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_kes_periode">Periode </label>
-                <input type="text" class="form-control datepicker" id="bpjs_kes_period" name="bpjs_kes_period">
+                <div class="input-group">
+                    <input type="text" class="form-control datepicker" id="bpjs_kes_period" name="bpjs_kes_period">
+                    <div class="input-group-append">
+                        <span class="input-group-text">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-md-6">
@@ -397,24 +424,31 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_tenaga_periode">Periode </label>
-                <input type="text" class="form-control datepicker" id="bpjs_tenaga_period" name="bpjs_tenaga_period">
+                <div class="input-group">
+                    <input type="text" class="form-control datepicker" id="bpjs_tenaga_period" name="bpjs_tenaga_period">
+                    <div class="input-group-append">
+                        <span class="input-group-text">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="form-group">
-                <label for="bank">Nama Bank</label>
+                <label for="bank">Nama Bank </label>
                 <input type="text" class="form-control" id="bank" name="bank">
             </div>
         </div>
         <div class="col-md-4">
             <div class="form-group">
-                <label for="bank_branch">Cabang Bank</label>
+                <label for="bank_branch">Cabang Bank </label>
                 <input type="text" class="form-control" id="bank_branch" name="bank_branch">
             </div>
         </div>
         <div class="col-md-4">
             <div class="form-group">
-                <label for="bank_account">No Rekening</label>
+                <label for="bank_account">No Rekening </label>
                 <input type="text" class="form-control number" id="bank_account" name="bank_account">
             </div>
         </div>
