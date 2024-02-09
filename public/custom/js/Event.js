@@ -652,3 +652,582 @@ $("#form_responsible").on(
     }
   }
 );
+
+$("#form_employee").on(
+  "change",
+  "select[name=md_country_id], select[name=md_country_dom_id]",
+  function (e) {
+    const _this = $(this);
+    const target = $(e.target);
+    const form = target.closest("form");
+    let value = this.value;
+    let formData = new FormData();
+
+    let field = form.find("select[name=md_province_id]");
+
+    if (_this.attr("name") === "md_country_dom_id") {
+      field = form.find("select[name=md_province_dom_id]");
+      form
+        .find(
+          "select[name=md_city_dom_id], select[name=md_district_dom_id], select[name=md_subdistrict_dom_id]"
+        )
+        .empty();
+    } else {
+      form
+        .find(
+          "select[name=md_city_id], select[name=md_district_id], select[name=md_subdistrict_id]"
+        )
+        .empty();
+    }
+
+    let url = ADMIN_URL + "province/getList";
+
+    field.empty();
+
+    if (value) {
+      formData.append("md_country_id", value);
+
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".save_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+          loadingForm(form.prop("id"), "ios");
+        },
+        complete: function () {
+          $(".save_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+          hideLoadingForm(form.prop("id"));
+        },
+        success: function (result) {
+          if (result.length) {
+            field.append('<option value=""></option>');
+
+            let md_province_id = 0,
+              md_province_dom_id = 0;
+
+            if (option.length) {
+              let index = 0;
+
+              $.each(option, function (i, item) {
+                if (
+                  ((_this.attr("name") === "md_country_id" &&
+                    item.fieldName === "md_country_id") ||
+                    (_this.attr("name") === "md_country_dom_id" &&
+                      item.fieldName === "md_country_dom_id")) &&
+                  item.option_ID != value
+                )
+                  index = option.findIndex(
+                    (item) =>
+                      (_this.attr("name") === "md_country_id" &&
+                        item.fieldName === "md_province_id") ||
+                      (_this.attr("name") === "md_country_dom_id" &&
+                        item.fieldName === "md_province_dom_id")
+                  );
+              });
+
+              if (index != 0) option.splice(index, 1);
+
+              $.each(option, function (i, item) {
+                if (item.fieldName === "md_province_id")
+                  md_province_id = item.label;
+
+                if (item.fieldName === "md_province_dom_id")
+                  md_province_dom_id = item.label;
+              });
+            }
+
+            if (!result[0].error) {
+              $.each(result, function (idx, item) {
+                if (
+                  (_this.attr("name") === "md_country_id" &&
+                    md_province_id == item.id) ||
+                  (_this.attr("name") === "md_country_dom_id" &&
+                    md_province_dom_id == item.id)
+                ) {
+                  field.append(
+                    '<option value="' +
+                      item.id +
+                      '" selected>' +
+                      item.text +
+                      "</option>"
+                  );
+                } else {
+                  field.append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  );
+                }
+              });
+            } else {
+              Swal.fire({
+                type: "error",
+                title: result[0].message,
+                showConfirmButton: false,
+                timer: 1500,
+              });
+            }
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    } else {
+      option.splice(
+        option.findIndex(
+          (item) =>
+            (_this.attr("name") === "md_country_id" &&
+              item.fieldName === "md_province_id") ||
+            (_this.attr("name") === "md_country_dom_id" &&
+              item.fieldName === "md_province_dom_id")
+        ),
+        1
+      );
+    }
+  }
+);
+
+$("#form_employee").on(
+  "change",
+  "select[name=md_province_id], select[name=md_province_dom_id]",
+  function (e) {
+    const _this = $(this);
+    const target = $(e.target);
+    const form = target.closest("form");
+    let value = this.value;
+    let formData = new FormData();
+
+    let field = form.find("select[name=md_city_id]");
+
+    if (_this.attr("name") === "md_province_dom_id") {
+      field = form.find("select[name=md_city_dom_id]");
+      form
+        .find(
+          "select[name=md_district_dom_id], select[name=md_subdistrict_dom_id]"
+        )
+        .empty();
+    } else {
+      form
+        .find("select[name=md_district_id], select[name=md_subdistrict_id]")
+        .empty();
+    }
+
+    let url = ADMIN_URL + "city/getList";
+
+    field.empty();
+
+    if (option.length) {
+      $.each(option, function (i, item) {
+        if (typeof _this.find(":selected").val() === "undefined") {
+          if (
+            (_this.attr("name") === "md_province_id" &&
+              item.fieldName === "md_province_id") ||
+            (_this.attr("name") === "md_province_dom_id" &&
+              item.fieldName === "md_province_dom_id")
+          )
+            value = item.label;
+        }
+      });
+    }
+
+    if (value) {
+      formData.append("md_province_id", value);
+
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".save_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+          loadingForm(form.prop("id"), "ios");
+        },
+        complete: function () {
+          $(".save_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+          hideLoadingForm(form.prop("id"));
+        },
+        success: function (result) {
+          if (result.length) {
+            field.append('<option value=""></option>');
+
+            let md_city_id = 0,
+              md_city_dom_id = 0;
+
+            if (option.length) {
+              let index = 0;
+
+              $.each(option, function (i, item) {
+                if (
+                  ((_this.attr("name") === "md_province_id" &&
+                    item.fieldName === "md_province_id") ||
+                    (_this.attr("name") === "md_province_dom_id" &&
+                      item.fieldName === "md_province_dom_id")) &&
+                  item.label != value
+                )
+                  index = option.findIndex(
+                    (item) =>
+                      (_this.attr("name") === "md_province_id" &&
+                        item.fieldName === "md_city_id") ||
+                      (_this.attr("name") === "md_province_dom_id" &&
+                        item.fieldName === "md_city_dom_id")
+                  );
+              });
+
+              if (index != 0) option.splice(index, 1);
+
+              $.each(option, function (i, item) {
+                if (item.fieldName === "md_city_id") md_city_id = item.label;
+
+                if (item.fieldName === "md_city_dom_id")
+                  md_city_dom_id = item.label;
+              });
+            }
+
+            if (!result[0].error) {
+              $.each(result, function (idx, item) {
+                if (
+                  (_this.attr("name") === "md_province_id" &&
+                    md_city_id == item.id) ||
+                  (_this.attr("name") === "md_province_dom_id" &&
+                    md_city_dom_id == item.id)
+                ) {
+                  field.append(
+                    '<option value="' +
+                      item.id +
+                      '" selected>' +
+                      item.text +
+                      "</option>"
+                  );
+                } else {
+                  field.append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  );
+                }
+              });
+            } else {
+              Swal.fire({
+                type: "error",
+                title: result[0].message,
+                showConfirmButton: false,
+                timer: 1500,
+              });
+            }
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    } else {
+      option.splice(
+        option.findIndex(
+          (item) =>
+            (_this.attr("name") === "md_province_id" &&
+              item.fieldName === "md_city_id") ||
+            (_this.attr("name") === "md_province_dom_id" &&
+              item.fieldName === "md_city_dom_id")
+        ),
+        1
+      );
+    }
+  }
+);
+
+$("#form_employee").on(
+  "change",
+  "select[name=md_city_id], select[name=md_city_dom_id]",
+  function (e) {
+    const _this = $(this);
+    const target = $(e.target);
+    const form = target.closest("form");
+    let value = this.value;
+    let formData = new FormData();
+
+    let field = form.find("select[name=md_district_id]");
+
+    if (_this.attr("name") === "md_city_dom_id") {
+      field = form.find("select[name=md_district_dom_id]");
+      form.find("select[name=md_subdistrict_dom_id]").empty();
+    } else {
+      form.find("select[name=md_subdistrict_id]").empty();
+    }
+
+    let url = ADMIN_URL + "district/getList";
+
+    field.empty();
+
+    if (option.length) {
+      $.each(option, function (i, item) {
+        if (typeof _this.find(":selected").val() === "undefined") {
+          if (
+            (_this.attr("name") === "md_city_id" &&
+              item.fieldName === "md_city_id") ||
+            (_this.attr("name") === "md_city_dom_id" &&
+              item.fieldName === "md_city_dom_id")
+          )
+            value = item.label;
+        }
+      });
+    }
+
+    if (value) {
+      formData.append("md_city_id", value);
+
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".save_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+          loadingForm(form.prop("id"), "ios");
+        },
+        complete: function () {
+          $(".save_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+          hideLoadingForm(form.prop("id"));
+        },
+        success: function (result) {
+          if (result.length) {
+            field.append('<option value=""></option>');
+
+            let md_district_id = 0,
+              md_district_dom_id = 0;
+
+            if (option.length) {
+              let index = 0;
+
+              $.each(option, function (i, item) {
+                if (
+                  ((_this.attr("name") === "md_city_id" &&
+                    item.fieldName === "md_city_id") ||
+                    (_this.attr("name") === "md_city_dom_id" &&
+                      item.fieldName === "md_city_dom_id")) &&
+                  item.label != value
+                )
+                  index = option.findIndex(
+                    (item) =>
+                      (_this.attr("name") === "md_city_id" &&
+                        item.fieldName === "md_district_id") ||
+                      (_this.attr("name") === "md_city_dom_id" &&
+                        item.fieldName === "md_district_dom_id")
+                  );
+              });
+
+              if (index != 0) option.splice(index, 1);
+
+              $.each(option, function (i, item) {
+                if (item.fieldName === "md_district_id")
+                  md_district_id = item.label;
+
+                if (item.fieldName === "md_district_dom_id")
+                  md_district_dom_id = item.label;
+              });
+            }
+
+            if (!result[0].error) {
+              $.each(result, function (idx, item) {
+                if (
+                  (_this.attr("name") === "md_city_id" &&
+                    md_district_id == item.id) ||
+                  (_this.attr("name") === "md_city_dom_id" &&
+                    md_district_dom_id == item.id)
+                ) {
+                  field.append(
+                    '<option value="' +
+                      item.id +
+                      '" selected>' +
+                      item.text +
+                      "</option>"
+                  );
+                } else {
+                  field.append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  );
+                }
+              });
+            } else {
+              Swal.fire({
+                type: "error",
+                title: result[0].message,
+                showConfirmButton: false,
+                timer: 1500,
+              });
+            }
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    } else {
+      option.splice(
+        option.findIndex(
+          (item) =>
+            (_this.attr("name") === "md_city_id" &&
+              item.fieldName === "md_district_id") ||
+            (_this.attr("name") === "md_city_dom_id" &&
+              item.fieldName === "md_district_dom_id")
+        ),
+        1
+      );
+    }
+  }
+);
+
+$("#form_employee").on(
+  "change",
+  "select[name=md_district_id], select[name=md_district_dom_id]",
+  function (e) {
+    const _this = $(this);
+    const target = $(e.target);
+    const form = target.closest("form");
+    let value = this.value;
+    let formData = new FormData();
+
+    let field = form.find("select[name=md_subdistrict_id]");
+
+    if (_this.attr("name") === "md_district_dom_id")
+      field = form.find("select[name=md_subdistrict_dom_id]");
+
+    let url = ADMIN_URL + "subdistrict/getList";
+
+    field.empty();
+
+    if (option.length) {
+      $.each(option, function (i, item) {
+        if (typeof _this.find(":selected").val() === "undefined") {
+          if (
+            (_this.attr("name") === "md_district_id" &&
+              item.fieldName === "md_district_id") ||
+            (_this.attr("name") === "md_district_dom_id" &&
+              item.fieldName === "md_district_dom_id")
+          )
+            value = item.label;
+        }
+      });
+    }
+
+    if (value) {
+      formData.append("md_district_id", value);
+
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".save_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+          loadingForm(form.prop("id"), "ios");
+        },
+        complete: function () {
+          $(".save_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+          hideLoadingForm(form.prop("id"));
+        },
+        success: function (result) {
+          if (result.length) {
+            field.append('<option value=""></option>');
+
+            let md_subdistrict_id = 0,
+              md_subdistrict_dom_id = 0;
+
+            if (option.length) {
+              let index = 0;
+
+              $.each(option, function (i, item) {
+                if (
+                  ((_this.attr("name") === "md_district_id" &&
+                    item.fieldName === "md_district_id") ||
+                    (_this.attr("name") === "md_district_dom_id" &&
+                      item.fieldName === "md_district_dom_id")) &&
+                  item.label != value
+                )
+                  index = option.findIndex(
+                    (item) =>
+                      (_this.attr("name") === "md_district_id" &&
+                        item.fieldName === "md_subdistrict_id") ||
+                      (_this.attr("name") === "md_district_dom_id" &&
+                        item.fieldName === "md_subdistrict_dom_id")
+                  );
+              });
+
+              if (index != 0) option.splice(index, 1);
+
+              $.each(option, function (i, item) {
+                if (item.fieldName === "md_subdistrict_id")
+                  md_subdistrict_id = item.label;
+
+                if (item.fieldName === "md_subdistrict_dom_id")
+                  md_subdistrict_dom_id = item.label;
+              });
+            }
+
+            if (!result[0].error) {
+              $.each(result, function (idx, item) {
+                if (
+                  (_this.attr("name") === "md_district_id" &&
+                    md_subdistrict_id == item.id) ||
+                  (_this.attr("name") === "md_district_dom_id" &&
+                    md_subdistrict_dom_id == item.id)
+                ) {
+                  field.append(
+                    '<option value="' +
+                      item.id +
+                      '" selected>' +
+                      item.text +
+                      "</option>"
+                  );
+                } else {
+                  field.append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  );
+                }
+              });
+            } else {
+              Swal.fire({
+                type: "error",
+                title: result[0].message,
+                showConfirmButton: false,
+                timer: 1500,
+              });
+            }
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    } else {
+      option.splice(
+        option.findIndex(
+          (item) =>
+            (_this.attr("name") === "md_district_id" &&
+              item.fieldName === "md_subdistrict_id") ||
+            (_this.attr("name") === "md_district_dom_id" &&
+              item.fieldName === "md_subdistrict_dom_id")
+        ),
+        1
+      );
+    }
+  }
+);
