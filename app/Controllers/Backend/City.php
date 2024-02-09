@@ -164,9 +164,24 @@ class City extends BaseController
 
             try {
                 if (isset($post['search'])) {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->like('name', $post['search'])
-                        ->orderBy('name', 'ASC')
+                    if (isset($post['md_province_id'])) {
+                        $list = $this->model->where([
+                            'isactive'      => 'Y',
+                            'md_province_id' => $post['md_province_id']
+                        ])->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
+                } else if (isset($post['md_province_id'])) {
+                    $list = $this->model->where([
+                        'isactive'      => 'Y',
+                        'md_province_id' => $post['md_province_id']
+                    ])->orderBy('name', 'ASC')
                         ->findAll();
                 } else {
                     $list = $this->model->where('isactive', 'Y')
@@ -177,7 +192,6 @@ class City extends BaseController
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getCityId();
                     $response[$key]['text'] = $row->getName();
-
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
