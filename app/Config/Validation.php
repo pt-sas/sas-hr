@@ -8,6 +8,7 @@ use CodeIgniter\Validation\FormatRules;
 use CodeIgniter\Validation\Rules;
 use App\Validation\PasswordRules;
 use App\Validation\SASRules;
+use App\Validation\SASFileRules;
 
 class Validation
 {
@@ -24,10 +25,10 @@ class Validation
     public $ruleSets = [
         Rules::class,
         FormatRules::class,
-        FileRules::class,
         CreditCardRules::class,
         PasswordRules::class,
-        SASRules::class
+        SASRules::class,
+        SASFileRules::class
     ];
 
     /**
