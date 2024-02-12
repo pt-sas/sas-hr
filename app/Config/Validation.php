@@ -164,7 +164,7 @@ class Validation
             'label'             => 'Validation Type',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Please Choose the {field} first.'
+                'required'      => 'Mohon pilih {field} dahulu.'
             ]
         ],
         'line'                  => [
@@ -1523,6 +1523,23 @@ class Validation
             'rules'            =>    'required',
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $lemburAddRow = [
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'Divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
             ]
         ]
     ];
