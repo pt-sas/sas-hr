@@ -42,7 +42,6 @@ class M_WScenario extends Model
 		'md_status.name',
 		'md_branch.name',
 		'md_division.name',
-		'sys_ref_detail.name',
 		'sys_wfscenario.description',
 		'sys_wfscenario.isactive'
 	];
@@ -54,7 +53,6 @@ class M_WScenario extends Model
 		'md_status.name',
 		'md_branch.name',
 		'md_division.name',
-		'sys_ref_detail.name',
 		'sys_wfscenario.description',
 		'sys_wfscenario.isactive'
 	];
