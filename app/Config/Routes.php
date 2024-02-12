@@ -385,7 +385,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('ijin-keluar-kantor/show/(:any)', 'Backend\PermissionLeaveOffice::show/$1');
     $routes->get('ijin-keluar-kantor/destroy/(:any)', 'Backend\PermissionLeaveOffice::destroy/$1');
     $routes->match(['get', 'post'], 'ijin-keluar-kantor/getList', 'Backend\PermissionLeaveOffice::getList');
-    $routes->post('ijin-keluar-kantor/exportPDF', 'Backend\PermissionLeaveOffice::exportPDF');
+    $routes->get('ijin-keluar-kantor/print/(:any)', 'Backend\PermissionLeaveOffice::exportPDF/$1');
     
 
     $routes->add('ijin', 'Backend\Permission::index');
@@ -440,6 +440,14 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('wscenario/destroy/(:any)', 'Backend\WScenario::destroy/$1');
     $routes->post('wscenario/tableLine', 'Backend\WScenario::tableLine');
     $routes->get('wscenario/destroyLine/(:any)', 'Backend\WScenario::destroyLine/$1');
+
+    $routes->add('lembur', 'Backend\Overtime::index');
+    $routes->match(['get', 'post'], 'lembur/showAll', 'Backend\Overtime::showAll');
+    $routes->post('lembur/create', 'Backend\Overtime::create');
+    $routes->get('lembur/show/(:any)', 'Backend\Overtime::show/$1');
+    $routes->get('lembur/destroy/(:any)', 'Backend\Overtime::destroy/$1');
+    $routes->get('lembur/processIt', 'Backend\Overtime::processIt');
+    $routes->post('lembur/tableLine', 'Backend\Overtime::tableLine');
 
     $routes->get('wactivity/showNotif', 'Backend\WActivity::showNotif');
     $routes->post('wactivity/create', 'Backend\WActivity::create');
