@@ -59,12 +59,12 @@ class AllowanceAtt extends BaseController
                 $end_date = date("Y-m-d", strtotime($date[1]));
                 $holiday = $mHoliday->getHolidayDate();
 
-                $date1 = getDatesFromRange($start_date, $end_date, $holiday);
+                $date_range = getDatesFromRange($start_date, $end_date, $holiday);
 
                 $number = $this->request->getPost('start');
                 $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, [], $where);
 
-                foreach ($date1 as $value) :
+                foreach ($date_range as $value) :
                     foreach ($list as $val) :
                         $row = [];
 
@@ -89,16 +89,15 @@ class AllowanceAtt extends BaseController
                     endforeach;
                 endforeach;
 
-                $recordTotal = $this->datatable->countAll($table, $select, $order, $sort, $search, [], $where);
-                $recordsFiltered = $this->datatable->countFiltered($table, $select, $order, $sort, $search, [], $where);
+                $recordTotal = count($data);
+                $recordsFiltered = count($data);
             }
 
             $result = [
                 'draw'              => $this->request->getPost('draw'),
                 'recordsTotal'      => $recordTotal,
                 'recordsFiltered'   => $recordsFiltered,
-                'data'              => $data,
-                'post'              => $date1
+                'data'              => $data
             ];
 
             return $this->response->setJSON($result);
