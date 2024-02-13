@@ -227,16 +227,16 @@ $(document).ready(function (e) {
   $(".daterange").daterangepicker({
     autoUpdateInput: false,
     locale: {
-      format: "YYYY-MM-DD",
+      format: "DD-MMM-YYYY",
       cancelLabel: "Clear",
     },
   });
 
   $(".daterange").on("apply.daterangepicker", function (ev, picker) {
     $(this).val(
-      picker.startDate.format("YYYY-MM-DD") +
+      picker.startDate.format("DD-MMM-YYYY") +
         " - " +
-        picker.endDate.format("YYYY-MM-DD")
+        picker.endDate.format("DD-MMM-YYYY")
     );
   });
 

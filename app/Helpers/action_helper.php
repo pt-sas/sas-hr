@@ -269,7 +269,7 @@ function replaceStrBracket(string $str)
  * @param string $format
  * @return array
  */
-function getDatesFromRange($start, $end, $format = 'Y-m-d H:i:s'): array
+function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s')
 {
     $array = [];
 
@@ -283,7 +283,13 @@ function getDatesFromRange($start, $end, $format = 'Y-m-d H:i:s'): array
     $period = new DatePeriod(new DateTime($start), $interval, $realEnd);
 
     foreach ($period as $date) {
-        $array[] = $date->format($format);
+        if ($date->format('N') < 6)
+            if ($arr_date) {
+                if (!in_array($date->format("Y-m-d"), $arr_date))
+                    $array[] = $date->format($format);
+            } else {
+                $array[] = $date->format($format);
+            }
     }
 
     return $array;
