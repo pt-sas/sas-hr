@@ -244,6 +244,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('karyawan/getDataBy/(:num)', 'Backend\Employee::getBy/$1');
     $routes->match(['get', 'post'], 'karyawan/getDetail', 'Backend\Employee::getDetailEmployee');
     $routes->match(['get', 'post'], 'employee/getList', 'Backend\Employee::getList');
+    $routes->match(['get', 'post'], 'karyawan/getList', 'Backend\Employee::getList');
     $routes->match(['get', 'post'], 'karyawan/superior', 'Backend\Employee::getSuperior');
     $routes->get('karyawan/destroy/(:any)', 'Backend\Employee::destroy/$1');
     $routes->post('karyawan/create', 'Backend\Employee::create');
@@ -386,7 +387,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('ijin-keluar-kantor/destroy/(:any)', 'Backend\PermissionLeaveOffice::destroy/$1');
     $routes->match(['get', 'post'], 'ijin-keluar-kantor/getList', 'Backend\PermissionLeaveOffice::getList');
     $routes->get('ijin-keluar-kantor/print/(:any)', 'Backend\PermissionLeaveOffice::exportPDF/$1');
-    
+
 
     $routes->add('ijin', 'Backend\Permission::index');
     $routes->match(['get', 'post'], 'ijin/showAll', 'Backend\Permission::showAll');

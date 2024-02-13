@@ -56,7 +56,7 @@ class Province extends BaseController
 
             $result = [
                 'draw'              => $this->request->getPost('draw'),
-                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search),
+                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join),
                 'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join),
                 'data'              => $data
             ];
@@ -164,9 +164,24 @@ class Province extends BaseController
 
             try {
                 if (isset($post['search'])) {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->like('name', $post['search'])
-                        ->orderBy('name', 'ASC')
+                    if (isset($post['md_country_id'])) {
+                        $list = $this->model->where([
+                            'isactive'      => 'Y',
+                            'md_country_id' => $post['md_country_id']
+                        ])->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
+                } else if (isset($post['md_country_id'])) {
+                    $list = $this->model->where([
+                        'isactive'      => 'Y',
+                        'md_country_id' => $post['md_country_id']
+                    ])->orderBy('name', 'ASC')
                         ->findAll();
                 } else {
                     $list = $this->model->where('isactive', 'Y')
@@ -177,7 +192,6 @@ class Province extends BaseController
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getProvinceId();
                     $response[$key]['text'] = $row->getName();
-
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
