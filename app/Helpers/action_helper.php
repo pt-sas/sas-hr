@@ -305,3 +305,17 @@ function imageShow($path = null, $image = null)
 
     return $result;
 }
+
+function getOperationResult($a, $b, $operator)
+{
+    $operations = [
+      '=='  => $a == $b,
+      '>>'  => $a > $b,
+      '>=' => $a >= $b,
+      '<<'  => $a < $b,
+      '<=' => $a <= $b,
+      '!=' => $a <> $b,
+    ];
+
+    return $operations[$operator];
+}
