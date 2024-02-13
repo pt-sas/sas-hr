@@ -112,7 +112,7 @@ class M_Datatable extends Model
                             $datetime =  urldecode($value['value']);
                             $date = explode(" - ", $datetime);
 
-                            $this->builder->where('DATE(' . $table . '.' . $value['name'] . ')' . ' >= "' . $date[0] . '" AND ' . 'DATE(' . $table . '.' . $value['name'] . ')' . ' <= "' . $date[1] . '"');
+                            $this->builder->where('DATE(' . $table . '.' . $value['name'] . ')' . ' >= "' . date("Y-m-d", strtotime($date[0])) . '" AND ' . 'DATE(' . $table . '.' . $value['name'] . ')' . ' <= "' . date("Y-m-d", strtotime($date[1])) . '"');
                         }
 
                         if ($field->name === $value['name'] && $field->type !== 'timestamp') {
@@ -142,7 +142,7 @@ class M_Datatable extends Model
                                         $datetime =  urldecode($value['value']);
                                         $date = explode(" - ", $datetime);
 
-                                        $this->builder->where($tableJoin . '.' . $value['name'] . ' >= "' . $date[0] . '" AND ' . $tableJoin . '.' . $value['name'] . ' <= "' . $date[1] . '"');
+                                        $this->builder->where($tableJoin . '.' . $value['name'] . ' >= "' . date("Y-m-d", strtotime($date[0])) . '" AND ' . $tableJoin . '.' . $value['name'] . ' <= "' . date("Y-m-d", strtotime($date[1])) . '"');
                                     }
 
                                     if ($field->name === $value['name'] && $field->type !== 'timestamp') {
