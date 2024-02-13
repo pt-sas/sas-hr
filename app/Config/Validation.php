@@ -551,48 +551,58 @@ class Validation
     ];
 
     public $absent = [
-        'md_employee_id'                 => [
-            'label'            => 'Karyawan',
-            'rules'            =>    'required',
-            'errors'        => [
-                'required'    => 'Mohon mengisi {field} dahulu'
+        'md_employee_id'        => [
+            'label'             => 'karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'md_branch_id'                 => [
-            'label'            => 'Cabang',
-            'rules'            =>    'required',
-            'errors'        => [
-                'required'    => 'Mohon mengisi {field} dahulu'
+        'md_branch_id'          => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'md_division_id'                 => [
-            'label'            => 'Divisi',
-            'rules'            =>    'required',
-            'errors'        => [
-                'required'    => 'Mohon mengisi {field} dahulu'
+        'md_division_id'        => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'startdate'                 => [
-            'label'            => 'Tanggal',
-            'rules'            =>    'required',
-            'errors'        => [
-                'required'    => 'Mohon mengisi {field} dahulu'
+        'startdate'             => [
+            'label'             => 'tanggal mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'enddate'                 => [
-            'label'            => 'Tanggal',
-            'rules'            =>    'required',
-            'errors'        => [
-                'required'    => 'Mohon mengisi {field} dahulu'
+        'enddate'               => [
+            'label'             => 'tanggal selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'reason'                 => [
-            'label'            => 'Alasan',
-            'rules'            =>    'required',
-            'errors'        => [
-                'required'    => 'Mohon mengisi {field} dahulu'
+        'reason'                => [
+            'label'             => 'alasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
             ]
-        ]
+        ],
+        'image'                 => [
+            'label'             => 'gambar',
+            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                'uploaded'      => 'Mohon upload {field} dahulu',
+                'max_size'      => 'Data {field} melebehi batas maksimum 3 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
     ];
 
     public $pengajuan = [
