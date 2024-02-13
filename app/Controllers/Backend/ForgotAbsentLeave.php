@@ -193,9 +193,7 @@ class ForgotAbsentLeave extends BaseController
 
     public function processIt()
     {
-        $mAllowance = new M_AllowanceAtt($this->request);
-        $mRule = new M_Rule($this->request);
-        $mRuleDetail = new M_RuleDetail($this->request);
+        $cWfs = new WScenario();
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -203,24 +201,27 @@ class ForgotAbsentLeave extends BaseController
             $_ID = $post['id'];
             $_DocAction = $post['docaction'];
             // $_Data = $this->model->where('trx_absent_id', $post['id'])->find();
-            $_Rule = $mRule->where('name', 'Lupa Absen')->find();
-            $_RuleDetail = $mRuleDetail->where(['md_rule_id' => $_Rule[0]->md_rule_id, 'name' => 'Lupa Absen Pulang'])->find();
+            // $_Rule = $mRule->where('name', 'Lupa Absen')->find();
+            // $_RuleDetail = $mRuleDetail->where(['md_rule_id' => $_Rule[0]->md_rule_id, 'name' => 'Lupa Absen Pulang'])->find();
             // $jamMasuk = convertToMinutes(format_time('08:00'));
             // $pagi = ($jamMasuk + $_RuleDetail[0]->condition);
             // $siang = ($jamMasuk + $_RuleDetail[1]->condition);
             // $jam = convertToMinutes(format_time($_Data[0]->startdate));
 
             $row = $this->model->find($_ID);
+            $menu = $this->request->uri->getSegment(2);
 
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                        $response = $this->save();
-                        $amount = abs($_RuleDetail[0]->value);
-                        
+                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                        $response = message('success', true, $this->message);
+                        // $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                        // $response = $this->save();
+                        // $amount = abs($_RuleDetail[0]->value);
+
                         // // Check Rule
                         //  if($_Rule[0]->isdetail === 'Y') {
                         //     if (getOperationResult($jam,$jamMasuk,$_RuleDetail[0]->operation) === true) {
@@ -233,21 +234,21 @@ class ForgotAbsentLeave extends BaseController
                         //         $amount = abs($_RuleDetail[0]->value);
                         //     }
                         // }
-                        
-                        if($amount != 0) {
-                        $arr[] = [
-                            "record_id"         => $_ID,
-                            "table"             => $this->model->table,
-                            "submissiontype"    => $row->getSubmissionType(),
-                            "submissiondate"    => $row->getStartDate(),
-                            "md_employee_id"    => $row->getEmployeeId(),
-                            "amount"            => $amount,
-                            "created_by"        => $this->access->getSessionUser(),
-                            "updated_by"        => $this->access->getSessionUser(),
-                        ];
 
-                        $mAllowance->builder->insertBatch($arr);
-                        }
+                        // if ($amount != 0) {
+                        //     $arr[] = [
+                        //         "record_id"         => $_ID,
+                        //         "table"             => $this->model->table,
+                        //         "submissiontype"    => $row->getSubmissionType(),
+                        //         "submissiondate"    => $row->getStartDate(),
+                        //         "md_employee_id"    => $row->getEmployeeId(),
+                        //         "amount"            => $amount,
+                        //         "created_by"        => $this->access->getSessionUser(),
+                        //         "updated_by"        => $this->access->getSessionUser(),
+                        //     ];
+
+                        //     $mAllowance->builder->insertBatch($arr);
+                        // }
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
