@@ -222,19 +222,19 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('datang-terlambat/destroy/(:any)', 'Backend\PermissionArrived::destroy/$1');
     $routes->get('datang-terlambat/processIt', 'Backend\PermissionArrived::processIt');
 
-    $routes->add('lupa-absen-masuk', 'Backend\ForgotAbsentLeave::index');
-    $routes->match(['get', 'post'], 'lupa-absen-masuk/showAll', 'Backend\ForgotAbsentLeave::showAll');
-    $routes->post('lupa-absen-masuk/create', 'Backend\ForgotAbsentLeave::create');
-    $routes->get('lupa-absen-masuk/show/(:any)', 'Backend\ForgotAbsentLeave::show/$1');
-    $routes->get('lupa-absen-masuk/destroy/(:any)', 'Backend\ForgotAbsentLeave::destroy/$1');
-    $routes->get('lupa-absen-masuk/processIt', 'Backend\ForgotAbsentLeave::processIt');
+    $routes->add('lupa-absen-masuk', 'Backend\ForgotAbsentArrive::index');
+    $routes->match(['get', 'post'], 'lupa-absen-masuk/showAll', 'Backend\ForgotAbsentArrive::showAll');
+    $routes->post('lupa-absen-masuk/create', 'Backend\ForgotAbsentArrive::create');
+    $routes->get('lupa-absen-masuk/show/(:any)', 'Backend\ForgotAbsentArrive::show/$1');
+    $routes->get('lupa-absen-masuk/destroy/(:any)', 'Backend\ForgotAbsentArrive::destroy/$1');
+    $routes->get('lupa-absen-masuk/processIt', 'Backend\ForgotAbsentArrive::processIt');
 
-    $routes->add('lupa-absen-pulang', 'Backend\ForgotAbsentArrive::index');
-    $routes->match(['get', 'post'], 'lupa-absen-pulang/showAll', 'Backend\ForgotAbsentArrive::showAll');
-    $routes->post('lupa-absen-pulang/create', 'Backend\ForgotAbsentArrive::create');
-    $routes->get('lupa-absen-pulang/show/(:any)', 'Backend\ForgotAbsentArrive::show/$1');
-    $routes->get('lupa-absen-pulang/destroy/(:any)', 'Backend\ForgotAbsentArrive::destroy/$1');
-    $routes->get('lupa-absen-pulang/processIt', 'Backend\ForgotAbsentArrive::processIt');
+    $routes->add('lupa-absen-pulang', 'Backend\ForgotAbsentLeave::index');
+    $routes->match(['get', 'post'], 'lupa-absen-pulang/showAll', 'Backend\ForgotAbsentLeave::showAll');
+    $routes->post('lupa-absen-pulang/create', 'Backend\ForgotAbsentLeave::create');
+    $routes->get('lupa-absen-pulang/show/(:any)', 'Backend\ForgotAbsentLeave::show/$1');
+    $routes->get('lupa-absen-pulang/destroy/(:any)', 'Backend\ForgotAbsentLeave::destroy/$1');
+    $routes->get('lupa-absen-pulang/processIt', 'Backend\ForgotAbsentLeave::processIt');
 
     $routes->add('laporan-potongan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-potongan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
