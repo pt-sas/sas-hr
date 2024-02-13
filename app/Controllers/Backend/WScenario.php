@@ -281,53 +281,64 @@ class WScenario extends BaseController
         return json_encode($table);
     }
 
-    // public function setScenario($entity, $model, $modelDetail = null, $trxID, $docStatus, $menu, $session)
-    // {
-    //     $mWfs = new M_WScenario($this->request);
-    //     $cWfa = new WActivity();
+    public function setScenario($entity, $model, $modelDetail = null, $trxID, $docStatus, $menu, $session)
+    {
+        $mWfs = new M_WScenario($this->request);
+        $cWfa = new WActivity();
 
-    //     $this->model = $model;
-    //     $this->entity = $entity;
+        $this->model = $model;
+        $this->entity = $entity;
 
-    //     $table = $this->model->table;
-    //     $primaryKey = $this->model->primaryKey;
-    //     $sessionUserId = $session->get('sys_user_id');
-    //     $isWfscenario = false;
+        $table = $this->model->table;
+        $primaryKey = $this->model->primaryKey;
+        $sessionUserId = $session->get('sys_user_id');
+        $isWfscenario = false;
 
-    //     $trx = $this->model->find($trxID);
+        $trx = $this->model->find($trxID);
 
-    //     if (!is_null($modelDetail)) {
-    //         $this->modelDetail = $modelDetail;
-    //         $trx = $this->modelDetail->where($primaryKey, $trxID)->first();
-    //     }
+        if (!is_null($modelDetail)) {
+            $this->modelDetail = $modelDetail;
+            $trx = $this->modelDetail->where($primaryKey, $trxID)->first();
+        }
 
-    //     if (!$trx && $docStatus === $this->DOCSTATUS_Completed) {
-    //         $this->entity->setDocStatus($this->DOCSTATUS_Invalid);
-    //         $this->entity->setWfScenarioId(0);
-    //     } else if ($docStatus === $this->DOCSTATUS_Voided) {
-    //         $this->entity->setDocStatus($this->DOCSTATUS_Voided);
-    //     } else if ($trx && $docStatus === $this->DOCSTATUS_Completed) {
-    //     }
+        if (!$trx && $docStatus === $this->DOCSTATUS_Completed) {
+            $this->entity->setDocStatus($this->DOCSTATUS_Invalid);
+            $this->entity->setWfScenarioId(0);
+        } else if ($docStatus === $this->DOCSTATUS_Voided) {
+            $this->entity->setDocStatus($this->DOCSTATUS_Voided);
+        } else if ($trx && $docStatus === $this->DOCSTATUS_Completed) {
+            if ($table === 'trx_absent') {
+                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id);
 
-    //     $this->entity->setUpdatedBy($session->get('sys_user_id'));
-    //     $this->entity->{$primaryKey} = $trxID;
-    //     $result = $this->model->save($this->entity);
+                if ($this->sys_wfscenario_id) {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
+                    $this->entity->setWfScenarioId($this->sys_wfscenario_id);
+                    $isWfscenario = true;
+                } else {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                }
+            }
+        }
 
-    //     if ($result && $isWfscenario)
-    //         $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);
+        $this->entity->setUpdatedBy($session->get('sys_user_id'));
+        $this->entity->{$primaryKey} = $trxID;
+        $result = $this->model->save($this->entity);
 
-    //     return $result;
-    // }
+        if ($result && $isWfscenario)
+            $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);
 
-    // private function getScenarioResponsible($sys_wfscenario_id)
-    // {
-    //     $this->modelDetail = new M_WScenarioDetail($this->request);
+        return $result;
+    }
 
-    //     $row = $this->modelDetail->where([
-    //         'sys_wfscenario_id'       => $sys_wfscenario_id,
-    //         'isactive'                => 'Y'
-    //     ])->orderBy('lineno', 'ASC')->first();
+    private function getScenarioResponsible($sys_wfscenario_id)
+    {
+        $this->modelDetail = new M_WScenarioDetail($this->request);
 
-    //     return $row->getWfResponsibleId();
-    // }
+        $row = $this->modelDetail->where([
+            'sys_wfscenario_id'       => $sys_wfscenario_id,
+            'isactive'                => 'Y'
+        ])->orderBy('lineno', 'ASC')->first();
+
+        return $row->getWfResponsibleId();
+    }
 }
