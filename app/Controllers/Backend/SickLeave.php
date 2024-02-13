@@ -112,22 +112,52 @@ class SickLeave extends BaseController
 
     public function create()
     {
+        $mEmployee = new M_Employee($this->request);
+
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $file = $this->request->getFile('image');
 
             $post["submissiontype"] = $this->Pengajuan_Sakit;
             $post["necessary"] = $this->Form_Absent;
 
             try {
-                $this->entity->fill($post);
+                $img_name = "";
+
+                if ($file && $file->isValid()) {
+                    $row = $mEmployee->find($post['md_employee_id']);
+
+                    $ext = $file->getClientExtension();
+                    $lenPos = strpos($row->getValue(), '-');
+                    $value = substr_replace($row->getValue(), "", $lenPos);
+                    $ymd = date('Ymd', strtotime($post['submissiondate']));
+
+                    $img_name = $this->Pengajuan_Sakit . '_' . $value . '_' . $ymd . '.' . $ext;
+                    $post['image'] = $img_name;
+                }
 
                 if (!$this->validation->run($post, 'absent')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                    if ($this->isNew()) {
+                        uploadFile($file, $path, $img_name);
+                    } else {
+                        $row = $this->model->find($this->getID());
+
+                        if (!empty($row->getImage()) && $post['image'] !== $row->getImage()) {
+                            if (file_exists($path . $row->getImage())) {
+                                unlink($path . $row->getImage());
+                                $file->move($path);
+                            }
+                        }
+                    }
+
+                    $this->entity->fill($post);
 
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-
                         $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Sakit, $post["necessary"]);
                         $this->entity->setDocumentNo($docNo);
                     }
@@ -150,6 +180,9 @@ class SickLeave extends BaseController
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
+
+                $path = 'uploads/' . $this->PATH_Pengajuan . '/';
+                $list[0]->image = $path . $list[0]->image;
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 

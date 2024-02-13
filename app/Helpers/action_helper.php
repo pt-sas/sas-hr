@@ -269,7 +269,7 @@ function replaceStrBracket(string $str)
  * @param string $format
  * @return array
  */
-function getDatesFromRange($start, $end, $format = 'Y-m-d H:i:s'): array
+function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s')
 {
     $array = [];
 
@@ -283,7 +283,13 @@ function getDatesFromRange($start, $end, $format = 'Y-m-d H:i:s'): array
     $period = new DatePeriod(new DateTime($start), $interval, $realEnd);
 
     foreach ($period as $date) {
-        $array[] = $date->format($format);
+        if ($date->format('N') < 6)
+            if ($arr_date) {
+                if (!in_array($date->format("Y-m-d"), $arr_date))
+                    $array[] = $date->format($format);
+            } else {
+                $array[] = $date->format($format);
+            }
     }
 
     return $array;
@@ -295,7 +301,7 @@ function imageShow($path = null, $image = null)
     $result .= '<div class="avatar avatar-xl">';
 
     if (!empty($image) && file_exists($path . $image)) {
-        $result .= '<img class="avatar-img rounded" src="' . site_url() . $path . $image . '" />';
+        $result .= '<img class="avatar-img rounded" src="' . base_url() . '/' . $path . $image . '" />';
     } else {
         $result .= '<img class="avatar-img rounded-circle" src="https://via.placeholder.com/200/808080/ffffff?text=No+Image">';
     }
@@ -318,4 +324,18 @@ function getOperationResult($a, $b, $operator)
     ];
 
     return $operations[$operator];
+}
+
+function uploadFile($file, $path, $new_name = null)
+{
+    if (!is_dir($path)) mkdir($path, 0777, true);
+
+    if ($file && $file->isValid()) {
+        if (is_null($new_name))
+            return $file->move($path);
+        else
+            return $file->move($path, $new_name);
+    }
+
+    return false;
 }

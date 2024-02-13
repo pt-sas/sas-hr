@@ -79,4 +79,33 @@ class M_Holiday extends Model
             "typeJoin" => $typeJoin
         ];
     }
+
+    public function getHolidayDate()
+    {
+        $mMassLeave = new M_MassLeave($this->request);
+
+        $date1 = $this->where([
+            "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
+            "isactive"                      => "Y"
+        ])->findAll();
+
+        foreach ($date1 as $row) :
+            $holiday[] = $row->getStartDate();
+        endforeach;
+
+        $date2 = $mMassLeave->where([
+            "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
+            "isaffect"                      => "Y",
+            "isactive"                      => "Y"
+        ])->findAll();
+
+        foreach ($date2 as $row) :
+            $massLeave[] = $row->getStartDate();
+        endforeach;
+
+        $arr = array_unique(array_merge($holiday, $massLeave));
+        sort($arr);
+
+        return $arr;
+    }
 }
