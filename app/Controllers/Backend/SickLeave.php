@@ -8,6 +8,7 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AllowanceAtt;
 use App\Models\M_Rule;
+use App\Models\M_RuleDetail;
 
 use function PHPUnit\Framework\isNull;
 
@@ -228,6 +229,7 @@ class SickLeave extends BaseController
     {
         $mRule = new M_Rule($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -246,9 +248,11 @@ class SickLeave extends BaseController
                         $response = $this->save();
                         
                         $_Rule = $mRule->where(['name' => 'Sakit', 'isactive' => 'Y'])->find();
+                        $_RuleDetail = $mRuleDetail->where('md_rule_id = ' . $_Rule[0]->md_rule_id)->find();
                         $amount = 0;
+                        $amountimage = abs($_RuleDetail[0]->value);
 
-                        // check rule
+                        // // check rule
                         // if($_Rule[0]->isdetail === 'Y') {
 
                         // } else if ($_Rule[0]->isdetail ==='N') {
@@ -272,8 +276,25 @@ class SickLeave extends BaseController
                                 "updated_by"        => $this->access->getSessionUser(),
                             ];
                         }
-
+                        
                         $mAllowance->builder->insertBatch($arr);
+
+                        if($row->image === "") {
+                            $arrImg[] = [
+                                "record_id"         => $_ID,
+                                "table"             => $this->model->table,
+                                "submissiontype"    => $row->getSubmissionType(),
+                                "submissiondate"    => $date,
+                                "md_employee_id"    => $row->getEmployeeId(),
+                                "amount"            => $amountimage,
+                                "created_by"        => $this->access->getSessionUser(),
+                                "updated_by"        => $this->access->getSessionUser(),
+                            ];
+                            $mAllowance->builder->insertBatch($arrImg);
+                        }
+
+
+                        // $response = $row;
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
