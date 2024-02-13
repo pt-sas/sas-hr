@@ -306,12 +306,16 @@ function imageShow($path = null, $image = null)
     return $result;
 }
 
-function uploadFile($file, $path)
+function uploadFile($file, $path, $new_name = null)
 {
     if (!is_dir($path)) mkdir($path, 0777, true);
 
-    if ($file && $file->isValid())
-        return $file->move($path);
+    if ($file && $file->isValid()) {
+        if (is_null($new_name))
+            return $file->move($path);
+        else
+            return $file->move($path, $new_name);
+    }
 
     return false;
 }
