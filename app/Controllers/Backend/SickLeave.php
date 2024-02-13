@@ -7,6 +7,9 @@ use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AllowanceAtt;
+use App\Models\M_Rule;
+
+use function PHPUnit\Framework\isNull;
 
 class SickLeave extends BaseController
 {
@@ -223,6 +226,7 @@ class SickLeave extends BaseController
 
     public function processIt()
     {
+        $mRule = new M_Rule($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
 
         if ($this->request->isAJAX()) {
@@ -240,6 +244,18 @@ class SickLeave extends BaseController
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                         $response = $this->save();
+                        
+                        $_Rule = $mRule->where(['name' => 'Sakit', 'isactive' => 'Y'])->find();
+                        $amount = 0;
+
+                        // check rule
+                        // if($_Rule[0]->isdetail === 'Y') {
+
+                        // } else if ($_Rule[0]->isdetail ==='N') {
+                                if($_Rule[0]->condition === "") {
+                                    $amount = abs($_Rule[0]->value);}
+                        //         } else {  }
+                        // };
 
                         $range = getDatesFromRange($row->getStartDate(), $row->getEndDate());
 
@@ -251,7 +267,7 @@ class SickLeave extends BaseController
                                 "submissiontype"    => $row->getSubmissionType(),
                                 "submissiondate"    => $date,
                                 "md_employee_id"    => $row->getEmployeeId(),
-                                "amount"            => 1,
+                                "amount"            => $amount,
                                 "created_by"        => $this->access->getSessionUser(),
                                 "updated_by"        => $this->access->getSessionUser(),
                             ];

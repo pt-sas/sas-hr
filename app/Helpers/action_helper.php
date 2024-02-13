@@ -312,6 +312,20 @@ function imageShow($path = null, $image = null)
     return $result;
 }
 
+function getOperationResult($a, $b, $operator)
+{
+    $operations = [
+      '=='  => $a == $b,
+      '>>'  => $a > $b,
+      '>=' => $a >= $b,
+      '<<'  => $a < $b,
+      '<=' => $a <= $b,
+      '!=' => $a <> $b,
+    ];
+
+    return $operations[$operator];
+}
+
 function uploadFile($file, $path, $new_name = null)
 {
     if (!is_dir($path)) mkdir($path, 0777, true);
