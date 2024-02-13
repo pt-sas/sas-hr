@@ -4551,13 +4551,13 @@ function putFieldData(form, data) {
           if (field[i].type === "select-multiple" && label !== null) {
             // array label explode into array
             if (typeof label === "object") {
-              label = label.id;
+              let option_ID = label.id;
+              let option_Txt = label.name;
 
-              arrMultiSelect.push(label);
               form
                 .find("select[name=" + fieldName + "]")
                 .not(".line")
-                .val(arrMultiSelect)
+                .val(option_ID)
                 .change();
             }
 
