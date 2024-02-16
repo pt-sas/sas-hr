@@ -17,6 +17,10 @@ $(".timepicker-start").on("dp.change", function (e) {
   $(".timepicker-end").data("DateTimePicker").minDate(e.date);
 });
 
+$(".date-start").on("dp.change", function (e) {
+  $(".date-end").data("DateTimePicker").minDate(e.date);
+});
+
 $(".date-start").datetimepicker({
   format: "DD-MMM-YYYY",
   showTodayButton: true,
