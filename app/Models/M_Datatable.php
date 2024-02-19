@@ -34,15 +34,15 @@ class M_Datatable extends Model
 
         if (count($where) > 0) {
             foreach ($where as $key => $value) :
-                if (gettype($value) === "string") {
+                if (is_string($value)) {
                     $this->builder->where($key, $value);
                 }
 
-                if (gettype($value) === "array" && !isset($value['condition'])) {
-                    $this->builder->whereIn($key, $value);
+                if (is_array($value) && !isset($value['condition'])) {
+                    $this->builder->whereIn($key, $value['value']);
                 }
 
-                if (gettype($value) === "array" && isset($value['condition']) && $value['condition'] === "OR") {
+                if (is_array($value) && isset($value['condition']) && $value['condition'] === "OR") {
                     $this->builder->orWhere($key, $value['value']);
                 }
             endforeach;
@@ -109,7 +109,7 @@ class M_Datatable extends Model
 
                     foreach ($fields as $field) :
                         if ($field->name === $value['name'] && $field->type === 'timestamp') {
-                            $datetime =  urldecode($value['value']);
+                            $datetime = urldecode($value['value']);
                             $date = explode(" - ", $datetime);
 
                             $this->builder->where('DATE(' . $table . '.' . $value['name'] . ')' . ' >= "' . date("Y-m-d", strtotime($date[0])) . '" AND ' . 'DATE(' . $table . '.' . $value['name'] . ')' . ' <= "' . date("Y-m-d", strtotime($date[1])) . '"');
@@ -139,7 +139,7 @@ class M_Datatable extends Model
 
                                 foreach ($fields as $field) :
                                     if ($field->name === $value['name'] && $field->type === 'timestamp') {
-                                        $datetime =  urldecode($value['value']);
+                                        $datetime = urldecode($value['value']);
                                         $date = explode(" - ", $datetime);
 
                                         $this->builder->where($tableJoin . '.' . $value['name'] . ' >= "' . date("Y-m-d", strtotime($date[0])) . '" AND ' . $tableJoin . '.' . $value['name'] . ' <= "' . date("Y-m-d", strtotime($date[1])) . '"');
