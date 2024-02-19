@@ -5,58 +5,32 @@ namespace App\Models;
 use CodeIgniter\Model;
 use CodeIgniter\HTTP\RequestInterface;
 
-class M_Absent extends Model
+class M_Overtime extends Model
 {
-    protected $table                = 'trx_absent';
-    protected $primaryKey           = 'trx_absent_id';
+    protected $table                = 'trx_overtime';
+    protected $primaryKey           = 'trx_overtime_id';
     protected $allowedFields        = [
         'documentno',
         'md_employee_id',
-        'nik',
         'md_branch_id',
         'md_division_id',
         'submissiondate',
-        'receiveddate',
-        'necessary',
-        'submissiontype',
-        'startdate',
-        'enddate',
-        'reason',
+        'description',
         'docstatus',
-        'image',
         'isapproved',
         'approveddate',
         'sys_wfscenario_id',
         'created_by',
         'updated_by',
-        'md_leavetype_id'
     ];
     protected $useTimestamps        = true;
-    protected $returnType           = 'App\Entities\Absent';
-    protected $allowCallbacks       = true;
-    protected $beforeInsert         = [];
-    protected $afterInsert          = [];
-    protected $beforeUpdate         = [];
-    protected $afterUpdate          = [];
-    protected $beforeDelete         = [];
-    protected $afterDelete          = [];
+    protected $returnType           = 'App\Entities\Overtime';
     protected $column_order         = [
         '', // Hide column
         '', // Number column
-        'md_branch.value',
-        'md_branch.name',
-        'md_branch.address',
-        'md_employee.name',
-        'md_branch.phone',
-        'md_branch.isactive'
+        
     ];
     protected $column_search        = [
-        'md_branch.value',
-        'md_branch.name',
-        'md_branch.address',
-        'md_employee.name',
-        'md_branch.phone',
-        'md_branch.isactive'
     ];
     protected $order                = ['documentno' => 'ASC'];
     protected $request;
@@ -76,11 +50,9 @@ class M_Absent extends Model
         $sql = $this->table . '.*,
                 md_employee.value as employee,
                 md_employee.fullname as employee_fullname,
+                md_employee.nik as nik,
                 md_branch.name as branch,
-                md_division.name as division,
-                sys_ref_detail.name as necessarytype,
-                sys_user.name as createdby,
-                md_leavetype.name as leavetype';
+                md_division.name as division';
 
         return $sql;
     }
@@ -91,10 +63,6 @@ class M_Absent extends Model
             $this->setDataJoin('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
             $this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
             $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
-            $this->setDataJoin('sys_reference', 'sys_reference.name = "NecessaryType"', 'left'),
-            $this->setDataJoin('sys_ref_detail', 'sys_ref_detail.value = ' . $this->table . '.necessary AND sys_reference.sys_reference_id = sys_ref_detail.sys_reference_id', 'left'),
-            $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left'),
-            $this->setDataJoin('md_leavetype', 'md_leavetype.md_leavetype_id = ' . $this->table . '.md_leavetype_id', 'left')
         ];
 
         return $sql;
@@ -109,13 +77,12 @@ class M_Absent extends Model
         ];
     }
 
-    public function getInvNumber($field, $where, $form)
+    public function getInvNumber($field, $where)
     {
         $post = $this->request->getPost();
 
         $year = date("Y", strtotime($post['submissiondate']));
         $month = date("m", strtotime($post['submissiondate']));
-        $post["necessary"] = $form;
 
         $this->builder->select('MAX(RIGHT(documentno,4)) AS documentno');
         $this->builder->where("DATE_FORMAT(submissiondate, '%m')", $month);
@@ -131,10 +98,23 @@ class M_Absent extends Model
         } else {
             $code = "0001";
         }
-        $first = $post["necessary"];
+        $first = 'LB';
 
         $prefix = $first . "/" . $year . "/" . $month . "/" . $code;
 
         return $prefix;
     }
+
+    public function getDetail($field = null, $where = null)
+	{
+		$this->builder->join('trx_overtime_detail', 'trx_overtime_detail.trx_overtime_id = ' . $this->table . '.trx_overtime_id', 'left');
+
+		if (!empty($field) && !empty($where)) {
+			$this->builder->where($field, $where);
+		}
+
+		$this->builder->orderBy($this->table . '.created_at', 'DESC');
+
+		return $this->builder->get();
+	}
 }

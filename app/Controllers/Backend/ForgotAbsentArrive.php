@@ -7,6 +7,8 @@ use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AllowanceAtt;
+use App\Models\M_Rule;
+use App\Models\M_RuleDetail;
 
 class ForgotAbsentArrive extends BaseController
 {
@@ -192,35 +194,61 @@ class ForgotAbsentArrive extends BaseController
 
     public function processIt()
     {
-        $mAllowance = new M_AllowanceAtt($this->request);
+        $cWfs = new WScenario();
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
 
             $_ID = $post['id'];
             $_DocAction = $post['docaction'];
+            // $_Data = $this->model->where('trx_absent_id', $post['id'])->find();
+            // $_Rule = $mRule->where('name', 'Lupa Absen')->find();
+            // $_RuleDetail = $mRuleDetail->where(['md_rule_id' => $_Rule[0]->md_rule_id, 'name' => 'Lupa Absen Masuk'])->find();
+            // $jamMasuk = convertToMinutes(format_time('08:00'));
+            // $pagi = ($jamMasuk + $_RuleDetail[0]->condition);
+            // $siang = ($jamMasuk + $_RuleDetail[1]->condition);
+            // $jam = convertToMinutes(format_time($_Data[0]->startdate));
 
             $row = $this->model->find($_ID);
+            $menu = $this->request->uri->getSegment(2);
 
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                        $response = $this->save();
+                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                        $response = message('success', true, $this->message);
 
-                        $arr[] = [
-                            "record_id"         => $_ID,
-                            "table"             => $this->model->table,
-                            "submissiontype"    => $row->getSubmissionType(),
-                            "submissiondate"    => $row->getStartDate(),
-                            "md_employee_id"    => $row->getEmployeeId(),
-                            "amount"            => 0.5,
-                            "created_by"        => $this->access->getSessionUser(),
-                            "updated_by"        => $this->access->getSessionUser(),
-                        ];
-                        $mAllowance->builder->insertBatch($arr);
+                        // $amount = abs($_RuleDetail[0]->value);
+
+                        // // Check Rule
+                        //  if($_Rule[0]->isdetail === 'Y') {
+                        //     if (getOperationResult($jam,$jamMasuk,$_RuleDetail[0]->operation) === true) {
+                        //         $amount = 0;
+                        //     }
+                        //     else if(getOperationResult($jam,$siang,$_RuleDetail[1]->operation) === true) {
+                        //         $amount = abs($_RuleDetail[1]->value);
+                        //     }
+                        //     else if(getOperationResult($jam,$sore,$_RuleDetail[0]->operation) === true) {
+                        //         $amount = abs($_RuleDetail[0]->value);
+                        //     }
+                        // }
+
+                        // if ($amount != 0) {
+                        //     $arr[] = [
+                        //         "record_id"         => $_ID,
+                        //         "table"             => $this->model->table,
+                        //         "submissiontype"    => $row->getSubmissionType(),
+                        //         "submissiondate"    => $row->getStartDate(),
+                        //         "md_employee_id"    => $row->getEmployeeId(),
+                        //         "amount"            => $amount,
+                        //         "created_by"        => $this->access->getSessionUser(),
+                        //         "updated_by"        => $this->access->getSessionUser(),
+                        //     ];
+
+                        //     $mAllowance->builder->insertBatch($arr);
+                        // }
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();

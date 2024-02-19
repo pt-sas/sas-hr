@@ -10,6 +10,9 @@ use App\Models\M_WActivity;
 use App\Models\M_WEvent;
 use App\Models\M_WScenarioDetail;
 use App\Models\M_Menu;
+use App\Models\M_Rule;
+use App\Models\M_AllowanceAtt;
+use App\Models\M_RuleDetail;
 use Config\Services;
 use Pusher\Pusher;
 use Html2Text\Html2Text;
@@ -188,12 +191,7 @@ class WActivity extends BaseController
                 $subject = ucwords($menuName) . "_" . $sql->documentno;
                 $message =  '<p>Dear Mr/Ms,</p><p><span style="letter-spacing: 0.05em;">Please approve document below.</span></p><div><br></div>';
                 $message .= "-----" . " " . ucwords($menuName) . " ";
-
-                if (isset($sql->grandtotal))
-                    $message .= $sql->documentno . ": Approval Amount =" . formatRupiah($sql->grandtotal);
-                else
-                    $message .= $sql->documentno;
-
+                $message .= $sql->documentno;
                 $message = new Html2Text($message);
                 $message = $message->getText();
 
@@ -231,11 +229,6 @@ class WActivity extends BaseController
                     $message =  'Sudah Di Approve' . "<br>";
                     $message .= "---" . "<br>";
                     $message .= ucwords($menuName) . " " . $sql->documentno . "<br>";
-
-                    if (isset($sql->grandtotal))
-                        $message .= "Approval Amount = " . formatRupiah($sql->grandtotal) . "<br>";
-
-                    $message .= $sql->description;
                     $message = new Html2Text($message);
                     $message = $message->getText();
 
@@ -253,6 +246,163 @@ class WActivity extends BaseController
             $this->entity->setUpdatedBy($user_by);
             $this->entity->setWfActivityId($sys_wfactivity_id);
             $result = $this->model->save($this->entity);
+
+            if ($table === "trx_absent") {
+                $mRule = new M_Rule($this->request);
+                $mRuleDetail = new M_RuleDetail($this->request);
+                $mAllowance = new M_AllowanceAtt($this->request);
+
+                $amount = 0;
+
+                if ($sql->docstatus === $this->DOCSTATUS_Completed) {
+                    $data = [
+                        'receiveddate' => date('Y-m-d')
+                    ];
+
+                    $builder->where($this->getPrimaryKey($table), $record_id)->update($data);
+
+                    $builder = $this->getBuilder($table);
+                    $builder->where($this->getPrimaryKey($table), $record_id);
+                    $sql = $builder->get()->getRow();
+
+                    if ($sql->submissiontype === "sakit") {
+                        $_Rule = $mRule->where(['name' => 'Sakit', 'isactive' => 'Y'])->first();
+
+                        if ($_Rule->condition === "")
+                            $amount = abs($_Rule->value);
+
+                        $range = getDatesFromRange($sql->startdate, $sql->enddate);
+
+                        $arr = [];
+
+                        if ($amount != 0) {
+                            foreach ($range as $date) {
+                                $arr[] = [
+                                    "record_id"         => $record_id,
+                                    "table"             => $table,
+                                    "submissiontype"    => $sql->submissiontype,
+                                    "submissiondate"    => $date,
+                                    "md_employee_id"    => $sql->md_employee_id,
+                                    "amount"            => $amount,
+                                    "created_by"        => $user_by,
+                                    "updated_by"        => $user_by,
+                                ];
+                            }
+
+                            $mAllowance->builder->insertBatch($arr);
+                        }
+                    }
+
+                    if ($sql->submissiontype === "lupa absen masuk") {
+                        $_Rule = $mRule->where('name', 'Lupa Absen')->first();
+                        $_RuleDetail = $mRuleDetail->where(['md_rule_id' => $_Rule->md_rule_id, 'name' => 'Lupa Absen Masuk'])->first();
+                        $amount = abs($_RuleDetail->value);
+
+                        if ($amount != 0) {
+                            $arr[] = [
+                                "record_id"         => $record_id,
+                                "table"             => $table,
+                                "submissiontype"    => $sql->submissiontype,
+                                "submissiondate"    => $sql->startdate,
+                                "md_employee_id"    => $sql->md_employee_id,
+                                "amount"            => $amount,
+                                "created_by"        => $user_by,
+                                "updated_by"        => $user_by,
+                            ];
+
+                            $mAllowance->builder->insertBatch($arr);
+                        }
+                    }
+
+                    if ($sql->submissiontype === "lupa absen pulang") {
+                        $_Rule = $mRule->where('name', 'Lupa Absen')->find();
+                        $_RuleDetail = $mRuleDetail->where(['md_rule_id' => $_Rule[0]->md_rule_id, 'name' => 'Lupa Absen Pulang'])->find();
+                        $amount = abs($_RuleDetail->value);
+
+                        if ($amount != 0) {
+                            $arr[] = [
+                                "record_id"         => $record_id,
+                                "table"             => $table,
+                                "submissiontype"    => $sql->submissiontype,
+                                "submissiondate"    => $sql->startdate,
+                                "md_employee_id"    => $sql->md_employee_id,
+                                "amount"            => $amount,
+                                "created_by"        => $user_by,
+                                "updated_by"        => $user_by,
+                            ];
+
+                            $mAllowance->builder->insertBatch($arr);
+                        }
+                    }
+
+                    if ($sql->submissiontype === "datang terlambat") {
+                        $_Rule = $mRule->where('name', 'Terlambat')->first();
+                        $_RuleDetail = $mRuleDetail->where('md_rule_id', $_Rule->md_rule_id)->findAll();
+
+                        $jamMasuk = convertToMinutes(format_time('08:00'));
+                        $pagi = ($jamMasuk + $_RuleDetail[0]->condition);
+                        $siang = ($jamMasuk + $_RuleDetail[1]->condition);
+                        $jam = convertToMinutes(format_time($sql->startdate));
+
+                        if ($_Rule->isdetail === 'Y') {
+                            if (getOperationResult($jam, $siang, $_RuleDetail[1]->operation) === true) {
+                                $amount = abs($_RuleDetail[1]->value);
+                            } else if (getOperationResult($jam, $pagi, $_RuleDetail[0]->operation) === true) {
+                                $amount = abs($_RuleDetail[0]->value);
+                            }
+                        }
+
+                        if ($amount != 0) {
+                            $arr[] = [
+                                "record_id"         => $record_id,
+                                "table"             => $table,
+                                "submissiontype"    => $sql->submissiontype,
+                                "submissiondate"    => $sql->startdate,
+                                "md_employee_id"    => $sql->md_employee_id,
+                                "amount"            => $amount,
+                                "created_by"        => $user_by,
+                                "updated_by"        => $user_by,
+                            ];
+
+                            $mAllowance->builder->insertBatch($arr);
+                        }
+                    }
+
+                    if ($sql->submissiontype === "pulang cepat") {
+                        $_Rule = $mRule->where('name', 'Pulang Cepat')->find();
+                        $_RuleDetail = $mRuleDetail->where('md_rule_id = ' . $_Rule[0]->md_rule_id)->find();
+                        $jamMasuk = convertToMinutes(format_time('08:00'));
+                        $sore = ($jamMasuk + $_RuleDetail[0]->condition);
+                        $siang = ($jamMasuk + $_RuleDetail[1]->condition);
+                        $jam = convertToMinutes(format_time($sql->startdate));
+
+                        if ($_Rule[0]->isdetail === 'Y') {
+                            if (getOperationResult($jam, $jamMasuk, $_RuleDetail[0]->operation) === true) {
+                                $amount = 0;
+                            } else if (getOperationResult($jam, $siang, $_RuleDetail[1]->operation) === true) {
+                                $amount = abs($_RuleDetail[1]->value);
+                            } else if (getOperationResult($jam, $sore, $_RuleDetail[0]->operation) === true) {
+                                $amount = abs($_RuleDetail[0]->value);
+                            }
+                        }
+
+                        if ($amount != 0) {
+                            $arr[] = [
+                                "record_id"         => $record_id,
+                                "table"             => $table,
+                                "submissiontype"    => $sql->submissiontype,
+                                "submissiondate"    => $sql->startdate,
+                                "md_employee_id"    => $sql->md_employee_id,
+                                "amount"            => $amount,
+                                "created_by"        => $user_by,
+                                "updated_by"        => $user_by,
+                            ];
+
+                            $mAllowance->builder->insertBatch($arr);
+                        }
+                    }
+                }
+            }
         }
 
         return $result;
@@ -295,11 +445,6 @@ class WActivity extends BaseController
                     $message =  'Tidak Di Approve' . "<br>";
                     $message .= "---" . "<br>";
                     $message .= ucwords($menuName) . " " . $sql->documentno . "<br>";
-
-                    if (isset($sql->grandtotal))
-                        $message .= "Approval Amount = " . formatRupiah($sql->grandtotal) . "<br>";
-
-                    $message .= $sql->description;
                     $message = new Html2Text($message);
                     $message = $message->getText();
 
