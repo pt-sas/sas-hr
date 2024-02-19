@@ -4,6 +4,8 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_AllowanceAtt;
+use App\Models\M_EmpBranch;
+use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
 use App\Models\M_Holiday;
 use Config\Services;
@@ -32,12 +34,14 @@ class AllowanceAtt extends BaseController
     {
         $mHoliday = new M_Holiday($this->request);
         $mEmployee = new M_Employee($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
+        $mEmpDiv = new M_EmpDivision($this->request);
+
         $post = $this->request->getVar();
         $data = [];
 
         $recordTotal = 0;
         $recordsFiltered = 0;
-        $date1 = [];
 
         if ($this->request->getMethod(true) === 'POST') {
             if (isset($post['form']) && $post['clear'] === 'false') {
@@ -49,9 +53,29 @@ class AllowanceAtt extends BaseController
                 $where['md_employee.isactive'] = 'Y';
 
                 foreach ($post['form'] as $value) {
-                    if ($value['name'] === "submissiondate") {
-                        $datetime =  urldecode($value['value']);
-                        $date = explode(" - ", $datetime);
+                    if (!empty($value['value'])) {
+                        if ($value['name'] === "submissiondate") {
+                            $datetime = urldecode($value['value']);
+                            $date = explode(" - ", $datetime);
+                        }
+
+                        if ($value['name'] === "md_division_id") {
+                            $arrDiv_id = $value['value'];
+
+                            $listDiv = $mEmpDiv->whereIn("md_division_id", $arrDiv_id)->findAll();
+                            $where['md_employee.md_employee_id'] = [
+                                'value'     => array_column($listDiv, "md_employee_id")
+                            ];
+                        }
+
+                        if ($value['name'] === "md_branch_id") {
+                            $arrBranch_id = $value['value'];
+
+                            $listBranch = $mEmpBranch->whereIn("md_branch_id", $arrBranch_id)->findAll();
+                            $where['md_employee.md_employee_id'] = [
+                                'value'     => array_column($listBranch, "md_employee_id")
+                            ];
+                        }
                     }
                 }
 
