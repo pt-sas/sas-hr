@@ -8,6 +8,7 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AllowanceAtt;
 use App\Models\M_Rule;
+use App\Models\M_RuleDetail;
 
 use function PHPUnit\Framework\isNull;
 
