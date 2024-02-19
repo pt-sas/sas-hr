@@ -33,6 +33,13 @@ class M_Absent extends Model
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';
+    protected $allowCallbacks       = true;
+    protected $beforeInsert         = [];
+    protected $afterInsert          = [];
+    protected $beforeUpdate         = [];
+    protected $afterUpdate          = [];
+    protected $beforeDelete         = [];
+    protected $afterDelete          = [];
     protected $column_order         = [
         '', // Hide column
         '', // Number column
