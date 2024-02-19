@@ -227,16 +227,16 @@ $(document).ready(function (e) {
   $(".daterange").daterangepicker({
     autoUpdateInput: false,
     locale: {
-      format: "YYYY-MM-DD",
+      format: "DD-MMM-YYYY",
       cancelLabel: "Clear",
     },
   });
 
   $(".daterange").on("apply.daterangepicker", function (ev, picker) {
     $(this).val(
-      picker.startDate.format("YYYY-MM-DD") +
+      picker.startDate.format("DD-MMM-YYYY") +
         " - " +
-        picker.endDate.format("YYYY-MM-DD")
+        picker.endDate.format("DD-MMM-YYYY")
     );
   });
 
@@ -4551,13 +4551,13 @@ function putFieldData(form, data) {
           if (field[i].type === "select-multiple" && label !== null) {
             // array label explode into array
             if (typeof label === "object") {
-              label = label.id;
+              let option_ID = label.id;
+              let option_Txt = label.name;
 
-              arrMultiSelect.push(label);
               form
                 .find("select[name=" + fieldName + "]")
                 .not(".line")
-                .val(arrMultiSelect)
+                .val(option_ID)
                 .change();
             }
 

@@ -35,25 +35,24 @@ class M_AllowanceAtt extends Model
         $this->builder = $this->db->table($this->table);
     }
 
-    public function getSelect()
+    public function getAllowance($where, $order = null)
     {
         $sql = $this->table . '.*,
-                md_employee.value as employee_value,
-                md_employee.fullname as employee_fullname,
                 trx_absent.documentno,
                 trx_absent.reason';
 
-        return $sql;
-    }
+        $this->builder->select($sql);
+        $this->builder->join('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.record_id AND table = "trx_absent"', 'left');
 
-    public function getJoin()
-    {
-        $sql = [
-            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
-            $this->setDataJoin('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.record_id AND table = "trx_absent"', 'left')
-        ];
+        if ($where)
+            $this->builder->where($where);
 
-        return $sql;
+        if ($order)
+            $this->builder->orderBy($order);
+        else
+            $this->builder->orderBy($this->table . '.submissiondate', 'ASC');
+
+        return $this->builder->get();
     }
 
     private function setDataJoin($tableJoin, $columnJoin, $typeJoin = "inner")

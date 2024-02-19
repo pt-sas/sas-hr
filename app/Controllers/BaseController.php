@@ -185,9 +185,16 @@ class BaseController extends Controller
 	/**
 	 * Button Print
 	 *
-	 * @var directory
+	 * @var string
 	 */
 	protected $BTN_Print = 'PRINT';
+
+	/**
+	 * PATH Folder for Pengajuan upload data
+	 *
+	 * @var directory
+	 */
+	protected $PATH_Pengajuan = "pengajuan";
 
 	/**
 	 * Constructor.

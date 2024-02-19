@@ -269,7 +269,7 @@ function replaceStrBracket(string $str)
  * @param string $format
  * @return array
  */
-function getDatesFromRange($start, $end, $format = 'Y-m-d H:i:s'): array
+function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s')
 {
     $array = [];
 
@@ -283,7 +283,13 @@ function getDatesFromRange($start, $end, $format = 'Y-m-d H:i:s'): array
     $period = new DatePeriod(new DateTime($start), $interval, $realEnd);
 
     foreach ($period as $date) {
-        $array[] = $date->format($format);
+        if ($date->format('N') < 6)
+            if ($arr_date) {
+                if (!in_array($date->format("Y-m-d"), $arr_date))
+                    $array[] = $date->format($format);
+            } else {
+                $array[] = $date->format($format);
+            }
     }
 
     return $array;
@@ -306,12 +312,16 @@ function imageShow($path = null, $image = null)
     return $result;
 }
 
-function uploadFile($file, $path)
+function uploadFile($file, $path, $new_name = null)
 {
     if (!is_dir($path)) mkdir($path, 0777, true);
 
-    if ($file && $file->isValid())
-        return $file->move($path);
+    if ($file && $file->isValid()) {
+        if (is_null($new_name))
+            return $file->move($path);
+        else
+            return $file->move($path, $new_name);
+    }
 
     return false;
 }

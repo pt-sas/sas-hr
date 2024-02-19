@@ -4,6 +4,10 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_AllowanceAtt;
+use App\Models\M_EmpBranch;
+use App\Models\M_EmpDivision;
+use App\Models\M_Employee;
+use App\Models\M_Holiday;
 use Config\Services;
 
 class AllowanceAtt extends BaseController
@@ -17,44 +21,106 @@ class AllowanceAtt extends BaseController
 
     public function reportIndex()
     {
-        return $this->template->render('report/allowance/v_rpt_allowance');
+        $date = format_dmy(date('Y-m-d'), "-");
+
+        $data = [
+            'date_range' => $date . ' - ' . $date
+        ];
+
+        return $this->template->render('report/allowance/v_rpt_allowance', $data);
     }
 
     public function reportShowAll()
     {
+        $mHoliday = new M_Holiday($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
+        $mEmpDiv = new M_EmpDivision($this->request);
+
+        $post = $this->request->getVar();
+        $data = [];
+
+        $recordTotal = 0;
+        $recordsFiltered = 0;
+
         if ($this->request->getMethod(true) === 'POST') {
-            $table = $this->model->table;
-            $select = $this->model->getSelect();
-            $join = $this->model->getJoin();
-            $order = $this->request->getPost('columns');
-            $sort = $this->model->order;
-            $search = $this->request->getPost('search');
+            if (isset($post['form']) && $post['clear'] === 'false') {
+                $table = $mEmployee->table;
+                $select = $mEmployee->findAll();
+                $order = $this->request->getPost('columns');
+                $sort = ['fullname' => 'ASC'];
+                $search = $this->request->getPost('search');
+                $where['md_employee.isactive'] = 'Y';
 
-            $data = [];
+                foreach ($post['form'] as $value) {
+                    if (!empty($value['value'])) {
+                        if ($value['name'] === "submissiondate") {
+                            $datetime = urldecode($value['value']);
+                            $date = explode(" - ", $datetime);
+                        }
 
-            $number = $this->request->getPost('start');
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
+                        if ($value['name'] === "md_division_id") {
+                            $arrDiv_id = $value['value'];
 
-            foreach ($list as $value) :
-                $row = [];
-                $ID = $value->trx_allow_attendance_id;
+                            $listDiv = $mEmpDiv->whereIn("md_division_id", $arrDiv_id)->findAll();
+                            $where['md_employee.md_employee_id'] = [
+                                'value'     => array_column($listDiv, "md_employee_id")
+                            ];
+                        }
 
-                $number++;
+                        if ($value['name'] === "md_branch_id") {
+                            $arrBranch_id = $value['value'];
 
-                $row[] = $number;
-                $row[] = $value->documentno;
-                $row[] = $value->employee_fullname;
-                $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = $value->submissiontype;
-                $row[] = $value->amount;
-                $row[] = $value->reason;
-                $data[] = $row;
-            endforeach;
+                            $listBranch = $mEmpBranch->whereIn("md_branch_id", $arrBranch_id)->findAll();
+                            $where['md_employee.md_employee_id'] = [
+                                'value'     => array_column($listBranch, "md_employee_id")
+                            ];
+                        }
+                    }
+                }
+
+                $start_date = date("Y-m-d", strtotime($date[0]));
+                $end_date = date("Y-m-d", strtotime($date[1]));
+                $holiday = $mHoliday->getHolidayDate();
+
+                $date_range = getDatesFromRange($start_date, $end_date, $holiday);
+
+                $number = $this->request->getPost('start');
+                $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, [], $where);
+
+                foreach ($date_range as $value) :
+                    foreach ($list as $val) :
+                        $row = [];
+
+                        $parAllow = [
+                            'trx_allow_attendance.md_employee_id'    => $val->md_employee_id,
+                            'trx_allow_attendance.submissiondate'    => $value
+                        ];
+
+                        $allow = $this->model->getAllowance($parAllow)->getRow();
+
+                        $number++;
+                        $qty = 1;
+
+                        $row[] = $number;
+                        $row[] = $allow ? $allow->documentno : "";
+                        $row[] = $val->fullname;
+                        $row[] = format_dmy($value, "-");
+                        $row[] = $allow ? $allow->submissiontype : "";
+                        $row[] = $allow ? ($qty - $allow->amount) : $qty;
+                        $row[] = $allow ? $allow->reason : "";
+                        $data[] = $row;
+                    endforeach;
+                endforeach;
+
+                $recordTotal = count($data);
+                $recordsFiltered = count($data);
+            }
 
             $result = [
                 'draw'              => $this->request->getPost('draw'),
-                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join),
-                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join),
+                'recordsTotal'      => $recordTotal,
+                'recordsFiltered'   => $recordsFiltered,
                 'data'              => $data
             ];
 

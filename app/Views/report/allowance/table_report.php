@@ -5,7 +5,7 @@
                 <th>No</th>
                 <th>No Form</th>
                 <th>Karyawan</th>
-                <th>Tanggal Pengajuan</th>
+                <th>Tanggal</th>
                 <th>Tipe Pengajuan</th>
                 <th>Jumlah</th>
                 <th>Alasan</th>

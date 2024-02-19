@@ -250,11 +250,11 @@ class Employee extends BaseController
                 $rowDiv = $mEmpDiv->where($this->model->primaryKey, $id)->findAll();
 
                 if ($rowBranch) {
-                    $list = $this->field->setDataSelect($mEmpBranch->table, $list, $mBranch->primaryKey, $mBranch->primaryKey, "name", $rowBranch);
+                    $list = $this->field->setDataSelect($mEmpBranch->table, $list, $mBranch->primaryKey, $mBranch->primaryKey, $mDiv->primaryKey, $rowBranch);
                 }
 
-                if ($rowBranch) {
-                    $list = $this->field->setDataSelect($mEmpDiv->table, $list, $mDiv->primaryKey, $mDiv->primaryKey, "name", $rowDiv);
+                if ($rowDiv) {
+                    $list = $this->field->setDataSelect($mEmpDiv->table, $list, $mDiv->primaryKey, $mDiv->primaryKey, $mDiv->primaryKey, $rowDiv);
                 }
 
                 if (!empty($list[0]->getRhesus())) {
