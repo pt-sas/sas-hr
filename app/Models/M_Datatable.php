@@ -8,6 +8,11 @@ use CodeIgniter\HTTP\RequestInterface;
 
 class M_Datatable extends Model
 {
+    protected $table            = '';
+    protected $primaryKey       = '';
+    protected $allowedFields    = [];
+    protected $useTimestamps    = true;
+    protected $returnType       = 'App\Entities\DataTable';
     protected $request;
     protected $db;
     protected $builder;
@@ -170,5 +175,27 @@ class M_Datatable extends Model
 
             $this->builder->join($tableJoin, $columnJoin, $typeJoin);
         endforeach;
+    }
+
+    public function initDataTable($table)
+    {
+        try {
+            if ($this->db->tableExists($table)) {
+                $this->table = $table;
+
+                $fields = $this->db->getFieldData($this->table);
+
+                foreach ($fields as $field) {
+                    if ($field->primary_key == 1)
+                        $this->primaryKey = $field->name;
+                    else
+                        $this->allowedFields[] = $field->name;
+                }
+
+                return $this;
+            }
+        } catch (\Exception $e) {
+            return $e->getMessage();
+        }
     }
 }
