@@ -197,6 +197,20 @@ class BaseController extends Controller
 	protected $PATH_Pengajuan = "pengajuan";
 
 	/**
+	 * Notification Text Approved
+	 *
+	 * @var int
+	 */
+	protected $Notif_Approved = 100002;
+
+	/**
+	 * Notification Text Not Approved
+	 *
+	 * @var int
+	 */
+	protected $Notif_NotApproved = 100003;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param RequestInterface  $request
