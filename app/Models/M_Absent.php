@@ -293,6 +293,32 @@ class M_Absent extends Model
 
                     $mAllowance->builder->insertBatch($arr);
                 }
+            
+            }
+            if ($sql->submissiontype === "alpa sakit tanpa surat" || $sql->submissiontype === "alpa potong tkh") {
+                $rule = $mRule->where('name', 'Alpa')->find();
+                $ruleDetail = $mRuleDetail->where('md_rule_id = ' . $rule[0]->md_rule_id)->find();
+
+                if ($sql->submissiontype === "alpa sakit tanpa surat") {
+                    $amount = abs($ruleDetail[0]->value);
+                } else if ($sql->submissiontype === "alpa potong tkh") {
+                    $amount = abs($ruleDetail[1]->value);
+                }
+
+                if ($amount != 0) {
+                    $arr[] = [
+                        "record_id"         => $rows['id'][0],
+                        "table"             => $this->table,
+                        "submissiontype"    => $sql->submissiontype,
+                        "submissiondate"    => $date,
+                        "md_employee_id"    => $sql->md_employee_id,
+                        "amount"            => $amount,
+                        "created_by"        => $rows['data']['updated_by'],
+                        "updated_by"        => $rows['data']['updated_by']
+                    ];
+
+                    $mAllowance->builder->insertBatch($arr);
+                }
             }
         }
     }

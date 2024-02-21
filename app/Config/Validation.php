@@ -1538,6 +1538,13 @@ class Validation
     ];
 
     public $lemburAddRow = [
+        'md_employee_id'          => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
         'md_branch_id'          => [
             'label'             => 'Cabang',
             'rules'             => 'required',
@@ -1551,6 +1558,103 @@ class Validation
             'errors'            => [
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
-        ]
+            ],
+            'startdate'         => [
+                'label'         =>'Tanggal',
+                'rules'         =>'required',
+                'errors'        => [
+                    'required'      => 'Mohon pilih {field} dahulu'
+                ]
+            ]
+    ];
+
+    public $lembur = [
+        'md_employee_id'          => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'Divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+            ],
+            'startdate'         => [
+                'label'         =>'Tanggal',
+                'rules'         =>'required',
+                'errors'        => [
+                    'required'      => 'Mohon pilih {field} dahulu'
+                ]
+            ]
+    ];
+
+    public $alpa = [
+        'md_employee_id'                 => [
+            'label'            => 'Karyawan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'                 => [
+            'label'            => 'Cabang',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'                 => [
+            'label'            => 'Divisi',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'nik'                 => [
+            'label'            => 'NIK',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'startdate'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'enddate'                 => [
+            'label'            => 'Jam',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                 => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+            ],
+            'submissiontype'                 => [
+                'label'            => 'Tipe Alpa',
+                'rules'            =>    'required',
+                'errors'        => [
+                    'required'    => 'Mohon mengisi {field} dahulu'
+                ]
+                ]
     ];
 }
