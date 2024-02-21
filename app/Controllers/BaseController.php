@@ -433,12 +433,12 @@ class BaseController extends Controller
 			//* Convert object to array 
 			$arrDataHeader = $this->transformDataToArray($obj, 'insert');
 
-			//* Must be called first so we don't
-			$data = $this->doStripLine($data);
-
 			//? Check function is exists 
 			if (method_exists($model, 'doChangeValueField'))
 				$data = $model->doChangeValueField($data, $this->getID());
+
+			//* Must be called first so we don't
+			$data = $this->doStripLine($data);
 
 			//* Split data
 			$data = $this->doSplitData($data, $model->primaryKey);
