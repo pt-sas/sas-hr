@@ -185,7 +185,9 @@ class WActivity extends BaseController
 
                         $this->entity->docstatus = $state;
                         $this->entity->isapproved = "Y";
+                        $this->entity->receiveddate = date("Y-m-d H:i:s");
                         $this->entity->approveddate = date("Y-m-d H:i:s");
+                        $this->entity->updated_by = $user_by;
                         $this->entity->{$this->model->primaryKey} = $record_id;
                         $this->save();
 
