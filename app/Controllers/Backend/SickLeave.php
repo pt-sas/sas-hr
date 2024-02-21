@@ -3,13 +3,9 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
-use App\Models\M_AllowanceAtt;
-use App\Models\M_Rule;
-
-use function PHPUnit\Framework\isNull;
+use Config\Services;
 
 class SickLeave extends BaseController
 {
@@ -25,7 +21,6 @@ class SickLeave extends BaseController
 
     public function index()
     {
-
         $data = [
             'today'     => date('d-M-Y')
         ];
@@ -182,15 +177,15 @@ class SickLeave extends BaseController
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
                 $path = 'uploads/' . $this->PATH_Pengajuan . '/';
-                $list[0]->image = $path . $list[0]->image;
+                $list[0]->setImage($path . $list[0]->getImage());
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
-                //Need to set data into date field in form
-                $list[0]->startdate = format_dmy($list[0]->startdate, "-");
-                $list[0]->enddate = format_dmy($list[0]->enddate, "-");
+                //* Need to set data into date field in form
+                $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
+                $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);

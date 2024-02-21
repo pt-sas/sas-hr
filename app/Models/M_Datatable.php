@@ -13,6 +13,13 @@ class M_Datatable extends Model
     protected $allowedFields    = [];
     protected $useTimestamps    = true;
     protected $returnType       = 'App\Entities\DataTable';
+    protected $allowCallbacks   = true;
+    protected $beforeInsert     = [];
+    protected $afterInsert      = [];
+    protected $beforeUpdate     = [];
+    protected $afterUpdate      = ['afterUpdate'];
+    protected $beforeDelete     = [];
+    protected $afterDelete      = [];
     protected $request;
     protected $db;
     protected $builder;
@@ -196,6 +203,14 @@ class M_Datatable extends Model
             }
         } catch (\Exception $e) {
             return $e->getMessage();
+        }
+    }
+
+    public function afterUpdate(array $rows)
+    {
+        if ($this->table === "trx_absent") {
+            $model = new M_Absent($this->request);
+            $model->createAllowance($rows);
         }
     }
 }

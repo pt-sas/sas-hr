@@ -16,6 +16,7 @@
                 <th>Status</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
+                <th>Jabatan</th>
                 <th>Keterangan</th>
                 <th>Aktif</th>
                 <th>Aksi</th>
