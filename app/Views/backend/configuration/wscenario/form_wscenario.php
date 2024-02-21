@@ -56,6 +56,16 @@
                     <label for="grandtotal">Grand Total </label>
                     <input type="text" class="form-control number" id="grandtotal" name="grandtotal" value="0">
                 </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="md_levelling_id">Jabatan </label>
+                    <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id" data-url="levelling/getList">
+                        <option value="">Select Jabatan</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
                 <div class="form-group">
                     <label for="description">Keterangan </label>
                     <textarea type="text" class="form-control" id="description" name="description" rows="2"></textarea>

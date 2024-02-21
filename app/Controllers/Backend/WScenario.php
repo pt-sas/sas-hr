@@ -11,6 +11,7 @@ use App\Models\M_Responsible;
 use App\Models\M_Status;
 use App\Models\M_Branch;
 use App\Models\M_Division;
+use App\Models\M_Levelling;
 use Config\Services;
 
 class WScenario extends BaseController
@@ -66,6 +67,7 @@ class WScenario extends BaseController
                 $row[] = $value->status;
                 $row[] = $value->branch;
                 $row[] = $value->division;
+                $row[] = $value->level;
                 $row[] = $value->description;
                 $row[] = active($value->isactive);
                 $row[] = $this->template->tableButton($ID);
@@ -116,6 +118,7 @@ class WScenario extends BaseController
     {
         $mBranch = new M_Branch($this->request);
         $mDiv = new M_Division($this->request);
+        $mLevel = new M_Levelling($this->request);
         $mStatus = new M_Status($this->request);
 
         if ($this->request->isAJAX()) {
@@ -131,6 +134,11 @@ class WScenario extends BaseController
                 if (!empty($list[0]->getDivisionId())) {
                     $rowDivision = $mDiv->find($list[0]->getDivisionId());
                     $list = $this->field->setDataSelect($mDiv->table, $list, $mDiv->primaryKey, $rowDivision->getDivisionId(), $rowDivision->getName());
+                }
+
+                if (!empty($list[0]->getLevellingId())) {
+                    $rowLevel = $mLevel->find($list[0]->getLevellingId());
+                    $list = $this->field->setDataSelect($mLevel->table, $list, $mLevel->primaryKey, $rowLevel->getLevellingId(), $rowLevel->getName());
                 }
 
                 if (!empty($list[0]->getStatusId())) {

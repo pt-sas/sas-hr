@@ -22,6 +22,7 @@ class M_WScenario extends Model
 		'isactive',
 		'created_by',
 		'updated_by',
+		'md_levelling_id',
 	];
 	protected $useTimestamps		= true;
 	protected $returnType			= 'App\Entities\WScenario';
@@ -74,7 +75,8 @@ class M_WScenario extends Model
 		$sql = $this->table . '.*,' .
 			'md_status.name as status,
 			md_branch.name as branch,
-			md_division.name as division';
+			md_division.name as division,
+			md_levelling.name as level';
 		return $sql;
 	}
 
@@ -84,6 +86,7 @@ class M_WScenario extends Model
 			$this->setDataJoin('md_status', 'md_status.md_status_id = ' . $this->table . '.md_status_id', 'left'),
 			$this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
 			$this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
+			$this->setDataJoin('md_levelling', 'md_levelling.md_levelling_id = ' . $this->table . '.md_levelling_id', 'left'),
 		];
 
 		return $sql;

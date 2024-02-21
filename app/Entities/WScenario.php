@@ -18,6 +18,7 @@ class WScenario extends Entity
     protected $isactive;
     protected $created_by;
     protected $updated_by;
+    protected $md_levelling_id;
 
     protected $dates   = [
         'created_at',
@@ -143,5 +144,15 @@ class WScenario extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
+    }
+
+    public function getLevellingId()
+    {
+        return $this->attributes['md_levelling_id'];
+    }
+
+    public function setLevellingId($md_levelling_id)
+    {
+        $this->attributes['md_levelling_id'] = $md_levelling_id;
     }
 }
