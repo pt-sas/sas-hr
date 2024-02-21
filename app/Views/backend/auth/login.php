@@ -3,9 +3,8 @@
 <?= $this->section('content') ?>
 <div class="wrapper wrapper-login wrapper-login-full p-0">
   <div class="login-aside w-50 d-flex flex-column align-items-center justify-content-center text-center bg-secondary-gradient">
-    <h1 class="title fw-bold text-white mb-3">PT. Sahabat Abadi Sejahtera</h1>
-    <!-- <p class="subtitle text-white op-7">All In One Service Portal</p> -->
-    <p class="subtitle text-white op-7">IT Aset</p>
+    <img src="<?= base_url('custom/image/logo-sa.png') ?>">
+    <h1 class="title fw-bold text-white mt-2">PT. Sahabat Abadi Sejahtera</h1>
   </div>
   <div class="login-aside w-50 d-flex align-items-center justify-content-center bg-white">
     <div class="container container-login container-transparent animated fadeIn">
