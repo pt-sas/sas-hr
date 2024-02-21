@@ -67,7 +67,7 @@ class Alpha extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
-            $where = ['trx_absent.submissiontype' => 'alpa sakit tanpa surat'];
+            $where = ['trx_absent.necessary' => 'AP'];
 
             $data = [];
 
