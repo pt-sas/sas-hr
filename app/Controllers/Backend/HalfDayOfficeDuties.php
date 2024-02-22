@@ -114,7 +114,7 @@ class HalfDayOfficeDuties extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Tugas_Kantor_setengah_Hari;
-            $post["necessary"] = $this->Form_Kelengkapan_Absent;
+            $post["necessary"] = 'TK';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
 

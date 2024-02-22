@@ -59,7 +59,6 @@
                     <small class="form-text text-danger" id="error_receiveddate"></small>
                 </div>
             </div>
-
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal Mulai <span class="required">*</span></label>
@@ -86,6 +85,17 @@
                         </div>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="submissiontype">Tipe Alpa <span class="required">*</span></label>
+                    <select class="form-control select2" id="submissiontype" name="submissiontype">
+                        <?php foreach ($submissiontype as $value => $name) : ?>
+                        <option value="<?= $value; ?>"><?= $name; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-text text-danger" id="error_submissiontype"></small>
                 </div>
             </div>
             <div class="col-md-6">

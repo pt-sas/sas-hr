@@ -114,7 +114,7 @@ class Permission extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Ijin;
-            $post["necessary"] = $this->Form_Absent;
+            $post["necessary"] = 'IJ';
 
             try {
                 $this->entity->fill($post);

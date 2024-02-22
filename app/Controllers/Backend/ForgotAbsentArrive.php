@@ -115,7 +115,7 @@ class ForgotAbsentArrive extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Lupa_Absen_Masuk;
-            $post["necessary"] = $this->Form_Kelengkapan_Absent;
+            $post["necessary"] = 'LM';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
 
             try {

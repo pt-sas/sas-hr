@@ -115,7 +115,7 @@ class PermissionArrived extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Datang_Terlambat;
-            $post["necessary"] = $this->Form_Kelengkapan_Absent;
+            $post["necessary"] = 'IT';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
 
             try {

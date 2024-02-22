@@ -114,7 +114,7 @@ class PermissionLeaveOffice extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Ijin_Keluar_Kantor;
-            $post["necessary"] = $this->Form_Kelengkapan_Absent;
+            $post["necessary"] = 'IK';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
 

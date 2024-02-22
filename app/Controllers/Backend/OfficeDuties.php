@@ -112,8 +112,7 @@ class OfficeDuties extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Tugas_Kantor;
-            $post["necessary"] = $this->Form_Absent;
-
+            $post["necessary"] = 'TG';
             try {
                 $this->entity->fill($post);
 

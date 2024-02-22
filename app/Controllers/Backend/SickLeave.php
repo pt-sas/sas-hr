@@ -114,7 +114,7 @@ class SickLeave extends BaseController
             $file = $this->request->getFile('image');
 
             $post["submissiontype"] = $this->Pengajuan_Sakit;
-            $post["necessary"] = $this->Form_Absent;
+            $post["necessary"] = 'SK';
 
             try {
                 $img_name = "";
@@ -131,7 +131,7 @@ class SickLeave extends BaseController
                     $post['image'] = $img_name;
                 }
 
-                if (!$this->validation->run($post, 'absent')) {
+                if (!$this->validation->run($post, 'sakit')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
