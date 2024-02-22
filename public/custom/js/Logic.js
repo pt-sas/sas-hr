@@ -77,3 +77,55 @@ $("#form_official_permission").on(
     });
   }
 );
+
+$("#form_overtime").on("dp.change", "input[name=startdate]", function (e) {
+  $("[name=enddate]").data("DateTimePicker").date(moment(e.date));
+
+  const rows = _tableLine.rows().nodes().to$();
+
+  rows.find("input[name=datestart]").val(this.value);
+  rows.find("input[name=dateend]").val(this.value);
+});
+
+// $("#form_overtime").on(
+//   "change",
+//   "select[name=md_branch_id], select[name=md_division_id]",
+//   function () {
+//     let _this = $(this);
+//     const form = _this.closest("form");
+//     let value = this.value;
+//     let formData = new FormData();
+
+//     formData.append(this.name, value);
+
+//     if (this.name === "md_division_id")
+//       formData.append("md_branch_id", form.find("[name=md_branch_id]").val());
+
+//     if (this.name === "md_branch_id")
+//       formData.append(
+//         "md_division_id",
+//         form.find("[name=md_division_id]").val()
+//       );
+
+//   }
+// );
+
+function destroyAllLine(field, id) {
+  let url = CURRENT_URL + "/destroyAllLine";
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: {
+      trx_overtime_id: id,
+    },
+    cache: false,
+    dataType: "JSON",
+    success: function (result) {
+      console.log(result);
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
