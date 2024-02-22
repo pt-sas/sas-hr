@@ -163,9 +163,14 @@ class User extends BaseController
 				}
 
 				if ($list) {
-					if (!empty($list[0]->getEmployeeId())) {
+					if (!empty($list[0]->getEmployeeId()) && isset($get["md_employee_id"])) {
 						$rowEmp = $mEmployee->find($list[0]->getEmployeeId());
 						$list[0]->setEmployeeId($rowEmp->getFullName());
+					}
+
+					if (!empty($list[0]->getEmployeeId()) && !isset($get["md_employee_id"])) {
+						$rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
+						$list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 					}
 
 					$fieldHeader = new \App\Entities\Table();

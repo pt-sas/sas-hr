@@ -36,6 +36,15 @@
                     <small class="form-text text-danger" id="error_password"></small>
                 </div>
             </div>
+            <div class="col-md-6"></div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="md_employee_id">Nama Karyawan </label>
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList">
+                        <option value="">Select Karyawan</option>
+                    </select>
+                </div>
+            </div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="sys_role_id">Hak Akses </label>
