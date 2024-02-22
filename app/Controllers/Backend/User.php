@@ -6,6 +6,11 @@ use App\Controllers\BaseController;
 use App\Models\M_Employee;
 use App\Models\M_User;
 use App\Models\M_Role;
+use App\Models\M_Branch;
+use App\Models\M_BranchAccess;
+use App\Models\M_DivAccess;
+use App\Models\M_Division;
+use App\Models\M_UserRole;
 use Config\Services;
 
 class User extends BaseController
@@ -20,9 +25,17 @@ class User extends BaseController
 	public function index()
 	{
 		$role = new M_Role($this->request);
+		$mBranch = new M_Branch($this->request);
+		$mDiv = new M_Division($this->request);
 
 		$data = [
 			'role'		=> $role->where('isactive', 'Y')
+				->orderBy('name', 'ASC')
+				->findAll(),
+			'branch'      => $mBranch->where('isactive', 'Y')
+				->orderBy('name', 'ASC')
+				->findAll(),
+			'division'    => $mDiv->where('isactive', 'Y')
 				->orderBy('name', 'ASC')
 				->findAll()
 		];
@@ -113,36 +126,53 @@ class User extends BaseController
 
 	public function show($id = null)
 	{
+		$mEmployee = new M_Employee($this->request);
+		$mBranchAcc = new M_BranchAccess($this->request);
+		$mUserRole = new M_UserRole($this->request);
+		$mDivAcc = new M_DivAccess($this->request);
+		$mBranch = new M_Branch($this->request);
+		$mDiv = new M_Division($this->request);
+		$mRole = new M_Role($this->request);
+
 		if ($this->request->isAJAX()) {
 			$get = $this->request->getGet();
 
 			$result = [];
 
 			try {
-				$mEmployee = new M_Employee($this->request);
-				$get = $this->request->getGet();
-
-				$list = $this->model->detail([], $this->model->table . '.' . $this->model->primaryKey, $id);
+				$list = $this->model->where($this->model->primaryKey, $id)->findAll();
 
 				if (isset($get["md_employee_id"])) {
-					$list = $this->model->detail([], $this->model->table . '.md_employee_id', $get["md_employee_id"]);
+					$list = $this->model->where("md_employee_id", $get["md_employee_id"])->findAll();
 				}
 
-				$data = $list->getResult();
+				$rowRoleAcc = $mUserRole->where($this->model->primaryKey, $id)->findAll();
+				$rowBranchAcc = $mBranchAcc->where($this->model->primaryKey, $id)->findAll();
+				$rowDivAcc = $mDivAcc->where($this->model->primaryKey, $id)->findAll();
 
-				if ($data) {
+				if ($rowRoleAcc) {
+					$list = $this->field->setDataSelect($mUserRole->table, $list, $mRole->primaryKey, $mRole->primaryKey, $mRole->primaryKey, $rowRoleAcc);
+				}
 
-					if (!empty($data[0]->md_employee_id)) {
-						$rowEmp = $mEmployee->find($data[0]->md_employee_id);
-						$data[0]->md_employee_id = $rowEmp->getFullName();
+				if ($rowBranchAcc) {
+					$list = $this->field->setDataSelect($mBranchAcc->table, $list, $mBranch->primaryKey, $mBranch->primaryKey, $mBranch->primaryKey, $rowBranchAcc);
+				}
+
+				if ($rowDivAcc) {
+					$list = $this->field->setDataSelect($mDivAcc->table, $list, $mDiv->primaryKey, $mDiv->primaryKey, $mDiv->primaryKey, $rowDivAcc);
+				}
+
+				if ($list) {
+					if (!empty($list[0]->getEmployeeId())) {
+						$rowEmp = $mEmployee->find($list[0]->getEmployeeId());
+						$list[0]->setEmployeeId($rowEmp->getFullName());
 					}
 
 					$fieldHeader = new \App\Entities\Table();
-					$fieldHeader->setTitle($data[0]->username);
+					$fieldHeader->setTitle($list[0]->getUserName());
 					$fieldHeader->setTable($this->model->table);
-					$fieldHeader->setPrimaryKey($this->model->primaryKey);
-					$fieldHeader->setQuery($list);
-					$fieldHeader->setList($data);
+					$fieldHeader->setField([$mRole->primaryKey, $mBranch->primaryKey, $mDiv->primaryKey]);
+					$fieldHeader->setList($list);
 
 					$result = [
 						'header'    => $this->field->store($fieldHeader)

@@ -19,6 +19,7 @@ class User extends Entity
 	protected $datepasswordchange;
 	protected $created_by;
 	protected $updated_by;
+	protected $md_employee_id;
 
 	protected $dates   = [
 		'created_at',
@@ -154,5 +155,15 @@ class User extends Entity
 	public function setUpdatedBy($updated_by)
 	{
 		$this->attributes['updated_by'] = $updated_by;
+	}
+
+	public function getEmployeeId()
+	{
+		return $this->attributes['md_employee_id'];
+	}
+
+	public function setEmployeeId($md_employee_id)
+	{
+		$this->attributes['md_employee_id'] = $md_employee_id;
 	}
 }

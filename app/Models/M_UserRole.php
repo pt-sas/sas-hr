@@ -31,10 +31,8 @@ class M_UserRole extends Model
 
 	public function create($post)
 	{
-		$user = new M_User($this->request);
-
 		$sys_user_id = $post['sys_user_id'];
-		$role = $post['role'];
+		$sys_role_id = $post['sys_role_id'];
 		$data = [];
 
 		$data['isactive'] = setCheckbox(isset($post['isactive']));
@@ -42,7 +40,7 @@ class M_UserRole extends Model
 
 		// Insert data
 		if (!isset($post['id'])) {
-			foreach ($post['role'] as $value) :
+			foreach ($sys_role_id as $value) :
 				$data['sys_role_id'] = $value;
 				$data['created_at'] = date('Y-m-d H:i:s');
 				$data['created_by'] = session()->get('sys_user_id');
@@ -52,26 +50,26 @@ class M_UserRole extends Model
 				$result = $this->builder->insert($data);
 			endforeach;
 		} else {
-			$list = $user->detail(['sur.sys_user_id' => $sys_user_id])->getResult();
-			$arrRole = [];
+			$list = $this->where("sys_user_id", $sys_user_id)->findAll();
+			$arr = [];
 
 			foreach ($list as $row) :
-				// Delete role when update user
-				if (!in_array($row->role, $role)) {
-					$result = $this->builder->where('sys_user_role_id', $row->sys_user_role_id)->delete();
+				// Delete data when update
+				if (!in_array($row->sys_role_id, $sys_role_id)) {
+					$result = $this->builder->where($this->primaryKey, $row->{$this->primaryKey})->delete();
 				} else {
 					$data['updated_at'] = date('Y-m-d H:i:s');
 					$data['updated_by'] = session()->get('sys_user_id');
-					$result = $this->builder->where('sys_user_role_id', $row->sys_user_role_id)->update($data);
+					$result = $this->builder->where($this->primaryKey, $row->{$this->primaryKey})->update($data);
 				}
 
-				// Get list role in this user before update
-				$arrRole[] = $row->role;
+				// Get list data in this before update
+				$arr[] = $row->sys_role_id;
 			endforeach;
 
-			// Add new role when update user
-			foreach ($role as $value) :
-				if (!in_array($value, $arrRole)) {
+			// Add new data when update
+			foreach ($sys_role_id as $value) :
+				if (!in_array($value, $arr)) {
 					$data['sys_role_id'] = $value;
 					$data['created_at'] = date('Y-m-d H:i:s');
 					$data['created_by'] = session()->get('sys_user_id');
