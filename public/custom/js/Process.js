@@ -417,6 +417,35 @@ _tableLine = $(".tb_displayline").DataTable({
       aDec: ",",
       mDec: "0",
     });
+    $(this).find(".timepicker").datetimepicker({
+      format: "HH:mm",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+      widgetParent: "body",
+    });
+    //For Pop Up DateTimePicker in Table
+    $(".timepicker").on("dp.show", function () {
+      var datepicker = $("body").find(".bootstrap-datetimepicker-widget:last");
+      if (datepicker.hasClass("bottom")) {
+        var top = $(this).offset().top + $(this).outerHeight();
+        var left = $(this).offset().left;
+        datepicker.css({
+          top: top + "px",
+          bottom: "auto",
+          left: left + "px",
+        });
+      } else if (datepicker.hasClass("top")) {
+        var top = $(this).offset().top - datepicker.outerHeight();
+        var left = $(this).offset().left;
+        datepicker.css({
+          top: top + "px",
+          bottom: "auto",
+          left: left + "px",
+        });
+      }
+    });
   },
   initComplete: function (settings, json) {
     $(".tb_displayline").wrap(
@@ -424,7 +453,7 @@ _tableLine = $(".tb_displayline").DataTable({
     );
   },
   lengthChange: false,
-  paging: false,
+  // paging: false,
   searching: false,
   ordering: false,
   autoWidth: false,
@@ -4952,6 +4981,7 @@ $(".btn_ok_answer").click(function (evt) {
       hideLoadingForm(modalBody.prop("id"));
     },
     success: function (result) {
+      console.log(result);
       if (result) {
         ID = 0;
         form.find("input").prop("readonly", true);
