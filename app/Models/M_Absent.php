@@ -148,7 +148,7 @@ class M_Absent extends Model
 
         $sql = $this->find($rows['id'][0]);
 
-        if ($rows['data']['docstatus'] === "CO") {
+        if ($sql->docstatus === "CO") {
             if ($sql->submissiontype === "sakit") {
                 $rule = $mRule->where(['name' => 'Sakit', 'isactive' => 'Y'])->first();
 

@@ -3,20 +3,19 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
-use App\Models\M_User;
 use CodeIgniter\HTTP\RequestInterface;
 
-class M_UserRole extends Model
+class M_BranchAccess extends Model
 {
-	protected $table      = 'sys_user_role';
-	protected $primaryKey = 'sys_user_role_id';
-	protected $allowedFields = [
-		'sys_role_id',
+	protected $table      		= 'sys_user_branchaccess';
+	protected $primaryKey 		= 'sys_user_branchaccess_id';
+	protected $allowedFields 	= [
 		'sys_user_id',
+		'md_branch_id',
 		'isactive'
 	];
-	protected $useTimestamps = true;
-	protected $returnType = 'App\Entities\UserRole';
+	protected $useTimestamps 	= true;
+	protected $returnType 		= 'App\Entities\BranchAccess';
 	protected $request;
 	protected $db;
 	protected $builder;
@@ -32,7 +31,7 @@ class M_UserRole extends Model
 	public function create($post)
 	{
 		$sys_user_id = $post['sys_user_id'];
-		$sys_role_id = $post['sys_role_id'];
+		$md_branch_id = $post['md_branch_id'];
 		$data = [];
 
 		$data['isactive'] = setCheckbox(isset($post['isactive']));
@@ -40,8 +39,8 @@ class M_UserRole extends Model
 
 		// Insert data
 		if (!isset($post['id'])) {
-			foreach ($sys_role_id as $value) :
-				$data['sys_role_id'] = $value;
+			foreach ($md_branch_id as $value) :
+				$data['md_branch_id'] = $value;
 				$data['created_at'] = date('Y-m-d H:i:s');
 				$data['created_by'] = session()->get('sys_user_id');
 				$data['updated_at'] = date('Y-m-d H:i:s');
@@ -55,7 +54,7 @@ class M_UserRole extends Model
 
 			foreach ($list as $row) :
 				// Delete data when update
-				if (!in_array($row->sys_role_id, $sys_role_id)) {
+				if (!in_array($row->md_branch_id, $md_branch_id)) {
 					$result = $this->builder->where($this->primaryKey, $row->{$this->primaryKey})->delete();
 				} else {
 					$data['updated_at'] = date('Y-m-d H:i:s');
@@ -64,13 +63,13 @@ class M_UserRole extends Model
 				}
 
 				// Get list data in this before update
-				$arr[] = $row->sys_role_id;
+				$arr[] = $row->md_branch_id;
 			endforeach;
 
 			// Add new data when update
-			foreach ($sys_role_id as $value) :
+			foreach ($md_branch_id as $value) :
 				if (!in_array($value, $arr)) {
-					$data['sys_role_id'] = $value;
+					$data['md_branch_id'] = $value;
 					$data['created_at'] = date('Y-m-d H:i:s');
 					$data['created_by'] = session()->get('sys_user_id');
 					$data['updated_at'] = date('Y-m-d H:i:s');

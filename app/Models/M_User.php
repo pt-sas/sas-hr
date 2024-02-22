@@ -28,9 +28,9 @@ class M_User extends Model
 	protected $returnType           = 'App\Entities\User';
 	protected $allowCallbacks		= true;
 	protected $beforeInsert			= [];
-	protected $afterInsert			= ['createUserRole'];
+	protected $afterInsert			= ['createAccess'];
 	protected $beforeUpdate			= [];
-	protected $afterUpdate			= ['createUserRole'];
+	protected $afterUpdate			= ['createAccess'];
 	protected $beforeDelete			= [];
 	protected $afterDelete			= ['deleteUserRole'];
 	protected $column_order = [
@@ -85,17 +85,35 @@ class M_User extends Model
 		return $query;
 	}
 
-	public function createUserRole(array $rows)
+	public function createAccess(array $rows)
 	{
 		$post = $this->request->getVar();
 
-		if (isset($post['role'])) {
+		if (isset($post['sys_role_id'])) {
 			$userRole = new M_UserRole($this->request);
 
-			$post['role'] = explode(',', $post['role']);
+			$post['sys_role_id'] = explode(',', $post['sys_role_id']);
 			$post['sys_user_id'] = $rows['id'];
 
 			$userRole->create($post);
+		}
+
+		if (isset($post['md_branch_id'])) {
+			$branchAccess = new M_BranchAccess($this->request);
+
+			$post['md_branch_id'] = explode(',', $post['md_branch_id']);
+			$post['sys_user_id'] = $rows['id'];
+
+			$branchAccess->create($post);
+		}
+
+		if (isset($post['md_division_id'])) {
+			$divAccess = new M_DivAccess($this->request);
+
+			$post['md_division_id'] = explode(',', $post['md_division_id']);
+			$post['sys_user_id'] = $rows['id'];
+
+			$divAccess->create($post);
 		}
 	}
 

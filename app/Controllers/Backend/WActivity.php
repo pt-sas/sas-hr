@@ -183,9 +183,11 @@ class WActivity extends BaseController
 
                         $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by);
 
-                        $this->entity->docstatus = $state;
+                        //! SAS Form Realisasi 
+                        // $this->entity->docstatus = $state;
+                        // $this->entity->receiveddate = date("Y-m-d H:i:s");
+
                         $this->entity->isapproved = "Y";
-                        $this->entity->receiveddate = date("Y-m-d H:i:s");
                         $this->entity->approveddate = date("Y-m-d H:i:s");
                         $this->entity->updated_by = $user_by;
                         $this->entity->{$this->model->primaryKey} = $record_id;

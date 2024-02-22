@@ -250,7 +250,7 @@ class Employee extends BaseController
                 $rowDiv = $mEmpDiv->where($this->model->primaryKey, $id)->findAll();
 
                 if ($rowBranch) {
-                    $list = $this->field->setDataSelect($mEmpBranch->table, $list, $mBranch->primaryKey, $mBranch->primaryKey, $mDiv->primaryKey, $rowBranch);
+                    $list = $this->field->setDataSelect($mEmpBranch->table, $list, $mBranch->primaryKey, $mBranch->primaryKey, $mBranch->primaryKey, $rowBranch);
                 }
 
                 if ($rowDiv) {

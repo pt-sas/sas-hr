@@ -38,13 +38,39 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label>Role </label>
+                    <label for="sys_role_id">Hak Akses </label>
                     <div class="select2-input select2-primary">
-                        <select class="form-control multiple-select" name="role" multiple="multiple" style="width: 100%;">
+                        <select class="form-control multiple-select" id="sys_role_id" name="sys_role_id" multiple="multiple" style="width: 100%;">
                             <?php foreach ($role as $row) : ?>
                                 <option value="<?= $row->sys_role_id; ?>"><?= $row->name; ?></option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="md_branch_id">Hak Akses Cabang <span class="required">*</span></label>
+                    <div class="select2-input select2-primary">
+                        <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id" multiple="multiple" style="width: 100%;">
+                            <?php foreach ($branch as $row) : ?>
+                                <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-danger" id="error_md_branch_id"></small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="md_division_id">Hak Akses Divisi <span class="required">*</span></label>
+                    <div class="select2-input select2-primary">
+                        <select class="form-control multiple-select" id="md_division_id" name="md_division_id" multiple="multiple" style="width: 100%;">
+                            <?php foreach ($division as $row) : ?>
+                                <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-danger" id="error_md_division_id"></small>
                     </div>
                 </div>
             </div>
