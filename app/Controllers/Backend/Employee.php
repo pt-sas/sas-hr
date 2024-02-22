@@ -367,10 +367,8 @@ class Employee extends BaseController
                             $arr = $this->model->getEmployeeBased($access["branch"], $access["division"]);
 
                             if ($arrEmployee) {
-                                $arr = array_unique(array_merge($arr, $arrEmployee));
-
                                 $list = $this->model->where('isactive', 'Y')
-                                    ->whereIn('md_employee_id', $arr)
+                                    ->whereIn('md_employee_id', $arrEmployee)
                                     ->orderBy('value', 'ASC')
                                     ->findAll();
                             } else {
@@ -391,10 +389,8 @@ class Employee extends BaseController
                         $arr = $this->model->getEmployeeBased($access["branch"], $access["division"]);
 
                         if ($arrEmployee) {
-                            $arr = array_unique(array_merge($arr, $arrEmployee));
-
                             $list = $this->model->where('isactive', 'Y')
-                                ->whereIn('md_employee_id', $arr)
+                                ->whereIn('md_employee_id', $arrEmployee)
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         } else {
