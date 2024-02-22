@@ -113,7 +113,7 @@ class OfficialPermission extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Ijin_Resmi;
-            $post["necessary"] = $this->Form_Absent;
+            $post["necessary"] = 'IR';
 
             try {
                 $this->entity->fill($post);
