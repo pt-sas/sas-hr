@@ -112,7 +112,7 @@ class Leave extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Cuti;
-            $post["necessary"] = $this->Form_Absent;
+            $post["necessary"] = 'CT';
 
             try {
                 $this->entity->fill($post);
