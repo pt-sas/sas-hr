@@ -72,10 +72,15 @@ class Employee extends BaseController
             $sort = $this->model->order;
             $search = $this->model->column_search;
 
+            $arrEmployee = $this->model->getChartEmployee($this->session->get("md_employee_id"));
+            $where['md_employee.md_employee_id'] = [
+                'value'     => $arrEmployee
+            ];
+
             $data = [];
 
             $number = $this->request->getPost('start');
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
 
             foreach ($list as $value) :
                 $row = [];
@@ -100,8 +105,8 @@ class Employee extends BaseController
 
             $result = [
                 'draw'              => $this->request->getPost('draw'),
-                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join),
-                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join),
+                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
                 'data'              => $data
             ];
 
