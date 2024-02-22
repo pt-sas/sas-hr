@@ -11,6 +11,7 @@ use App\Models\M_Responsible;
 use App\Models\M_Status;
 use App\Models\M_Branch;
 use App\Models\M_Division;
+use App\Models\M_Employee;
 use App\Models\M_Levelling;
 use Config\Services;
 
@@ -316,7 +317,10 @@ class WScenario extends BaseController
             $this->entity->setDocStatus($this->DOCSTATUS_Voided);
         } else if ($trx && $docStatus === $this->DOCSTATUS_Completed) {
             if ($table === 'trx_absent') {
-                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id);
+                $mEmp = new M_Employee($this->request);
+                $employee = $mEmp->find($trx->md_employee_id);
+
+                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id);
 
                 if ($this->sys_wfscenario_id) {
                     $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
