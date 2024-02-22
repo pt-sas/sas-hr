@@ -71,4 +71,46 @@ class M_AccessMenu extends Model
 
         return $result;
     }
+
+    public function getAccess($sys_user_id)
+    {
+        $mBranchAccess = new M_BranchAccess($this->request);
+        $mDivAccess = new M_DivAccess($this->request);
+
+        /**
+         * Branch
+         */
+        $branch = $mBranchAccess->where([
+            "sys_user_id"   => $sys_user_id,
+            "isactive"      => "Y"
+        ])->findAll();
+
+        $arrBranch = [];
+
+        if ($branch)
+            foreach ($branch as $row) :
+                if (!empty($row->getBranchId()))
+                    $arrBranch['branch'][] = $row->getBranchId();
+            endforeach;
+
+        /**
+         * Division
+         */
+        $div = $mDivAccess->where([
+            "sys_user_id"   => $sys_user_id,
+            "isactive"      => "Y"
+        ])->findAll();
+
+        $arrDiv = [];
+
+        if ($div)
+            foreach ($div as $row) :
+                if (!empty($row->getDivId()))
+                    $arrDiv['division'][] = $row->getDivId();
+            endforeach;
+
+        $arr = array_merge($arrBranch, $arrDiv);
+
+        return $arr;
+    }
 }

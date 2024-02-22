@@ -3,6 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_AccessMenu;
 use App\Models\M_BloodType;
 use App\Models\M_Branch;
 use App\Models\M_Country;
@@ -349,17 +350,60 @@ class Employee extends BaseController
 
     public function getList()
     {
+        $mAccess = new M_AccessMenu($this->request);
+
         if ($this->request->isAjax()) {
             $post = $this->request->getVar();
 
             $response = [];
 
             try {
+                $arrEmployee = $this->model->getChartEmployee($this->session->get("md_employee_id"));
+                $access = $mAccess->getAccess($this->session->get("sys_user_id"));
+
                 if (isset($post['search'])) {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->like('value', $post['search'])
-                        ->orderBy('value', 'ASC')
-                        ->findAll();
+                    if (!empty($post['name'])) {
+                        if ($access && isset($access["branch"]) && isset($access["division"])) {
+                            $arr = $this->model->getEmployeeBased($access["branch"], $access["division"]);
+
+                            if ($arrEmployee) {
+                                $arr = array_unique(array_merge($arr, $arrEmployee));
+
+                                $list = $this->model->where('isactive', 'Y')
+                                    ->whereIn('md_employee_id', $arr)
+                                    ->orderBy('value', 'ASC')
+                                    ->findAll();
+                            } else {
+                                $list = $this->model->where('isactive', 'Y')
+                                    ->whereIn('md_employee_id', $arr)
+                                    ->orderBy('value', 'ASC')
+                                    ->findAll();
+                            }
+                        }
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->like('value', $post['search'])
+                            ->orderBy('value', 'ASC')
+                            ->findAll();
+                    }
+                } else if (!empty($post['name'])) {
+                    if ($access && isset($access["branch"]) && isset($access["division"])) {
+                        $arr = $this->model->getEmployeeBased($access["branch"], $access["division"]);
+
+                        if ($arrEmployee) {
+                            $arr = array_unique(array_merge($arr, $arrEmployee));
+
+                            $list = $this->model->where('isactive', 'Y')
+                                ->whereIn('md_employee_id', $arr)
+                                ->orderBy('value', 'ASC')
+                                ->findAll();
+                        } else {
+                            $list = $this->model->where('isactive', 'Y')
+                                ->whereIn('md_employee_id', $arr)
+                                ->orderBy('value', 'ASC')
+                                ->findAll();
+                        }
+                    }
                 } else {
                     $list = $this->model->where('isactive', 'Y')
                         ->orderBy('value', 'ASC')

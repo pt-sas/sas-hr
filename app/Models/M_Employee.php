@@ -207,4 +207,52 @@ class M_Employee extends Model
 
 		return $prefix;
 	}
+
+	public function getChartEmployee($id)
+	{
+		$employee = [];
+
+		if (!empty($id)) {
+			$sql = "SELECT e.md_employee_id
+				FROM md_employee e
+				LEFT JOIN md_employee_division ed ON ed.md_employee_id = e.md_employee_id
+				LEFT JOIN md_division d ON d.md_division_id = ed.md_division_id
+				WHERE e.isactive = 'Y'
+				AND e.md_status_id NOT IN (100004)
+				AND (d.md_division_id IN (SELECT v.md_division_id 
+					FROM md_employee em
+					LEFT JOIN md_employee_division v ON v.md_employee_id = em.md_employee_id
+					WHERE em.superior_id = " . $id . ")
+				OR e.md_employee_id = " . $id . ")
+				ORDER BY d.name, e.fullname ASC";
+
+			$result = $this->db->query($sql)->getResult();
+
+			foreach ($result as $row) {
+				$employee[] = $row->md_employee_id;
+			}
+		}
+
+		return $employee;
+	}
+
+	public function getEmployeeBased($arrB, $arrD)
+	{
+		$this->builder->select($this->table . '.md_employee_id');
+		$this->builder->join('md_employee_branch', 'md_employee_branch.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+		$this->builder->join('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+		$this->builder->whereIn('md_employee_branch.md_branch_id', $arrB);
+		$this->builder->whereIn('md_employee_division.md_division_id', $arrD);
+		$query = $this->builder->get()->getResult();
+
+		$arr = [];
+		foreach ($query as $row) :
+			$arr[] = $row->md_employee_id;
+		endforeach;
+
+		$arr = array_unique($arr);
+		sort($arr);
+
+		return $arr;
+	}
 }
