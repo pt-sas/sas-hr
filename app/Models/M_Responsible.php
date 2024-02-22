@@ -95,6 +95,8 @@ class M_Responsible extends Model
         $mUr = new M_UserRole($this->request);
         $resp = $this->find($sys_wfresponsible_id);
 
+        $user_id = 0;
+
         if ($resp->getResponsibleType() === 'U') {
             $user_id = $resp->getUserId();
         } else if ($resp->getResponsibleType() === 'R') {
