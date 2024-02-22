@@ -46,7 +46,11 @@ class M_Datatable extends Model
 
         if (count($where) > 0) {
             foreach ($where as $key => $value) :
-                if (is_string($value)) {
+                if (is_numeric($key)) {
+                    $this->builder->where($value);
+                }
+
+                if (is_string($key) && is_string($value)) {
                     $this->builder->where($key, $value);
                 }
 
