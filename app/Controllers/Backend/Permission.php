@@ -6,7 +6,7 @@ use App\Controllers\BaseController;
 use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
-use App\Models\M_Reference;
+use App\Models\M_AccessMenu;
 use App\Models\M_AllowanceAtt;
 
 class Permission extends BaseController
@@ -33,6 +33,9 @@ class Permission extends BaseController
 
     public function showAll()
     {
+        $mAccess = new M_AccessMenu($this->request);
+        $mEmployee = new M_Employee($this->request);
+        
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -67,6 +70,33 @@ class Permission extends BaseController
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
+
+            /**
+             * Hak akses
+             */
+            $arrEmployee = $mEmployee->getChartEmployee($this->session->get("md_employee_id"));
+            $arrEmployee = implode(",", $arrEmployee);
+
+            $access = $mAccess->getAccess($this->session->get("sys_user_id"));
+
+            if ($access && isset($access["branch"]) && isset($access["division"])) {
+                $where['trx_absent.md_branch_id'] = [
+                    'value'     => $access["branch"]
+                ];
+
+                $where['trx_absent.md_division_id'] = [
+                    'value'     => $access["division"]
+                ];
+
+                if ($arrEmployee)
+                    $where = [
+                        '(trx_absent.created_by =' . $this->session->get("sys_user_id") . ' OR trx_absent.md_employee_id IN (' . $arrEmployee . '))'
+                    ];
+            } else {
+                $where['trx_absent.md_branch_id'] = "";
+                $where['trx_absent.md_division_id'] = "";
+            }
+            
             $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin;
 
             $data = [];
