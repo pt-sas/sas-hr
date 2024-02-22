@@ -235,4 +235,24 @@ class M_Employee extends Model
 
 		return $employee;
 	}
+
+	public function getEmployeeBased($arrB, $arrD)
+	{
+		$this->builder->select($this->table . '.md_employee_id');
+		$this->builder->join('md_employee_branch', 'md_employee_branch.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+		$this->builder->join('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+		$this->builder->whereIn('md_employee_branch.md_branch_id', $arrB);
+		$this->builder->whereIn('md_employee_division.md_division_id', $arrD);
+		$query = $this->builder->get()->getResult();
+
+		$arr = [];
+		foreach ($query as $row) :
+			$arr[] = $row->md_employee_id;
+		endforeach;
+
+		$arr = array_unique($arr);
+		sort($arr);
+
+		return $arr;
+	}
 }
