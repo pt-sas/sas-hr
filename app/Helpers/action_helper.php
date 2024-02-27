@@ -306,7 +306,8 @@ function imageShow($path = null, $image = null, $value = null)
 
     if (!empty($image) && file_exists($path . $image)) {
         $result .= '<a class="popup-image" href="#" value="' . $value . '">';
-        $result .= '<img class="avatar-img rounded" src="' . encode_img($path . $image) . '">';
+        // $result .= '<img class="avatar-img rounded" src="' . encode_img($path . $image) . '">';
+        $result .= '<img class="avatar-img rounded" src="' . base_url("uploads/karyawan/$image") . '">';
         $result .= '</a>';
     } else {
         $result .= '<img class="avatar-img rounded-circle" src="https://via.placeholder.com/200/808080/ffffff?text=No+Image">';

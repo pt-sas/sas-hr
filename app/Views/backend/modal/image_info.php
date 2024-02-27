@@ -8,7 +8,7 @@
                 </button>
             </div>
             <div class="modal-body" id="image_info">
-                <img src="" class="imagepreview" style="width: 100%;">
+                <img src="" class="rounded imagepreview w-100 h-100">
             </div>
         </div>
     </div>
