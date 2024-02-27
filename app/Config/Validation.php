@@ -798,13 +798,6 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'superior_id'           => [
-            'label'             => 'superior',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
-            ]
-        ],
         'md_position_id'        => [
             'label'             => 'jabatan',
             'rules'             => 'required',
@@ -1528,13 +1521,6 @@ class Validation
     ];
 
     public $lemburAddRow = [
-        'md_employee_id'          => [
-            'label'             => 'Karyawan',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon pilih {field} dahulu'
-            ]
-        ],
         'md_branch_id'          => [
             'label'             => 'Cabang',
             'rules'             => 'required',
@@ -1586,7 +1572,21 @@ class Validation
                 'errors'        => [
                     'required'      => 'Mohon pilih {field} dahulu'
                 ]
-            ]
+                ],
+            'line'                  => [
+                'label'             => 'Lembur Detail',
+                'rules'             => 'required',
+                'errors'            => [
+                    'required'      => 'Mohon mengisi {field} dahulu.'
+                ]
+            ],
+            'detail.table.*.md_employee_id_line'  => [
+                'label'             => 'Karyawan',
+                'rules'             => 'required',
+                'errors'            => [
+                    'required'      => 'Mohon pilih {field} dahulu'
+                ]
+            ],
     ];
 
     public $alpa = [
