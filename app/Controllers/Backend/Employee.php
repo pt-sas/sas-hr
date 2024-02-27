@@ -88,11 +88,12 @@ class Employee extends BaseController
                 $fullName = $value->fullname;
 
                 $number++;
-                $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
+                // $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
+                $path = $path = 'uploads/' . $this->PATH_Karyawan . '/';
 
                 $row[] = $ID;
                 $row[] = $number;
-                $row[] = imageShow($path, $value->image, $value->fullname);
+                $row[] = imageShow($path, $value->image, $fullName);
                 $row[] = $value->value;
                 $row[] = $fullName;
                 $row[] = $value->pob;
