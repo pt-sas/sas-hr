@@ -269,7 +269,7 @@ function replaceStrBracket(string $str)
  * @param string $format
  * @return array
  */
-function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s')
+function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s', string $exclude = "weekend")
 {
     $array = [];
 
@@ -283,25 +283,31 @@ function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s'
     $period = new DatePeriod(new DateTime($start), $interval, $realEnd);
 
     foreach ($period as $date) {
-        if ($date->format('N') < 6)
-            if ($arr_date) {
-                if (!in_array($date->format("Y-m-d"), $arr_date))
+        if (!is_null($exclude) && $exclude === "weekend") {
+            if ($date->format('N') < 6)
+                if ($arr_date) {
+                    if (!in_array($date->format("Y-m-d"), $arr_date))
+                        $array[] = $date->format($format);
+                } else {
                     $array[] = $date->format($format);
-            } else {
-                $array[] = $date->format($format);
-            }
+                }
+        } else {
+            $array[] = $date->format($format);
+        }
     }
 
     return $array;
 }
 
-function imageShow($path = null, $image = null)
+function imageShow($path = null, $image = null, $value = null)
 {
     $result = '<center>';
     $result .= '<div class="avatar avatar-xl">';
 
     if (!empty($image) && file_exists($path . $image)) {
-        $result .= '<img class="avatar-img rounded" src="' . base_url() . '/' . $path . $image . '" />';
+        $result .= '<a class="popup-image" href="#" value="' . $value . '">';
+        $result .= '<img class="avatar-img rounded" src="' . encode_img($path . $image) . '">';
+        $result .= '</a>';
     } else {
         $result .= '<img class="avatar-img rounded-circle" src="https://via.placeholder.com/200/808080/ffffff?text=No+Image">';
     }
@@ -315,12 +321,12 @@ function imageShow($path = null, $image = null)
 function getOperationResult($a, $b, $operator)
 {
     $operations = [
-      '=='  => $a == $b,
-      '>>'  => $a > $b,
-      '>=' => $a >= $b,
-      '<<'  => $a < $b,
-      '<=' => $a <= $b,
-      '!=' => $a <> $b,
+        '=='  => $a == $b,
+        '>>'  => $a > $b,
+        '>=' => $a >= $b,
+        '<<'  => $a < $b,
+        '<=' => $a <= $b,
+        '!=' => $a <> $b,
     ];
 
     return $operations[$operator];
@@ -338,4 +344,19 @@ function uploadFile($file, $path, $new_name = null)
     }
 
     return false;
+}
+
+function encode_img($src)
+{
+    if (preg_match("/.jpg/i", $src)) {
+        $mime = 'jpg';
+    } else if (preg_match("/.jpeg/i", $src)) {
+        $mime = 'jpeg';
+    } else if (preg_match("/.png/i", $src)) {
+        $mime = 'png';
+    } else if (preg_match("/.gif/i", $src)) {
+        $mime = 'gif';
+    }
+
+    return "data:image/" . $mime . ";base64," . base64_encode(file_get_contents($src));
 }
