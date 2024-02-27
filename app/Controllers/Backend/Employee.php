@@ -85,15 +85,16 @@ class Employee extends BaseController
             foreach ($list as $value) :
                 $row = [];
                 $ID = $value->md_employee_id;
+                $fullName = $value->fullname;
 
                 $number++;
-                $path = 'uploads/' . $this->PATH_Karyawan . '/';
+                $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
 
                 $row[] = $ID;
                 $row[] = $number;
-                $row[] = imageShow($path, $value->image);
+                $row[] = imageShow($path, $value->image, $value->fullname);
                 $row[] = $value->value;
-                $row[] = $value->fullname;
+                $row[] = $fullName;
                 $row[] = $value->pob;
                 $row[] = format_dmy($value->birthday, "-");
                 $row[] = $value->gender_name;
@@ -199,8 +200,15 @@ class Employee extends BaseController
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
 
-                $path = 'uploads/' . $this->PATH_Karyawan . '/';
-                $list[0]->image = $path . $list[0]->image;
+                $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
+
+                if (file_exists($path . $list[0]->image)) {
+                    $path = 'uploads/' . $this->PATH_Karyawan . '/';
+                    $list[0]->image = $path . $list[0]->image;
+                } else {
+                    $list[0]->image = "";
+                }
+
 
                 if (!empty($list[0]->getReligionId())) {
                     $rowFeligion = $mReligion->find($list[0]->getReligionId());
