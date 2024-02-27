@@ -87,45 +87,61 @@ $("#form_overtime").on("dp.change", "input[name=startdate]", function (e) {
   rows.find("input[name=dateend]").val(this.value);
 });
 
-// $("#form_overtime").on(
-//   "change",
-//   "select[name=md_branch_id], select[name=md_division_id]",
-//   function () {
-//     let _this = $(this);
-//     const form = _this.closest("form");
-//     let value = this.value;
-//     let formData = new FormData();
+$("#form_overtime").on(
+  "change",
+  "#md_branch_id, #md_division_id",
+  function (evt) {
+    const form = $(this).closest("form");
+    const field = form.find("select");
+    const attrName = $(this).attr("name");
+    let value = this.value;
+    let fields = [];
 
-//     formData.append(this.name, value);
+    if (attrName === "movementtype")
+      for (let i = 0; i < field.length; i++) {
+        if (typeof $(field[i]).attr("hide-field") !== "undefined")
+          fields = $(field[i])
+            .attr("hide-field")
+            .split(",")
+            .map((element) => element.trim());
 
-//     if (this.name === "md_division_id")
-//       formData.append("md_branch_id", form.find("[name=md_branch_id]").val());
+        select.val(null).change();
+      }
 
-//     if (this.name === "md_branch_id")
-//       formData.append(
-//         "md_division_id",
-//         form.find("[name=md_division_id]").val()
-//       );
-
-//   }
-// );
-
-function destroyAllLine(field, id) {
-  let url = CURRENT_URL + "/destroyAllLine";
-
-  $.ajax({
-    url: url,
-    type: "POST",
-    data: {
-      trx_overtime_id: id,
-    },
-    cache: false,
-    dataType: "JSON",
-    success: function (result) {
-      console.log(result);
-    },
-    error: function (jqXHR, exception) {
-      showError(jqXHR, exception);
-    },
-  });
-}
+    if (setSave === "add") {
+      _tableLine.clear().draw(false);
+    }
+    // update data
+    $.each(option, function (idx, elem) {
+      if (elem.fieldName === attrName && setSave !== "add") {
+        if (
+          (attrName === "md_branch_id" || attrName === "md_division_id") &&
+          value !== "" &&
+          elem.label !== "undefined" &&
+          value != elem.label &&
+          _tableLine.data().any()
+        ) {
+          Swal.fire({
+            title: "Delete?",
+            text: "Are you sure you want to change all data ? ",
+            type: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            confirmButtonText: "Okay",
+            cancelButtonText: "Close",
+            reverseButtons: true,
+          }).then((data) => {
+            if (data.value) {
+              _tableLine.clear().draw(false);
+            } else {
+              form
+                .find("select[name=" + attrName + "]")
+                .val(elem.label)
+                .change();
+            }
+          });
+        }
+      }
+    });
+  }
+);
