@@ -1276,3 +1276,28 @@ $("#form_employee").on("change", "input[name=issameaddress]", function (e) {
     }
   }
 });
+
+_table.on("click", "a.popup-image", function (e) {
+  e.preventDefault();
+  const _this = $(this);
+  const parent = _this.closest(".container");
+  const main_page = parent.find(".main_page");
+  const modalImg = $("#modal_image_info");
+  let s = parent.find(".card");
+
+  if (s.length > 1) s = parent.find(".page-inner");
+  else s = main_page.find(".card");
+
+  s.length &&
+    (s.addClass("is-loading"),
+    setTimeout(function () {
+      modalImg.modal({
+        backdrop: "static",
+        keyboard: false,
+      });
+
+      modalImg.find(".modal-title").html(_this.attr("value"));
+      modalImg.find(".imagepreview").attr("src", _this.find("img").attr("src"));
+      s.removeClass("is-loading");
+    }, 200));
+});
