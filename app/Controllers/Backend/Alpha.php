@@ -34,7 +34,7 @@ class Alpha extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -95,7 +95,7 @@ class Alpha extends BaseController
                 $where['trx_absent.md_branch_id'] = "";
                 $where['trx_absent.md_division_id'] = "";
             }
-            
+
             $where = ['trx_absent.necessary' => 'AP'];
 
             $data = [];
@@ -143,7 +143,7 @@ class Alpha extends BaseController
             $post = $this->request->getVar();
 
             // $post["submissiontype"] = $this->Pengajuan_Alpa;
-            $post["necessary"] = 'AP';
+            $post["necessary"] = 'AL';
 
             try {
                 $this->entity->fill($post);
@@ -185,7 +185,7 @@ class Alpha extends BaseController
                 //Need to set data into date field in form
                 $list[0]->startdate = format_dmy($list[0]->startdate, "-");
                 $list[0]->enddate = format_dmy($list[0]->enddate, "-");
-               
+
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
