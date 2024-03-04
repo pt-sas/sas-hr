@@ -34,7 +34,7 @@ class ForgotAbsentArrive extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -95,7 +95,7 @@ class ForgotAbsentArrive extends BaseController
                 $where['trx_absent.md_branch_id'] = "";
                 $where['trx_absent.md_division_id'] = "";
             }
-            
+
             $where['trx_absent.submissiontype'] = $this->Pengajuan_Lupa_Absen_Masuk;
 
             $data = [];
@@ -145,6 +145,7 @@ class ForgotAbsentArrive extends BaseController
             $post["submissiontype"] = $this->Pengajuan_Lupa_Absen_Masuk;
             $post["necessary"] = 'LM';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
+            $post["enddate"] = $post["startdate"];
 
             try {
                 $this->entity->fill($post);
