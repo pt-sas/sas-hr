@@ -28,6 +28,8 @@ class Absent extends Entity
     protected $created_by;
     protected $updated_by;
     protected $md_leavetype_id;
+    protected $image2;
+    protected $image3;
 
     protected $dates   = [
         'created_at',
@@ -278,5 +280,25 @@ class Absent extends Entity
     public function setLeaveTypeId($md_leavetype_id)
     {
         $this->attributes['md_leavetype_id'] = $md_leavetype_id;
+    }
+
+    public function getImage2()
+    {
+        return $this->attributes['image2'];
+    }
+
+    public function setImage2($image2)
+    {
+        $this->attributes['image2'] = $image2;
+    }
+
+    public function getImage3()
+    {
+        return $this->attributes['image3'];
+    }
+
+    public function setImage3($image3)
+    {
+        $this->attributes['image3'] = $image3;
     }
 }

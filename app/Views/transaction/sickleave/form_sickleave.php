@@ -56,35 +56,6 @@
                     <small class="form-text text-danger" id="error_receiveddate"></small>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
-                    <div class="input-group">
-                        <input type="text" class="form-control datepicker-start" name="startdate">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
-                            </span>
-                        </div>
-                    </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="date">Tanggal Selesai <span class="required">*</span></label>
-                    <div class="input-group">
-                        <input type="text" class="form-control datepicker-end" name="enddate">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
-                            </span>
-                        </div>
-                    </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
-                </div>
-            </div>
-            <div class="col-md-6"></div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="reason">Alasan <span class="required">*</span></label>
@@ -92,11 +63,35 @@
                     <small class="form-text text-danger" id="error_reason"></small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control datepicker-start" name="startdate">
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                    <small class="form-text text-danger" id="error_startdate"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="date">Tanggal Selesai <span class="required">*</span></label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control datepicker-end" name="enddate">
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                    <small class="form-text text-danger" id="error_startdate"></small>
+                </div>
+            </div>
+            <div class="col-md-4">
                 <div class="form-group">
                     <label>Foto <span class="required">*</span></label>
                     <div class="form-upload-result">
-                        <label class="col-md-6 form-result">
+                        <label class="col-md-4 form-result">
                             <button type="button" class="close-img" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -104,11 +99,51 @@
                         </label>
                     </div>
                     <div class="form-upload">
-                        <label class="col-md-6 form-upload-foto" id="image-upload">
+                        <label class="col-md-4 form-upload-foto" id="image-upload">
                             <input type="file" class="control-upload-image" id="image" name="image" onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
                         <small class="form-text text-danger" id="error_image"></small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>Foto 2 </label>
+                    <div class="form-upload-result">
+                        <label class="col-md-4 form-result">
+                            <button type="button" class="close-img" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <img class="img-result">
+                        </label>
+                    </div>
+                    <div class="form-upload">
+                        <label class="col-md-4 form-upload-foto" id="image2-upload">
+                            <input type="file" class="control-upload-image" id="image2" name="image2" onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
+                            <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
+                        </label>
+                        <small class="form-text text-danger" id="error_image2"></small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>Foto 3 </label>
+                    <div class="form-upload-result">
+                        <label class="col-md-4 form-result">
+                            <button type="button" class="close-img" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <img class="img-result">
+                        </label>
+                    </div>
+                    <div class="form-upload">
+                        <label class="col-md-4 form-upload-foto" id="image3-upload">
+                            <input type="file" class="control-upload-image" id="image3" name="image3" onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
+                            <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
+                        </label>
+                        <small class="form-text text-danger" id="error_image3"></small>
                     </div>
                 </div>
             </div>
