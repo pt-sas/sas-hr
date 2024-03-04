@@ -29,7 +29,9 @@ class M_Absent extends Model
         'sys_wfscenario_id',
         'created_by',
         'updated_by',
-        'md_leavetype_id'
+        'md_leavetype_id',
+        'image2',
+        'image3'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';
@@ -293,7 +295,6 @@ class M_Absent extends Model
 
                     $mAllowance->builder->insertBatch($arr);
                 }
-            
             }
             if ($sql->submissiontype === "alpa sakit tanpa surat" || $sql->submissiontype === "alpa potong tkh") {
                 $rule = $mRule->where('name', 'Alpa')->find();
