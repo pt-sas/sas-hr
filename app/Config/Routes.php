@@ -453,6 +453,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('wactivity/showNotif', 'Backend\WActivity::showNotif');
     $routes->post('wactivity/create', 'Backend\WActivity::create');
     $routes->match(['get', 'post'], 'wactivity/showActivityInfo', 'Backend\WActivity::showActivityInfo');
+
+    $routes->add('laporan-absensi', 'Backend\Rpt_AbsentSummary::reportIndex');
+    $routes->match(['get', 'post'], 'laporan-absensi/showAll', 'Backend\Rpt_AbsentSummary::reportShowAll');
 });
 
 /*
