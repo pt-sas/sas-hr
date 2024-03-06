@@ -1301,3 +1301,16 @@ _table.on("click", "a.popup-image", function (e) {
       s.removeClass("is-loading");
     }, 200));
 });
+
+$("#modal_image_info").on("click", ".btn_download_img", function (e) {
+  const _this = $(this);
+  const parent = _this.closest(".modal");
+  const modalBody = parent.find(".modal-body");
+  let url = modalBody.find("img").attr("src");
+
+  loadingForm(modalBody.attr("id"), "facebook"),
+    setTimeout(function () {
+      downloadFile(url);
+      hideLoadingForm(modalBody.attr("id"));
+    }, 200);
+});
