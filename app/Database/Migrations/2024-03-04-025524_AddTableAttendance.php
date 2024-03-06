@@ -16,8 +16,8 @@ class AddTableAttendance extends Migration
             'updated_by'                => ['type' => 'INT', 'constraint' => 11, 'null' => false],
             'nik'                       => ['type' => 'VARCHAR', 'constraint' => 6, 'null' => false],
             'date'                      => ['type' => 'timestamp', 'null' => false],
-            'clock_in'                  => ['type' => 'INT', 'constraint' => 11, 'null' => false],
-            'clock_out'                 => ['type' => 'INT', 'constraint' => 11, 'null' => false],
+            'clock_in'                  => ['type' => 'time', 'constraint' => 6, 'null' => true],
+            'clock_out'                 => ['type' => 'time', 'constraint' => 6, 'null' => true],
             'absent'                    => ['type' => 'CHAR', 'constraint' => 1, 'null' => false]
         ]);
 
