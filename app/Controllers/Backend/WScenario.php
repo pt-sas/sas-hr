@@ -307,7 +307,7 @@ class WScenario extends BaseController
 
         if (!is_null($modelDetail)) {
             $this->modelDetail = $modelDetail;
-            $trx = $this->modelDetail->where($primaryKey, $trxID)->first();
+            $trxLine = $this->modelDetail->where($primaryKey, $trxID)->first();
         }
 
         if (!$trx && $docStatus === $this->DOCSTATUS_Completed) {
@@ -334,7 +334,7 @@ class WScenario extends BaseController
 
         $this->entity->setUpdatedBy($session->get('sys_user_id'));
         $this->entity->{$primaryKey} = $trxID;
-        $result = $this->model->save($this->entity);
+        $result = $this->save($this->entity);
 
         if ($result && $isWfscenario)
             $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);
