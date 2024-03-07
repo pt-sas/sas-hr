@@ -462,6 +462,11 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('import-kehadiran', 'Backend\ImportAttendance::index');
     $routes->post('import-kehadiran/import', 'Backend\ImportAttendance::import');
+  
+    $routes->add('realisasi', 'Backend\Realization::index');
+    $routes->match(['get', 'post'], 'realisasi/showAll', 'Backend\Realization::showAll');
+    $routes->post('realisasi/create', 'Backend\Realization::create');
+    $routes->match(['get', 'post'], 'realisasi/getList', 'Backend\Realization::getList');
 });
 
 /*

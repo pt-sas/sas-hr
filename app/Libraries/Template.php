@@ -296,4 +296,40 @@ class Template
 
         return $sidebar;
     }
+
+    public function tableButtonProcess($btnID)
+    {
+        $uri = $this->request->uri->getSegment(2);
+        $allBtn = '';
+
+        $btnNotAgree = '<a class="btn btn-lg btn_not_agree" id="' . $btnID . '" name="not_agree" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times text-danger"></i></a>';
+
+        $btnAgree = '<a class="btn btn-lg btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check text-success"></i></a>';
+
+        $create = $this->access->checkCrud($uri, $this->isCreate);
+        $update = $this->access->checkCrud($uri, $this->isUpdate);
+
+        if ($create === 'Y' && $update === 'Y')
+            $allBtn .= $btnNotAgree . $btnAgree;
+
+        return $allBtn;
+    }
+
+    public function toolbarButtonProcess()
+    {
+        $uri = $this->request->uri->getSegment(2);
+        $allBtn = '';
+
+        $btnNotAgree = '<button type="button" class="btn btn-danger btn-sm btn-round ml-auto btn_agree mr-1" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times fa-fw"></i> Tidak Setuju</button>';
+
+        $btnAgree = '<button type="button" class="btn btn-success btn-sm btn-round ml-auto btn_not_agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check fa-fw"></i> Setuju</button>';
+
+        $create = $this->access->checkCrud($uri, $this->isCreate);
+        $update = $this->access->checkCrud($uri, $this->isUpdate);
+
+        if ($create === 'Y' && $update === 'Y')
+            $allBtn .= $btnNotAgree . $btnAgree;
+
+        return $allBtn;
+    }
 }

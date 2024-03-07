@@ -542,6 +542,23 @@ _tableReport = $(".table_report")
       url: CURRENT_URL + SHOWALL,
       type: "POST",
       data: function (d, setting) {
+        const container = $(setting.nTable).closest(".container");
+        const filter_page = container.find(".filter_page");
+
+        if (filter_page.length) {
+          const form = filter_page.find("form");
+          const disabled = form.find("[disabled]");
+
+          //! Remove attribute disabled field
+          disabled.removeAttr("disabled");
+
+          //* Serialize form array
+          formReport = form.serializeArray();
+
+          //! Set attribute disabled field
+          disabled.prop("disabled", true);
+        }
+
         return $.extend({}, d, {
           form: formReport,
           clear: clear,
@@ -568,6 +585,7 @@ _tableReport = $(".table_report")
     language: {
       info: "Total Data <span class='badge badge-primary'>_TOTAL_</span>",
       infoFiltered: "",
+      infoEmpty: "Total Data <span class='badge badge-primary'>_TOTAL_</span>",
     },
     searching: false,
     paging: false,
@@ -748,7 +766,8 @@ $(".save_form").click(function (evt) {
           if (field[i].files.length > 0) {
             formData.append(field[i].name, field[i].files[0]);
           } else {
-            let source = form.find(".img-result").attr("src");
+            const group = $(field[i]).closest(".form-group");
+            let source = group.find(".img-result").attr("src");
             let imgSrc = source;
 
             if (typeof source !== "undefined" && source !== "")
@@ -913,55 +932,57 @@ $(".save_form").click(function (evt) {
         const tr = $(this).closest("tr");
         const td = tr.find("td");
 
-        let row = {};
+        if (tag.length) {
+          let row = {};
 
-        //* Table cell from tag
-        $.each(tag, function () {
-          let className = this.className.split(/\s+/);
-          let name = $(this).attr("name");
-          let value = this.value;
-          let id = $(this).attr("id");
-          const foreignkey = form.find("input.foreignkey");
+          //* Table cell from tag
+          $.each(tag, function () {
+            let className = this.className.split(/\s+/);
+            let name = $(this).attr("name");
+            let value = this.value;
+            let id = $(this).attr("id");
+            const foreignkey = form.find("input.foreignkey");
 
-          //* Field containing class rupiah
-          if (className.includes("rupiah")) value = replaceRupiah(value);
+            //* Field containing class rupiah
+            if (className.includes("rupiah")) value = replaceRupiah(value);
 
-          if (this.type === "text" || this.type === "select-one") {
-            //* Field containing class datepicker
-            if (className.includes("datepicker")) {
-              let date = value;
-              row[name] = date;
+            if (this.type === "text" || this.type === "select-one") {
+              //* Field containing class datepicker
+              if (className.includes("datepicker")) {
+                let date = value;
+                row[name] = date;
 
-              if (date !== "") {
-                let dateTime = moment(date).format("YYYY-MM-DD HH:mm:ss");
-                row[name] = dateTime;
+                if (date !== "") {
+                  let dateTime = moment(date).format("YYYY-MM-DD HH:mm:ss");
+                  row[name] = dateTime;
+                }
+              } else {
+                row[name] = value;
               }
-            } else {
-              row[name] = value;
+            } else if (this.type === "checkbox") {
+              row[name] = $(this).is(":checked") ? "Y" : "N";
+            } else if (typeof name !== "undefined") {
+              if (id !== "") row[name] = id;
+              else row[name] = "";
+
+              if (className.includes("reference-key")) row[name] = value; // Get value reference key
             }
-          } else if (this.type === "checkbox") {
-            row[name] = $(this).is(":checked") ? "Y" : "N";
-          } else if (typeof name !== "undefined") {
-            if (id !== "") row[name] = id;
-            else row[name] = "";
 
-            if (className.includes("reference-key")) row[name] = value; // Get value reference key
-          }
-
-          if (foreignkey.length)
-            row[foreignkey.attr("name")] = foreignkey.attr("set-id");
-        });
-
-        //* Table cell data
-        $.each(td, function (i, item) {
-          let txtValue = $(item).text();
-
-          $.each(tableHead, function (idx, column) {
-            if (i == column.position) row[column.name] = txtValue;
+            if (foreignkey.length)
+              row[foreignkey.attr("name")] = foreignkey.attr("set-id");
           });
-        });
 
-        output[i] = row;
+          //* Table cell data
+          $.each(td, function (i, item) {
+            let txtValue = $(item).text();
+
+            $.each(tableHead, function (idx, column) {
+              if (i == column.position) row[column.name] = txtValue;
+            });
+          });
+
+          output[i] = row;
+        }
       });
 
       formData.append("table", JSON.stringify(output));
@@ -1468,7 +1489,7 @@ function Edit(id, status, last_url) {
 
               if (arrMsg.header) {
                 let data = arrMsg.header;
-                putFieldData(form, data);
+                putFieldData(form, data, status);
 
                 if (modalTab.length) {
                   const navLink = modalTab.find("li.nav-item a");
@@ -3323,6 +3344,11 @@ function clearForm(evt) {
     }
   }
 
+  if (target.closest(".modal").length) {
+    const modal = target.closest(".modal");
+    form = modal.find("form");
+  }
+
   //TODO: Clear field data on the form
   form[0].reset();
 
@@ -3647,9 +3673,11 @@ function readonly(parent, value) {
  * @param {*} id
  * @param {*} src source image
  */
-function previewImage(input, id, src) {
-  let labelUpload = input.closest("label");
-  id = id || ".img-result";
+function previewImage(input, id, src, status = null) {
+  const parent = input.closest(".form-group");
+  const labelUpload = input.closest("label");
+
+  id = id || $(parent).find("img.img-result");
 
   src = src == null ? "" : src;
 
@@ -3665,8 +3693,8 @@ function previewImage(input, id, src) {
       setTimeout(function () {
         $(id).attr("src", e.target.result).width("auto").height(150);
 
-        $(".form-upload-foto").css("display", "none");
-        $(".form-result").css("display", "block");
+        $(parent).find(".form-upload-foto").css("display", "none");
+        $(parent).find(".form-result").css("display", "block");
 
         hideLoadingForm(labelUpload.id);
 
@@ -3696,12 +3724,19 @@ function previewImage(input, id, src) {
 
         setTimeout(function () {
           $(id).attr("src", src).width("auto").height(150);
-          $(".form-upload-foto").css("display", "none");
-          $(".form-result").css("display", "block");
+          $(parent).find(".form-upload-foto").css("display", "none");
+          $(parent).find(".form-result").css("display", "block");
 
           hideLoadingForm(labelUpload.id);
 
-          $(".save_form").removeAttr("disabled");
+          if (
+            typeof status === "undefined" ||
+            status === "" ||
+            status === "DR" ||
+            status === "IP"
+          )
+            $(".save_form").removeAttr("disabled");
+
           $(".x_form").removeAttr("disabled");
           $(".close_form").removeAttr("disabled");
         }, 500);
@@ -3709,8 +3744,8 @@ function previewImage(input, id, src) {
     });
   } else {
     $(id).attr("src", "").width("auto").height(150);
-    $(".form-upload-foto").css("display", "block");
-    $(".form-result").css("display", "none");
+    $(parent).find(".form-upload-foto").css("display", "block");
+    $(parent).find(".form-result").css("display", "none");
   }
 }
 
@@ -4440,7 +4475,7 @@ function showFormData(form) {
  * @param {*} form
  * @param {*} data
  */
-function putFieldData(form, data) {
+function putFieldData(form, data, status = null) {
   const modalTab = form.closest(".modal-tab");
 
   if (data.length > 1) {
@@ -4665,7 +4700,8 @@ function putFieldData(form, data) {
               previewImage(
                 form.find("input[name=" + fieldName + "]")[0],
                 "",
-                label
+                label,
+                status
               );
             }
           }
@@ -4981,7 +5017,6 @@ $(".btn_ok_answer").click(function (evt) {
       hideLoadingForm(modalBody.prop("id"));
     },
     success: function (result) {
-      console.log(result);
       if (result) {
         ID = 0;
         form.find("input").prop("readonly", true);

@@ -1534,14 +1534,14 @@ class Validation
             'errors'            => [
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
-            ],
-            'startdate'         => [
-                'label'         =>'Tanggal',
-                'rules'         =>'required',
-                'errors'        => [
-                    'required'      => 'Mohon pilih {field} dahulu'
-                ]
+        ],
+        'startdate'         => [
+            'label'         => 'Tanggal',
+            'rules'         => 'required',
+            'errors'        => [
+                'required'      => 'Mohon pilih {field} dahulu'
             ]
+        ]
     ];
 
     public $lembur = [
@@ -1565,28 +1565,35 @@ class Validation
             'errors'            => [
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
-            ],
-            'startdate'         => [
-                'label'         =>'Tanggal',
-                'rules'         =>'required',
-                'errors'        => [
-                    'required'      => 'Mohon pilih {field} dahulu'
-                ]
-                ],
-            'line'                  => [
-                'label'             => 'Lembur Detail',
-                'rules'             => 'required',
-                'errors'            => [
-                    'required'      => 'Mohon mengisi {field} dahulu.'
-                ]
-            ],
-            'detail.table.*.md_employee_id_line'  => [
-                'label'             => 'Karyawan',
-                'rules'             => 'required',
-                'errors'            => [
-                    'required'      => 'Mohon pilih {field} dahulu'
-                ]
-            ],
+        ],
+        'startdate'         => [
+            'label'         =>'Tanggal',
+            'rules'         =>'required',
+            'errors'        => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+         ],
+          'line'                  => [
+              'label'             => 'Lembur Detail',
+              'rules'             => 'required',
+              'errors'            => [
+                  'required'      => 'Mohon mengisi {field} dahulu.'
+              ]
+          ],
+          'detail.table.*.md_employee_id_line'  => [
+              'label'             => 'Karyawan',
+              'rules'             => 'required',
+              'errors'            => [
+                  'required'      => 'Mohon pilih {field} dahulu'
+              ]
+          ],
+          'startdate'         => [
+              'label'         => 'Tanggal',
+              'rules'         => 'required',
+              'errors'        => [
+                  'required'      => 'Mohon pilih {field} dahulu'
+              ]
+          ]
     ];
 
     public $alpa = [
@@ -1638,14 +1645,14 @@ class Validation
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
             ]
-            ],
-            'submissiontype'                 => [
-                'label'            => 'Tipe Alpa',
-                'rules'            =>    'required',
-                'errors'        => [
-                    'required'    => 'Mohon mengisi {field} dahulu'
-                ]
-                ]
+        ],
+        'submissiontype'                 => [
+            'label'            => 'Tipe Alpa',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 
     public $sakit = [
@@ -1692,14 +1699,59 @@ class Validation
             ]
         ],
         'image'                 => [
-            'label'             => 'gambar',
-            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'label'             => 'foto',
+            'rules'             => 'uploaded[image]|max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
                 'uploaded'      => 'Mohon upload {field} dahulu',
-                'max_size'      => 'Data {field} melebehi batas maksimum 3 Mb',
+                'max_size'      => 'Data {field} melebehi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
             ]
         ],
+        'image2'                 => [
+            'label'             => 'foto 2',
+            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                'max_size'      => 'Data {field} melebehi batas maksimum 1 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
+        'image3'                 => [
+            'label'             => 'foto 3',
+            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                'max_size'      => 'Data {field} melebehi batas maksimum 1 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
+    ];
+
+    public $realisasi_agree = [
+        'submissiondate'        => [
+            'label'             => 'Tanggal Tidak Masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $realisasi_not_agree = [
+        'submissiondate'        => [
+            'label'             => 'Tanggal Tidak Masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'submissiontype'        => [
+            'label'             => 'Tipe Form',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 }

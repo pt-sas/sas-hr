@@ -56,20 +56,22 @@ class SASFileRules extends FileRules
         }
 
         foreach ($files as $file) {
-            if ($file === null && empty($data[$name])) {
-                return false;
-            }
+            if ($file) {
+                if ($file === null && empty($data[$name])) {
+                    return false;
+                }
 
-            if ($file && $file->getError() === UPLOAD_ERR_NO_FILE) {
-                return true;
-            }
+                if ($file->getError() === UPLOAD_ERR_NO_FILE) {
+                    return true;
+                }
 
-            if ($file && $file->getError() === UPLOAD_ERR_INI_SIZE) {
-                return false;
-            }
+                if ($file->getError() === UPLOAD_ERR_INI_SIZE) {
+                    return false;
+                }
 
-            if ($file && $file->getSize() / 1024 > $params[0]) {
-                return false;
+                if ($file->getSize() / 1024 > $params[0]) {
+                    return false;
+                }
             }
         }
 
@@ -92,17 +94,17 @@ class SASFileRules extends FileRules
         }
 
         foreach ($files as $file) {
-            if ($file === null && empty($data[$name])) {
-                return false;
-            }
-
-            if ($file && $file->getError() === UPLOAD_ERR_NO_FILE) {
-                return true;
-            }
-
-            // We know that our mimes list always has the first mime
-            // start with `image` even when then are multiple accepted types.
             if ($file) {
+                if ($file === null && empty($data[$name])) {
+                    return false;
+                }
+
+                if ($file->getError() === UPLOAD_ERR_NO_FILE) {
+                    return true;
+                }
+
+                // We know that our mimes list always has the first mime
+                // start with `image` even when then are multiple accepted types.
                 $type = Mimes::guessTypeFromExtension($file->getExtension());
 
                 if (mb_strpos($type, 'image') !== 0) {
@@ -129,16 +131,18 @@ class SASFileRules extends FileRules
         }
 
         foreach ($files as $file) {
-            if ($file === null && empty($data[$name])) {
-                return false;
-            }
+            if ($file) {
+                if ($file === null && empty($data[$name])) {
+                    return false;
+                }
 
-            if ($file && $file->getError() === UPLOAD_ERR_NO_FILE) {
-                return true;
-            }
+                if ($file->getError() === UPLOAD_ERR_NO_FILE) {
+                    return true;
+                }
 
-            if ($file && !in_array($file->getMimeType(), $params, true)) {
-                return false;
+                if (!in_array($file->getMimeType(), $params, true)) {
+                    return false;
+                }
             }
         }
 
@@ -160,16 +164,18 @@ class SASFileRules extends FileRules
         }
 
         foreach ($files as $file) {
-            if ($file === null && empty($data[$name])) {
-                return false;
-            }
+            if ($file) {
+                if ($file === null && empty($data[$name])) {
+                    return false;
+                }
 
-            if ($file && $file->getError() === UPLOAD_ERR_NO_FILE) {
-                return true;
-            }
+                if ($file->getError() === UPLOAD_ERR_NO_FILE) {
+                    return true;
+                }
 
-            if ($file && !in_array($file->guessExtension(), $params, true)) {
-                return false;
+                if (!in_array($file->guessExtension(), $params, true)) {
+                    return false;
+                }
             }
         }
 
@@ -192,15 +198,15 @@ class SASFileRules extends FileRules
         }
 
         foreach ($files as $file) {
-            if ($file === null && empty($data[$name])) {
-                return false;
-            }
-
-            if ($file && $file->getError() === UPLOAD_ERR_NO_FILE) {
-                return true;
-            }
-
             if ($file) {
+                if ($file === null && empty($data[$name])) {
+                    return false;
+                }
+
+                if ($file->getError() === UPLOAD_ERR_NO_FILE) {
+                    return true;
+                }
+
                 // Get Parameter sizes
                 $allowedWidth  = $params[0] ?? 0;
                 $allowedHeight = $params[1] ?? 0;

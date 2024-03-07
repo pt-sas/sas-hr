@@ -361,3 +361,13 @@ function encode_img($src)
 
     return "data:image/" . $mime . ";base64," . base64_encode(file_get_contents($src));
 }
+
+function statusRealize($str)
+{
+    if ($str === "Y")
+        return '<small class="badge badge-success">Disetujui</small>';
+    else if ($str === "N")
+        return '<small class="badge badge-danger">Tidak Disetujui</small>';
+    else
+        return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
+}

@@ -1314,3 +1314,243 @@ $("#modal_image_info").on("click", ".btn_download_img", function (e) {
       hideLoadingForm(modalBody.attr("id"));
     }, 200);
 });
+
+/**
+ * Field All Checkbox Realize
+ */
+$(".ischeckall-realize").click(function (e) {
+  const target = $(e.target);
+  const card = target.closest(".card");
+  const cardHeader = card.find(".card-header");
+  const floatRight = cardHeader.find(".float-right");
+  const checkbox = _tableReport
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-realize");
+
+  if (this.checked) {
+    checkbox.prop("checked", true);
+
+    if (_tableReport.data().any()) floatRight.removeClass("d-none");
+  } else {
+    checkbox.prop("checked", false);
+
+    floatRight.addClass("d-none");
+  }
+});
+
+/**
+ * Field Checkbox Realize
+ */
+_tableReport.on("click", ".check-realize", function (e) {
+  const target = $(e.target);
+  const card = target.closest(".card");
+  const cardHeader = card.find(".card-header");
+  const floatRight = cardHeader.find(".float-right");
+  const checkbox = _tableReport
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-realize");
+
+  //* Checked checkbox
+  if ($(this).is(":checked")) {
+    let noChkdData = [];
+
+    $.each(checkbox, function (idx, item) {
+      if (!$(item).is(":checked")) noChkdData.push(item.value);
+    });
+
+    floatRight.removeClass("d-none");
+
+    if (noChkdData.length == 0) $(".ischeckall-realize").prop("checked", true);
+  } else {
+    let chkdData = [];
+
+    $.each(checkbox, function (idx, item) {
+      if ($(item).is(":checked")) chkdData.push(item.value);
+    });
+
+    if (chkdData.length == 0) floatRight.addClass("d-none");
+
+    $(".ischeckall-realize").prop("checked", false);
+  }
+});
+
+/**
+ * Event Click Button Filter Realize
+ */
+$(".btn_filter_realize").on("click", function (e) {
+  const target = $(e.target);
+  const pageInner = target.closest(".page-inner");
+  const card = target.closest(".card");
+  const form = card.find("form");
+  const disabled = form.find("[disabled]");
+  const cardHeader = pageInner.find(".card-header");
+  const floatRight = cardHeader.find(".float-right");
+  const checkAll = $(".ischeckall-realize");
+
+  //! Remove attribute disabled field
+  disabled.removeAttr("disabled");
+
+  //TODO: Collect field array
+  let field = form
+    .find("input, select")
+    .map(function () {
+      if (typeof $(this).attr("name") !== "undefined") {
+        let row = {};
+
+        row["name"] = $(this).attr("name");
+
+        if (this.type !== "checkbox" && this.type !== "select-multiple")
+          row["value"] = this.value;
+        else if (this.type === "select-multiple") row["value"] = $(this).val();
+        else row["value"] = this.checked ? "Y" : "N";
+
+        row["type"] = this.type;
+
+        return row;
+      }
+    })
+    .get();
+
+  formReport = field;
+
+  //! Set attribute disabled field
+  disabled.prop("disabled", true);
+
+  //TODO: Loading and processing
+  pageInner.length &&
+    (pageInner.addClass("is-loading"),
+    reloadTable(),
+    setTimeout(function () {
+      checkAll.prop("checked", false);
+      floatRight.addClass("d-none");
+      pageInner.removeClass("is-loading");
+    }, 700));
+});
+
+_tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
+  const tr = $(this).closest("tr");
+  let formType = tr.find("td:eq(1)").text();
+  let submissionDate = tr.find("td:eq(4)").text();
+  let id = this.id;
+
+  if (this.name === "agree") {
+    $("#modal_realization_agree").modal({
+      backdrop: "static",
+      keyboard: false,
+    });
+
+    const form = $("#form_realization_agree");
+
+    form.find("input[name=submissiondate]").val(submissionDate);
+    form.find("input[name=isagree]").val("Y");
+
+    ID = id;
+  } else {
+    $("#modal_realization_not_agree").modal({
+      backdrop: "static",
+      keyboard: false,
+    });
+
+    const form = $("#form_realization_not_agree");
+
+    form.find("input[name=submissiondate]").val(submissionDate);
+    form.find("input[name=isagree]").val("N");
+    form.find("input[name=foreignkey]").val(id);
+
+    if (form.find("select.select-data").length) {
+      form
+        .find("select.select-data")
+        .attr("data-url", "realisasi/getList/$" + formType);
+
+      initSelectData(form.find("select.select-data"));
+    }
+  }
+});
+
+$(".btn_ok_realization").click(function (e) {
+  e.preventDefault();
+  let _this = $(this);
+  const parent = $(this).closest(".modal");
+  const form = parent.find("form");
+  const field = form.find("input, select, textarea");
+  let formData = new FormData(form[0]);
+
+  for (let i = 0; i < field.length; i++) {
+    if (field[i].name !== "") {
+      //* Set field and value to formData
+      if (
+        field[i].type == "text" ||
+        field[i].type == "textarea" ||
+        field[i].type == "select-one" ||
+        field[i].type == "password" ||
+        field[i].type == "hidden"
+      )
+        formData.append(field[i].name, field[i].value);
+    }
+  }
+
+  if (ID != 0) formData.append("id", ID);
+
+  let url = `${SITE_URL}${CREATE}`;
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      _this.prop("disabled", true);
+      $(".close").prop("disabled", true);
+      $(".btn_close_realization").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      _this.removeAttr("disabled");
+      $(".close").removeAttr("disabled");
+      $(".btn_close_realization").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      if (result[0].success) {
+        Toast.fire({
+          type: "success",
+          title: result[0].message,
+        });
+
+        $(`#${parent.attr("id")}`).modal("hide");
+        clearForm(e);
+        clearErrorForm(form);
+        reloadTable();
+      } else if (result[0].error) {
+        errorForm(form, result);
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+
+        clearErrorForm(form);
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+});
+
+$(".btn_close_realization").click(function (e) {
+  e.preventDefault();
+  const parent = $(this).closest(".modal");
+  const form = parent.find("form");
+
+  clearForm(e);
+  clearErrorForm(form);
+  reloadTable();
+});
