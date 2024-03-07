@@ -114,7 +114,7 @@ class Absent extends Entity
 
     public function setReceivedDate($receiveddate)
     {
-        if (empty($this->attributes['receiveddate']))
+        if (empty($receiveddate) || isset($this->attributes['receiveddate']))
             return null;
 
         $this->attributes['receiveddate'] = $receiveddate;

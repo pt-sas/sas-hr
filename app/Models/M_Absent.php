@@ -39,7 +39,7 @@ class M_Absent extends Model
     protected $beforeInsert         = [];
     protected $afterInsert          = [];
     protected $beforeUpdate         = [];
-    protected $afterUpdate          = [];
+    protected $afterUpdate          = ['createDetail'];
     protected $beforeDelete         = [];
     protected $afterDelete          = [];
     protected $column_order         = [
@@ -102,6 +102,32 @@ class M_Absent extends Model
         return $sql;
     }
 
+    public function getSelectDetail()
+    {
+        $sql = $this->table . '.*,
+                md_employee.value as employee,
+                md_employee.fullname as employee_fullname,
+                md_branch.name as branch,
+                md_division.name as division,
+                trx_absent_detail.trx_absent_detail_id,
+                trx_absent_detail.isagree,
+                trx_absent_detail.date';
+
+        return $sql;
+    }
+
+    public function getJoinDetail()
+    {
+        $sql = [
+            $this->setDataJoin('trx_absent_detail', 'trx_absent_detail.trx_absent_id = ' . $this->table . '.trx_absent_id', 'left'),
+            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
+            $this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
+            $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
+        ];
+
+        return $sql;
+    }
+
     private function setDataJoin($tableJoin, $columnJoin, $typeJoin = "inner")
     {
         return [
@@ -111,13 +137,10 @@ class M_Absent extends Model
         ];
     }
 
-    public function getInvNumber($field, $where, $form)
+    public function getInvNumber($field, $where, $post)
     {
-        $post = $this->request->getPost();
-
         $year = date("Y", strtotime($post['submissiondate']));
         $month = date("m", strtotime($post['submissiondate']));
-        $post["necessary"] = $form;
 
         $this->builder->select('MAX(RIGHT(documentno,4)) AS documentno');
         $this->builder->where("DATE_FORMAT(submissiondate, '%m')", $month);
@@ -133,11 +156,46 @@ class M_Absent extends Model
         } else {
             $code = "0001";
         }
-        $first = $post["necessary"];
+        $first = $post['necessary'];
 
         $prefix = $first . "/" . $year . "/" . $month . "/" . $code;
 
         return $prefix;
+    }
+
+    public function createDetail(array $rows)
+    {
+        $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mHoliday = new M_Holiday($this->request);
+
+        $sql = $this->find($rows['id'][0]);
+        $line = $mAbsentDetail->where($this->primaryKey, $rows['id'][0])->first();
+
+        if ($sql->getIsApproved() === 'Y' && is_null($line)) {
+            $holiday = $mHoliday->getHolidayDate();
+
+            $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday);
+
+            $data = [];
+            $number = 0;
+            foreach ($date_range as $date) :
+                $row = [];
+
+                $number++;
+
+                $row[$this->primaryKey] = $rows['id'][0];
+                $row['date'] = $date;
+                $row['lineno'] = $number;
+                $row['isagree'] = 'H';
+                $row['created_by'] = $rows['data']['updated_by'];
+                $row['updated_by'] = $rows['data']['updated_by'];
+                $data[] = $row;
+            endforeach;
+
+            $mAbsentDetail->builder->insertBatch($data);
+        }
+
+        $this->createAllowance($rows);
     }
 
     public function createAllowance(array $rows)
