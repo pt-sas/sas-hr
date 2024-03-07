@@ -4,6 +4,7 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_AllowanceAtt;
+use App\Models\M_Attendance;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
@@ -22,7 +23,6 @@ class AllowanceAtt extends BaseController
     public function reportIndex()
     {
         $date = format_dmy(date('Y-m-d'), "-");
-
         $data = [
             'date_range' => $date . ' - ' . $date
         ];
@@ -36,6 +36,7 @@ class AllowanceAtt extends BaseController
         $mEmployee = new M_Employee($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDiv = new M_EmpDivision($this->request);
+        $mAttendance = new M_Attendance($this->request);
 
         $post = $this->request->getVar();
         $data = [];
@@ -91,17 +92,24 @@ class AllowanceAtt extends BaseController
                 foreach ($date_range as $value) :
                     foreach ($list as $val) :
                         $row = [];
+                        $qty = 0;
 
                         $parAllow = [
                             'trx_allow_attendance.md_employee_id'    => $val->md_employee_id,
                             'trx_allow_attendance.submissiondate'    => $value
                         ];
 
+                        $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $val->nik, 'trx_attendance.date' => $value])->getRow();
+
+                        if (isset($attendance)) {
+                            if ($attendance->absent === 'N') {
+                                $qty = 1;
+                            }
+                        }
+
                         $allow = $this->model->getAllowance($parAllow)->getRow();
 
                         $number++;
-                        $qty = 1;
-
                         $row[] = $number;
                         $row[] = $allow ? $allow->documentno : "";
                         $row[] = $val->fullname;

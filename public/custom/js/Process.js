@@ -5519,3 +5519,37 @@ function getHolidayDate() {
 
   return array;
 }
+
+
+$(".import_file").click(function (evt) {
+  let url = CURRENT_URL + IMPORT;
+  let formData = new FormData();
+  let file = $('#file')[0].files[0];
+  formData.append("file", file);
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      success: function (result) {
+        console.log(result);
+        if (result[0].success) {
+          Toast.fire({
+            type: "success",
+            title: result[0].message,
+          });
+        $('#file').val('');
+      }
+        if (result[0].error) {
+          Toast.fire({
+            type: "error",
+            title: result[0].message,
+          })
+        }
+      },
+  })
+})
