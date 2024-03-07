@@ -148,5 +148,21 @@
                 </div>
             </div>
         </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group table-responsive">
+                    <table class="table table-light table-hover tb_displayline" style="width: 100%">
+                        <thead>
+                            <tr>
+                                <th>Line</th>
+                                <th>Tanggal Tidak Masuk</th>
+                                <th>Referensi</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
     </form>
 </div>

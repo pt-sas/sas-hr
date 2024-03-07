@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Models\M_Absent;
 use App\Models\M_AccessMenu;
 use App\Models\M_Employee;
+use App\Models\M_AbsentDetail;
 use Config\Services;
 
 class SickLeave extends BaseController
@@ -17,6 +18,7 @@ class SickLeave extends BaseController
     {
         $this->request = Services::request();
         $this->model = new M_Absent($this->request);
+        $this->modelDetail = new M_AbsentDetail($this->request);
         $this->entity = new \App\Entities\Absent();
     }
 
@@ -117,7 +119,7 @@ class SickLeave extends BaseController
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
-                $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
+                $row[] = !is_null($value->receiveddate) ? format_dmytime($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
@@ -153,11 +155,14 @@ class SickLeave extends BaseController
                 $img_name = "";
                 $img2_name = "";
                 $img3_name = "";
+                $value = "";
 
-                $row = $mEmployee->find($post['md_employee_id']);
-                $lenPos = strpos($row->getValue(), '-');
-                $value = substr_replace($row->getValue(), "", $lenPos);
-                $ymd = date('YmdHis');
+                if (!empty($post['md_employee_id'])) {
+                    $row = $mEmployee->find($post['md_employee_id']);
+                    $lenPos = strpos($row->getValue(), '-');
+                    $value = substr_replace($row->getValue(), "", $lenPos);
+                    $ymd = date('YmdHis');
+                }
 
                 if ($file && $file->isValid()) {
                     $ext = $file->getClientExtension();
@@ -217,7 +222,7 @@ class SickLeave extends BaseController
 
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Sakit, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Sakit, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 
@@ -238,6 +243,7 @@ class SickLeave extends BaseController
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+                $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
                 $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
@@ -277,7 +283,8 @@ class SickLeave extends BaseController
                 $fieldHeader->setList($list);
 
                 $result = [
-                    'header'    => $this->field->store($fieldHeader)
+                    'header'    => $this->field->store($fieldHeader),
+                    'line'      => $this->tableLine('edit', $detail)
                 ];
 
                 $response = message('success', true, $result);
@@ -306,7 +313,6 @@ class SickLeave extends BaseController
     public function processIt()
     {
         $cWfs = new WScenario();
-
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
 
@@ -322,7 +328,7 @@ class SickLeave extends BaseController
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                        $response = message('success', true, $this->message);
+                        $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
@@ -341,5 +347,32 @@ class SickLeave extends BaseController
 
             return $this->response->setJSON($response);
         }
+    }
+
+    public function tableLine($set = null, $detail = [])
+    {
+        $table = [];
+
+
+        //? Update
+        if (!empty($set) && count($detail) > 0) {
+            foreach ($detail as $row) :
+                if (!empty($row->ref_absent_detail_id)) {
+                    $line = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    $doc = $line->documentno;
+                } else {
+                    $doc = "";
+                }
+
+                $table[] = [
+                    $row->lineno,
+                    format_dmy($row->date, '-'),
+                    $doc,
+                    statusRealize($row->isagree)
+                ];
+            endforeach;
+        }
+
+        return json_encode($table);
     }
 }
