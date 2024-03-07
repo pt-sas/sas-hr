@@ -35,7 +35,7 @@ class OfficialPermission extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -96,7 +96,7 @@ class OfficialPermission extends BaseController
                 $where['trx_absent.md_branch_id'] = "";
                 $where['trx_absent.md_division_id'] = "";
             }
-            
+
             $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin_Resmi;
 
             $data = [];
@@ -156,7 +156,7 @@ class OfficialPermission extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin_Resmi, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin_Resmi, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 
@@ -186,7 +186,7 @@ class OfficialPermission extends BaseController
                 //Need to set data into date field in form
                 $list[0]->startdate = format_dmy($list[0]->startdate, "-");
                 $list[0]->enddate = format_dmy($list[0]->enddate, "-");
-        
+
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
@@ -277,21 +277,21 @@ class OfficialPermission extends BaseController
         }
     }
 
-    public function getEndDate() {
+    public function getEndDate()
+    {
         if ($this->request->isAJAX()) {
-            
-        $leave = new M_LeaveType($this->request);
-        $post = $this->request->getVar();
-        
+
+            $leave = new M_LeaveType($this->request);
+            $post = $this->request->getVar();
+
             try {
                 $leavetype = $leave->find($post["md_leavetype_id"]);
 
-                if($leavetype->duration_type === "D"){
+                if ($leavetype->duration_type === "D") {
                     $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "days"));
                 } else if ($leavetype->duration_type === "M") {
                     $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "month - 1 days"));
                 }
-
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

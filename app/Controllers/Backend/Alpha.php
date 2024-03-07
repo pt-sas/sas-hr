@@ -155,7 +155,7 @@ class Alpha extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $post["submissiontype"], $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $post["submissiontype"], $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 
