@@ -1720,4 +1720,31 @@ class Validation
             ]
         ],
     ];
+
+    public $realisasi_agree = [
+        'submissiondate'        => [
+            'label'             => 'Tanggal Tidak Masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $realisasi_not_agree = [
+        'submissiondate'        => [
+            'label'             => 'Tanggal Tidak Masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'submissiontype'        => [
+            'label'             => 'Tipe Form',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
 }

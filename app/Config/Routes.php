@@ -453,6 +453,11 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('wactivity/showNotif', 'Backend\WActivity::showNotif');
     $routes->post('wactivity/create', 'Backend\WActivity::create');
     $routes->match(['get', 'post'], 'wactivity/showActivityInfo', 'Backend\WActivity::showActivityInfo');
+
+    $routes->add('realisasi', 'Backend\Realization::index');
+    $routes->match(['get', 'post'], 'realisasi/showAll', 'Backend\Realization::showAll');
+    $routes->post('realisasi/create', 'Backend\Realization::create');
+    $routes->match(['get', 'post'], 'realisasi/getList', 'Backend\Realization::getList');
 });
 
 /*
