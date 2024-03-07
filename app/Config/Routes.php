@@ -462,6 +462,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('import-kehadiran', 'Backend\ImportAttendance::index');
     $routes->post('import-kehadiran/import', 'Backend\ImportAttendance::import');
+
+    $routes->add('list-absent', 'Backend\ListAbsent::index');
+    $routes->post('list-absent/showAll', 'Backend\ListAbsent::showAll');
 });
 
 /*
