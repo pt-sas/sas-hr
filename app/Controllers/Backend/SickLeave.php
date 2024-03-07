@@ -149,7 +149,7 @@ class SickLeave extends BaseController
             $file3 = $this->request->getFile('image3');
 
             $post["submissiontype"] = $this->Pengajuan_Sakit;
-            $post["necessary"] = 'SK';
+            $post["necessary"] = 'SA';
 
             try {
                 $img_name = "";

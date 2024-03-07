@@ -36,7 +36,7 @@ class PermissionLeaveOffice extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -145,7 +145,7 @@ class PermissionLeaveOffice extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Ijin_Keluar_Kantor;
-            $post["necessary"] = 'IK';
+            $post["necessary"] = 'KK';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
 
@@ -286,62 +286,63 @@ class PermissionLeaveOffice extends BaseController
         }
     }
 
-    public function exportPDF($id) {
+    public function exportPDF($id)
+    {
         $mEmployee = new M_Employee($this->request);
         $mDivision = new M_Division($this->request);
         $list = $this->model->find($id);
         $employee = $mEmployee->where($mEmployee->primaryKey, $list->md_employee_id)->first();
         $division = $mDivision->where($mDivision->primaryKey, $list->md_division_id)->first();
-        $tglpenerimaan = '' ;
-        
-        if($list->receiveddate !== null) {
-            $tglpenerimaan = format_dmy($list->receiveddate,'-');
+        $tglpenerimaan = '';
+
+        if ($list->receiveddate !== null) {
+            $tglpenerimaan = format_dmy($list->receiveddate, '-');
         };
 
         //bagian PF
-        $pdf = new TCPDF('L', PDF_UNIT, 'A5',true,'UTF-8',false);
-        
+        $pdf = new TCPDF('L', PDF_UNIT, 'A5', true, 'UTF-8', false);
+
         $pdf->setPrintHeader(false);
         $pdf->AddPage();
-        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera',0,0,'L',false,'',0,false);
-        $pdf->Cell(50, 0, 'No Form : '. $list->documentno,0,1,'L',false,'',0,false );
+        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(50, 0, 'No Form : ' . $list->documentno, 0, 1, 'L', false, '', 0, false);
         $pdf->setFont('helvetica', 'B', 20);
-        $pdf->Cell(0, 25, 'FORM IJIN KELUAR KANTOR',0,1,'C');
-        $pdf->setFont('helvetica','',12);
+        $pdf->Cell(0, 25, 'FORM IJIN KELUAR KANTOR', 0, 1, 'C');
+        $pdf->setFont('helvetica', '', 12);
         //Ini untuk bagian field nama dan tanggal pengajuan
-        $pdf->Cell(30, 0, 'Nama ',0,0,'L',false,'',0,false);
-        $pdf->Cell(90, 0, ': ' . $employee->fullname,0,0,'L',false,'',0,false);
-        $pdf->Cell(40, 0, 'Tanggal Pengajuan',0,0,'L',false,'',0,false);
-        $pdf->Cell(30, 0, ': ' . format_dmy($list->submissiondate,'-'),0,1,'L',false,'',0,false);
+        $pdf->Cell(30, 0, 'Nama ', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . $employee->fullname, 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, 'Tanggal Pengajuan', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(30, 0, ': ' . format_dmy($list->submissiondate, '-'), 0, 1, 'L', false, '', 0, false);
         $pdf->Ln(2);
         //Ini untuk bagian field divisi dan Tanggal diterima
-        $pdf->Cell(30, 0, 'Divisi ',0,0,'L',false,'',0,false);
-        $pdf->Cell(90, 0, ': ' . $division->name,0,0,'L',false,'',0,false);
-        $pdf->Cell(40, 0, 'Tanggal Diterima',0,0,'L',false,'',0,false);
-        $pdf->Cell(30, 0, ': ' . $tglpenerimaan,0,1,'L',false,'',0,false);
+        $pdf->Cell(30, 0, 'Divisi ', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . $division->name, 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, 'Tanggal Diterima', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(30, 0, ': ' . $tglpenerimaan, 0, 1, 'L', false, '', 0, false);
         $pdf->Ln(10);
         //Ini bagian tanggal ijin dan jam
-        $pdf->Cell(30, 0, 'Tanggal Ijin',0,0,'L',false,'',0,false);
-        $pdf->Cell(40, 0, ': ' . format_dmy($list->startdate,'-'),0,1,'L',false,'',0,false);
-        $pdf->Cell(30, 0, 'Jam',0,0,'L',false,'',0,false);
-        $pdf->Cell(15, 0, ': ' . format_time($list->startdate),0,0,'L',false,'',0,false);
-        $pdf->Cell(8, 0, 's/d ............',0,1,'L',false,'',0,false);
+        $pdf->Cell(30, 0, 'Tanggal Ijin', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, ': ' . format_dmy($list->startdate, '-'), 0, 1, 'L', false, '', 0, false);
+        $pdf->Cell(30, 0, 'Jam', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(15, 0, ': ' . format_time($list->startdate), 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(8, 0, 's/d ............', 0, 1, 'L', false, '', 0, false);
         $pdf->Ln(2);
         //Ini bagian Alasan
-        $pdf->Cell(30, 0, 'Alasan',0,0,'L');
-        $pdf->Cell(3, 0, ':',0,0,'L');
-        $pdf->MultiCell(0, 20,$list->reason,0,'',false,1,null,null,false,0,false,false,20);
+        $pdf->Cell(30, 0, 'Alasan', 0, 0, 'L');
+        $pdf->Cell(3, 0, ':', 0, 0, 'L');
+        $pdf->MultiCell(0, 20, $list->reason, 0, '', false, 1, null, null, false, 0, false, false, 20);
         //Bagian ttd
-        $pdf->setFont('helvetica','',10);
-        $pdf->Cell(63, 0, 'Dibuat oleh,',0,0,'C');
-        $pdf->Cell(63, 0, 'Disetujui oleh,',0,0,'C');
-        $pdf->Cell(63, 0, 'Diketahui oleh,',0,0,'C');
+        $pdf->setFont('helvetica', '', 10);
+        $pdf->Cell(63, 0, 'Dibuat oleh,', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Disetujui oleh,', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Diketahui oleh,', 0, 0, 'C');
         $pdf->Ln(25);
-        $pdf->Cell(63, 0, $employee ->fullname,0,0,'C');
-        $pdf->Cell(63, 0, '(                          )',0,0,'C');
-        $pdf->Cell(63, 0, '(                          )',0,0,'C');
+        $pdf->Cell(63, 0, $employee->fullname, 0, 0, 'C');
+        $pdf->Cell(63, 0, '(                          )', 0, 0, 'C');
+        $pdf->Cell(63, 0, '(                          )', 0, 0, 'C');
 
         $this->response->setContentType('application/pdf');
-        $pdf->Output('detail-laporan,pdf','I'); 
+        $pdf->Output('detail-laporan,pdf', 'I');
     }
 }

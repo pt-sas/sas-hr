@@ -67,6 +67,7 @@ class OvertimeDetail extends Entity
 
 	public function setEndDate($enddate) 
 	{
+		
 		$this->attributes['enddate'] = $enddate;
 	}
 

@@ -96,7 +96,7 @@ class HalfDayOfficeDuties extends BaseController
                 $where['trx_absent.md_branch_id'] = "";
                 $where['trx_absent.md_division_id'] = "";
             }
-            
+
             $where['trx_absent.submissiontype'] = $this->Pengajuan_Tugas_Kantor_setengah_Hari;
 
             $data = [];
@@ -144,7 +144,7 @@ class HalfDayOfficeDuties extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Tugas_Kantor_setengah_Hari;
-            $post["necessary"] = 'TK';
+            $post["necessary"] = 'TH';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
 

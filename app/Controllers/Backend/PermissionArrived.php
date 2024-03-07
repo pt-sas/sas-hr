@@ -33,7 +33,7 @@ class PermissionArrived extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -142,7 +142,7 @@ class PermissionArrived extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Datang_Terlambat;
-            $post["necessary"] = 'IT';
+            $post["necessary"] = 'DT';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
 
             try {

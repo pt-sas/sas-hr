@@ -11,12 +11,10 @@
                 <th>No</th>
                 <th>No Form</th>
                 <th>Karyawan</th>
-                <th>NIK</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Tanggal Pengajuan</th>
                 <th>Tanggal Lembur</th>
-                <th>Tanggal Diterima</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>
                 <th>Createdby</th>

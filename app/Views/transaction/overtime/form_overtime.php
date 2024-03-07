@@ -13,7 +13,7 @@
                 <div class="form-group">
                     <label for="md_employee_id">Nama Pengaju <span class="required">*</span></label>
                     <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
-                        data-url="employee/getList">
+                        data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -39,7 +39,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
+                    <label for="submissiondate">Tanggal Pengajuan</label>
                     <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
                         value=<?= $today ?> readonly>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
@@ -48,8 +48,36 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="receiveddate">Tanggal Disetujui</label>
-                    <input type="text" class="form-control datepicker" id="receiveddate" name="receiveddate">
+                    <input type="text" class="form-control datepicker" id="receiveddate" name="receiveddate" readonly>
                     <small class="form-text text-danger" id="error_receiveddate"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control datepicker" name="startdate">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="fa fa-calendar"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <small class="form-text text-danger" id="error_startdate"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="date">Tanggal Selesai <span class="required">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control datepicker" name="enddate" readonly>
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="fa fa-calendar"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
             </div>
             <div class="col-md-6">

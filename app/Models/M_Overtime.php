@@ -18,6 +18,8 @@ class M_Overtime extends Model
         'description',
         'docstatus',
         'isapproved',
+        'startdate',
+        'enddate',
         'approveddate',
         'sys_wfscenario_id',
         'created_by',
@@ -28,9 +30,26 @@ class M_Overtime extends Model
     protected $column_order         = [
         '', // Hide column
         '', // Number column
-        
+        'trx_overtime.documentno',
+                'md_employee.fullname',
+                'md_branch.name',
+                'md_division.name',
+                'trx_overtime.submissiondate',
+                'trx_overtime.startdate',
+                'trx_overtime.description',
+                'trx_overtime.docstatus',
+                'sys_user.name'
     ];
     protected $column_search        = [
+        'trx_overtime.documentno',
+                'md_employee.fullname',
+                'md_branch.name',
+                'md_division.name',
+                'trx_overtime.submissiondate',
+                'trx_overtime.startdate',
+                'trx_overtime.description',
+                'trx_overtime.docstatus',
+                'sys_user.name'
     ];
     protected $order                = ['documentno' => 'ASC'];
     protected $request;
@@ -52,6 +71,7 @@ class M_Overtime extends Model
                 md_employee.fullname as employee_fullname,
                 md_employee.nik as nik,
                 md_branch.name as branch,
+                sys_user.name as createdby,
                 md_division.name as division';
 
         return $sql;
@@ -63,6 +83,7 @@ class M_Overtime extends Model
             $this->setDataJoin('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
             $this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
             $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
+            $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left')
         ];
 
         return $sql;
@@ -77,7 +98,7 @@ class M_Overtime extends Model
         ];
     }
 
-    public function getInvNumber($field, $where)
+    public function getInvNumber()
     {
         $post = $this->request->getPost();
 
@@ -86,7 +107,6 @@ class M_Overtime extends Model
 
         $this->builder->select('MAX(RIGHT(documentno,4)) AS documentno');
         $this->builder->where("DATE_FORMAT(submissiondate, '%m')", $month);
-        $this->builder->where($field, $where);
         $sql = $this->builder->get();
 
         $code = "";

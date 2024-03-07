@@ -33,7 +33,7 @@ class PermissionLeaveEarly extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -142,7 +142,7 @@ class PermissionLeaveEarly extends BaseController
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Pulang_Cepat;
-            $post["necessary"] = 'IP';
+            $post["necessary"] = 'PC';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
 
             try {

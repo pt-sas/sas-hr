@@ -7,12 +7,11 @@ use CodeIgniter\HTTP\RequestInterface;
 
 class M_OvertimeDetail extends Model
 {
-    protected $table                = 'trx_overtimedetail';
-    protected $primaryKey           = 'trx_overtimedetail_id';
+    protected $table                = 'trx_overtime_detail';
+    protected $primaryKey           = 'trx_overtime_detail_id';
     protected $allowedFields        = [
         'trx_overtime_id',
         'md_employee_id',
-        'nik',
         'startdate',
         'enddate',
         'description',
@@ -33,4 +32,24 @@ class M_OvertimeDetail extends Model
         $this->request = $request;
         
     }
+
+    
+	/**
+	 * Change value of field data
+	 *
+	 * @param array $data Data
+	 * @return array
+	 */
+	public function doChangeValueField(array $data): array
+	{
+		$result = [];
+        
+		foreach ($data as $row) :
+            $row->startdate = date('Y-m-d', strtotime($row->datestart)) . " " . $row->starttime;
+            $row->enddate = date('Y-m-d', strtotime($row->dateend)) . " " . $row->endtime;
+			$result[] = $row;
+		endforeach;
+
+		return $result;
+	}
 }
