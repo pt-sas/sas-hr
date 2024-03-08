@@ -379,6 +379,34 @@ class M_Absent extends Model
                     $mAllowance->builder->insertBatch($arr);
                 }
             }
+
+            if ($sql->submissiontype === "ijin") {
+                $rule = $mRule->where(['name' => 'Ijin', 'isactive' => 'Y'])->first();
+
+                if ($rule->condition === "")
+                    $amount = abs($rule->value);
+
+                $range = getDatesFromRange($sql->startdate, $sql->enddate);
+
+                $arr = [];
+
+                if ($amount != 0) {
+                    foreach ($range as $date) {
+                        $arr[] = [
+                            "record_id"         => $rows['id'][0],
+                            "table"             => $this->table,
+                            "submissiontype"    => $sql->submissiontype,
+                            "submissiondate"    => $date,
+                            "md_employee_id"    => $sql->md_employee_id,
+                            "amount"            => $amount,
+                            "created_by"        => $rows['data']['updated_by'],
+                            "updated_by"        => $rows['data']['updated_by']
+                        ];
+                    }
+
+                    $mAllowance->builder->insertBatch($arr);
+                }
+            }
         }
     }
 }
