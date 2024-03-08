@@ -1554,3 +1554,11 @@ $(".btn_close_realization").click(function (e) {
   clearErrorForm(form);
   reloadTable();
 });
+
+$(".datepicker-year").datepicker({
+  format: "M-yyyy",
+  startView: "months",
+  minViewMode: "months",
+  autoclose: true,
+  clearBtn: true,
+});

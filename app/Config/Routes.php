@@ -471,6 +471,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('list-absent', 'Backend\ListAbsent::index');
     $routes->post('list-absent/showAll', 'Backend\ListAbsent::showAll');
+
+    $routes->add('laporan-saldo-tkh', 'Backend\AllowanceAtt::index');
+    $routes->match(['get', 'post'], 'laporan-saldo-tkh/reportAll', 'Backend\AllowanceAtt::reportAll');
 });
 
 /*
