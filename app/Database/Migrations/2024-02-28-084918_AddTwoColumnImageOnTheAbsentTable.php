@@ -18,7 +18,7 @@ class AddTwoColumnImageOnTheAbsentTable extends Migration
             'image3'            =>  [
                 'type'          => 'VARCHAR',
                 'constraint'    => 255,
-                'after'         => 'image3',
+                'after'         => 'image2',
                 'null'          => true
             ]
         ];
