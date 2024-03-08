@@ -119,23 +119,26 @@ class Realization extends BaseController
                         /**
                          * Insert Pengajuan baru
                          */
-                        if ($post['submissiontype'] === 'ijin')
+                        if ($post['submissiontype'] === 'ijin') {
                             $this->entity->setNecessary('IJ');
+                            $this->entity->setSubmissionType($post['submissiontype']);
+                        }
 
-                        if ($post['submissiontype'] === 'alpa')
+                        if ($post['submissiontype'] === 'alpa') {
                             $this->entity->setNecessary('AL');
+                            $this->entity->setSubmissionType('alpa potong tkh');
+                        }
 
                         $this->entity->setEmployeeId($row->getEmployeeId());
                         $this->entity->setNik($row->getNik());
                         $this->entity->setBranchId($row->getBranchId());
                         $this->entity->setDivisionId($row->getDivisionId());
-                        $this->entity->setSubmissionType($post['submissiontype']);
                         $this->entity->setReceivedDate($todayTime);
                         $this->entity->setReason($post['reason']);
                         $this->entity->setSubmissionDate($today);
                         $this->entity->setStartDate(date('Y-m-d', strtotime($submissionDate)));
                         $this->entity->setEndDate(date('Y-m-d', strtotime($submissionDate)));
-                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
                         $post['submissiondate'] = $this->entity->getSubmissionDate();
                         $post['necessary'] = $this->entity->getNecessary();
@@ -177,8 +180,15 @@ class Realization extends BaseController
                         $this->entity->ref_absent_detail_id = $post['foreignkey'];
                         $this->entity->trx_absent_detail_id = $lineID;
                         $this->save();
+
+                        $this->model = new M_Absent($this->request);
+                        $this->entity = new \App\Entities\Absent();
+                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                        $this->entity->setAbsentId($ID);
+                        $this->save();
                     }
 
+                    $this->model = new M_AbsentDetail($this->request);
                     $list = $this->model->where([
                         'isagree'       => $holdAgree,
                         'trx_absent_id' => $line->trx_absent_id
