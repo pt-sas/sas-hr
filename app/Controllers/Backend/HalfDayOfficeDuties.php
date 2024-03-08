@@ -158,7 +158,7 @@ class HalfDayOfficeDuties extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Tugas_Kantor_setengah_Hari, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Tugas_Kantor_setengah_Hari, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 

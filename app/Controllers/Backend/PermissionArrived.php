@@ -155,7 +155,7 @@ class PermissionArrived extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Datang_Terlambat, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Datang_Terlambat, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 

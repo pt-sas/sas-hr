@@ -154,7 +154,7 @@ class OfficeDuties extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Tugas_Kantor, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Tugas_Kantor, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 

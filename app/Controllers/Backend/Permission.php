@@ -35,7 +35,7 @@ class Permission extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -96,7 +96,7 @@ class Permission extends BaseController
                 $where['trx_absent.md_branch_id'] = "";
                 $where['trx_absent.md_division_id'] = "";
             }
-            
+
             $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin;
 
             $data = [];
@@ -156,7 +156,7 @@ class Permission extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 
@@ -221,7 +221,7 @@ class Permission extends BaseController
 
     public function processIt()
     {
-        $mAllowance = new M_AllowanceAtt($this->request);
+        $cWfs = new WScenario();
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -230,32 +230,15 @@ class Permission extends BaseController
             $_DocAction = $post['docaction'];
 
             $row = $this->model->find($_ID);
+            $menu = $this->request->uri->getSegment(2);
 
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                        $response = $this->save();
-
-                        $range = getDatesFromRange($row->getStartDate(), $row->getEndDate());
-
-                        $arr = [];
-                        foreach ($range as $date) {
-                            $arr[] = [
-                                "record_id"         => $_ID,
-                                "table"             => $this->model->table,
-                                "submissiontype"    => $row->getSubmissionType(),
-                                "submissiondate"    => $date,
-                                "md_employee_id"    => $row->getEmployeeId(),
-                                "amount"            => 1,
-                                "created_by"        => $this->access->getSessionUser(),
-                                "updated_by"        => $this->access->getSessionUser(),
-                            ];
-                        }
-
-                        $mAllowance->builder->insertBatch($arr);
+                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                        $response = message('success', true, $this->message);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();

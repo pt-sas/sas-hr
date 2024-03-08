@@ -155,7 +155,7 @@ class PermissionLeaveEarly extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Pulang_Cepat, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Pulang_Cepat, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 

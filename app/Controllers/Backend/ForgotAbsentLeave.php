@@ -33,7 +33,7 @@ class ForgotAbsentLeave extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -94,7 +94,7 @@ class ForgotAbsentLeave extends BaseController
                 $where['trx_absent.md_branch_id'] = "";
                 $where['trx_absent.md_division_id'] = "";
             }
-            
+
             $where['trx_absent.submissiontype'] = $this->Pengajuan_Lupa_Absen_Pulang;
 
             $data = [];
@@ -155,7 +155,7 @@ class ForgotAbsentLeave extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Lupa_Absen_Pulang, $post["necessary"]);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Lupa_Absen_Pulang, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 
