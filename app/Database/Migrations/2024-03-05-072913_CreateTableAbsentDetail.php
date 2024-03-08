@@ -19,7 +19,7 @@ class CreateTableAbsentDetail extends Migration
             'updated_by'            => ['type' => 'INT', 'constraint' => 11, 'null' => false],
             'trx_absent_id'         => ['type' => 'INT', 'constraint' => 11, 'null' => false],
             'lineno'                => ['type' => 'DECIMAL', 'constraint' => 10, 'null' => false],
-            'date'                  => ['type' => 'TIMESTAMP', 'null' => false],
+            'date'                  => ['type' => 'timestamp default current_timestamp'],
             'isagree'               => ['type' => 'CHAR', 'constraint' => 1, 'null' => true],
             'ref_absent_detail_id'  => ['type' => 'INT', 'constraint' => 11, 'null' => true],
         ]);
