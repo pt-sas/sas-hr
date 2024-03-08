@@ -416,7 +416,7 @@ class M_Absent extends Model
                 if ($amount != 0) {
                     foreach ($range as $date) {
                         $arr[] = [
-                            "record_id"         => $rows['id'][0],
+                            "record_id"         => $ID,
                             "table"             => $this->table,
                             "submissiontype"    => $sql->submissiontype,
                             "submissiondate"    => $date,
