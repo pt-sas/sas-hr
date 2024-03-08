@@ -145,3 +145,30 @@ $("#form_overtime").on(
     });
   }
 );
+
+function Generate(id) {
+  let formData = new FormData();
+  let url = ADMIN_URL + "alpa/generate"
+  let ID = id;
+  formData.append('trx_attendance_id', ID);
+
+  $.ajax({
+    url: url,
+    type: "post",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    success: function (result) {
+      if (result[0].success) {
+          Toast.fire({
+            type: "success",
+            title: result[0].message,
+          });
+          reloadTable();
+        }
+      },
+  })
+
+}

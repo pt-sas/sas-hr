@@ -209,6 +209,7 @@ class M_Absent extends Model
         $amount = 0;
 
         $sql = $this->find($rows['id'][0]);
+        $ID = $rows['id'][0];
         $line = $mAbsentDetail->where($this->primaryKey, $rows['id'][0])->first();
 
         $ID = $rows['id'][0];
@@ -270,6 +271,17 @@ class M_Absent extends Model
                     }
                 }
             }
+
+            if ($sql->submissiontype === "lupa absen masuk") {
+                $rule = $mRule->where('name', 'Lupa Absen')->first();
+
+                if ($rule) {
+                    $ruleDetail = $mRuleDetail->where([
+                        'md_rule_id'    => $rule->md_rule_id,
+                        'name'          => 'Lupa Absen Masuk'
+                    ])->first();
+
+                    $amount = abs($ruleDetail->value);
 
             if ($sql->submissiontype === "lupa absen masuk") {
                 $rule = $mRule->where('name', 'Lupa Absen')->first();
@@ -427,6 +439,35 @@ class M_Absent extends Model
 
                         $mAllowance->builder->insertBatch($arr);
                     }
+                }
+            }
+
+            if ($sql->submissiontype === "ijin") {
+                $rule = $mRule->where(['name' => 'Ijin', 'isactive' => 'Y'])->first();
+
+                if ($rule->condition === "")
+                    $amount = abs($rule->value);
+
+                $range = getDatesFromRange($sql->startdate, $sql->enddate);
+
+                $arr = [];
+
+                if ($amount != 0) {
+                    foreach ($range as $date) {
+                        $arr[] = [
+                            "record_id"         => $ID,
+                            "table"             => $this->table,
+                            "submissiontype"    => $sql->submissiontype,
+                            "submissiondate"    => $date,
+                            "md_employee_id"    => $sql->md_employee_id,
+                            "amount"            => $amount,
+                            "created_by"        => $rows['data']['updated_by'],
+                            "updated_by"        => $rows['data']['updated_by']
+                        ];
+                    }
+
+                    $mAllowance->builder->insertBatch($arr);
+                  }
                 }
             }
         }
