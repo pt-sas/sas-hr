@@ -395,6 +395,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('ijin/show/(:any)', 'Backend\Permission::show/$1');
     $routes->get('ijin/destroy/(:any)', 'Backend\Permission::destroy/$1');
     $routes->match(['get', 'post'], 'ijin/getList', 'Backend\Permission::getList');
+    $routes->get('ijin/processIt', 'Backend\Permission::processIt');
 
     $routes->add('laporan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
@@ -462,6 +463,11 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('import-kehadiran', 'Backend\ImportAttendance::index');
     $routes->post('import-kehadiran/import', 'Backend\ImportAttendance::import');
+
+    $routes->add('realisasi', 'Backend\Realization::index');
+    $routes->match(['get', 'post'], 'realisasi/showAll', 'Backend\Realization::showAll');
+    $routes->post('realisasi/create', 'Backend\Realization::create');
+    $routes->match(['get', 'post'], 'realisasi/getList', 'Backend\Realization::getList');
 
     $routes->add('list-absent', 'Backend\ListAbsent::index');
     $routes->post('list-absent/showAll', 'Backend\ListAbsent::showAll');
