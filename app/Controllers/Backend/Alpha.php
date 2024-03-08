@@ -9,6 +9,7 @@ use App\Models\M_Employee;
 use App\Models\M_AccessMenu;
 use App\Models\M_Attendance;
 use App\Models\M_Division;
+use App\Models\M_AbsentDetail;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 
@@ -21,6 +22,7 @@ class Alpha extends BaseController
     {
         $this->request = Services::request();
         $this->model = new M_Absent($this->request);
+        $this->modelDetail = new M_AbsentDetail($this->request);
         $this->entity = new \App\Entities\Absent();
     }
 
@@ -180,6 +182,7 @@ class Alpha extends BaseController
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+                $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
@@ -197,7 +200,8 @@ class Alpha extends BaseController
                 $fieldHeader->setList($list);
 
                 $result = [
-                    'header'    => $this->field->store($fieldHeader)
+                    'header'    => $this->field->store($fieldHeader),
+                    'line'      => $this->tableLine('edit', $detail)
                 ];
 
                 $response = message('success', true, $result);
@@ -226,7 +230,6 @@ class Alpha extends BaseController
     public function processIt()
     {
         $cWfs = new WScenario();
-
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
 
@@ -261,6 +264,33 @@ class Alpha extends BaseController
 
             return $this->response->setJSON($response);
         }
+    }
+
+    public function tableLine($set = null, $detail = [])
+    {
+        $table = [];
+
+
+        //? Update
+        if (!empty($set) && count($detail) > 0) {
+            foreach ($detail as $row) :
+                if (!empty($row->ref_absent_detail_id)) {
+                    $line = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    $doc = $line->documentno;
+                } else {
+                    $doc = "";
+                }
+
+                $table[] = [
+                    $row->lineno,
+                    format_dmy($row->date, '-'),
+                    $doc,
+                    statusRealize($row->isagree)
+                ];
+            endforeach;
+        }
+
+        return json_encode($table);
     }
 
     public function generateAlpa()
