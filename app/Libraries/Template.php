@@ -332,4 +332,15 @@ class Template
 
         return $allBtn;
     }
+
+    public function buttonGenerate($btnID)
+    {
+        $allBtn = '';
+
+        $btnGenerate = '<a class="btn btn-danger btn-round generate_alpa" onclick="Generate(' . "'" . $btnID . "'" . ')" id="' . $btnID . '">Alpa</a>';
+
+        $allBtn = $btnGenerate;
+
+        return $allBtn;
+    }
 }

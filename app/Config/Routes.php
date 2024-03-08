@@ -214,6 +214,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('alpa/show/(:any)', 'Backend\Alpha::show/$1');
     $routes->get('alpa/destroy/(:any)', 'Backend\Alpha::destroy/$1');
     $routes->get('alpa/processIt', 'Backend\Alpha::processIt');
+    $routes->post('alpa/generate', 'Backend\Alpha::generateAlpa');
 
     $routes->add('datang-terlambat', 'Backend\PermissionArrived::index');
     $routes->match(['get', 'post'], 'datang-terlambat/showAll', 'Backend\PermissionArrived::showAll');

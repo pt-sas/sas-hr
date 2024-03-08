@@ -7,6 +7,10 @@ use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AccessMenu;
+use App\Models\M_Attendance;
+use App\Models\M_Division;
+use App\Models\M_EmpBranch;
+use App\Models\M_EmpDivision;
 
 class Alpha extends BaseController
 {
@@ -24,7 +28,7 @@ class Alpha extends BaseController
     {
         $data = [
             'today'     => date('d-M-Y'),
-            'submissiontype' => ['alpa sakit tanpa surat' => 'Alpa Sakit Tanpa Surat', 'alpa potong tkh' => 'Alpa Tidak Ada Cuti']
+            'submissiontype' => ['alpa potong tkh' => 'Alpa Tidak Ada Cuti']
         ];
 
         return $this->template->render('transaction/alpha/v_alpha', $data);
@@ -96,7 +100,7 @@ class Alpha extends BaseController
                 $where['trx_absent.md_division_id'] = "";
             }
 
-            $where = ['trx_absent.necessary' => 'AP'];
+            $where = ['trx_absent.necessary' => 'AL'];
 
             $data = [];
 
@@ -257,5 +261,48 @@ class Alpha extends BaseController
 
             return $this->response->setJSON($response);
         }
+    }
+
+    public function generateAlpa()
+    {
+        $mAttendance = new M_Attendance($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
+        $mEmpDivision = new M_EmpDivision($this->request);
+        $todayTime = date('Y-m-d H:i:s');
+        $today = date('Y-m-d');
+
+        try {
+            $post = $this->request->getVar();
+            $post['necessary'] = 'AL';
+            $post['submissiondate'] = $today;
+
+            $attendance = $mAttendance->where('trx_attendance_id', $post['trx_attendance_id'])->find();
+            $employee = $mEmployee->where('nik', $attendance[0]->nik)->find();
+            $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
+            $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
+
+            $this->entity->setNecessary($post['necessary']);
+            $this->entity->setSubmissionType('alpa potong tkh');
+            $this->entity->setEmployeeId($employee[0]->md_employee_id);
+            $this->entity->setNik($employee[0]->nik);
+            $this->entity->setBranchId($branch[0]->md_branch_id);
+            $this->entity->setDivisionId($division[0]->md_division_id);
+            $this->entity->setReceivedDate($todayTime);
+            $this->entity->setReason('');
+            $this->entity->setSubmissionDate($today);
+            $this->entity->setStartDate($attendance[0]->date);
+            $this->entity->setEndDate($attendance[0]->date);
+            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+            $docNo = $this->model->getInvNumber("submissiontype", 'alpa potong tkh', $post);
+            $this->entity->setDocumentNo($docNo);
+            $result = $this->save();
+
+            $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . $docNo);
+        } catch (\Exception $e) {
+            $response = message('error', false, $e->getMessage());
+        }
+
+        return $this->response->setJSON($response);
     }
 }
