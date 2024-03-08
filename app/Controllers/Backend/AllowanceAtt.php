@@ -9,6 +9,14 @@ use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
 use App\Models\M_Holiday;
+use App\Models\M_Levelling;
+use PHPExcel;
+use PHPExcel_IOFactory;
+use PHPExcel_Style_Alignment;
+use PHPExcel_Style_Border;
+use PHPExcel_Cell_DataType;
+use PHPExcel_Worksheet_PageSetup;
+use DateTime;
 use Config\Services;
 
 class AllowanceAtt extends BaseController
@@ -134,5 +142,272 @@ class AllowanceAtt extends BaseController
 
             return $this->response->setJSON($result);
         }
+    }
+
+    public function index()
+    {
+        $data = [
+            'month' => date('M-Y')
+        ];
+
+        return $this->template->render('report/allowance/v_report_allowance', $data);
+    }
+
+    public function reportAll()
+    {
+        $post = $this->request->getPost();
+        $mEmployee = new M_Employee($this->request);
+        $mLevel = new M_Levelling($this->request);
+        $mAttendance = new M_Attendance($this->request);
+
+        $md_branch_id = null;
+        $md_division_id = null;
+        $md_employee_id = null;
+        $cutOff = 15;
+
+        if (isset($post['md_branch_id']))
+            $md_branch_id = $post['md_branch_id'];
+
+        if (isset($post['md_division_id']))
+            $md_division_id = $post['md_division_id'];
+
+        if (isset($post['md_employee_id']))
+            $md_employee_id = $post['md_employee_id'];
+
+        $periode = $post['periode'];
+
+        // Panggil class PHPExcel nya
+        $excel = new PHPExcel();
+        // Settingan awal file excel
+        $excel->getProperties()->setCreator('Laporan Saldo TKH')
+            ->setLastModifiedBy('Laporan Saldo TKH')
+            ->setTitle("Laporan Saldo TKH")
+            ->setSubject("Laporan Saldo TKH")
+            ->setDescription("Laporan Saldo TKH")
+            ->setKeywords("Laporan Saldo TKH");
+        // Buat sebuah variabel untuk menampung pengaturan style dari header tabel
+        $style_col = array(
+            'font' => array('bold' => true), // Set font nya jadi bold
+            'alignment' => array(
+                'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, // Set text jadi ditengah secara horizontal (center)
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER // Set text jadi di tengah secara vertical (middle)
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN), // Set border top dengan garis tipis
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),  // Set border right dengan garis tipis
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN), // Set border bottom dengan garis tipis
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN) // Set border left dengan garis tipis
+            )
+        );
+        // Buat sebuah variabel untuk menampung pengaturan style dari isi tabel
+        $style_row = array(
+            'alignment' => array(
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER // Set text jadi di tengah secara vertical (middle)
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN), // Set border top dengan garis tipis
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),  // Set border right dengan garis tipis
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN), // Set border bottom dengan garis tipis
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN) // Set border left dengan garis tipis
+            )
+        );
+        $excel->setActiveSheetIndex(0)->setCellValue('A1', "LAPORAN ABSENSI HARIAN"); // Set kolom A1 dengan tulisan "LAPORAN ABSENSI HARIAN"
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE); // Set bold kolom A1
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15); // Set font size 15 untuk kolom A1
+        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER); // Set text center untuk kolom A1
+        // Buat header tabel nya pada baris ke 3
+        $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO"); // Set kolom A3 dengan tulisan "NO"
+        $excel->getActiveSheet()->mergeCells('A3:A4'); // Set Merge Cell
+        $excel->setActiveSheetIndex(0)->setCellValue('B3', "Kode"); // Set kolom B3 dengan tulisan "Kode"
+        $excel->getActiveSheet()->mergeCells('B3:B4'); // Set Merge Cell
+        $excel->setActiveSheetIndex(0)->setCellValue('C3', "Nama"); // Set kolom C3 dengan tulisan "NAMA"
+        $excel->getActiveSheet()->mergeCells('C3:C4'); // Set Merge Cell
+        $excel->setActiveSheetIndex(0)->setCellValue('D3', "Jabatan"); // Set kolom D3 dengan tulisan "Jabatan"
+        $excel->getActiveSheet()->mergeCells('D3:D4'); // Set Merge Cell
+
+        $cell = 'E';
+        $cellRow = 4;
+
+        $firstCell = '';
+        $lastCell = '';
+
+        $prevDayMonth = $cutOff + 1;
+        $prevMonth = date('Y-m-' . $prevDayMonth, strtotime($periode . '-1 month'));
+        $prevLastDay = new DateTime($prevMonth);
+        $prevLastDay = $prevLastDay->format('Y-m-t');
+        $prevMonthYear = date('M-Y', strtotime($prevMonth));
+        $prevDateRange = getDatesFromRange($prevMonth, $prevLastDay, [], 'Y-m-d', 'all');
+
+        $excel->setActiveSheetIndex(0)->setCellValue('E3', $prevMonthYear); // Set kolom E3 dengan tulisan "Bulan"
+
+        foreach ($prevDateRange as $date) {
+            $date = date('d', strtotime($date));
+
+            $excel->setActiveSheetIndex(0)->setCellValue($cell . $cellRow, $date);
+            $excel->getActiveSheet()->getStyle($cell . $cellRow)->applyFromArray($style_col);
+
+            if (count($prevDateRange) - 1)
+                $lastCell = $cell;
+
+            $cell++;
+        }
+
+        $excel->getActiveSheet()->mergeCells('E3:' . $lastCell . '3'); // Set Merge Cell
+        $excel->getActiveSheet()->getStyle('E3:' . $lastCell . '3')->applyFromArray($style_col);
+
+        $day = $cutOff - 1;
+        $periode = date('Y-m-d', strtotime($periode));
+        $lastCutDay = date('Y-m-d', strtotime($periode . '+' . $day . 'day'));
+        $monthYear = date('M-Y', strtotime($periode));
+        $dateRange = getDatesFromRange($periode, $lastCutDay, [], 'Y-m-d', 'all');
+
+        $firstCell = $cell;
+        $excel->setActiveSheetIndex(0)->setCellValue($firstCell . '3', $monthYear); // Set kolom F3 dengan tulisan "Bulan Next"
+
+        foreach ($dateRange as $date) {
+            $date = date('d', strtotime($date));
+
+            $excel->setActiveSheetIndex(0)->setCellValue($cell . $cellRow, $date);
+            $excel->getActiveSheet()->getStyle($cell . $cellRow)->applyFromArray($style_col);
+
+            if (count($dateRange) - 1)
+                $lastCell = $cell;
+
+            $cell++;
+        }
+
+        $excel->getActiveSheet()->mergeCells($firstCell . '3:' . $lastCell . '3'); // Set Merge Cell
+        $excel->getActiveSheet()->getStyle($firstCell . '3:' . $lastCell . '3')->applyFromArray($style_col);
+
+        // $excel->setActiveSheetIndex(0)->setCellValue($cell . '3', "Total Hari Kerja"); // Set kolom E3 dengan tulisan "Bulan"
+        // $excel->getActiveSheet()->mergeCells($cell . '3:' . $cell . '4'); // Set Merge Cell
+        // $excel->getActiveSheet()->getStyle($cell . '3:' . $cell . '4')->applyFromArray($style_col);
+
+        $excel->getActiveSheet()->mergeCells('A1:' . $cell . '1'); // Set Merge Cell pada kolom A1 sampai F1
+
+        // Apply style header yang telah kita buat tadi ke masing-masing kolom header
+        $excel->getActiveSheet()->getStyle('A3:A4')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('B3:B4')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('C3:C4')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('D3:D4')->applyFromArray($style_col);
+
+        $sql = $mEmployee->where([
+            'isactive'          => 'Y',
+            'md_status_id <> '  => 100004
+        ])->orderBy('fullname', 'ASC')->findAll();
+
+        $no = 1; // Untuk penomoran tabel, di awal set dengan 1
+        $numrow = 5; // Set baris pertama untuk isi tabel adalah baris ke 4
+
+        // while ($data = $sql->fetch()) { // Ambil semua data dari hasil eksekusi $sql
+        foreach ($sql as $row) {
+            $level = $mLevel->find($row->md_levelling_id);
+
+            $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
+            $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $row->nik);
+            $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $row->fullname);
+            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $level->name);
+
+            // Apply style row yang telah kita buat tadi ke masing-masing baris (isi tabel)
+            $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
+
+            $cell = 'E';
+            $prevTotal = [];
+            foreach ($prevDateRange as $date) {
+                $qty = 0;
+
+                $parAllow = [
+                    'trx_allow_attendance.md_employee_id'    => $row->md_employee_id,
+                    'trx_allow_attendance.submissiondate'    => $date
+                ];
+                $allow = $this->model->getAllowance($parAllow)->getRow();
+
+                $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+
+                if (isset($attendance)) {
+                    if ($attendance->absent === 'N') {
+                        $qty = 1;
+                    }
+
+                    if ($attendance->absent === 'N' && $allow) {
+                        $qty = 1 - $allow->amount;
+                    }
+
+                    if ($attendance->absent === 'Y' && $allow) {
+                        $qty -= $allow->amount;
+                    }
+                }
+
+                $value = $qty;
+                $prevTotal[] = $value;
+                $excel->setActiveSheetIndex(0)->setCellValue($cell . $numrow, $value);
+                $excel->getActiveSheet()->getStyle($cell . $numrow)->applyFromArray($style_row);
+                $cell++;
+            }
+
+            foreach ($dateRange as $date) {
+                $qty = 0;
+
+                $parAllow = [
+                    'trx_allow_attendance.md_employee_id'    => $row->md_employee_id,
+                    'trx_allow_attendance.submissiondate'    => $date
+                ];
+
+                $allow = $this->model->getAllowance($parAllow)->getRow();
+
+                $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+
+                if (isset($attendance)) {
+                    if ($attendance->absent === 'N') {
+                        $qty = 1;
+                    }
+
+                    if ($attendance->absent === 'N' && $allow) {
+                        $qty = 1 - $allow->amount;
+                    }
+
+                    if ($attendance->absent === 'Y' && $allow) {
+                        $qty -= $allow->amount;
+                    }
+                }
+
+                $value = $qty;
+                $prevTotal[] = $value;
+                $excel->setActiveSheetIndex(0)->setCellValue($cell . $numrow, $value);
+                $excel->getActiveSheet()->getStyle($cell . $numrow)->applyFromArray($style_row);
+                $cell++;
+            }
+
+            // $excel->setActiveSheetIndex(0)->setCellValue($cell . $numrow, array_sum($prevTotal));
+
+            $excel->getActiveSheet()->getRowDimension($numrow)->setRowHeight(20);
+
+            $no++; // Tambah 1 setiap kali looping
+            $numrow++; // Tambah 1 setiap kali looping
+        }
+        // Set width kolom
+        $excel->getActiveSheet()->getColumnDimension('A')->setWidth(3); // Set width kolom A
+        $excel->getActiveSheet()->getColumnDimension('B')->setWidth(15); // Set width kolom B
+        $excel->getActiveSheet()->getColumnDimension('C')->setWidth(25); // Set width kolom C
+        $excel->getActiveSheet()->getColumnDimension('D')->setWidth(20); // Set width kolom D
+        // $excel->getActiveSheet()->getColumnDimension($cell)->setWidth(20); // Set width kolom D
+        // $excel->getActiveSheet()->getColumnDimension('E')->setWidth(15); // Set width kolom E
+        // $excel->getActiveSheet()->getColumnDimension('F')->setWidth(30); // Set width kolom F
+        // Set orientasi kertas jadi LANDSCAPE
+        $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
+        // Set judul file excel nya
+        $excel->getActiveSheet(0)->setTitle("Laporan Absensi Harian");
+        $excel->setActiveSheetIndex(0);
+        // Proses file excel
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="Laporan Absensi Harian.xlsx"'); // Set nama file excel nya
+        header('Cache-Control: max-age=0');
+        $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
+        $write->save('php://output');
+
+        // return json_encode($dateRange);
     }
 }

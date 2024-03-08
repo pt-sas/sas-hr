@@ -171,7 +171,7 @@ class M_Absent extends Model
         $sql = $this->find($rows['id'][0]);
         $line = $mAbsentDetail->where($this->primaryKey, $rows['id'][0])->first();
 
-        if ($sql->getIsApproved() === 'Y' && is_null($line)) {
+        if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP" && is_null($line)) {
             $holiday = $mHoliday->getHolidayDate();
 
             $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday);
@@ -204,11 +204,39 @@ class M_Absent extends Model
         $mRuleDetail = new M_RuleDetail($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mHoliday = new M_Holiday($this->request);
 
         $amount = 0;
 
         $sql = $this->find($rows['id'][0]);
         $ID = $rows['id'][0];
+        $line = $mAbsentDetail->where($this->primaryKey, $rows['id'][0])->first();
+
+        $ID = $rows['id'][0];
+
+        if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP" && is_null($line)) {
+            $holiday = $mHoliday->getHolidayDate();
+
+            $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday);
+
+            $data = [];
+            $number = 0;
+            foreach ($date_range as $date) :
+                $row = [];
+
+                $number++;
+
+                $row[$this->primaryKey] = $rows['id'][0];
+                $row['date'] = $date;
+                $row['lineno'] = $number;
+                $row['isagree'] = 'H';
+                $row['created_by'] = $rows['data']['updated_by'];
+                $row['updated_by'] = $rows['data']['updated_by'];
+                $data[] = $row;
+            endforeach;
+
+            $mAbsentDetail->builder->insertBatch($data);
+        }
 
         if ($sql->docstatus === "CO") {
             if ($sql->submissiontype === "sakit") {
@@ -243,6 +271,17 @@ class M_Absent extends Model
                     }
                 }
             }
+
+            if ($sql->submissiontype === "lupa absen masuk") {
+                $rule = $mRule->where('name', 'Lupa Absen')->first();
+
+                if ($rule) {
+                    $ruleDetail = $mRuleDetail->where([
+                        'md_rule_id'    => $rule->md_rule_id,
+                        'name'          => 'Lupa Absen Masuk'
+                    ])->first();
+
+                    $amount = abs($ruleDetail->value);
 
             if ($sql->submissiontype === "lupa absen masuk") {
                 $rule = $mRule->where('name', 'Lupa Absen')->first();
@@ -428,6 +467,7 @@ class M_Absent extends Model
                     }
 
                     $mAllowance->builder->insertBatch($arr);
+                  }
                 }
             }
         }
