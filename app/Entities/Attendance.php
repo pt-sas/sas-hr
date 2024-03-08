@@ -43,8 +43,6 @@ class Attendance extends Entity
 
     public function getDate()
     {
-        if (!empty($this->attributes['date']))
-            return format_dmy($this->attributes['date'], "-");
         return $this->attributes['date'];
     }
 
