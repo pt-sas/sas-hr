@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
+use App\Models\M_AbsentDetail;
 use App\Models\M_AccessMenu;
 use App\Models\M_AllowanceAtt;
 
@@ -18,6 +19,7 @@ class Permission extends BaseController
     {
         $this->request = Services::request();
         $this->model = new M_Absent($this->request);
+        $this->modelDetail = new M_AbsentDetail($this->request);
         $this->entity = new \App\Entities\Absent();
     }
 
@@ -177,6 +179,7 @@ class Permission extends BaseController
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+                $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
@@ -193,7 +196,8 @@ class Permission extends BaseController
                 $fieldHeader->setList($list);
 
                 $result = [
-                    'header'    => $this->field->store($fieldHeader)
+                    'header'    => $this->field->store($fieldHeader),
+                    'line'      => $this->tableLine('edit', $detail)
                 ];
 
                 $response = message('success', true, $result);
