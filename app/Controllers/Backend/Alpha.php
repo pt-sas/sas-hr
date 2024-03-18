@@ -29,8 +29,7 @@ class Alpha extends BaseController
     public function index()
     {
         $data = [
-            'today'     => date('d-M-Y'),
-            'submissiontype' => ['alpa potong tkh' => 'Alpa Tidak Ada Cuti']
+            'today'     => date('d-M-Y')
         ];
 
         return $this->template->render('transaction/alpha/v_alpha', $data);
@@ -148,7 +147,7 @@ class Alpha extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            // $post["submissiontype"] = $this->Pengajuan_Alpa;
+            $post["submissiontype"] = $this->Pengajuan_Alpa;
             $post["necessary"] = 'AL';
 
             try {
@@ -301,6 +300,7 @@ class Alpha extends BaseController
         $mEmpDivision = new M_EmpDivision($this->request);
         $todayTime = date('Y-m-d H:i:s');
         $today = date('Y-m-d');
+        $agree = 'Y';
 
         try {
             $post = $this->request->getVar();
@@ -313,7 +313,7 @@ class Alpha extends BaseController
             $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
 
             $this->entity->setNecessary($post['necessary']);
-            $this->entity->setSubmissionType('alpa potong tkh');
+            $this->entity->setSubmissionType('alpa');
             $this->entity->setEmployeeId($employee[0]->md_employee_id);
             $this->entity->setNik($employee[0]->nik);
             $this->entity->setBranchId($branch[0]->md_branch_id);
@@ -323,10 +323,27 @@ class Alpha extends BaseController
             $this->entity->setSubmissionDate($today);
             $this->entity->setStartDate($attendance[0]->date);
             $this->entity->setEndDate($attendance[0]->date);
-            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-            $docNo = $this->model->getInvNumber("submissiontype", 'alpa potong tkh', $post);
+            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+            $docNo = $this->model->getInvNumber("submissiontype", 'alpa', $post);
             $this->entity->setDocumentNo($docNo);
-            $result = $this->save();
+            $this->save();
+
+            //* Foreignkey id 
+            $ID =  $this->insertID;
+
+            $this->model = new M_AbsentDetail($this->request);
+            $this->entity = new \App\Entities\AbsentDetail();
+            $this->entity->isagree = $agree;
+            $this->entity->trx_absent_id = $ID;
+            $this->entity->lineno = 1;
+            $this->entity->date = $attendance[0]->date;
+            $this->save();
+
+            $this->model = new M_Absent($this->request);
+            $this->entity = new \App\Entities\Absent();
+            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+            $this->entity->setAbsentId($ID);
+            $this->save();
 
             $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . $docNo);
         } catch (\Exception $e) {

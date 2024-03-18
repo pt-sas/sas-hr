@@ -126,7 +126,7 @@ class Realization extends BaseController
 
                         if ($post['submissiontype'] === 'alpa') {
                             $this->entity->setNecessary('AL');
-                            $this->entity->setSubmissionType('alpa potong tkh');
+                            $this->entity->setSubmissionType('alpa');
                         }
 
                         $this->entity->setEmployeeId($row->getEmployeeId());

@@ -283,191 +283,192 @@ class M_Absent extends Model
 
                     $amount = abs($ruleDetail->value);
 
-            if ($sql->submissiontype === "lupa absen masuk") {
-                $rule = $mRule->where('name', 'Lupa Absen')->first();
+                    if ($sql->submissiontype === "lupa absen masuk") {
+                        $rule = $mRule->where('name', 'Lupa Absen')->first();
 
-                if ($rule) {
-                    $ruleDetail = $mRuleDetail->where([
-                        'md_rule_id'    => $rule->md_rule_id,
-                        'name'          => 'Lupa Absen Masuk'
-                    ])->first();
+                        if ($rule) {
+                            $ruleDetail = $mRuleDetail->where([
+                                'md_rule_id'    => $rule->md_rule_id,
+                                'name'          => 'Lupa Absen Masuk'
+                            ])->first();
 
-                    $amount = abs($ruleDetail->value);
+                            $amount = abs($ruleDetail->value);
 
-                    if ($amount != 0) {
-                        $arr[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "submissiontype"    => $sql->submissiontype,
-                            "submissiondate"    => $sql->submissiondate,
-                            "md_employee_id"    => $sql->md_employee_id,
-                            "amount"            => $amount,
-                            "created_by"        => $rows['data']['updated_by'],
-                            "updated_by"        => $rows['data']['updated_by']
-                        ];
+                            if ($amount != 0) {
+                                $arr[] = [
+                                    "record_id"         => $ID,
+                                    "table"             => $this->table,
+                                    "submissiontype"    => $sql->submissiontype,
+                                    "submissiondate"    => $sql->submissiondate,
+                                    "md_employee_id"    => $sql->md_employee_id,
+                                    "amount"            => $amount,
+                                    "created_by"        => $rows['data']['updated_by'],
+                                    "updated_by"        => $rows['data']['updated_by']
+                                ];
 
-                        $mAllowance->builder->insertBatch($arr);
-                    }
-                }
-            }
-
-            if ($sql->submissiontype === "lupa absen pulang") {
-                $rule = $mRule->where('name', 'Lupa Absen')->first();
-
-                if ($rule) {
-                    $ruleDetail = $mRuleDetail->where([
-                        'md_rule_id' => $rule->md_rule_id,
-                        'name' => 'Lupa Absen Pulang'
-                    ])->first();
-
-                    $amount = abs($ruleDetail->value);
-
-                    if ($amount != 0) {
-                        $arr[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "submissiontype"    => $sql->submissiontype,
-                            "submissiondate"    => $sql->submissiondate,
-                            "md_employee_id"    => $sql->md_employee_id,
-                            "amount"            => $amount,
-                            "created_by"        => $rows['data']['updated_by'],
-                            "updated_by"        => $rows['data']['updated_by']
-                        ];
-
-                        $mAllowance->builder->insertBatch($arr);
-                    }
-                }
-            }
-
-            if ($sql->submissiontype === "datang terlambat") {
-                $rule = $mRule->where('name', 'Terlambat')->first();
-
-                if ($rule) {
-                    $ruleDetail = $mRuleDetail->where('md_rule_id', $rule->md_rule_id)->findAll();
-
-                    $jamMasuk = convertToMinutes(format_time('08:00'));
-                    $pagi = ($jamMasuk + $ruleDetail[0]->condition);
-                    $siang = ($jamMasuk + $ruleDetail[1]->condition);
-                    $jam = convertToMinutes(format_time($sql->startdate));
-
-                    if ($rule->isdetail === 'Y') {
-                        if (getOperationResult($jam, $siang, $ruleDetail[1]->operation) === true) {
-                            $amount = abs($ruleDetail[1]->value);
-                        } else if (getOperationResult($jam, $pagi, $ruleDetail[0]->operation) === true) {
-                            $amount = abs($ruleDetail[0]->value);
+                                $mAllowance->builder->insertBatch($arr);
+                            }
                         }
                     }
 
-                    if ($amount != 0) {
-                        $arr[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "submissiontype"    => $sql->submissiontype,
-                            "submissiondate"    => $sql->submissiondate,
-                            "md_employee_id"    => $sql->md_employee_id,
-                            "amount"            => $amount,
-                            "created_by"        => $rows['data']['updated_by'],
-                            "updated_by"        => $rows['data']['updated_by']
-                        ];
+                    if ($sql->submissiontype === "lupa absen pulang") {
+                        $rule = $mRule->where('name', 'Lupa Absen')->first();
 
-                        $mAllowance->builder->insertBatch($arr);
-                    }
-                }
-            }
+                        if ($rule) {
+                            $ruleDetail = $mRuleDetail->where([
+                                'md_rule_id' => $rule->md_rule_id,
+                                'name' => 'Lupa Absen Pulang'
+                            ])->first();
 
-            if ($sql->submissiontype === "pulang cepat") {
-                $rule = $mRule->where('name', 'Pulang Cepat')->find();
+                            $amount = abs($ruleDetail->value);
 
-                if ($rule) {
-                    $ruleDetail = $mRuleDetail->where('md_rule_id = ' . $rule[0]->md_rule_id)->find();
+                            if ($amount != 0) {
+                                $arr[] = [
+                                    "record_id"         => $ID,
+                                    "table"             => $this->table,
+                                    "submissiontype"    => $sql->submissiontype,
+                                    "submissiondate"    => $sql->submissiondate,
+                                    "md_employee_id"    => $sql->md_employee_id,
+                                    "amount"            => $amount,
+                                    "created_by"        => $rows['data']['updated_by'],
+                                    "updated_by"        => $rows['data']['updated_by']
+                                ];
 
-                    $jamMasuk = convertToMinutes(format_time('08:00'));
-                    $sore = ($jamMasuk + $ruleDetail[0]->condition);
-                    $siang = ($jamMasuk + $ruleDetail[1]->condition);
-                    $jam = convertToMinutes(format_time($sql->startdate));
-
-                    if ($rule[0]->isdetail === 'Y') {
-                        if (getOperationResult($jam, $jamMasuk, $ruleDetail[0]->operation) === true) {
-                            $amount = 0;
-                        } else if (getOperationResult($jam, $siang, $ruleDetail[1]->operation) === true) {
-                            $amount = abs($ruleDetail[1]->value);
-                        } else if (getOperationResult($jam, $sore, $ruleDetail[0]->operation) === true) {
-                            $amount = abs($ruleDetail[0]->value);
+                                $mAllowance->builder->insertBatch($arr);
+                            }
                         }
                     }
 
-                    if ($amount != 0) {
-                        $arr[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "submissiontype"    => $sql->submissiontype,
-                            "submissiondate"    => $sql->submissiondate,
-                            "md_employee_id"    => $sql->md_employee_id,
-                            "amount"            => $amount,
-                            "created_by"        => $rows['data']['updated_by'],
-                            "updated_by"        => $rows['data']['updated_by']
-                        ];
+                    if ($sql->submissiontype === "datang terlambat") {
+                        $rule = $mRule->where('name', 'Terlambat')->first();
 
-                        $mAllowance->builder->insertBatch($arr);
-                    }
-                }
-            }
+                        if ($rule) {
+                            $ruleDetail = $mRuleDetail->where('md_rule_id', $rule->md_rule_id)->findAll();
 
-            if ($sql->submissiontype === "alpa sakit tanpa surat" || $sql->submissiontype === "alpa potong tkh") {
-                $rule = $mRule->where('name', 'Alpa')->find();
+                            $jamMasuk = convertToMinutes(format_time('08:00'));
+                            $pagi = ($jamMasuk + $ruleDetail[0]->condition);
+                            $siang = ($jamMasuk + $ruleDetail[1]->condition);
+                            $jam = convertToMinutes(format_time($sql->startdate));
 
-                if ($rule) {
-                    $ruleDetail = $mRuleDetail->where('md_rule_id = ' . $rule[0]->md_rule_id)->find();
+                            if ($rule->isdetail === 'Y') {
+                                if (getOperationResult($jam, $siang, $ruleDetail[1]->operation) === true) {
+                                    $amount = abs($ruleDetail[1]->value);
+                                } else if (getOperationResult($jam, $pagi, $ruleDetail[0]->operation) === true) {
+                                    $amount = abs($ruleDetail[0]->value);
+                                }
+                            }
 
-                    if ($sql->submissiontype === "alpa sakit tanpa surat") {
-                        $amount = abs($ruleDetail[0]->value);
-                    } else if ($sql->submissiontype === "alpa potong tkh") {
-                        $amount = abs($ruleDetail[1]->value);
-                    }
+                            if ($amount != 0) {
+                                $arr[] = [
+                                    "record_id"         => $ID,
+                                    "table"             => $this->table,
+                                    "submissiontype"    => $sql->submissiontype,
+                                    "submissiondate"    => $sql->submissiondate,
+                                    "md_employee_id"    => $sql->md_employee_id,
+                                    "amount"            => $amount,
+                                    "created_by"        => $rows['data']['updated_by'],
+                                    "updated_by"        => $rows['data']['updated_by']
+                                ];
 
-                    if ($amount != 0) {
-                        $arr[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "submissiontype"    => $sql->submissiontype,
-                            "submissiondate"    => $sql->submissiondate,
-                            "md_employee_id"    => $sql->md_employee_id,
-                            "amount"            => $amount,
-                            "created_by"        => $rows['data']['updated_by'],
-                            "updated_by"        => $rows['data']['updated_by']
-                        ];
-
-                        $mAllowance->builder->insertBatch($arr);
-                    }
-                }
-            }
-
-            if ($sql->submissiontype === "ijin") {
-                $rule = $mRule->where(['name' => 'Ijin', 'isactive' => 'Y'])->first();
-
-                if ($rule->condition === "")
-                    $amount = abs($rule->value);
-
-                $range = getDatesFromRange($sql->startdate, $sql->enddate);
-
-                $arr = [];
-
-                if ($amount != 0) {
-                    foreach ($range as $date) {
-                        $arr[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "submissiontype"    => $sql->submissiontype,
-                            "submissiondate"    => $date,
-                            "md_employee_id"    => $sql->md_employee_id,
-                            "amount"            => $amount,
-                            "created_by"        => $rows['data']['updated_by'],
-                            "updated_by"        => $rows['data']['updated_by']
-                        ];
+                                $mAllowance->builder->insertBatch($arr);
+                            }
+                        }
                     }
 
-                    $mAllowance->builder->insertBatch($arr);
-                  }
+                    if ($sql->submissiontype === "pulang cepat") {
+                        $rule = $mRule->where('name', 'Pulang Cepat')->find();
+
+                        if ($rule) {
+                            $ruleDetail = $mRuleDetail->where('md_rule_id = ' . $rule[0]->md_rule_id)->find();
+
+                            $jamMasuk = convertToMinutes(format_time('08:00'));
+                            $sore = ($jamMasuk + $ruleDetail[0]->condition);
+                            $siang = ($jamMasuk + $ruleDetail[1]->condition);
+                            $jam = convertToMinutes(format_time($sql->startdate));
+
+                            if ($rule[0]->isdetail === 'Y') {
+                                if (getOperationResult($jam, $jamMasuk, $ruleDetail[0]->operation) === true) {
+                                    $amount = 0;
+                                } else if (getOperationResult($jam, $siang, $ruleDetail[1]->operation) === true) {
+                                    $amount = abs($ruleDetail[1]->value);
+                                } else if (getOperationResult($jam, $sore, $ruleDetail[0]->operation) === true) {
+                                    $amount = abs($ruleDetail[0]->value);
+                                }
+                            }
+
+                            if ($amount != 0) {
+                                $arr[] = [
+                                    "record_id"         => $ID,
+                                    "table"             => $this->table,
+                                    "submissiontype"    => $sql->submissiontype,
+                                    "submissiondate"    => $sql->submissiondate,
+                                    "md_employee_id"    => $sql->md_employee_id,
+                                    "amount"            => $amount,
+                                    "created_by"        => $rows['data']['updated_by'],
+                                    "updated_by"        => $rows['data']['updated_by']
+                                ];
+
+                                $mAllowance->builder->insertBatch($arr);
+                            }
+                        }
+                    }
+
+                    if ($sql->submissiontype === "alpa sakit tanpa surat" || $sql->submissiontype === "alpa potong tkh") {
+                        $rule = $mRule->where('name', 'Alpa')->find();
+
+                        if ($rule) {
+                            $ruleDetail = $mRuleDetail->where('md_rule_id = ' . $rule[0]->md_rule_id)->find();
+
+                            if ($sql->submissiontype === "alpa sakit tanpa surat") {
+                                $amount = abs($ruleDetail[0]->value);
+                            } else if ($sql->submissiontype === "alpa potong tkh") {
+                                $amount = abs($ruleDetail[1]->value);
+                            }
+
+                            if ($amount != 0) {
+                                $arr[] = [
+                                    "record_id"         => $ID,
+                                    "table"             => $this->table,
+                                    "submissiontype"    => $sql->submissiontype,
+                                    "submissiondate"    => $sql->submissiondate,
+                                    "md_employee_id"    => $sql->md_employee_id,
+                                    "amount"            => $amount,
+                                    "created_by"        => $rows['data']['updated_by'],
+                                    "updated_by"        => $rows['data']['updated_by']
+                                ];
+
+                                $mAllowance->builder->insertBatch($arr);
+                            }
+                        }
+                    }
+
+                    if ($sql->submissiontype === "ijin") {
+                        $rule = $mRule->where(['name' => 'Ijin', 'isactive' => 'Y'])->first();
+
+                        if ($rule->condition === "")
+                            $amount = abs($rule->value);
+
+                        $range = getDatesFromRange($sql->startdate, $sql->enddate);
+
+                        $arr = [];
+
+                        if ($amount != 0) {
+                            foreach ($range as $date) {
+                                $arr[] = [
+                                    "record_id"         => $ID,
+                                    "table"             => $this->table,
+                                    "submissiontype"    => $sql->submissiontype,
+                                    "submissiondate"    => $date,
+                                    "md_employee_id"    => $sql->md_employee_id,
+                                    "amount"            => $amount,
+                                    "created_by"        => $rows['data']['updated_by'],
+                                    "updated_by"        => $rows['data']['updated_by']
+                                ];
+                            }
+
+                            $mAllowance->builder->insertBatch($arr);
+                        }
+                    }
                 }
             }
         }
