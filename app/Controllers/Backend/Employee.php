@@ -64,6 +64,8 @@ class Employee extends BaseController
 
     public function showAll()
     {
+        $mAccess = new M_AccessMenu($this->request);
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -72,10 +74,38 @@ class Employee extends BaseController
             $sort = $this->model->order;
             $search = $this->model->column_search;
 
-            $arrEmployee = $this->model->getChartEmployee($this->session->get("md_employee_id"));
-            $where['md_employee.md_employee_id'] = [
-                'value'     => $arrEmployee
-            ];
+            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+            $arrEmployee = $this->model->getChartEmployee($this->session->get('md_employee_id'));
+
+            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                $arrBranch = $arrAccess["branch"];
+                $arrDiv = $arrAccess["division"];
+
+                $arrEmpBased = $this->model->getEmployeeBased($arrBranch, $arrDiv);
+
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrEmpBased
+                    ];
+                } else {
+                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+            } else {
+                $where['md_employee.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
+            }
 
             $data = [];
 
