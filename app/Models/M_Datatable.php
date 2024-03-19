@@ -50,7 +50,7 @@ class M_Datatable extends Model
                     $this->builder->where($value);
                 }
 
-                if (is_string($key) && is_string($value)) {
+                if (is_string($key) && (is_string($value) || is_integer($value))) {
                     $this->builder->where($key, $value);
                 }
 
