@@ -213,19 +213,27 @@ class M_Employee extends Model
 		$employee = [];
 
 		if (!empty($id)) {
-			$sql = "SELECT e.md_employee_id
-				FROM md_employee e
-				LEFT JOIN md_employee_division ed ON ed.md_employee_id = e.md_employee_id
-				LEFT JOIN md_division d ON d.md_division_id = ed.md_division_id
-				WHERE e.isactive = 'Y'
-				AND e.md_status_id NOT IN (100004)
-				AND (d.md_division_id IN (SELECT v.md_division_id 
-					FROM md_employee em
-					LEFT JOIN md_employee_division v ON v.md_employee_id = em.md_employee_id
-					WHERE em.superior_id = " . $id . ")
-				OR e.md_employee_id = " . $id . ")
-				ORDER BY d.name, e.fullname ASC";
+			$row = $this->find($id);
 
+			$sql = "SELECT e.md_employee_id
+					FROM md_employee e
+					LEFT JOIN md_employee_division ed ON ed.md_employee_id = e.md_employee_id
+					LEFT JOIN md_division d ON d.md_division_id = ed.md_division_id
+					WHERE e.isactive = 'Y'
+					AND e.md_status_id NOT IN (100004)";
+
+			if ($row->getLevellingId() == 100004) {
+				$sql .= "AND (e.superior_id = " . $id . "
+					OR e.md_employee_id = " . $id . ")";
+			} else {
+				$sql .= "AND (d.md_division_id IN (SELECT v.md_division_id 
+							FROM md_employee em
+							LEFT JOIN md_employee_division v ON v.md_employee_id = em.md_employee_id
+							WHERE em.superior_id = " . $id . ")
+						OR e.md_employee_id = " . $id . ")";
+			}
+
+			$sql .= "ORDER BY d.name, e.fullname ASC";
 			$result = $this->db->query($sql)->getResult();
 
 			foreach ($result as $row) {
@@ -256,7 +264,8 @@ class M_Employee extends Model
 		return $arr;
 	}
 
-	public function getEmployee($branchId, $divisionId) {
+	public function getEmployee($branchId, $divisionId)
+	{
 		$this->builder->join('md_employee_branch', 'md_employee_branch.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
 		$this->builder->join('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
 		$this->builder->select($this->table . '.*,' .
