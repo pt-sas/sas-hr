@@ -101,10 +101,12 @@ class Employee extends BaseController
                 } else {
                     $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
                 }
-            } else {
+            } else if (!empty($this->session->get('md_employee_id'))) {
                 $where['md_employee.md_employee_id'] = [
                     'value'     => $arrEmployee
                 ];
+            } else {
+                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $data = [];
