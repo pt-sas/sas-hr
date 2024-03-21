@@ -98,17 +98,18 @@ class Realization extends BaseController
                 } else if (!$this->validation->run($post, 'realisasi_not_agree') && $isAgree === 'N') {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $this->model = new M_AbsentDetail($this->request);
-                    $this->entity = new \App\Entities\AbsentDetail();
+                    if ($isAgree === $agree) {
+                        $this->model = new M_AbsentDetail($this->request);
+                        $this->entity = new \App\Entities\AbsentDetail();
 
-                    if ($isAgree === 'Y') {
                         $line = $this->model->find($post['id']);
 
                         $this->entity->isagree = $isAgree;
                         $response = $this->save();
                     }
 
-                    if ($isAgree === 'N') {
+                    if ($isAgree === $notAgree) {
+                        $this->model = new M_AbsentDetail($this->request);
                         $line = $this->model->find($post['foreignkey']);
 
                         $this->model = new M_Absent($this->request);
@@ -119,13 +120,16 @@ class Realization extends BaseController
                         /**
                          * Insert Pengajuan baru
                          */
+                        $necessary = '';
                         if ($post['submissiontype'] === 'ijin') {
-                            $this->entity->setNecessary('IJ');
+                            $necessary = 'IJ';
+                            $this->entity->setNecessary($necessary);
                             $this->entity->setSubmissionType($post['submissiontype']);
                         }
 
                         if ($post['submissiontype'] === 'alpa') {
-                            $this->entity->setNecessary('AL');
+                            $necessary = 'AL';
+                            $this->entity->setNecessary($necessary);
                             $this->entity->setSubmissionType('alpa');
                         }
 
@@ -141,10 +145,12 @@ class Realization extends BaseController
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
                         $post['submissiondate'] = $this->entity->getSubmissionDate();
-                        $post['necessary'] = $this->entity->getNecessary();
+                        $post['necessary'] = $necessary;
 
                         $docNo = $this->model->getInvNumber("submissiontype", $post['submissiontype'], $post);
                         $this->entity->setDocumentNo($docNo);
+                        $this->isNewRecord = true;
+
                         $response = $this->save();
 
                         //* Foreignkey id 
@@ -162,9 +168,12 @@ class Realization extends BaseController
                         //* Foreignkey id
                         $lineID = $this->insertID;
 
+
                         /**
                          * Update Pengajuan lama
                          */
+                        $this->isNewRecord = false;
+
                         $this->model = new M_AbsentDetail($this->request);
                         $this->entity = new \App\Entities\AbsentDetail();
                         $this->entity->isagree = $isAgree;
@@ -208,7 +217,9 @@ class Realization extends BaseController
                 $response = message('error', false, $e->getMessage());
             }
 
-            return $this->response->setJSON($response);
+            // return $this->response->setJSON($this->entity);
+
+            return json_encode($response);
         }
     }
 

@@ -242,7 +242,6 @@ class Employee extends BaseController
                     $list[0]->image = "";
                 }
 
-
                 if (!empty($list[0]->getReligionId())) {
                     $rowFeligion = $mReligion->find($list[0]->getReligionId());
                     $list = $this->field->setDataSelect($mReligion->table, $list, $mReligion->primaryKey, $rowFeligion->getReligionId(), $rowFeligion->getName());
@@ -404,27 +403,56 @@ class Employee extends BaseController
             $response = [];
 
             try {
-                $arrEmployee = $this->model->getChartEmployee($this->session->get("md_employee_id"));
-                $access = $mAccess->getAccess($this->session->get("sys_user_id"));
+                $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+                $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+                $arrEmployee = $this->model->getChartEmployee($this->session->get('md_employee_id'));
 
                 if (isset($post['search'])) {
                     if (!empty($post['name'])) {
-                        if ($access && isset($access["branch"]) && isset($access["division"])) {
-                            $arr = $this->model->getEmployeeBased($access["branch"], $access["division"]);
+                        if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                            $arrBranch = $arrAccess["branch"];
+                            $arrDiv = $arrAccess["division"];
 
-                            if ($arrEmployee) {
-                                $arr = array_unique(array_merge($arr, $arrEmployee));
+                            $arrEmpBased = $this->model->getEmployeeBased($arrBranch, $arrDiv);
+
+                            if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                                $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                                 $list = $this->model->where('isactive', 'Y')
-                                    ->whereIn('md_employee_id', $arr)
+                                    ->whereIn('md_employee_id', $arrMerge)
+                                    ->like('value', $post['search'])
+                                    ->orderBy('value', 'ASC')
+                                    ->findAll();
+                            } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                                $list = $this->model->where('isactive', 'Y')
+                                    ->whereIn('md_employee_id', $arrEmployee)
+                                    ->like('value', $post['search'])
+                                    ->orderBy('value', 'ASC')
+                                    ->findAll();
+                            } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                                $list = $this->model->where('isactive', 'Y')
+                                    ->whereIn('md_employee_id', $arrEmpBased)
+                                    ->like('value', $post['search'])
                                     ->orderBy('value', 'ASC')
                                     ->findAll();
                             } else {
                                 $list = $this->model->where('isactive', 'Y')
-                                    ->whereIn('md_employee_id', $arr)
+                                    ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
+                                    ->like('value', $post['search'])
                                     ->orderBy('value', 'ASC')
                                     ->findAll();
                             }
+                        } else if (!empty($this->session->get('md_employee_id'))) {
+                            $list = $this->model->where('isactive', 'Y')
+                                ->whereIn('md_employee_id', $arrEmployee)
+                                ->like('value', $post['search'])
+                                ->orderBy('value', 'ASC')
+                                ->findAll();
+                        } else {
+                            $list = $this->model->where('isactive', 'Y')
+                                ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
+                                ->orderBy('value', 'ASC')
+                                ->findAll();
                         }
                     } else {
                         $list = $this->model->where('isactive', 'Y')
@@ -433,22 +461,45 @@ class Employee extends BaseController
                             ->findAll();
                     }
                 } else if (!empty($post['name'])) {
-                    if ($access && isset($access["branch"]) && isset($access["division"])) {
-                        $arr = $this->model->getEmployeeBased($access["branch"], $access["division"]);
+                    if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                        $arrBranch = $arrAccess["branch"];
+                        $arrDiv = $arrAccess["division"];
 
-                        if ($arrEmployee) {
-                            $arr = array_unique(array_merge($arr, $arrEmployee));
+                        $arrEmpBased = $this->model->getEmployeeBased($arrBranch, $arrDiv);
+
+                        if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                            $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                             $list = $this->model->where('isactive', 'Y')
-                                ->whereIn('md_employee_id', $arr)
+                                ->whereIn('md_employee_id', $arrMerge)
+                                ->orderBy('value', 'ASC')
+                                ->findAll();
+                        } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                            $list = $this->model->where('isactive', 'Y')
+                                ->whereIn('md_employee_id', $arrEmployee)
+                                ->orderBy('value', 'ASC')
+                                ->findAll();
+                        } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                            $list = $this->model->where('isactive', 'Y')
+                                ->whereIn('md_employee_id', $arrEmpBased)
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         } else {
                             $list = $this->model->where('isactive', 'Y')
-                                ->whereIn('md_employee_id', $arr)
+                                ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         }
+                    } else if (!empty($this->session->get('md_employee_id'))) {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereIn('md_employee_id', $arrEmployee)
+                            ->orderBy('value', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
+                            ->orderBy('value', 'ASC')
+                            ->findAll();
                     }
                 } else {
                     $list = $this->model->where('isactive', 'Y')

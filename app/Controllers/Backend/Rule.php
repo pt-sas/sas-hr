@@ -55,6 +55,8 @@ class Rule extends BaseController
                 $row[] = $value->name;
                 $row[] = $value->condition;
                 $row[] = $value->value;
+                $row[] = $value->min;
+                $row[] = $value->max;
                 $row[] = $value->menu_url;
                 $row[] = $value->priority;
                 $row[] = active($value->isdetail);

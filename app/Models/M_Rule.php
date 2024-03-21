@@ -18,7 +18,9 @@ class M_Rule extends Model
 		'isdetail',
 		'isactive',
 		'created_by',
-		'updated_by'
+		'updated_by',
+		'min',
+		'max'
 	];
 	protected $useTimestamps        = true;
 	protected $returnType 			= 'App\Entities\Rule';
@@ -35,6 +37,8 @@ class M_Rule extends Model
 		'md_rule.name',
 		'md_rule.condition',
 		'md_rule.value',
+		'md_rule.min',
+		'md_rule.max',
 		'md_rule.menu_id',
 		'md_rule.priority',
 		'md_rule.isdetail',
@@ -44,6 +48,8 @@ class M_Rule extends Model
 		'md_rule.name',
 		'md_rule.condition',
 		'md_rule.value',
+		'md_rule.min',
+		'md_rule.max',
 		'md_rule.menu_id',
 		'md_rule.priority',
 		'md_rule.isdetail',

@@ -7,6 +7,9 @@ use App\Models\M_Absent;
 use App\Models\M_AccessMenu;
 use App\Models\M_Employee;
 use App\Models\M_AbsentDetail;
+use App\Models\M_Holiday;
+use App\Models\M_Attendance;
+use App\Models\M_Rule;
 use Config\Services;
 
 class SickLeave extends BaseController
@@ -141,6 +144,9 @@ class SickLeave extends BaseController
     public function create()
     {
         $mEmployee = new M_Employee($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mAttendance = new M_Attendance($this->request);
+        $mRule = new M_Rule($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -182,8 +188,46 @@ class SickLeave extends BaseController
                     $post['image3'] = $img3_name;
                 }
 
+                $holidays = $mHoliday->getHolidayDate();
+                $startDate = $post['startdate'];
+                $nik = $post['nik'];
+                $date = $post['submissiondate'];
+
+                $rule = $mRule->where([
+                    'name'      => 'Sakit',
+                    'isactive'  => 'Y'
+                ])->first();
+
+                $countDays = 1;
+
+                if ($rule)
+                    if (!empty($rule->min))
+                        $countDays = $rule->min;
+
+                $prevDate = lastWorkingDays($date, $holidays, $countDays);
+                $lastDate = end($prevDate);
+
+                $att = $mAttendance->where([
+                    'nik'       => $nik,
+                    'date'      => $startDate,
+                    'absent'    => 'Y'
+                ])->first();
+
+                $trx = $this->modelDetail->getAbsentDetail([
+                    'trx_absent.nik'            => $nik,
+                    'trx_absent_detail.date'    => $startDate,
+                    'trx_absent.docstatus'      => $this->DOCSTATUS_Completed,
+                    'trx_absent_detail.isagree' => 'Y'
+                ])->getRow();
+
                 if (!$this->validation->run($post, 'sakit')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
+                } else if ($startDate < $lastDate && ($att || is_null($att))) {
+                    $response = message('success', false, 'Tanggal mulai sudah melewati ketentuan, maksimal tanggal mulai : ' . format_dmy($lastDate, '-'));
+                } else if ($startDate = $lastDate && $att && !is_null($trx)) {
+                    $response = message('success', false, 'Sudah ada pengajuan : ' . $trx->documentno);
+                } else if ($startDate = $lastDate && is_null($att) && is_null($trx)) {
+                    $response = message('success', false, 'Tidak bisa mengajukan pada tanggal mulai : ' . format_dmy($lastDate, '-'));
                 } else {
                     $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
 

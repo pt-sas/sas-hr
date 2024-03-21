@@ -371,3 +371,18 @@ function statusRealize($str)
     else
         return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
 }
+
+function lastWorkingDays($date, $holidays, $countDays, $backwards = true)
+{
+    $workingDays = [];
+
+    do {
+        $direction = $backwards ? 'last' : 'next';
+        $date = date("Y-m-d", strtotime("$direction weekday", strtotime($date)));
+
+        if (!in_array($date, $holidays))
+            $workingDays[] = $date;
+    } while (count($workingDays) < $countDays);
+
+    return $workingDays;
+}

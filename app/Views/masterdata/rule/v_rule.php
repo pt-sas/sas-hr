@@ -12,6 +12,8 @@
                 <th>Nama Rule</th>
                 <th>Kondisi</th>
                 <th>Value</th>
+                <th>Min</th>
+                <th>Max</th>
                 <th>Menu</th>
                 <th>Priority</th>
                 <th>Detail</th>

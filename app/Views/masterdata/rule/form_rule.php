@@ -48,7 +48,19 @@
                 </select>
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="min">Min </label>
+                <input type="text" class="form-control number" id="min" name="min">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="max">Max </label>
+                <input type="text" class="form-control number" id="max" name="max">
+            </div>
+        </div>
+        <div class="col-md-2 mt-4">
             <div class="form-check">
                 <label class="form-check-label">
                     <input type="checkbox" class="form-check-input active" id="isactive" name="isactive">

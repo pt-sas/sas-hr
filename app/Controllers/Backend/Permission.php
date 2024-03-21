@@ -262,4 +262,30 @@ class Permission extends BaseController
             return $this->response->setJSON($response);
         }
     }
+
+    public function tableLine($set = null, $detail = [])
+    {
+        $table = [];
+
+        //? Update
+        if (!empty($set) && count($detail) > 0) {
+            foreach ($detail as $row) :
+                if (!empty($row->ref_absent_detail_id)) {
+                    $line = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    $doc = $line->documentno;
+                } else {
+                    $doc = "";
+                }
+
+                $table[] = [
+                    $row->lineno,
+                    format_dmy($row->date, '-'),
+                    $doc,
+                    statusRealize($row->isagree)
+                ];
+            endforeach;
+        }
+
+        return json_encode($table);
+    }
 }
