@@ -419,17 +419,24 @@ class M_Absent extends Model
                     if ($rule->condition === "")
                         $amount = abs($rule->value);
 
-                    if ($amount != 0) {
-                        $arr[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "submissiontype"    => $sql->submissiontype,
-                            "submissiondate"    => $sql->submissiondate,
-                            "md_employee_id"    => $sql->md_employee_id,
-                            "amount"            => $amount,
-                            "created_by"        => $rows['data']['updated_by'],
-                            "updated_by"        => $rows['data']['updated_by']
-                        ];
+                    $range = $mAbsentDetail->where([
+                        'trx_absent_id' => $sql->trx_absent_id,
+                        'isagree'       => 'Y'
+                    ])->orderBy('lineno', 'ASC')->findAll();
+
+                    if ($amount != 0 && $range) {
+                        foreach ($range as $row) {
+                            $arr[] = [
+                                "record_id"         => $ID,
+                                "table"             => $this->table,
+                                "submissiontype"    => $sql->submissiontype,
+                                "submissiondate"    => $row->date,
+                                "md_employee_id"    => $sql->md_employee_id,
+                                "amount"            => $amount,
+                                "created_by"        => $rows['data']['updated_by'],
+                                "updated_by"        => $rows['data']['updated_by']
+                            ];
+                        }
 
                         $mAllowance->builder->insertBatch($arr);
                     }

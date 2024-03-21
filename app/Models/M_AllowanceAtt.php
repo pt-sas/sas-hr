@@ -37,15 +37,19 @@ class M_AllowanceAtt extends Model
 
     public function getAllowance($where, $order = null)
     {
-        $sql = $this->table . '.*,
-                trx_absent.documentno,
-                trx_absent.reason';
+        $this->builder->selectSum($this->table . '.amount');
+        $this->builder->select($this->table . '.submissiondate,' .
+            $this->table . '.md_employee_id');
 
-        $this->builder->select($sql);
         $this->builder->join('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.record_id AND table = "trx_absent"', 'left');
 
         if ($where)
             $this->builder->where($where);
+
+        $this->builder->groupBy([
+            $this->table . '.submissiondate',
+            $this->table . '.md_employee_id'
+        ]);
 
         if ($order)
             $this->builder->orderBy($order);

@@ -407,7 +407,7 @@ class AllowanceAtt extends BaseController
         header('Cache-Control: max-age=0');
         $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
         $write->save('php://output');
-
+        exit();
         // return json_encode($dateRange);
     }
 }
