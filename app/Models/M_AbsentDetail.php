@@ -46,4 +46,16 @@ class M_AbsentDetail extends Model
 
         return $this->builder->get();
     }
+
+    public function getAbsentDetail($where)
+    {
+        $this->builder->select($this->table . '.*,
+            trx_absent.trx_absent_id,
+            trx_absent.nik,
+            trx_absent.documentno');
+
+        $this->builder->join('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.trx_absent_id', 'left');
+        $this->builder->where($where);
+        return $this->builder->get();
+    }
 }
