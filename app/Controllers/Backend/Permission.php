@@ -8,7 +8,9 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AbsentDetail;
 use App\Models\M_AccessMenu;
-use App\Models\M_AllowanceAtt;
+use App\Models\M_Holiday;
+use App\Models\M_Attendance;
+use App\Models\M_Rule;
 
 class Permission extends BaseController
 {
@@ -76,27 +78,39 @@ class Permission extends BaseController
             /**
              * Hak akses
              */
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get("md_employee_id"));
-            $arrEmployee = implode(",", $arrEmployee);
+            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
-            $access = $mAccess->getAccess($this->session->get("sys_user_id"));
+            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                $arrBranch = $arrAccess["branch"];
+                $arrDiv = $arrAccess["division"];
 
-            if ($access && isset($access["branch"]) && isset($access["division"])) {
-                $where['trx_absent.md_branch_id'] = [
-                    'value'     => $access["branch"]
-                ];
+                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
-                $where['trx_absent.md_division_id'] = [
-                    'value'     => $access["division"]
-                ];
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                if ($arrEmployee)
-                    $where = [
-                        '(trx_absent.created_by =' . $this->session->get("sys_user_id") . ' OR trx_absent.md_employee_id IN (' . $arrEmployee . '))'
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrMerge
                     ];
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrEmpBased
+                    ];
+                } else {
+                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+            } else if (!empty($this->session->get('md_employee_id'))) {
+                $where['trx_absent.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
             } else {
-                $where['trx_absent.md_branch_id'] = "";
-                $where['trx_absent.md_division_id'] = "";
+                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin;
@@ -142,6 +156,10 @@ class Permission extends BaseController
 
     public function create()
     {
+        $mHoliday = new M_Holiday($this->request);
+        $mAttendance = new M_Attendance($this->request);
+        $mRule = new M_Rule($this->request);
+
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
@@ -151,8 +169,46 @@ class Permission extends BaseController
             try {
                 $this->entity->fill($post);
 
+                $holidays = $mHoliday->getHolidayDate();
+                $startDate = $post['startdate'];
+                $nik = $post['nik'];
+                $date = $post['submissiondate'];
+
+                $rule = $mRule->where([
+                    'name'      => 'Sakit',
+                    'isactive'  => 'Y'
+                ])->first();
+
+                $countDays = 1;
+
+                if ($rule)
+                    if (!empty($rule->min))
+                        $countDays = $rule->min;
+
+                $prevDate = lastWorkingDays($date, $holidays, $countDays);
+                $lastDate = end($prevDate);
+
+                $att = $mAttendance->where([
+                    'nik'       => $nik,
+                    'date'      => $startDate,
+                    'absent'    => 'Y'
+                ])->first();
+
+                $trx = $this->modelDetail->getAbsentDetail([
+                    'trx_absent.nik'            => $nik,
+                    'trx_absent_detail.date'    => $startDate,
+                    'trx_absent.docstatus'      => $this->DOCSTATUS_Completed,
+                    'trx_absent_detail.isagree' => 'Y'
+                ])->getRow();
+
                 if (!$this->validation->run($post, 'absent')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
+                } else if ($startDate < $lastDate && ($att || is_null($att))) {
+                    $response = message('success', false, 'Tanggal mulai sudah melewati ketentuan, maksimal tanggal mulai : ' . format_dmy($lastDate, '-'));
+                } else if ($startDate = $lastDate && $att && !is_null($trx)) {
+                    $response = message('success', false, 'Sudah ada pengajuan : ' . $trx->documentno);
+                } else if ($startDate = $lastDate && is_null($att) && is_null($trx)) {
+                    $response = message('success', false, 'Tidak bisa mengajukan pada tanggal mulai : ' . format_dmy($lastDate, '-'));
                 } else {
 
                     if ($this->isNew()) {
