@@ -207,8 +207,8 @@ class Permission extends BaseController
                     $response = message('success', false, 'Tanggal mulai sudah melewati ketentuan, maksimal tanggal mulai : ' . format_dmy($lastDate, '-'));
                 } else if ($startDate = $lastDate && $att && !is_null($trx)) {
                     $response = message('success', false, 'Sudah ada pengajuan : ' . $trx->documentno);
-                } else if ($startDate = $lastDate && is_null($att) && is_null($trx)) {
-                    $response = message('success', false, 'Tidak bisa mengajukan pada tanggal mulai : ' . format_dmy($lastDate, '-'));
+                    // } else if (is_null($att) && is_null($trx)) {
+                    // $response = message('success', false, 'Tidak bisa mengajukan pada tanggal mulai : ' . format_dmy($lastDate, '-'));
                 } else {
 
                     if ($this->isNew()) {
