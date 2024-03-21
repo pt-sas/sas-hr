@@ -19,7 +19,14 @@ class ListAbsent extends BaseController
 
     public function index()
     {
-        return $this->template->render('generate/listabsent/v_list_absent');
+        $start_date = format_dmy(date('Y-m-d', strtotime('- 1 days')), "-");
+        $end_date = format_dmy(date('Y-m-d'), "-");
+
+        $data = [
+            'date_range'            => $start_date . ' - ' . $end_date,
+            'toolbarRealization'    => $this->template->toolbarButtonProcess()
+        ];
+        return $this->template->render('generate/listabsent/v_list_absent', $data);
     }
 
     public function showAll()
