@@ -84,9 +84,9 @@ class ImportAttendance extends BaseController
                         //     $absent = $Kolomabsent;
                         // } else {
                         if ($clock_in == null && $clock_out == null) {
-                            $absent = 'Y';
-                        } else {
                             $absent = 'N';
+                        } else {
+                            $absent = 'Y';
                         }
                         // }
 
