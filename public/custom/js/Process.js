@@ -578,6 +578,10 @@ _tableReport = $(".table_report")
         targets: 1,
         width: "10%",
       },
+      {
+        targets: -1,
+        width: "20%",
+      },
     ],
     order: [],
     displayLength: -1,
@@ -5555,11 +5559,10 @@ function getHolidayDate() {
   return array;
 }
 
-
 $(".import_file").click(function (evt) {
   let url = CURRENT_URL + IMPORT;
   let formData = new FormData();
-  let file = $('#file')[0].files[0];
+  let file = $("#file")[0].files[0];
   formData.append("file", file);
 
   $.ajax({
@@ -5567,24 +5570,24 @@ $(".import_file").click(function (evt) {
     type: "POST",
     data: formData,
     processData: false,
-      contentType: false,
-      cache: false,
-      dataType: "JSON",
-      success: function (result) {
-        console.log(result);
-        if (result[0].success) {
-          Toast.fire({
-            type: "success",
-            title: result[0].message,
-          });
-        $('#file').val('');
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    success: function (result) {
+      console.log(result);
+      if (result[0].success) {
+        Toast.fire({
+          type: "success",
+          title: result[0].message,
+        });
+        $("#file").val("");
       }
-        if (result[0].error) {
-          Toast.fire({
-            type: "error",
-            title: result[0].message,
-          })
-        }
-      },
-  })
-})
+      if (result[0].error) {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+      }
+    },
+  });
+});
