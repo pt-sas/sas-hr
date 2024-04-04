@@ -303,17 +303,15 @@ class Realization extends BaseController
             $holdAgree = 'H';
 
             $isAgree = $post['isagree'];
-            $today = date('Y-m-d');
-            $todayTime = date('Y-m-d H:i:s');
 
             try {
                 if (!$this->validation->run($post, 'realisasi_lembur_agree') && $isAgree === 'Y') {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $mOvertimeDetail = new M_OvertimeDetail($this->request);
-                    $oEntityDetail = new \App\Entities\OvertimeDetail();
+                    $this->model = new M_OvertimeDetail($this->request);
+                    $this->entity = new \App\Entities\OvertimeDetail();
 
-                    $line = $mOvertimeDetail->find($post['id']);
+                    $line = $this->model->find($post['id']);
 
                     if ($isAgree === $agree) {
 
@@ -321,26 +319,27 @@ class Realization extends BaseController
                         $enddate =   date('Y-m-d', strtotime($post["enddate"])) . " " . $post['endtime'];
                         $ovt = $this->getHourOvertime($startdate, $enddate);
 
-                        $oEntityDetail->trx_overtime_detail_id = $post['id'];
-                        $oEntityDetail->startdate = $startdate;
-                        $oEntityDetail->enddate = $enddate;
-                        $oEntityDetail->status = $isAgree;
-                        $oEntityDetail->overtime_expense = $ovt['expense'];
-                        $oEntityDetail->overtime_balance = $ovt['balance'];
-                        $oEntityDetail->total = $ovt['total'];
+                        $this->entity->trx_overtime_detail_id = $post['id'];
+                        $this->entity->startdate = $startdate;
+                        $this->entity->enddate = $enddate;
+                        $this->entity->status = $isAgree;
+                        $this->entity->overtime_expense = $ovt['expense'];
+                        $this->entity->overtime_balance = $ovt['balance'];
+                        $this->entity->total = $ovt['total'];
 
-                        $response = $mOvertimeDetail->save($oEntityDetail);
+                        $response = $this->save();
                     }
 
                     if ($isAgree === $notAgree) {
 
-                        $oEntityDetail->trx_overtime_detail_id = $post['id'];
-                        $oEntityDetail->status = $isAgree;
+                        $this->entity->trx_overtime_detail_id = $post['id'];
+                        $this->entity->description = $post['description'];
+                        $this->entity->status = $isAgree;
 
-                        $response = $mOvertimeDetail->save($oEntityDetail);
+                        $response = $this->save();
                     }
 
-                    $list = $mOvertimeDetail->where([
+                    $list = $this->model->where([
                         'status'       => $holdAgree,
                         'trx_overtime_id' => $line->trx_overtime_id
                     ])->first();
