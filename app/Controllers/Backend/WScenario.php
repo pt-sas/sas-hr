@@ -330,6 +330,21 @@ class WScenario extends BaseController
                     $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                 }
             }
+
+            if ($table === 'trx_overtime') {
+                $mEmp = new M_Employee($this->request);
+                $employee = $mEmp->find($trx->md_employee_id);
+
+                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
+
+                if ($this->sys_wfscenario_id) {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
+                    $this->entity->setWfScenarioId($this->sys_wfscenario_id);
+                    $isWfscenario = true;
+                } else {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                }
+            }
         }
 
         $this->entity->setUpdatedBy($session->get('sys_user_id'));
