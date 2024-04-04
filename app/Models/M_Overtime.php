@@ -31,25 +31,25 @@ class M_Overtime extends Model
         '', // Hide column
         '', // Number column
         'trx_overtime.documentno',
-                'md_employee.fullname',
-                'md_branch.name',
-                'md_division.name',
-                'trx_overtime.submissiondate',
-                'trx_overtime.startdate',
-                'trx_overtime.description',
-                'trx_overtime.docstatus',
-                'sys_user.name'
+        'md_employee.fullname',
+        'md_branch.name',
+        'md_division.name',
+        'trx_overtime.submissiondate',
+        'trx_overtime.startdate',
+        'trx_overtime.description',
+        'trx_overtime.docstatus',
+        'sys_user.name'
     ];
     protected $column_search        = [
         'trx_overtime.documentno',
-                'md_employee.fullname',
-                'md_branch.name',
-                'md_division.name',
-                'trx_overtime.submissiondate',
-                'trx_overtime.startdate',
-                'trx_overtime.description',
-                'trx_overtime.docstatus',
-                'sys_user.name'
+        'md_employee.fullname',
+        'md_branch.name',
+        'md_division.name',
+        'trx_overtime.submissiondate',
+        'trx_overtime.startdate',
+        'trx_overtime.description',
+        'trx_overtime.docstatus',
+        'sys_user.name'
     ];
     protected $order                = ['documentno' => 'ASC'];
     protected $request;
@@ -77,6 +77,25 @@ class M_Overtime extends Model
         return $sql;
     }
 
+    public function getSelectDetail()
+    {
+        $sql = $this->table . '.*,
+        trx_overtime_detail.trx_overtime_detail_id,
+        trx_overtime_detail.md_employee_id,
+        md_employee.fullname as employee_name,
+        trx_overtime_detail.startdate as startdate_line,
+        trx_overtime_detail.enddate as enddate_line,
+        trx_overtime_detail.description,
+        trx_overtime_detail.overtime_balance,
+        trx_overtime_detail.overtime_expense,
+        trx_overtime_detail.total,
+        trx_overtime_detail.status,
+        md_branch.name as branch_name,
+        md_division.name as division_name';
+
+        return $sql;
+    }
+
     public function getJoin()
     {
         $sql = [
@@ -84,6 +103,18 @@ class M_Overtime extends Model
             $this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
             $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
             $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left')
+        ];
+
+        return $sql;
+    }
+
+    public function getJoinDetail()
+    {
+        $sql = [
+            $this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
+            $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
+            $this->setDataJoin('trx_overtime_detail', 'trx_overtime_detail.trx_overtime_id = ' . $this->table . '.trx_overtime_id', 'left'),
+            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = trx_overtime_detail.md_employee_id', 'left')
         ];
 
         return $sql;
@@ -126,15 +157,15 @@ class M_Overtime extends Model
     }
 
     public function getDetail($field = null, $where = null)
-	{
-		$this->builder->join('trx_overtime_detail', 'trx_overtime_detail.trx_overtime_id = ' . $this->table . '.trx_overtime_id', 'left');
+    {
+        $this->builder->join('trx_overtime_detail', 'trx_overtime_detail.trx_overtime_id = ' . $this->table . '.trx_overtime_id', 'left');
 
-		if (!empty($field) && !empty($where)) {
-			$this->builder->where($field, $where);
-		}
+        if (!empty($field) && !empty($where)) {
+            $this->builder->where($field, $where);
+        }
 
-		$this->builder->orderBy($this->table . '.created_at', 'DESC');
+        $this->builder->orderBy($this->table . '.created_at', 'DESC');
 
-		return $this->builder->get();
-	}
+        return $this->builder->get();
+    }
 }

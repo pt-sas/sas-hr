@@ -1567,33 +1567,33 @@ class Validation
             ]
         ],
         'startdate'         => [
-            'label'         =>'Tanggal',
-            'rules'         =>'required',
+            'label'         => 'Tanggal',
+            'rules'         => 'required',
             'errors'        => [
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
-         ],
-          'line'                  => [
-              'label'             => 'Lembur Detail',
-              'rules'             => 'required',
-              'errors'            => [
-                  'required'      => 'Mohon mengisi {field} dahulu.'
-              ]
-          ],
-          'detail.table.*.md_employee_id_line'  => [
-              'label'             => 'Karyawan',
-              'rules'             => 'required',
-              'errors'            => [
-                  'required'      => 'Mohon pilih {field} dahulu'
-              ]
-          ],
-          'startdate'         => [
-              'label'         => 'Tanggal',
-              'rules'         => 'required',
-              'errors'        => [
-                  'required'      => 'Mohon pilih {field} dahulu'
-              ]
-          ]
+        ],
+        'line'                  => [
+            'label'             => 'Lembur Detail',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.md_employee_id_line'  => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'startdate'         => [
+            'label'         => 'Tanggal',
+            'rules'         => 'required',
+            'errors'        => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ]
     ];
 
     public $alpa = [
@@ -1748,6 +1748,40 @@ class Validation
         ],
         'submissiontype'        => [
             'label'             => 'Tipe Form',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $realisasi_lembur_agree = [
+        'enddate'        => [
+            'label'             => 'Tanggal Selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'endtime'        => [
+            'label'             => 'Jam Selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'starttime'        => [
+            'label'             => 'Jam Mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $realisasi_lembur_not_agree = [
+        'description'        => [
+            'label'             => 'Alasan',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'

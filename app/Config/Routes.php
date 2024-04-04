@@ -475,6 +475,10 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('laporan-saldo-tkh', 'Backend\AllowanceAtt::index');
     $routes->match(['get', 'post'], 'laporan-saldo-tkh/reportAll', 'Backend\AllowanceAtt::reportAll');
+
+    $routes->add('realisasi-lembur', 'Backend\Realization::indexOvertime');
+    $routes->match(['get', 'post'], 'realisasi-lembur/showAll', 'Backend\Realization::showAllOvertime');
+    $routes->post('realisasi-lembur/create', 'Backend\Realization::createOvertime');
 });
 
 /*
