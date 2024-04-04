@@ -59,13 +59,11 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal Mulai <span class="required">*</span></label>
-                    <div class="input-group">
+                    <div class="input-icon">
                         <input type="text" class="form-control datepicker-start" name="startdate">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
-                            </span>
-                        </div>
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
@@ -73,15 +71,13 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal Selesai <span class="required">*</span></label>
-                    <div class="input-group">
+                    <div class="input-icon">
                         <input type="text" class="form-control datepicker-end" name="enddate">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
-                            </span>
-                        </div>
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
                     </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
+                    <small class="form-text text-danger" id="error_enddate"></small>
                 </div>
             </div>
             <div class="col-md-6">
@@ -100,7 +96,8 @@
                             <tr>
                                 <th>Line</th>
                                 <th>Tanggal Tidak Masuk</th>
-                                <th>Referensi</th>
+                                <th>Doc No</th>
+                                <th>Doc Referensi</th>
                                 <th>Status</th>
                             </tr>
                         </thead>

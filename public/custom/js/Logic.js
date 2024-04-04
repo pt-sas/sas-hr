@@ -48,10 +48,47 @@ $("#form_official_permission").on(
 
     let url = ADMIN_URL + "ijin-resmi/getEndDate";
 
+    if (option.length) {
+      $.each(option, function (i, item) {
+        if (typeof _this.find(":selected").val() === "undefined") {
+          if (
+            _this.attr("name") === "md_leavetype_id" &&
+            item.fieldName === "md_leavetype_id"
+          )
+            value = item.label;
+        }
+      });
+    }
+
     formData.append(this.name, value);
 
-    if (this.name === "md_leavetype_id")
+    if (this.name === "md_leavetype_id") {
+      if (value != 100003) {
+        $(".date-start").data("DateTimePicker").destroy();
+
+        $(".date-start").datetimepicker({
+          format: "DD-MMM-YYYY",
+          showTodayButton: true,
+          showClear: true,
+          showClose: true,
+          daysOfWeekDisabled: [0, 6],
+          disabledDates: getHolidayDate(),
+          useCurrent: false,
+        });
+      } else {
+        $(".date-start").data("DateTimePicker").destroy();
+
+        $(".date-start").datetimepicker({
+          format: "DD-MMM-YYYY",
+          showTodayButton: true,
+          showClear: true,
+          showClose: true,
+          useCurrent: false,
+        });
+      }
+
       formData.append("startdate", form.find("[name=startdate]").val());
+    }
 
     if (this.name === "startdate")
       formData.append(
@@ -68,11 +105,15 @@ $("#form_official_permission").on(
       cache: false,
       dataType: "JSON",
       success: function (result) {
-        console.log(result);
-        if (form.find("[name=startdate]").val() !== "") {
+        if (
+          form.find("[name=md_leavetype_id]").val() !== "" &&
+          form.find("[name=startdate]").val() !== ""
+        )
           form.find("[name=enddate]").val(moment(result).format("DD-MMM-Y"));
-        } else {
-        }
+        else form.find("[name=enddate]").val(null);
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
       },
     });
   }
@@ -148,9 +189,9 @@ $("#form_overtime").on(
 
 function Generate(id) {
   let formData = new FormData();
-  let url = ADMIN_URL + "alpa/generate"
+  let url = ADMIN_URL + "alpa/generate";
   let ID = id;
-  formData.append('trx_attendance_id', ID);
+  formData.append("trx_attendance_id", ID);
 
   $.ajax({
     url: url,
@@ -162,13 +203,12 @@ function Generate(id) {
     dataType: "JSON",
     success: function (result) {
       if (result[0].success) {
-          Toast.fire({
-            type: "success",
-            title: result[0].message,
-          });
-          reloadTable();
-        }
-      },
-  })
-
+        Toast.fire({
+          type: "success",
+          title: result[0].message,
+        });
+        reloadTable();
+      }
+    },
+  });
 }

@@ -27,7 +27,6 @@ class Permission extends BaseController
 
     public function index()
     {
-
         $data = [
             'today'     => date('d-M-Y')
         ];
@@ -167,58 +166,66 @@ class Permission extends BaseController
             $post["necessary"] = 'IJ';
 
             try {
-                $this->entity->fill($post);
-
-                $holidays = $mHoliday->getHolidayDate();
-                $startDate = $post['startdate'];
-                $nik = $post['nik'];
-                $date = $post['submissiondate'];
-
-                $rule = $mRule->where([
-                    'name'      => 'Sakit',
-                    'isactive'  => 'Y'
-                ])->first();
-
-                $countDays = 1;
-
-                if ($rule)
-                    if (!empty($rule->min))
-                        $countDays = $rule->min;
-
-                $prevDate = lastWorkingDays($date, $holidays, $countDays);
-                $lastDate = end($prevDate);
-
-                $att = $mAttendance->where([
-                    'nik'       => $nik,
-                    'date'      => $startDate,
-                    'absent'    => 'Y'
-                ])->first();
-
-                $trx = $this->modelDetail->getAbsentDetail([
-                    'trx_absent.nik'            => $nik,
-                    'trx_absent_detail.date'    => $startDate,
-                    'trx_absent.docstatus'      => $this->DOCSTATUS_Completed,
-                    'trx_absent_detail.isagree' => 'Y'
-                ])->getRow();
-
                 if (!$this->validation->run($post, 'absent')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
-                } else if ($startDate < $lastDate && ($att || is_null($att))) {
-                    $response = message('success', false, 'Tanggal mulai sudah melewati ketentuan, maksimal tanggal mulai : ' . format_dmy($lastDate, '-'));
-                } else if ($startDate = $lastDate && $att && !is_null($trx)) {
-                    $response = message('success', false, 'Sudah ada pengajuan : ' . $trx->documentno);
-                    // } else if (is_null($att) && is_null($trx)) {
-                    // $response = message('success', false, 'Tidak bisa mengajukan pada tanggal mulai : ' . format_dmy($lastDate, '-'));
                 } else {
+                    $holidays = $mHoliday->getHolidayDate();
+                    $startDate = $post['startdate'];
+                    $endDate = $post['enddate'];
+                    $nik = $post['nik'];
+                    $date = $post['submissiondate'];
+                    $dateWorkRange = getDatesFromRange($startDate, $endDate, $holidays);
 
-                    if ($this->isNew()) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    $rule = $mRule->where([
+                        'name'      => 'Ijin',
+                        'isactive'  => 'Y'
+                    ])->first();
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin, $post);
-                        $this->entity->setDocumentNo($docNo);
+                    $countDays = $rule && !empty($rule->min) ? $rule->min : 1;
+                    $prevDate = lastWorkingDays($date, $holidays, $countDays);
+                    $lastDate = end($prevDate);
+
+                    $att = $mAttendance->where([
+                        'nik'       => $nik,
+                        'date'      => $startDate,
+                        'absent'    => 'Y'
+                    ])->first();
+
+                    $whereClause = "trx_absent.nik = $nik";
+                    $whereClause .= " AND trx_absent.startdate >= '$startDate' AND trx_absent.enddate <= '$endDate'";
+                    $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
+                    $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                    $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
+
+                    $attPresent = $mAttendance->where([
+                        'nik'       => $nik,
+                        'absent'    => 'N'
+                    ])->whereIn('date', $dateWorkRange)->findAll();
+
+                    if ($startDate < $lastDate && ($att || is_null($att))) {
+                        $response = message('success', false, 'Tanggal mulai sudah melewati ketentuan, maksimal tanggal mulai : ' . format_dmy($lastDate, '-'));
+                    } else if ($startDate = $lastDate && $trx) {
+                        $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                    } else if ($attPresent) {
+                        $date = [];
+                        foreach ($attPresent as $val) {
+                            $date[] = format_dmy($val->date, '-');
+                        }
+
+                        $date = implode(", ", $date);
+                        $response = message('success', false, 'Ada kehadiran, tidak bisa mengajukan pada tanggal : [' . $date . ']');
+                    } else {
+                        $this->entity->fill($post);
+
+                        if ($this->isNew()) {
+                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                            $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin, $post);
+                            $this->entity->setDocumentNo($docNo);
+                        }
+
+                        $response = $this->save();
                     }
-
-                    $response = $this->save();
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -242,9 +249,9 @@ class Permission extends BaseController
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
-                //Need to set data into date field in form
-                $list[0]->startdate = format_dmy($list[0]->startdate, "-");
-                $list[0]->enddate = format_dmy($list[0]->enddate, "-");
+                //* Need to set data into date field in form
+                $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
+                $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
@@ -326,17 +333,19 @@ class Permission extends BaseController
         //? Update
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
+                $docNoRef = "";
+                $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
+
                 if (!empty($row->ref_absent_detail_id)) {
-                    $line = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
-                    $doc = $line->documentno;
-                } else {
-                    $doc = "";
+                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    $docNoRef = $lineRef->documentno;
                 }
 
                 $table[] = [
                     $row->lineno,
                     format_dmy($row->date, '-'),
-                    $doc,
+                    $line->getDocumentNo(),
+                    $docNoRef,
                     statusRealize($row->isagree)
                 ];
             endforeach;
