@@ -212,3 +212,101 @@ function Generate(id) {
     },
   });
 }
+
+_tableReport.on("click", ".btn_edit_att", function (e) {
+  const tr = $(this).closest("tr");
+  let description = tr.find("td:eq(4)").text();
+  let id = this.id;
+
+  $("#modal_attendance").modal({
+    backdrop: "static",
+    keyboard: false,
+  });
+
+  const form = $("#form_attendance");
+  form.find("textarea[name=description]").val(description);
+
+  ID = id;
+});
+
+$(".btn_ok_attendance").click(function (e) {
+  e.preventDefault();
+  let _this = $(this);
+  const parent = $(this).closest(".modal");
+  const form = parent.find("form");
+  const field = form.find("input, select, textarea");
+  let formData = new FormData(form[0]);
+
+  for (let i = 0; i < field.length; i++) {
+    if (field[i].name !== "") {
+      //* Set field and value to formData
+      if (
+        field[i].type == "text" ||
+        field[i].type == "textarea" ||
+        field[i].type == "select-one" ||
+        field[i].type == "password" ||
+        field[i].type == "hidden"
+      )
+        formData.append(field[i].name, field[i].value);
+    }
+  }
+
+  if (ID != 0) formData.append("id", ID);
+
+  let url = `${SITE_URL}${CREATE}`;
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      _this.prop("disabled", true);
+      $(".btn_close_attendance").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      _this.removeAttr("disabled");
+      $(".btn_close_attendance").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      if (result[0].success) {
+        Toast.fire({
+          type: "success",
+          title: result[0].message,
+        });
+
+        $(`#${parent.attr("id")}`).modal("hide");
+        clearForm(e);
+        clearErrorForm(form);
+        reloadTable();
+      } else if (result[0].error) {
+        errorForm(form, result);
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+
+        clearErrorForm(form);
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+});
+
+$(".btn_close_attendance").click(function (e) {
+  e.preventDefault();
+  const parent = $(this).closest(".modal");
+  const form = parent.find("form");
+
+  clearForm(e);
+  clearErrorForm(form);
+  reloadTable();
+});

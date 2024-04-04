@@ -1435,10 +1435,16 @@ _tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
   const tr = $(this).closest("tr");
   let formType = tr.find("td:eq(1)").text();
   let submissionDate = tr.find("td:eq(4)").text();
+  let description = tr.find("td:eq(5)");
   let enddate = tr.find("td:eq(6)").text();
   let starttime = tr.find("td:eq(7)").text();
   let endtime = tr.find("td:eq(8)").text();
   let id = this.id;
+
+  let leaveTypeID = 0;
+
+  if (description.find("span").length)
+    leaveTypeID = description.find("span").attr("id");
 
   if (this.name === "agree") {
     $("#modal_realization_agree, #modal_overtime_realization_agree").modal({
@@ -1449,35 +1455,40 @@ _tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
     const form = $("#form_realization_agree, #form_overtime_realization_agree");
 
     if (form.is($("#form_realization_agree"))) {
-    form.find("input[name=submissiondate]").val(submissionDate);
-    form.find("input[name=isagree]").val("Y");
-    ID = id;
+      form.find("input[name=submissiondate]").val(submissionDate);
+      form.find("input[name=isagree]").val("Y");
+      form.find("input[name=md_leavetype_id]").val(leaveTypeID);
+      ID = id;
     } else if (form.is($("#form_overtime_realization_agree"))) {
-    form.find("input[name=enddate]").val(enddate);
-    form.find("input[name=starttime]").val(starttime);
-    form.find("input[name=endtime]").val(endtime);
-    form.find("input[name=isagree]").val("Y");
-    ID = id;
+      form.find("input[name=enddate]").val(enddate);
+      form.find("input[name=starttime]").val(starttime);
+      form.find("input[name=endtime]").val(endtime);
+      form.find("input[name=isagree]").val("Y");
+      ID = id;
     }
-
   } else {
-    $("#modal_realization_not_agree, #modal_overtime_realization_not_agree").modal({
+    $(
+      "#modal_realization_not_agree, #modal_overtime_realization_not_agree"
+    ).modal({
       backdrop: "static",
       keyboard: false,
     });
 
-    const form = $("#form_realization_not_agree, #form_overtime_realization_not_agree");
+    const form = $(
+      "#form_realization_not_agree, #form_overtime_realization_not_agree"
+    );
 
-    if(form.is($("#form_realization_not_agree"))){
+    if (form.is($("#form_realization_not_agree"))) {
       form.find("input[name=submissiondate]").val(submissionDate);
       form.find("input[name=isagree]").val("N");
       form.find("input[name=foreignkey]").val(id);
-  
+      form.find("input[name=md_leavetype_id]").val(leaveTypeID);
+
       if (form.find("select.select-data").length) {
         form
           .find("select.select-data")
           .attr("data-url", "realisasi/getList/$" + formType);
-  
+
         initSelectData(form.find("select.select-data"));
       }
     } else if (form.is($("#form_overtime_realization_not_agree"))) {
@@ -1511,9 +1522,14 @@ $(".btn_ok_realization").click(function (e) {
 
   if (ID != 0) formData.append("id", ID);
 
-  if(form.is($("#form_overtime_realization_agree")) || form.is($("#form_overtime_realization_not_agree"))) {
-    url = 'realisasi-lembur/create';
-  } else {url = `${SITE_URL}${CREATE}`;}
+  if (
+    form.is($("#form_overtime_realization_agree")) ||
+    form.is($("#form_overtime_realization_not_agree"))
+  ) {
+    url = "realisasi-lembur/create";
+  } else {
+    url = `${SITE_URL}${CREATE}`;
+  }
 
   $.ajax({
     url: url,
@@ -1536,7 +1552,6 @@ $(".btn_ok_realization").click(function (e) {
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",

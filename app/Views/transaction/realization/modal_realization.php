@@ -20,6 +20,7 @@
                             </div>
                         </div>
                         <input type="hidden" class="form-control" name="isagree">
+                        <input type="hidden" class="form-control" name="md_leavetype_id">
                     </div>
                 </form>
             </div>
@@ -71,6 +72,7 @@
                         </div>
                         <input type="hidden" class="form-control" name="isagree">
                         <input type="hidden" class="form-control" name="foreignkey">
+                        <input type="hidden" class="form-control" name="md_leavetype_id">
                     </div>
                 </form>
             </div>

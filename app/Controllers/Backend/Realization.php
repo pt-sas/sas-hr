@@ -32,14 +32,15 @@ class Realization extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
-            $select = $this->model->getSelectDetail();
-            $join = $this->model->getJoinDetail();
+            $list = $this->model->getSelectDetail();
+            // $join = $this->model->getJoinDetail();
             $order = $this->request->getPost('columns');
             $search = $this->request->getPost('search');
-            $sort = ['trx_absent_detail.date' => 'ASC'];
+            $sort = [];
+            // $sort = ['trx_absent_detail.date' => 'ASC'];
 
-            $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
-            $where['trx_absent_detail.isagree'] = 'H';
+            // $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
+            // $where['trx_absent_detail.isagree'] = 'H';
 
             $data = [];
 
@@ -49,7 +50,8 @@ class Realization extends BaseController
             $fieldChk->setClass("check-realize");
 
             $number = $this->request->getPost('start');
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+            // $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+            // $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search);
 
             foreach ($list as $value) :
                 $row = [];
@@ -60,7 +62,7 @@ class Realization extends BaseController
                 $reason = $value->reason;
 
                 if (!empty($value->leavetype))
-                    $reason = "[" . $value->leavetype . "]" . " - " . $value->reason;
+                    $reason = "<span class='badge badge-info' id=" . $value->md_leavetype_id . ">" . $value->leavetype . "</span>" . " - " . $value->reason;
 
                 // $row[] = $this->field->fieldTable($fieldChk);
                 $row[] = $number;
@@ -69,14 +71,19 @@ class Realization extends BaseController
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = format_dmy($value->date, '-');
                 $row[] = $reason;
-                $row[] = $this->template->tableButtonProcess($ID);
+                $row[] = $this->template->tableButtonProcess($ID, $value->leavetype);
                 $data[] = $row;
             endforeach;
 
+            $recordsTotal = count($data);
+            $recordsFiltered = count($data);
+
             $result = [
                 'draw'              => $this->request->getPost('draw'),
-                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
-                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
+                // 'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
+                'recordsTotal'      => $recordsTotal,
+                // 'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
+                'recordsFiltered'   => $recordsFiltered,
                 'data'              => $data
             ];
 
@@ -97,6 +104,7 @@ class Realization extends BaseController
             $submissionDate = $post['submissiondate'];
             $today = date('Y-m-d');
             $todayTime = date('Y-m-d H:i:s');
+            $leaveTypeId = $post['md_leavetype_id'];
 
             try {
                 if (!$this->validation->run($post, 'realisasi_agree') && $isAgree === 'Y') {
@@ -110,8 +118,26 @@ class Realization extends BaseController
 
                         $line = $this->model->find($post['id']);
 
-                        $this->entity->isagree = $isAgree;
-                        $response = $this->save();
+                        if (empty($leaveTypeId)) {
+                            $this->entity->isagree = $isAgree;
+                            $response = $this->save();
+                        } else {
+                            $list = $this->model->where('trx_absent_id', $line->trx_absent_id)->findAll();
+
+                            $arr = [];
+
+                            foreach ($list as $row) {
+                                $arr[] = [
+                                    "trx_absent_detail_id" => $row->trx_absent_detail_id,
+                                    "isagree"           => "Y",
+                                    "updated_by"        => $this->session->get('sys_user_id')
+                                ];
+                            }
+
+                            $this->model->builder->updateBatch($arr, $this->model->primaryKey);
+                            $this->message = notification("updated");
+                            $response = message('success', true, $this->message);
+                        }
                     }
 
                     if ($isAgree === $notAgree) {
@@ -222,7 +248,8 @@ class Realization extends BaseController
                 $response = message('error', false, $e->getMessage());
             }
 
-            return $this->response->setJSON($response);
+            // return $this->response->setJSON($response);
+            return json_encode($response);
         }
     }
 

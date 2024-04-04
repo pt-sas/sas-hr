@@ -1567,33 +1567,33 @@ class Validation
             ]
         ],
         'startdate'         => [
-            'label'         =>'Tanggal',
-            'rules'         =>'required',
+            'label'         => 'Tanggal',
+            'rules'         => 'required',
             'errors'        => [
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
-         ],
-          'line'                  => [
-              'label'             => 'Lembur Detail',
-              'rules'             => 'required',
-              'errors'            => [
-                  'required'      => 'Mohon mengisi {field} dahulu.'
-              ]
-          ],
-          'detail.table.*.md_employee_id_line'  => [
-              'label'             => 'Karyawan',
-              'rules'             => 'required',
-              'errors'            => [
-                  'required'      => 'Mohon pilih {field} dahulu'
-              ]
-          ],
-          'startdate'         => [
-              'label'         => 'Tanggal',
-              'rules'         => 'required',
-              'errors'        => [
-                  'required'      => 'Mohon pilih {field} dahulu'
-              ]
-          ]
+        ],
+        'line'                  => [
+            'label'             => 'Lembur Detail',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.md_employee_id_line'  => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'startdate'         => [
+            'label'         => 'Tanggal',
+            'rules'         => 'required',
+            'errors'        => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ]
     ];
 
     public $alpa = [
@@ -1748,6 +1748,16 @@ class Validation
         ],
         'submissiontype'        => [
             'label'             => 'Tipe Form',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $attendance = [
+        'description'           => [
+            'label'             => 'Keterangan',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
