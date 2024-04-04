@@ -5,6 +5,10 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
+use App\Models\M_Overtime;
+use App\Models\M_OvertimeDetail;
+use App\Models\M_Rule;
+use App\Models\M_RuleDetail;
 use Config\Services;
 
 class Realization extends BaseController
@@ -26,6 +30,19 @@ class Realization extends BaseController
         ];
 
         return $this->template->render('transaction/realization/v_realization', $data);
+    }
+
+    public function indexOvertime()
+    {
+        $start_date = format_dmy(date('Y-m-d', strtotime('- 1 days')), "-");
+        $end_date = format_dmy(date('Y-m-d'), "-");
+
+        $data = [
+            'date_range'            => $start_date . ' - ' . $end_date,
+            'toolbarRealization'    => $this->template->toolbarButtonProcess()
+        ];
+
+        return $this->template->render('transaction/overtimerealization/v_overtime_realization', $data);
     }
 
     public function showAll()
@@ -84,6 +101,56 @@ class Realization extends BaseController
                 'recordsTotal'      => $recordsTotal,
                 // 'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
                 'recordsFiltered'   => $recordsFiltered,
+                'data'              => $data
+            ];
+
+            return $this->response->setJSON($result);
+        }
+    }
+
+    public function showAllOvertime()
+    {
+        $mOvertime = new M_Overtime($this->request);
+
+        if ($this->request->getMethod(true) === 'POST') {
+            $table = $mOvertime->table;
+            $select = $mOvertime->getSelectDetail();
+            $join = $mOvertime->getJoinDetail();
+            $order = $this->request->getPost('columns');
+            $search = $this->request->getPost('search');
+            $sort = ['trx_overtime.documentno' => 'ASC'];
+
+            $where['trx_overtime.docstatus'] = $this->DOCSTATUS_Inprogress;
+            $where['trx_overtime_detail.status'] = 'H';
+
+            $data = [];
+
+            $number = $this->request->getPost('start');
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+
+            foreach ($list as $value) :
+                $row = [];
+                $ID = $value->trx_overtime_detail_id;
+
+                $number++;
+
+                $row[] = $number;
+                $row[] = $value->documentno;
+                $row[] = $value->employee_name;
+                $row[] = $value->branch_name;
+                $row[] = $value->division_name;
+                $row[] = format_dmy($value->startdate_line, '-');
+                $row[] = format_dmy($value->enddate_line, '-');
+                $row[] = format_time($value->startdate_line);
+                $row[] = format_time($value->enddate_line);
+                $row[] = $this->template->tableButtonProcess($ID);
+                $data[] = $row;
+            endforeach;
+
+            $result = [
+                'draw'              => $this->request->getPost('draw'),
+                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
                 'data'              => $data
             ];
 
@@ -253,6 +320,74 @@ class Realization extends BaseController
         }
     }
 
+    public function createOvertime()
+    {
+        if ($this->request->getMethod(true) === 'POST') {
+            $post = $this->request->getVar();
+
+            $agree = 'Y';
+            $notAgree = 'N';
+            $holdAgree = 'H';
+
+            $isAgree = $post['isagree'];
+
+            try {
+                if (!$this->validation->run($post, 'realisasi_lembur_agree') && $isAgree === 'Y') {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $this->model = new M_OvertimeDetail($this->request);
+                    $this->entity = new \App\Entities\OvertimeDetail();
+
+                    $line = $this->model->find($post['id']);
+
+                    if ($isAgree === $agree) {
+
+                        $startdate = date('Y-m-d', strtotime($line->startdate)) . " " . $post['starttime'];
+                        $enddate =   date('Y-m-d', strtotime($post["enddate"])) . " " . $post['endtime'];
+                        $ovt = $this->getHourOvertime($startdate, $enddate);
+
+                        $this->entity->trx_overtime_detail_id = $post['id'];
+                        $this->entity->startdate = $startdate;
+                        $this->entity->enddate = $enddate;
+                        $this->entity->status = $isAgree;
+                        $this->entity->overtime_expense = $ovt['expense'];
+                        $this->entity->overtime_balance = $ovt['balance'];
+                        $this->entity->total = $ovt['total'];
+
+                        $response = $this->save();
+                    }
+
+                    if ($isAgree === $notAgree) {
+
+                        $this->entity->trx_overtime_detail_id = $post['id'];
+                        $this->entity->description = $post['description'];
+                        $this->entity->status = $isAgree;
+
+                        $response = $this->save();
+                    }
+
+                    $list = $this->model->where([
+                        'status'       => $holdAgree,
+                        'trx_overtime_id' => $line->trx_overtime_id
+                    ])->first();
+
+                    if (is_null($list)) {
+                        $mOvertime = new M_Overtime($this->request);
+                        $oEntity = new \App\Entities\Overtime();
+
+                        $oEntity->setOvertimeId($line->trx_overtime_id);
+                        $oEntity->setDocStatus($this->DOCSTATUS_Completed);
+                        $mOvertime->save($oEntity);
+                    }
+                }
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return json_encode($response);
+        }
+    }
+
     public function getList()
     {
         if ($this->request->isAjax()) {
@@ -293,5 +428,55 @@ class Realization extends BaseController
 
             return $this->response->setJSON($response);
         }
+    }
+
+    public function getHourOvertime($startdate, $endate)
+    {
+        $mRule = new M_Rule($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
+
+        $start = format_dmy($startdate, '-');
+        $end = format_dmy($endate, '-');
+
+        $rule = $mRule->where([
+            'name'      => 'Lembur',
+            'isactive'  => 'Y'
+        ])->first();
+
+        $detail = $mRuleDetail->where('md_rule_id', $rule->md_rule_id)->find();
+
+        $data = [];
+
+        // if ($start = $end) {
+        $starttime = format_time($startdate);
+        $endtime = format_time($endate);
+
+        $startMinutes = convertToMinutes(format_time($starttime));
+        $endMinutes = convertToMinutes(format_time($endtime));
+
+        $balance = ($endMinutes - $startMinutes) / 60;
+        $total = $detail[0]->value * (int) $balance;
+
+
+        $data['balance'] = (int) $balance;
+        $data['expense'] = $detail[0]->value;
+        $data['total'] = $total;
+        // } else if ($start < $end) {
+        //     $starttime = format_time($startdate);
+        //     $endtime = format_time($endate);
+
+        //     $startMinutes = convertToMinutes(format_time($starttime));
+        //     $endMinutes = convertToMinutes(format_time($endtime));
+
+        //     $balance = ($endMinutes - $startMinutes) / 60;
+        //     $total = $detail[0]->value * (int) $balance;
+
+
+        //     $data['balance'] = (int) $balance;
+        //     $data['expense'] = $detail[0]->value;
+        //     $data['total'] = $total;
+        // }
+
+        return $data;
     }
 }

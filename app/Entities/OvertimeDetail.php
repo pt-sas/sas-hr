@@ -12,8 +12,11 @@ class OvertimeDetail extends Entity
 	protected $startdate;
 	protected $enddate;
 	protected $description;
-    protected $created_by;
-    protected $updated_by;
+	protected $overtime_balance;
+	protected $overtime_expense;
+	protected $total;
+	protected $created_by;
+	protected $updated_by;
 	protected $dates   = [
 		'created_at',
 		'updated_at',
@@ -25,7 +28,7 @@ class OvertimeDetail extends Entity
 		return $this->attributes['trx_overtime_detail_id'];
 	}
 
-	public function setOvertimeDetailId($trx_overtime_detail_id) 
+	public function setOvertimeDetailId($trx_overtime_detail_id)
 	{
 		$this->attributes['trx_overtime_detail_id'] = $trx_overtime_detail_id;
 	}
@@ -35,7 +38,7 @@ class OvertimeDetail extends Entity
 		return $this->attributes['trx_overtime_id'];
 	}
 
-	public function setOvertimeId($trx_overtime_id) 
+	public function setOvertimeId($trx_overtime_id)
 	{
 		$this->attributes['trx_overtime_id'] = $trx_overtime_id;
 	}
@@ -45,7 +48,7 @@ class OvertimeDetail extends Entity
 		return $this->attributes['md_employee_id'];
 	}
 
-	public function setEmployeeId($md_employee_id) 
+	public function setEmployeeId($md_employee_id)
 	{
 		$this->attributes['md_employee_id'] = $md_employee_id;
 	}
@@ -55,7 +58,7 @@ class OvertimeDetail extends Entity
 		return $this->attributes['startdate'];
 	}
 
-	public function setStartDate($startdate) 
+	public function setStartDate($startdate)
 	{
 		$this->attributes['startdate'] = $startdate;
 	}
@@ -65,9 +68,9 @@ class OvertimeDetail extends Entity
 		return $this->attributes['enddate'];
 	}
 
-	public function setEndDate($enddate) 
+	public function setEndDate($enddate)
 	{
-		
+
 		$this->attributes['enddate'] = $enddate;
 	}
 
@@ -76,48 +79,78 @@ class OvertimeDetail extends Entity
 		return $this->attributes['description'];
 	}
 
-	public function setDescription($description) 
+	public function setDescription($description)
 	{
 		$this->attributes['description'] = $description;
 	}
 
 	public function getIsActive()
-    {
-        return $this->attributes['isactive'];
-    }
+	{
+		return $this->attributes['isactive'];
+	}
 
-    public function setIsActive($isactive)
-    {
-        return $this->attributes['isactive'] = $isactive;
-    }
+	public function setIsActive($isactive)
+	{
+		return $this->attributes['isactive'] = $isactive;
+	}
 
-    public function getCreatedAt()
-    {
-        return $this->attributes['created_at'];
-    }
+	public function getOvertimeBalance()
+	{
+		return $this->attributes['overtime_balance'];
+	}
 
-    public function getCreatedBy()
-    {
-        return $this->attributes['created_by'];
-    }
+	public function setOvertimeBalance($overtime_balance)
+	{
+		return $this->attributes['overtime_balance'] = $overtime_balance;
+	}
 
-    public function setCreatedBy($created_by)
-    {
-        $this->attributes['created_by'] = $created_by;
-    }
+	public function getOvertimeExpense()
+	{
+		return $this->attributes['overtime_expense'];
+	}
 
-    public function getUpdatedAt()
-    {
-        return $this->attributes['updated_at'];
-    }
+	public function setOvertimeExpense($overtime_expense)
+	{
+		return $this->attributes['overtime_expense'] = $overtime_expense;
+	}
 
-    public function getUpdatedBy()
-    {
-        return $this->attributes['updated_by'];
-    }
+	public function getTotal()
+	{
+		return $this->attributes['total'];
+	}
 
-    public function setUpdatedBy($updated_by)
-    {
-        $this->attributes['updated_by'] = $updated_by;
-    }
+	public function setTotal($total)
+	{
+		return $this->attributes['total'] = $total;
+	}
+
+	public function getCreatedAt()
+	{
+		return $this->attributes['created_at'];
+	}
+
+	public function getCreatedBy()
+	{
+		return $this->attributes['created_by'];
+	}
+
+	public function setCreatedBy($created_by)
+	{
+		$this->attributes['created_by'] = $created_by;
+	}
+
+	public function getUpdatedAt()
+	{
+		return $this->attributes['updated_at'];
+	}
+
+	public function getUpdatedBy()
+	{
+		return $this->attributes['updated_by'];
+	}
+
+	public function setUpdatedBy($updated_by)
+	{
+		$this->attributes['updated_by'] = $updated_by;
+	}
 }

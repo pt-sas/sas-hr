@@ -11,7 +11,7 @@ use App\Models\M_Attendance;
 use App\Models\M_AbsentDetail;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
-use App\Models\M_Holiday;
+use App\Models\M_AllowanceAtt;
 use App\Models\M_Rule;
 
 class Alpha extends BaseController
@@ -297,8 +297,33 @@ class Alpha extends BaseController
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $mRule = new M_Rule($this->request);
+                        $mAllowance = new M_AllowanceAtt($this->request);
+
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
+                        $this->save();
+
+
+                        $rule = $mRule->where([
+                            'name'      => 'Alpa',
+                            'isactive'  => 'Y'
+                        ])->first();
+
+                        $arr[] = [
+                            "record_id"         => $_ID,
+                            "table"             => $this->model->table,
+                            "submissiontype"    => $row->getSubmissionType(),
+                            "submissiondate"    => $row->getStartDate(),
+                            "md_employee_id"    => $row->getEmployeeId(),
+                            "amount"            => $rule->value,
+                            "created_by"        => $this->access->getSessionUser(),
+                            "updated_by"        => $this->access->getSessionUser()
+                        ];
+
+                        $mAllowance->builder->insertBatch($arr);
+
+                        $response = message('success', true, 'Alpa dibatalkan');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();

@@ -4,9 +4,9 @@ namespace App\Entities;
 
 use CodeIgniter\Entity\Entity;
 
-class overtime extends Entity
+class Overtime extends Entity
 {
-    protected $md_overtime_id;
+    protected $trx_overtime_id;
     protected $documentno;
     protected $md_employee_id;
     protected $md_branch_id;
@@ -29,12 +29,12 @@ class overtime extends Entity
 
     public function getOvertimeId()
     {
-        return $this->attributes['md_overtime_id'];
+        return $this->attributes['trx_overtime_id'];
     }
 
-    public function setOvertimeId($md_overtime_id)
+    public function setOvertimeId($trx_overtime_id)
     {
-        $this->attributes['md_overtime_id'] = $md_overtime_id;
+        $this->attributes['trx_overtime_id'] = $trx_overtime_id;
     }
 
     public function getDocumentNo()

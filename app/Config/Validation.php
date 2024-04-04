@@ -1755,6 +1755,30 @@ class Validation
         ]
     ];
 
+    public $realisasi_lembur_agree = [
+        'enddate'        => [
+            'label'             => 'Tanggal Selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'endtime'        => [
+            'label'             => 'Jam Selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'starttime'        => [
+            'label'             => 'Jam Mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+  
     public $attendance = [
         'description'           => [
             'label'             => 'Keterangan',

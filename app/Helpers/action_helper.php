@@ -171,9 +171,9 @@ function docStatus(string $str, string $type = null, ?int $total = 0, ?int $avai
     if ($str === "IP" && (is_null($type) || strtoupper($type) !== "TERIMA")) {
         $msg = '<center><span class="badge badge-info">In Progress</span></center>';
     } else if ($str === "VO") {
-        $msg = '<center><span class="badge badge-secondary">Canceled</span></center>';
+        $msg = '<center><span class="badge badge-danger">Canceled</span></center>';
     } else if ($str === "IN") {
-        $msg = '<center><span class="badge badge-danger">Invalid</span></center>';
+        $msg = '<center><span class="badge badge-secondary">Invalid</span></center>';
     } else if ($str === "AP") {
         $msg = '<center><span class="badge badge-info">Approved</span></center>';
     } else if ($str === "NA") {

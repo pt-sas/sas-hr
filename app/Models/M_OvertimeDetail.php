@@ -15,14 +15,18 @@ class M_OvertimeDetail extends Model
         'startdate',
         'enddate',
         'description',
+        'overtime_balance',
+        'overtime_expense',
+        'total',
+        'status',
         'created_by',
         'updated_by',
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\OvertimeDetail';
-	protected $request;
-	protected $db;
-	protected $builder;
+    protected $request;
+    protected $db;
+    protected $builder;
 
     public function __construct(RequestInterface $request)
     {
@@ -30,26 +34,25 @@ class M_OvertimeDetail extends Model
         $this->db = db_connect();
         $this->builder = $this->db->table($this->table);
         $this->request = $request;
-        
     }
 
-    
-	/**
-	 * Change value of field data
-	 *
-	 * @param array $data Data
-	 * @return array
-	 */
-	public function doChangeValueField(array $data): array
-	{
-		$result = [];
-        
-		foreach ($data as $row) :
+
+    /**
+     * Change value of field data
+     *
+     * @param array $data Data
+     * @return array
+     */
+    public function doChangeValueField(array $data): array
+    {
+        $result = [];
+
+        foreach ($data as $row) :
             $row->startdate = date('Y-m-d', strtotime($row->datestart)) . " " . $row->starttime;
             $row->enddate = date('Y-m-d', strtotime($row->dateend)) . " " . $row->endtime;
-			$result[] = $row;
-		endforeach;
+            $result[] = $row;
+        endforeach;
 
-		return $result;
-	}
+        return $result;
+    }
 }
