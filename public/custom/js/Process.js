@@ -425,8 +425,17 @@ _tableLine = $(".tb_displayline").DataTable({
       useCurrent: false,
       widgetParent: "body",
     });
+    $(this).find(".datepicker-line").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+      widgetParent: "body",
+    });
+
     //For Pop Up DateTimePicker in Table
-    $(".timepicker").on("dp.show", function () {
+    $(".timepicker, .datepicker-line").on("dp.show", function () {
       var datepicker = $("body").find(".bootstrap-datetimepicker-widget:last");
       if (datepicker.hasClass("bottom")) {
         var top = $(this).offset().top + $(this).outerHeight();
@@ -1026,6 +1035,7 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
+        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
