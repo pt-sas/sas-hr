@@ -26,6 +26,7 @@ class ListAbsent extends BaseController
             'date_range'            => $start_date . ' - ' . $end_date,
             'toolbarRealization'    => $this->template->toolbarButtonProcess()
         ];
+
         return $this->template->render('generate/listabsent/v_list_absent', $data);
     }
 
@@ -37,15 +38,17 @@ class ListAbsent extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
-            $order = [];
             $join = $this->model->getJoin();
-            $sort = ['nik' => 'ASC'];
-            $search = [];
+            $order = $this->request->getPost('columns');
+            $search = $this->request->getPost('search');
+            $sort = ['date' => 'ASC', 'nik' => 'ASC'];
+
             $where = ['trx_attendance.absent' => 'Y'];
-            $number = $this->request->getPost('start');
-            $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);
 
             $data = [];
+
+            $number = $this->request->getPost('start');
+            $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);
 
             foreach ($list as $val) :
                 $parAbsent = [
