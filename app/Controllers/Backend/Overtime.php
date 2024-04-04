@@ -33,7 +33,7 @@ class Overtime extends BaseController
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
-        
+
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -86,7 +86,7 @@ class Overtime extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = format_dmy($value->startdate,'-');
+                $row[] = format_dmy($value->startdate, '-');
                 $row[] = $value->description;
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
@@ -193,7 +193,7 @@ class Overtime extends BaseController
     public function processIt()
     {
         $cWfs = new WScenario();
-        
+
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
 
@@ -210,14 +210,24 @@ class Overtime extends BaseController
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         if ($line) {
-                            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                             $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+
+
+                            // This for set status to Hold in Overtime Detail
+                            $ovt_line = $this->modelDetail->where('trx_overtime_id', $_ID)->find();
+
+                            foreach ($ovt_line as $key => $value) {
+                                $value->status = 'H';
+                                $this->modelDetail->save($value);
+                            }
+                            // 
+
                             $response = message('success', true, $this->message);
                         } else {
                             $this->entity->setDocStatus($this->DOCSTATUS_Invalid);
                             $response = $this->save();
                         }
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock && !$receipt) {
+                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
                     } else if ($receipt && ($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
@@ -284,6 +294,24 @@ class Overtime extends BaseController
         $fieldEndTime->setClass("timepicker");
         $fieldEndTime->setLength(100);
 
+        $fieldBalance = new \App\Entities\Table();
+        $fieldBalance->setName("overtime_balance");
+        $fieldBalance->setType("text");
+        $fieldBalance->setLength(100);
+        $fieldBalance->setIsReadonly(true);
+
+        $fieldExpense = new \App\Entities\Table();
+        $fieldExpense->setName("overtime_expense");
+        $fieldExpense->setType("text");
+        $fieldExpense->setLength(150);
+        $fieldExpense->setIsReadonly(true);
+
+        $fieldTotal = new \App\Entities\Table();
+        $fieldTotal->setName("total");
+        $fieldTotal->setType("text");
+        $fieldTotal->setLength(150);
+        $fieldTotal->setIsReadonly(true);
+
         $fieldDesctiprion = new \App\Entities\Table();
         $fieldDesctiprion->setName("description");
         $fieldDesctiprion->setId("description");
@@ -294,7 +322,7 @@ class Overtime extends BaseController
         $btnDelete->setName($this->modelDetail->primaryKey);
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
-        
+
         // ? Create
 
         if (empty($set)) {
@@ -302,8 +330,8 @@ class Overtime extends BaseController
                 $table = $this->field->errorValidation($this->model->table, $post);
             } else {
 
-                if($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
-                    $dataEmployee = $employee->getEmployee($post['md_branch_id'],$post['md_division_id']);
+                if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
+                    $dataEmployee = $employee->getEmployee($post['md_branch_id'], $post['md_division_id']);
                     $fieldEmployee->setList($dataEmployee);
                 }
 
@@ -315,27 +343,42 @@ class Overtime extends BaseController
                     $this->field->fieldTable($fieldStartTime),
                     $this->field->fieldTable($fieldDateEnd),
                     $this->field->fieldTable($fieldEndTime),
+                    $this->field->fieldTable($fieldBalance),
+                    $this->field->fieldTable($fieldExpense),
+                    $this->field->fieldTable($fieldTotal),
                     $this->field->fieldTable($fieldDesctiprion),
+                    '',
                     $this->field->fieldTable($btnDelete)
                 ];
-            }}
+            }
+        }
 
-         //? Update
-         if (!empty($set) && count($detail) > 0) {
-            
+        //? Update
+        if (!empty($set) && count($detail) > 0) {
+
             foreach ($detail as $row) :
                 $id = $row->getOvertimeId();
                 $header = $this->model->where('trx_overtime_id', $id)->first();
 
-                $dataEmployee = $employee->getEmployee($header->md_branch_id,$header->md_division_id);
+                $dataEmployee = $employee->getEmployee($header->md_branch_id, $header->md_division_id);
                 $fieldEmployee->setList($dataEmployee);
-                
+
                 $fieldEmployee->setValue($row->getEmployeeId());
-                $fieldDateStart->setValue(format_dmy($row->getStartDate(),'-'));
+                $fieldDateStart->setValue(format_dmy($row->getStartDate(), '-'));
                 $fieldStartTime->setValue(format_time($row->getStartDate()));
-                $fieldDateEnd->setValue(format_dmy($row->getEndDate(),'-'));
+                $fieldDateEnd->setValue(format_dmy($row->getEndDate(), '-'));
                 $fieldEndTime->setValue(format_time($row->getEndDate()));
+                $fieldDesctiprion->setValue($row->getDescription());
+                $fieldBalance->setValue($row->getOvertimeBalance());
+                $fieldExpense->setValue(formatRupiah($row->getOvertimeExpense()));
+                $fieldTotal->setValue(formatRupiah($row->getTotal()));
                 $btnDelete->setValue($row->getOvertimeDetailId());
+
+                if ($header->docstatus == 'IP' || $header->docstatus == 'CO') {
+                    $status = statusRealize($row->status);
+                } else {
+                    $status = '';
+                }
 
                 $table[] = [
                     $this->field->fieldTable($fieldEmployee),
@@ -343,7 +386,11 @@ class Overtime extends BaseController
                     $this->field->fieldTable($fieldStartTime),
                     $this->field->fieldTable($fieldDateEnd),
                     $this->field->fieldTable($fieldEndTime),
+                    $this->field->fieldTable($fieldBalance),
+                    $this->field->fieldTable($fieldExpense),
+                    $this->field->fieldTable($fieldTotal),
                     $this->field->fieldTable($fieldDesctiprion),
+                    $status,
                     $this->field->fieldTable($btnDelete)
                 ];
             endforeach;
@@ -351,5 +398,4 @@ class Overtime extends BaseController
 
         return json_encode($table);
     }
-  
 }

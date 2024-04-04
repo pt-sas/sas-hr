@@ -11,7 +11,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="md_employee_id">Nama Pengaju <span class="required">*</span></label>
+                    <label for="md_employee_id">Pemohon<span class="required">*</span></label>
                     <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
                         data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
@@ -107,7 +107,11 @@
                                 <th>Jam Mulai</th>
                                 <th>Tanggal Selesai</th>
                                 <th>Jam Selesai</th>
+                                <th>Saldo Lembur</th>
+                                <th>Per Jam</th>
+                                <th>Total</th>
                                 <th>Deskripsi</th>
+                                <th>Status</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
