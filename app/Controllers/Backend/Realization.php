@@ -420,35 +420,38 @@ class Realization extends BaseController
 
         $data = [];
 
-        // if ($start = $end) {
-        $starttime = format_time($startdate);
-        $endtime = format_time($endate);
+        if ($start === $end) {
+            $starttime = format_time($startdate);
+            $endtime = format_time($endate);
 
-        $startMinutes = convertToMinutes(format_time($starttime));
-        $endMinutes = convertToMinutes(format_time($endtime));
+            $startMinutes = convertToMinutes(format_time($starttime));
+            $endMinutes = convertToMinutes(format_time($endtime));
 
-        $balance = ($endMinutes - $startMinutes) / 60;
-        $total = $detail[0]->value * (int) $balance;
-
-
-        $data['balance'] = (int) $balance;
-        $data['expense'] = $detail[0]->value;
-        $data['total'] = $total;
-        // } else if ($start < $end) {
-        //     $starttime = format_time($startdate);
-        //     $endtime = format_time($endate);
-
-        //     $startMinutes = convertToMinutes(format_time($starttime));
-        //     $endMinutes = convertToMinutes(format_time($endtime));
-
-        //     $balance = ($endMinutes - $startMinutes) / 60;
-        //     $total = $detail[0]->value * (int) $balance;
+            $balance = ($endMinutes - $startMinutes) / 60;
+            $total = $detail[0]->value * (int) $balance;
 
 
-        //     $data['balance'] = (int) $balance;
-        //     $data['expense'] = $detail[0]->value;
-        //     $data['total'] = $total;
-        // }
+            $data['balance'] = (int) $balance;
+            $data['expense'] = $detail[0]->value;
+            $data['total'] = $total;
+        } else if ($start !== $end) {
+            $starttime = format_time($startdate);
+            $endtime = format_time($endate);
+
+            $endDayMinutes = convertToMinutes('23:59');
+
+            $startMinutes = convertToMinutes(format_time($starttime));
+            $endMinutes = convertToMinutes(format_time($endtime));
+
+            $balance = (($endDayMinutes - $startMinutes) + $endMinutes + 1) / 60;
+
+            $total = $detail[0]->value * (int) $balance;
+
+
+            $data['balance'] = (int) $balance;
+            $data['expense'] = $detail[0]->value;
+            $data['total'] = $total;
+        }
 
         return $data;
     }
