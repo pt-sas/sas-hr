@@ -43,7 +43,7 @@ class ListAbsent extends BaseController
             $search = $this->request->getPost('search');
             $sort = ['date' => 'ASC', 'nik' => 'ASC'];
 
-            $where = ['trx_attendance.absent' => 'Y'];
+            $where = ['trx_attendance.absent' => 'N'];
 
             $data = [];
 
