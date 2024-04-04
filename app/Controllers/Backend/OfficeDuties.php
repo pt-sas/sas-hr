@@ -187,7 +187,7 @@ class OfficeDuties extends BaseController
                     $att = $mAttendance->where([
                         'nik'       => $nik,
                         'date'      => $startDate,
-                        'absent'    => 'Y'
+                        'absent'    => 'N'
                     ])->first();
 
                     $whereClause = "trx_absent.nik = $nik";

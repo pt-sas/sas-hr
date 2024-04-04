@@ -3,7 +3,6 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AccessMenu;
@@ -13,6 +12,8 @@ use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 use App\Models\M_AllowanceAtt;
 use App\Models\M_Rule;
+use App\Models\M_Holiday;
+use Config\Services;
 
 class Alpha extends BaseController
 {
@@ -157,7 +158,6 @@ class Alpha extends BaseController
 
     public function create()
     {
-        $mEmployee = new M_Employee($this->request);
         $mHoliday = new M_Holiday($this->request);
         $mAttendance = new M_Attendance($this->request);
         $mRule = new M_Rule($this->request);
@@ -190,7 +190,7 @@ class Alpha extends BaseController
                     $att = $mAttendance->where([
                         'nik'       => $nik,
                         'date'      => $startDate,
-                        'absent'    => 'Y'
+                        'absent'    => 'N'
                     ])->first();
 
                     $whereClause = "trx_absent.nik = $nik";
