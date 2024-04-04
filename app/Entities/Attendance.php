@@ -14,6 +14,7 @@ class Attendance extends Entity
     protected $absent;
     protected $created_by;
     protected $updated_by;
+    protected $description;
 
     protected $dates   = [
         'created_at',
@@ -99,5 +100,15 @@ class Attendance extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
+    }
+
+    public function getDescription()
+    {
+        return $this->attributes['description'];
+    }
+
+    public function setDescription($description)
+    {
+        $this->attributes['description'] = $description;
     }
 }

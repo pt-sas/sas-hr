@@ -104,17 +104,74 @@ class M_Absent extends Model
 
     public function getSelectDetail()
     {
-        $sql = $this->table . '.*,
-                md_employee.value as employee,
-                md_employee.fullname as employee_fullname,
-                md_branch.name as branch,
-                md_division.name as division,
-                trx_absent_detail.trx_absent_detail_id,
-                trx_absent_detail.isagree,
-                trx_absent_detail.date,
-                md_leavetype.name as leavetype';
+        // $sql = $this->table . '.*,
+        //         md_employee.value as employee,
+        //         md_employee.fullname as employee_fullname,
+        //         md_branch.name as branch,
+        //         md_division.name as division,
+        //         trx_absent_detail.trx_absent_detail_id,
+        //         trx_absent_detail.isagree,
+        //         trx_absent_detail.date,
+        //         md_leavetype.name as leavetype';
 
-        return $sql;
+        // return $sql;
+
+        $post = $this->request->getPost();
+
+        foreach ($post['form'] as $value) :
+            if (!empty($value['value'])) {
+                $datetime = urldecode($value['value']);
+                $date = explode(" - ", $datetime);
+            }
+        endforeach;
+
+        $sql = "(SELECT
+                    ta.*,
+                    me.value as employee,
+                    me.fullname as employee_fullname,
+                    mb.name as branch,
+                    md.name as division,
+                    td.trx_absent_detail_id,
+                    td.isagree,
+                    td.date,
+                    ml.name as leavetype
+                    from trx_absent ta 
+                    left join trx_absent_detail td on ta.trx_absent_id = td.trx_absent_id 
+                    left join md_employee me on me.md_employee_id = ta.md_employee_id 
+                    left join md_branch mb on mb.md_branch_id = ta.md_branch_id 
+                    left join md_division md on md.md_division_id = ta.md_division_id 
+                    left join md_leavetype ml on ml.md_leavetype_id = ta.md_leavetype_id 
+                    where ta.docstatus = 'IP'
+                    and td.isagree = 'H'
+                    and DATE(td.date) BETWEEN '" . date("Y-m-d", strtotime($date[0])) . "' AND '" . date("Y-m-d", strtotime($date[1])) . "'
+                    and ta.md_leavetype_id is null
+                    order by td.date asc)
+                    union all 
+                    (SELECT
+                    ta.*,
+                    me.value as employee,
+                    me.fullname as employee_fullname,
+                    mb.name as branch,
+                    md.name as division,
+                    (select max(td.trx_absent_detail_id)
+                        from trx_absent_detail td
+                        where td.trx_absent_id = ta.trx_absent_id)
+                    as trx_absent_detail_id,
+                    'H' as isagree,
+                    ta.startdate as date,
+                    ml.name as leavetype
+                    from trx_absent ta 
+                    left join md_employee me on me.md_employee_id = ta.md_employee_id 
+                    left join md_branch mb on mb.md_branch_id = ta.md_branch_id 
+                    left join md_division md on md.md_division_id = ta.md_division_id 
+                    left join md_leavetype ml on ml.md_leavetype_id = ta.md_leavetype_id 
+                    where ta.docstatus = 'IP'
+                    and ta.isapproved = 'Y'
+                    and DATE(ta.startdate) >= '" . date("Y-m-d", strtotime($date[0])) . "' AND DATE(ta.startdate) <= '" . date("Y-m-d", strtotime($date[1])) . "'
+                    and ta.md_leavetype_id is not null
+                    order by ta.startdate asc)";
+
+        return $this->db->query($sql)->getResult();
     }
 
     public function getJoinDetail()

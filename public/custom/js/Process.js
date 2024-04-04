@@ -1035,7 +1035,6 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
-        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
@@ -3746,6 +3745,7 @@ function previewImage(input, id, src, status = null) {
           if (
             typeof status === "undefined" ||
             status === "" ||
+            status === null ||
             status === "DR" ||
             status === "IP"
           )
@@ -5584,7 +5584,6 @@ $(".import_file").click(function (evt) {
     cache: false,
     dataType: "JSON",
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",
