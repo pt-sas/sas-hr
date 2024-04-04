@@ -1562,3 +1562,102 @@ $(".datepicker-year").datepicker({
   autoclose: true,
   clearBtn: true,
 });
+
+$("#form_official_permission").on("change", "#md_employee_id", function (e) {
+  let _this = $(this);
+  const target = $(e.target);
+  const form = _this.closest("form");
+  let value = this.value;
+  let formData = new FormData();
+
+  let field = form.find("select[name=md_leavetype_id]");
+
+  let url = ADMIN_URL + "leavetype/getList";
+
+  field.empty();
+
+  if (value) {
+    formData.append("md_employee_id", value);
+
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".save_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "ios");
+      },
+      complete: function () {
+        $(".save_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result.length) {
+          field.append('<option value=""></option>');
+
+          let md_leavetype_id = 0;
+
+          if (option.length) {
+            let index = 0;
+
+            $.each(option, function (i, item) {
+              if (
+                _this.attr("name") === "md_employee_id" &&
+                item.fieldName === "md_employee_id" &&
+                item.option_ID != value
+              )
+                index = option.findIndex(
+                  (item) =>
+                    _this.attr("name") === "md_employee_id" &&
+                    item.fieldName === "md_leavetype_id"
+                );
+            });
+
+            if (index != 0) option.splice(index, 1);
+
+            $.each(option, function (i, item) {
+              if (item.fieldName === "md_leavetype_id")
+                md_leavetype_id = item.label;
+            });
+          }
+
+          if (!result[0].error) {
+            $.each(result, function (idx, item) {
+              if (md_leavetype_id == item.id) {
+                field.append(
+                  '<option value="' +
+                    item.id +
+                    '" selected>' +
+                    item.text +
+                    "</option>"
+                );
+              } else {
+                field.append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                );
+              }
+            });
+          } else {
+            Swal.fire({
+              type: "error",
+              title: result[0].message,
+              showConfirmButton: false,
+              timer: 1500,
+            });
+          }
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+  } else {
+    form.find("input[name=startdate], input[name=enddate]").val(null);
+  }
+});

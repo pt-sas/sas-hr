@@ -28,6 +28,7 @@
                             <th>Karyawan</th>
                             <th>Tanggal Pengajuan</th>
                             <th>Tanggal Tidak Masuk</th>
+                            <th>Keterangan</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
