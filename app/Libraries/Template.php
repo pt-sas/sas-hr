@@ -300,17 +300,24 @@ class Template
     public function tableButtonProcess($btnID)
     {
         $uri = $this->request->uri->getSegment(2);
-        $allBtn = '';
+        $allBtn = "";
 
-        $btnNotAgree = '<a class="btn btn-lg btn_not_agree" id="' . $btnID . '" name="not_agree" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times text-danger"></i></a>';
+        $btnNotAgree = '<button class="btn btn-sm btn-danger rounded ml-4 btn_not_agree" id="' . $btnID . '" name="not_agree" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times"></i> Tidak Setuju</button>';
 
-        $btnAgree = '<a class="btn btn-lg btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check text-success"></i></a>';
+        $btnAgree = '<button class="btn btn-sm btn-success rounded mr-5 btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check"></i> Setuju</button>';
 
         $create = $this->access->checkCrud($uri, $this->isCreate);
         $update = $this->access->checkCrud($uri, $this->isUpdate);
 
         if ($create === 'Y' && $update === 'Y')
-            $allBtn .= $btnNotAgree . $btnAgree;
+            $allBtn = '<div class="d-flex justify-content-between">
+                        <div>
+                            <button class="btn btn-sm btn-success rounded ml-auto btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check"></i> Setuju</button>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-danger rounded ml-auto btn_not_agree" id="' . $btnID . '" name="not_agree" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times"></i> Tidak Setuju</button>
+                        </div>
+                    </div>';
 
         return $allBtn;
     }
@@ -335,11 +342,19 @@ class Template
 
     public function buttonGenerate($btnID)
     {
+        $uri = $this->request->uri->getSegment(2);
         $allBtn = '';
 
-        $btnGenerate = '<a class="btn btn-danger btn-round generate_alpa" onclick="Generate(' . "'" . $btnID . "'" . ')" id="' . $btnID . '">Alpa</a>';
+        $btnGenerate = '<div class="d-flex justify-content-center">
+                            <div>
+                                <a class="btn btn-sm btn-danger rounded ml-auto btn_generate_alpa" onclick="Generate(' . "'" . $btnID . "'" . ')" id="' . $btnID . '" name="generate_alpa" data-toggle="tooltip" title="Generate Alpa" data-original-title="Generate Alpa"><i class="fas fa-cog"></i> Generate</a>
+                            </div>
+                        </div>';
 
-        $allBtn = $btnGenerate;
+        $create = $this->access->checkCrud($uri, $this->isCreate);
+
+        if ($create === 'Y')
+            $allBtn = $btnGenerate;
 
         return $allBtn;
     }
