@@ -587,6 +587,10 @@ _tableReport = $(".table_report")
         targets: 1,
         width: "10%",
       },
+      {
+        targets: -1,
+        width: "20%",
+      },
     ],
     order: [],
     displayLength: -1,
@@ -5565,14 +5569,12 @@ function getHolidayDate() {
   return array;
 }
 
-
 $(".import_file").click(function (evt) {
   let url = CURRENT_URL + IMPORT;
   let formData = new FormData();
-  let file = $('#file')[0].files[0];
+  let file = $("#file")[0].files[0];
   formData.append("file", file);
   
-  // if(typeof file !== 'undefined') {
     $.ajax({
       url: url,
       type: "POST",
