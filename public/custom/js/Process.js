@@ -425,8 +425,17 @@ _tableLine = $(".tb_displayline").DataTable({
       useCurrent: false,
       widgetParent: "body",
     });
+    $(this).find(".datepicker-line").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+      widgetParent: "body",
+    });
+    
     //For Pop Up DateTimePicker in Table
-    $(".timepicker").on("dp.show", function () {
+    $(".timepicker, .datepicker-line").on("dp.show", function () {
       var datepicker = $("body").find(".bootstrap-datetimepicker-widget:last");
       if (datepicker.hasClass("bottom")) {
         var top = $(this).offset().top + $(this).outerHeight();
@@ -1026,6 +1035,7 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
+        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
@@ -5564,30 +5574,31 @@ $(".import_file").click(function (evt) {
   let formData = new FormData();
   let file = $("#file")[0].files[0];
   formData.append("file", file);
-
-  $.ajax({
-    url: url,
-    type: "POST",
-    data: formData,
-    processData: false,
-    contentType: false,
-    cache: false,
-    dataType: "JSON",
-    success: function (result) {
-      console.log(result);
-      if (result[0].success) {
-        Toast.fire({
-          type: "success",
-          title: result[0].message,
-        });
-        $("#file").val("");
-      }
-      if (result[0].error) {
-        Toast.fire({
-          type: "error",
-          title: result[0].message,
-        });
-      }
-    },
-  });
-});
+  
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        success: function (result) {
+          console.log(result);
+          if (result[0].success) {
+            Toast.fire({
+              type: "success",
+              title: result[0].message,
+            });
+          $('#file').val('');
+        }
+          if (result[0].error) {
+            Toast.fire({
+              type: "error",
+              title: result[0].message,
+            })
+          }
+        },
+    })
+  
+})

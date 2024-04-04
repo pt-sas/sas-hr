@@ -8,7 +8,7 @@
                 <th>Tanggal</th>
                 <th>Jam Masuk</th>
                 <th>Jam Pulang</th>
-                <th>Tidak Absent</th>
+                <th>Absen</th>
             </tr>
         </thead>
     </table>
