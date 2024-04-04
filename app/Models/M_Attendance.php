@@ -16,7 +16,8 @@ class M_Attendance extends Model
         'clock_out',
         'absent',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'description'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Attendance';

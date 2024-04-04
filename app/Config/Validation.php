@@ -1778,10 +1778,10 @@ class Validation
             ]
         ]
     ];
-
-    public $realisasi_lembur_not_agree = [
-        'description'        => [
-            'label'             => 'Alasan',
+  
+    public $attendance = [
+        'description'           => [
+            'label'             => 'Keterangan',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'

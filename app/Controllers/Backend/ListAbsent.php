@@ -76,6 +76,7 @@ class ListAbsent extends BaseController
                     $row[] = $val->nik;
                     $row[] = $val->fullname;
                     $row[] = format_dmy($val->date, "-");
+                    $row[] = $val->description;
                     $row[] = $this->template->buttonGenerate($ID);
                     $data[] = $row;
                 }
@@ -92,6 +93,26 @@ class ListAbsent extends BaseController
             ];
 
             return $this->response->setJSON($result);
+        }
+    }
+
+    public function create()
+    {
+        if ($this->request->getMethod(true) === 'POST') {
+            $post = $this->request->getVar();
+
+            try {
+                if (!$this->validation->run($post, 'attendance')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $this->entity->fill($post);
+                    $response = $this->save();
+                }
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
         }
     }
 }

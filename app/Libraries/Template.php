@@ -297,7 +297,7 @@ class Template
         return $sidebar;
     }
 
-    public function tableButtonProcess($btnID)
+    public function tableButtonProcess($btnID, $type = null)
     {
         $uri = $this->request->uri->getSegment(2);
         $allBtn = "";
@@ -309,13 +309,20 @@ class Template
         $create = $this->access->checkCrud($uri, $this->isCreate);
         $update = $this->access->checkCrud($uri, $this->isUpdate);
 
-        if ($create === 'Y' && $update === 'Y')
+        if ($create === 'Y' && $update === 'Y' && is_null($type))
             $allBtn = '<div class="d-flex justify-content-between">
                         <div>
                             <button class="btn btn-sm btn-success rounded ml-auto btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check"></i> Setuju</button>
                         </div>
                         <div>
                             <button class="btn btn-sm btn-danger rounded ml-auto btn_not_agree" id="' . $btnID . '" name="not_agree" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times"></i> Tidak Setuju</button>
+                        </div>
+                    </div>';
+
+        if ($create === 'Y' && $update === 'Y' && !is_null($type))
+            $allBtn = '<div class="d-flex justify-content-center">
+                        <div>
+                            <button class="btn btn-sm btn-success rounded ml-auto btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check"></i> Setuju</button>
                         </div>
                     </div>';
 
@@ -345,9 +352,12 @@ class Template
         $uri = $this->request->uri->getSegment(2);
         $allBtn = '';
 
-        $btnGenerate = '<div class="d-flex justify-content-center">
+        $btnGenerate = '<div class="d-flex justify-content-between">
                             <div>
                                 <a class="btn btn-sm btn-danger rounded ml-auto btn_generate_alpa" onclick="Generate(' . "'" . $btnID . "'" . ')" id="' . $btnID . '" name="generate_alpa" data-toggle="tooltip" title="Generate Alpa" data-original-title="Generate Alpa"><i class="fas fa-cog"></i> Generate</a>
+                            </div>
+                            <div>
+                                <a class="btn btn-sm btn-primary rounded ml-auto btn_edit_att" id="' . $btnID . '" name="attendance" data-toggle="tooltip" title="Edit Kehadiran" data-original-title="Edit Kehadiran"><i class="fas fa-edit"></i> Edit</a>
                             </div>
                         </div>';
 
