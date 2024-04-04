@@ -5,10 +5,11 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use Config\Services;
 use App\Models\M_Absent;
+use App\Models\M_AbsentDetail;
 use App\Models\M_Employee;
-use App\Models\M_AllowanceAtt;
 use App\Models\M_LeaveType;
 use App\Models\M_AccessMenu;
+use App\Models\M_Holiday;
 
 class OfficialPermission extends BaseController
 {
@@ -19,6 +20,7 @@ class OfficialPermission extends BaseController
     {
         $this->request = Services::request();
         $this->model = new M_Absent($this->request);
+        $this->modelDetail = new M_AbsentDetail($this->request);
         $this->entity = new \App\Entities\Absent();
     }
 
@@ -74,27 +76,39 @@ class OfficialPermission extends BaseController
             /**
              * Hak akses
              */
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get("md_employee_id"));
-            $arrEmployee = implode(",", $arrEmployee);
+            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
-            $access = $mAccess->getAccess($this->session->get("sys_user_id"));
+            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                $arrBranch = $arrAccess["branch"];
+                $arrDiv = $arrAccess["division"];
 
-            if ($access && isset($access["branch"]) && isset($access["division"])) {
-                $where['trx_absent.md_branch_id'] = [
-                    'value'     => $access["branch"]
-                ];
+                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
-                $where['trx_absent.md_division_id'] = [
-                    'value'     => $access["division"]
-                ];
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                if ($arrEmployee)
-                    $where = [
-                        '(trx_absent.created_by =' . $this->session->get("sys_user_id") . ' OR trx_absent.md_employee_id IN (' . $arrEmployee . '))'
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrMerge
                     ];
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrEmpBased
+                    ];
+                } else {
+                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+            } else if (!empty($this->session->get('md_employee_id'))) {
+                $where['trx_absent.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
             } else {
-                $where['trx_absent.md_branch_id'] = "";
-                $where['trx_absent.md_division_id'] = "";
+                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin_Resmi;
@@ -147,11 +161,10 @@ class OfficialPermission extends BaseController
             $post["necessary"] = 'IR';
 
             try {
-                $this->entity->fill($post);
-
                 if (!$this->validation->run($post, 'absent')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $this->entity->fill($post);
 
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
@@ -177,16 +190,16 @@ class OfficialPermission extends BaseController
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+                $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
-                //Need to set data into date field in form
-                $list[0]->startdate = format_dmy($list[0]->startdate, "-");
-                $list[0]->enddate = format_dmy($list[0]->enddate, "-");
-
+                //* Need to set data into date field in form
+                $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
+                $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
@@ -194,7 +207,8 @@ class OfficialPermission extends BaseController
                 $fieldHeader->setList($list);
 
                 $result = [
-                    'header'    => $this->field->store($fieldHeader)
+                    'header'    => $this->field->store($fieldHeader),
+                    'line'      => $this->tableLine('edit', $detail)
                 ];
 
                 $response = message('success', true, $result);
@@ -222,7 +236,7 @@ class OfficialPermission extends BaseController
 
     public function processIt()
     {
-        $mAllowance = new M_AllowanceAtt($this->request);
+        $cWfs = new WScenario();
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -231,32 +245,15 @@ class OfficialPermission extends BaseController
             $_DocAction = $post['docaction'];
 
             $row = $this->model->find($_ID);
+            $menu = $this->request->uri->getSegment(2);
 
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                        $response = $this->save();
-
-                        $range = getDatesFromRange($row->getStartDate(), $row->getEndDate());
-
-                        $arr = [];
-                        foreach ($range as $date) {
-                            $arr[] = [
-                                "record_id"         => $_ID,
-                                "table"             => $this->model->table,
-                                "submissiontype"    => $row->getSubmissionType(),
-                                "submissiondate"    => $date,
-                                "md_employee_id"    => $row->getEmployeeId(),
-                                "amount"            => 1,
-                                "created_by"        => $this->access->getSessionUser(),
-                                "updated_by"        => $this->access->getSessionUser(),
-                            ];
-                        }
-
-                        $mAllowance->builder->insertBatch($arr);
+                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                        $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
@@ -279,26 +276,65 @@ class OfficialPermission extends BaseController
 
     public function getEndDate()
     {
+        $mHoliday = new M_Holiday($this->request);
+
         if ($this->request->isAJAX()) {
 
             $leave = new M_LeaveType($this->request);
             $post = $this->request->getVar();
 
             try {
-                $leavetype = $leave->find($post["md_leavetype_id"]);
+                $holidays = $mHoliday->getHolidayDate();
+                $today = date('Y-m-d');
 
-                if ($leavetype->duration_type === "D") {
-                    $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "days"));
-                } else if ($leavetype->duration_type === "M") {
-                    $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "month - 1 days"));
+                if (!empty($post["md_leavetype_id"])) {
+                    $leavetype = $leave->find($post["md_leavetype_id"]);
+
+                    if ($leavetype->duration_type === "D") {
+                        $post['startdate'] = !empty($post['startdate']) ? $post['startdate'] : $today;
+
+                        $date = lastWorkingDays($post['startdate'], $holidays, $leavetype->getDuration(), false);
+
+                        $response = $date[count($date) - 2];
+                    } else if ($leavetype->duration_type === "M") {
+                        $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "month - 1 days"));
+                    }
+                } else {
+                    $response = $today;
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
 
-            // return $this->response->setJSON($response);
-
             return json_encode($response);
         }
+    }
+
+    public function tableLine($set = null, $detail = [])
+    {
+        $table = [];
+
+        //? Update
+        if (!empty($set) && count($detail) > 0) {
+            foreach ($detail as $row) :
+                $docNoRef = "";
+                $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
+
+                if (!empty($row->ref_absent_detail_id)) {
+                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    $docNoRef = $lineRef->documentno;
+                }
+
+                $table[] = [
+                    $row->lineno,
+                    format_dmy($row->date, '-'),
+                    $line->getDocumentNo(),
+                    $docNoRef,
+                    statusRealize($row->isagree)
+                ];
+            endforeach;
+        }
+
+        return json_encode($table);
     }
 }

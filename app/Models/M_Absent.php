@@ -111,7 +111,8 @@ class M_Absent extends Model
                 md_division.name as division,
                 trx_absent_detail.trx_absent_detail_id,
                 trx_absent_detail.isagree,
-                trx_absent_detail.date';
+                trx_absent_detail.date,
+                md_leavetype.name as leavetype';
 
         return $sql;
     }
@@ -123,6 +124,7 @@ class M_Absent extends Model
             $this->setDataJoin('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
             $this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
             $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
+            $this->setDataJoin('md_leavetype', 'md_leavetype.md_leavetype_id = ' . $this->table . '.md_leavetype_id', 'left'),
         ];
 
         return $sql;
@@ -493,6 +495,42 @@ class M_Absent extends Model
                                     ];
                                 }
                             }
+                        }
+
+                        $mAllowance->builder->insertBatch($arr);
+                    }
+                }
+            }
+
+            if ($sql->submissiontype === "tugas kantor") {
+                $rule = $mRule->where([
+                    'name'      => 'Tugas Kantor 1 Hari',
+                    'isactive'  => 'Y'
+                ])->first();
+
+                if ($rule) {
+                    if ($rule->condition === "")
+                        $amount = abs($rule->value);
+
+                    $range = $mAbsentDetail->where([
+                        'trx_absent_id' => $sql->trx_absent_id,
+                        'isagree'       => 'Y'
+                    ])->orderBy('lineno', 'ASC')->findAll();
+
+                    $arr = [];
+
+                    if ($amount != 0 && $range) {
+                        foreach ($range as $row) {
+                            $arr[] = [
+                                "record_id"         => $ID,
+                                "table"             => $this->table,
+                                "submissiontype"    => $sql->submissiontype,
+                                "submissiondate"    => $row->date,
+                                "md_employee_id"    => $sql->md_employee_id,
+                                "amount"            => $amount,
+                                "created_by"        => $rows['data']['updated_by'],
+                                "updated_by"        => $rows['data']['updated_by']
+                            ];
                         }
 
                         $mAllowance->builder->insertBatch($arr);

@@ -3,6 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Employee;
 use App\Models\M_LeaveType;
 use App\Models\M_Reference;
 use Config\Services;
@@ -11,7 +12,6 @@ class LeaveType extends BaseController
 {
     public function __construct()
     {
-
         $this->request = Services::request();
         $this->model = new M_LeaveType($this->request);
         $this->entity = new \App\Entities\LeaveType();
@@ -161,6 +161,8 @@ class LeaveType extends BaseController
 
     public function getList()
     {
+        $mEmployee = new M_Employee($this->request);
+
         if ($this->request->isAjax()) {
             $post = $this->request->getVar();
 
@@ -168,8 +170,31 @@ class LeaveType extends BaseController
 
             try {
                 if (isset($post['search'])) {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->like('name', $post['search'])
+                    if (isset($post['md_employee_id']) && !empty($post['md_employee_id'])) {
+                        $row = $mEmployee->find($post['md_employee_id']);
+
+                        $list = $this->model->where([
+                            'isactive'  => 'Y',
+                            'gender'    => $row->gender,
+                        ])->orWhere('gender', 'A')
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
+                } else if (isset($post['md_employee_id']) && !empty($post['md_employee_id'])) {
+                    $row = $mEmployee->find($post['md_employee_id']);
+
+                    $list = $this->model->where([
+                        'isactive'  => 'Y'
+                    ])->groupStart()
+                        ->where('gender', $row->gender)
+                        ->orWhere('gender', 'A')
+                        ->groupEnd()
                         ->orderBy('name', 'ASC')
                         ->findAll();
                 } else {
@@ -181,7 +206,6 @@ class LeaveType extends BaseController
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getLeaveTypeId();
                     $response[$key]['text'] = $row->getName();
-
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

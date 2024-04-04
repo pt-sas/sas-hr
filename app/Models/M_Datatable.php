@@ -85,7 +85,9 @@ class M_Datatable extends Model
         if ($this->request->getPost('order')) {
             $this->builder->orderBy($column_order[$this->request->getPost('order')['0']['column']], $this->request->getPost('order')['0']['dir']);
         } else if (isset($order) && !empty($order)) {
-            $this->builder->orderBy(key($order), $order[key($order)]);
+            foreach ($order as $column => $param) :
+                $this->builder->orderBy($column, $param);
+            endforeach;
         }
     }
 

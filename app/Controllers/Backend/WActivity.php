@@ -230,7 +230,7 @@ class WActivity extends BaseController
             else
                 $subject = "[" . ucwords($menuName) . "]";
 
-            $subject .= " - " . $dataScenLine->notif_subject;
+            $subject .= " - " . $dataNotif->getSubject();
             $message .= "-----" . " " . ucwords($menuName) . " " . $trx->documentno;
 
             $message = new Html2Text($message);

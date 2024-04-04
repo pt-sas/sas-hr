@@ -84,7 +84,7 @@
                             <i class="fa fa-calendar"></i>
                         </span>
                     </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
+                    <small class="form-text text-danger" id="error_enddate"></small>
                 </div>
             </div>
             <div class="col-md-4">
@@ -156,7 +156,8 @@
                             <tr>
                                 <th>Line</th>
                                 <th>Tanggal Tidak Masuk</th>
-                                <th>Referensi</th>
+                                <th>Doc No</th>
+                                <th>Doc Referensi</th>
                                 <th>Status</th>
                             </tr>
                         </thead>

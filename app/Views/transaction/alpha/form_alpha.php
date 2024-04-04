@@ -5,8 +5,7 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
-                        data-url="employee/getList/$Access">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -22,8 +21,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
-                        readonly>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -47,8 +45,7 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
-                        value=<?= $today ?> readonly>
+                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?> readonly>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
@@ -62,13 +59,11 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal Mulai <span class="required">*</span></label>
-                    <div class="input-group">
+                    <div class="input-icon">
                         <input type="text" class="form-control datepicker-start" name="startdate">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
-                            </span>
-                        </div>
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
@@ -76,15 +71,13 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal Selesai <span class="required">*</span></label>
-                    <div class="input-group">
+                    <div class="input-icon">
                         <input type="text" class="form-control datepicker-end" name="enddate">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
-                            </span>
-                        </div>
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
                     </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
+                    <small class="form-text text-danger" id="error_enddate"></small>
                 </div>
             </div>
             <div class="col-md-6">
@@ -103,7 +96,8 @@
                             <tr>
                                 <th>Line</th>
                                 <th>Tanggal Tidak Masuk</th>
-                                <th>Referensi</th>
+                                <th>Doc No</th>
+                                <th>Doc Referensi</th>
                                 <th>Status</th>
                             </tr>
                         </thead>

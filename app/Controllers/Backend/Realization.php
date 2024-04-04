@@ -74,12 +74,18 @@ class Realization extends BaseController
 
                 $number++;
 
+                $reason = $value->reason;
+
+                if (!empty($value->leavetype))
+                    $reason = "[" . $value->leavetype . "]" . " - " . $value->reason;
+
                 // $row[] = $this->field->fieldTable($fieldChk);
                 $row[] = $number;
                 $row[] = $value->submissiontype;
                 $row[] = $value->employee_fullname;
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = format_dmy($value->date, '-');
+                $row[] = $reason;
                 $row[] = $this->template->tableButtonProcess($ID);
                 $data[] = $row;
             endforeach;
@@ -235,7 +241,6 @@ class Realization extends BaseController
                         //* Foreignkey id
                         $lineID = $this->insertID;
 
-
                         /**
                          * Update Pengajuan lama
                          */
@@ -284,9 +289,7 @@ class Realization extends BaseController
                 $response = message('error', false, $e->getMessage());
             }
 
-            // return $this->response->setJSON($this->entity);
-
-            return json_encode($response);
+            return $this->response->setJSON($response);
         }
     }
 

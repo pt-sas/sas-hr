@@ -157,6 +157,11 @@ class Alpha extends BaseController
 
     public function create()
     {
+        $mEmployee = new M_Employee($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mAttendance = new M_Attendance($this->request);
+        $mRule = new M_Rule($this->request);
+
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
@@ -164,20 +169,52 @@ class Alpha extends BaseController
             $post["necessary"] = 'AL';
 
             try {
-                $this->entity->fill($post);
-
                 if (!$this->validation->run($post, 'alpa')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $holidays = $mHoliday->getHolidayDate();
+                    $startDate = $post['startdate'];
+                    $endDate = $post['enddate'];
+                    $nik = $post['nik'];
+                    $date = $post['submissiondate'];
 
-                    if ($this->isNew()) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    $rule = $mRule->where([
+                        'name'      => 'Alpa',
+                        'isactive'  => 'Y'
+                    ])->first();
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $post["submissiontype"], $post);
-                        $this->entity->setDocumentNo($docNo);
+                    $countDays = $rule && !empty($rule->min) ? $rule->min : 1;
+                    $prevDate = lastWorkingDays($date, $holidays, $countDays);
+                    $lastDate = end($prevDate);
+
+                    $att = $mAttendance->where([
+                        'nik'       => $nik,
+                        'date'      => $startDate,
+                        'absent'    => 'Y'
+                    ])->first();
+
+                    $whereClause = "trx_absent.nik = $nik";
+                    $whereClause .= " AND trx_absent.startdate >= '$startDate' AND trx_absent.enddate <= '$endDate'";
+                    $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
+                    $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                    $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
+
+                    if ($startDate < $lastDate && ($att || is_null($att))) {
+                        $response = message('success', false, 'Tanggal mulai sudah melewati ketentuan, maksimal tanggal mulai : ' . format_dmy($lastDate, '-'));
+                    } else if ($startDate = $lastDate && $trx) {
+                        $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                    } else {
+                        $this->entity->fill($post);
+
+                        if ($this->isNew()) {
+                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                            $docNo = $this->model->getInvNumber("submissiontype", $post["submissiontype"], $post);
+                            $this->entity->setDocumentNo($docNo);
+                        }
+
+                        $response = $this->save();
                     }
-
-                    $response = $this->save();
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -202,9 +239,8 @@ class Alpha extends BaseController
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
                 //Need to set data into date field in form
-                $list[0]->startdate = format_dmy($list[0]->startdate, "-");
-                $list[0]->enddate = format_dmy($list[0]->enddate, "-");
-
+                $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
+                $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
@@ -257,7 +293,7 @@ class Alpha extends BaseController
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                        $response = message('success', true, $this->message);
+                        $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
@@ -307,21 +343,22 @@ class Alpha extends BaseController
     {
         $table = [];
 
-
         //? Update
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
+                $docNoRef = "";
+                $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
+
                 if (!empty($row->ref_absent_detail_id)) {
-                    $line = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
-                    $doc = $line->documentno;
-                } else {
-                    $doc = "";
+                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    $docNoRef = $lineRef->documentno;
                 }
 
                 $table[] = [
                     $row->lineno,
                     format_dmy($row->date, '-'),
-                    $doc,
+                    $line->getDocumentNo(),
+                    $docNoRef,
                     statusRealize($row->isagree)
                 ];
             endforeach;
