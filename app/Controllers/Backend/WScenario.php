@@ -329,9 +329,7 @@ class WScenario extends BaseController
                 } else {
                     $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                 }
-            }
-
-            if ($table === 'trx_overtime') {
+            } else if ($table === 'trx_overtime') {
                 $mEmp = new M_Employee($this->request);
                 $employee = $mEmp->find($trx->md_employee_id);
 

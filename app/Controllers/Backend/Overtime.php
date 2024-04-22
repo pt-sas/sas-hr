@@ -210,11 +210,11 @@ class Overtime extends BaseController
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         if ($line) {
-                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, null, $_ID, $_DocAction, $menu, $this->session);
 
 
                             // This for set status to Hold in Overtime Detail
-                            $ovt_line = $this->modelDetail->where('trx_overtime_id', $_ID)->find();
+                            $ovt_line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 
                             foreach ($ovt_line as $key => $value) {
                                 $value->status = 'H';
@@ -222,16 +222,15 @@ class Overtime extends BaseController
                             }
                             // 
 
-                            $response = message('success', true, $this->message);
+                            $response = message('success', true, true);
                         } else {
-                            $this->entity->setDocStatus($this->DOCSTATUS_Invalid);
-                            $response = $this->save();
+                            $response = message('error', true, 'Line Kosong');
                         }
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
-                    } else if ($receipt && ($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Cannot be processed');
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();
