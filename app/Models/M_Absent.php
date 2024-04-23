@@ -118,10 +118,16 @@ class M_Absent extends Model
 
         $post = $this->request->getPost();
 
+        $startDate = date('Y-m-d');
+        $endDate = date('Y-m-d');
+
         foreach ($post['form'] as $value) :
             if (!empty($value['value'])) {
                 $datetime = urldecode($value['value']);
                 $date = explode(" - ", $datetime);
+
+                $startDate = $date[0];
+                $endDate = $date[1];
             }
         endforeach;
 
@@ -143,7 +149,6 @@ class M_Absent extends Model
                     left join md_leavetype ml on ml.md_leavetype_id = ta.md_leavetype_id 
                     where ta.docstatus = 'IP'
                     and td.isagree = 'H'
-                    and DATE(td.date) BETWEEN '" . date("Y-m-d", strtotime($date[0])) . "' AND '" . date("Y-m-d", strtotime($date[1])) . "'
                     and ta.md_leavetype_id is null
                     order by td.date asc)
                     union all 
@@ -167,7 +172,6 @@ class M_Absent extends Model
                     left join md_leavetype ml on ml.md_leavetype_id = ta.md_leavetype_id 
                     where ta.docstatus = 'IP'
                     and ta.isapproved = 'Y'
-                    and DATE(ta.startdate) >= '" . date("Y-m-d", strtotime($date[0])) . "' AND DATE(ta.startdate) <= '" . date("Y-m-d", strtotime($date[1])) . "'
                     and ta.md_leavetype_id is not null
                     order by ta.startdate asc)";
 
@@ -264,6 +268,7 @@ class M_Absent extends Model
         $mAllowance = new M_AllowanceAtt($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mLeaveBalance = new M_LeaveBalance($this->request);
 
         $amount = 0;
 
@@ -536,20 +541,50 @@ class M_Absent extends Model
                         }
 
                         foreach ($ruleDetail as $detail) {
-                            if ($detail->name === "Sanksi Ijin No Cuti") {
-                                $amount = abs($detail->value);
+                            $balance = $mLeaveBalance->getBalance('md_employee_id', $sql->md_employee_id);
 
-                                foreach ($range as $row) {
-                                    $arr[] = [
-                                        "record_id"         => $ID,
-                                        "table"             => $this->table,
-                                        "submissiontype"    => $sql->submissiontype,
-                                        "submissiondate"    => $row->date,
-                                        "md_employee_id"    => $sql->md_employee_id,
-                                        "amount"            => $amount,
-                                        "created_by"        => $rows['data']['updated_by'],
-                                        "updated_by"        => $rows['data']['updated_by']
-                                    ];
+                            if (!empty($balance)) {
+                                if ($detail->name === "Sanksi Ijin Cuti") {
+                                    $entity = new \App\Entities\LeaveBalance();
+
+                                    $amount = abs($detail->value);
+
+                                    foreach ($range as $row) {
+                                        $arr[] = [
+                                            "record_id"         => $ID,
+                                            "table"             => $this->table,
+                                            "submissiontype"    => $sql->submissiontype,
+                                            "submissiondate"    => $row->date,
+                                            "md_employee_id"    => $sql->md_employee_id,
+                                            "amount"            => $amount,
+                                            "created_by"        => $rows['data']['updated_by'],
+                                            "updated_by"        => $rows['data']['updated_by']
+                                        ];
+
+                                        $entity->record_id = $ID;
+                                        $entity->table = 'ijin';
+                                        $entity->md_employee_id = $sql->md_employee_id;
+                                        $entity->amount = $detail->value;
+
+                                        $mLeaveBalance->save($entity);
+                                    }
+                                }
+                            } else {
+                                if ($detail->name === "Sanksi Ijin No Cuti") {
+                                    $amount = abs($detail->value);
+
+                                    foreach ($range as $row) {
+                                        $arr[] = [
+                                            "record_id"         => $ID,
+                                            "table"             => $this->table,
+                                            "submissiontype"    => $sql->submissiontype,
+                                            "submissiondate"    => $row->date,
+                                            "md_employee_id"    => $sql->md_employee_id,
+                                            "amount"            => $amount,
+                                            "created_by"        => $rows['data']['updated_by'],
+                                            "updated_by"        => $rows['data']['updated_by']
+                                        ];
+                                    }
                                 }
                             }
                         }
