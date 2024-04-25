@@ -11,6 +11,8 @@ use App\Models\M_AccessMenu;
 use App\Models\M_Holiday;
 use App\Models\M_Attendance;
 use App\Models\M_Rule;
+use App\Models\M_EmpWorkDay;
+use App\Models\M_WorkDetail;
 
 class Permission extends BaseController
 {
@@ -158,12 +160,17 @@ class Permission extends BaseController
         $mHoliday = new M_Holiday($this->request);
         $mAttendance = new M_Attendance($this->request);
         $mRule = new M_Rule($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->Pengajuan_Ijin;
             $post["necessary"] = 'IJ';
+            $today = date('Y-m-d');
+            $employeeId = $post['md_employee_id'];
+            $day = date('w');
 
             try {
                 if (!$this->validation->run($post, 'absent')) {
@@ -173,7 +180,7 @@ class Permission extends BaseController
                     $startDate = $post['startdate'];
                     $endDate = $post['enddate'];
                     $nik = $post['nik'];
-                    $date = $post['submissiondate'];
+                    $submissionDate = $post['submissiondate'];
                     $dateWorkRange = getDatesFromRange($startDate, $endDate, $holidays);
 
                     $rule = $mRule->where([
@@ -182,29 +189,62 @@ class Permission extends BaseController
                     ])->first();
 
                     $countDays = $rule && !empty($rule->min) ? $rule->min : 1;
-                    $prevDate = lastWorkingDays($date, $holidays, $countDays);
-                    $lastDate = end($prevDate);
 
-                    $att = $mAttendance->where([
+                    //TODO : Get attendance present employee
+                    $attPresent = $mAttendance->where([
+                        'nik'       => $nik,
+                        'absent'    => 'Y'
+                    ])->whereIn('date', $dateWorkRange)->findAll();
+
+                    //TODO : Get attendance not present employee
+                    $attNotPresent = $mAttendance->where([
                         'nik'       => $nik,
                         'date'      => $startDate,
                         'absent'    => 'N'
                     ])->first();
 
+                    //TODO : Get next day attendance from enddate
+                    $attPresentNextDay = $mAttendance->where([
+                        'nik'       => $nik,
+                        'date >'    => $endDate,
+                        'absent'    => 'Y'
+                    ])->orderBy('date', 'ASC')->first();
+
+                    $nextDate = lastWorkingDays($attPresentNextDay->date, $holidays, $countDays, false);
+
+                    //* index array 1 from variable attPresentNextDay first date
+                    $lastDate = $nextDate[1];
+
+                    //TODO : Get submission
                     $whereClause = "trx_absent.nik = $nik";
                     $whereClause .= " AND trx_absent.startdate >= '$startDate' AND trx_absent.enddate <= '$endDate'";
                     $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
                     $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
                     $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
 
-                    $attPresent = $mAttendance->where([
-                        'nik'       => $nik,
-                        'absent'    => 'N'
-                    ])->whereIn('date', $dateWorkRange)->findAll();
+                    $subDate = date('Y-m-d', strtotime($submissionDate));
 
-                    if ($startDate < $lastDate && ($att || is_null($att))) {
-                        $response = message('success', false, 'Tanggal mulai sudah melewati ketentuan, maksimal tanggal mulai : ' . format_dmy($lastDate, '-'));
-                    } else if ($startDate = $lastDate && $trx) {
+                    $workDay = $mEmpWork->where([
+                        'md_employee_id'    => $post['md_employee_id'],
+                        'validfrom <='      => $today
+                    ])->orderBy('validfrom', 'ASC')->first();
+
+                    $day = strtoupper(formatDay_idn($day));
+
+                    //TODO : Get Work Detail
+                    $whereClause = "md_work_detail.isactive = 'Y'";
+                    $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                    $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                    $whereClause .= " AND md_day.name = '$day'";
+                    $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+
+                    if (is_null($workDay)) {
+                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    } else if (is_null($work)) {
+                        $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
+                    } else if (!is_null($attPresentNextDay) && !($lastDate >= $subDate) && $workDay && $work && $attNotPresent) {
+                        $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
+                    } else if ($trx) {
                         $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
                     } else if ($attPresent) {
                         $date = [];

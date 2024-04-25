@@ -480,6 +480,8 @@ class M_Absent extends Model
                 ])->first();
 
                 if ($rule) {
+                    $ruleDetail = $mRuleDetail->where('md_rule_id = ' . $rule->md_rule_id)->findAll();
+
                     if ($rule->condition === "")
                         $amount = abs($rule->value);
 
@@ -500,6 +502,43 @@ class M_Absent extends Model
                                 "created_by"        => $rows['data']['updated_by'],
                                 "updated_by"        => $rows['data']['updated_by']
                             ];
+                        }
+
+                        foreach ($ruleDetail as $detail) {
+                            $balance = $mLeaveBalance->getBalance('md_employee_id', $sql->md_employee_id);
+
+                            if (!empty($balance)) {
+                                if ($detail->name === "Sanksi Alpa Cuti") {
+                                    $entity = new \App\Entities\LeaveBalance();
+
+                                    foreach ($range as $row) {
+                                        $entity->record_id = $ID;
+                                        $entity->table = $this->table;
+                                        $entity->md_employee_id = $sql->md_employee_id;
+                                        $entity->submissiondate = $row->date;
+                                        $entity->amount = $detail->value;
+
+                                        $mLeaveBalance->save($entity);
+                                    }
+                                }
+                            } else {
+                                if ($detail->name === "Sanksi Alpa No Cuti") {
+                                    $amount = abs($detail->value);
+
+                                    foreach ($range as $row) {
+                                        $arr[] = [
+                                            "record_id"         => $ID,
+                                            "table"             => $this->table,
+                                            "submissiontype"    => $sql->submissiontype,
+                                            "submissiondate"    => $row->date,
+                                            "md_employee_id"    => $sql->md_employee_id,
+                                            "amount"            => $amount,
+                                            "created_by"        => $rows['data']['updated_by'],
+                                            "updated_by"        => $rows['data']['updated_by']
+                                        ];
+                                    }
+                                }
+                            }
                         }
 
                         $mAllowance->builder->insertBatch($arr);
@@ -547,23 +586,11 @@ class M_Absent extends Model
                                 if ($detail->name === "Sanksi Ijin Cuti") {
                                     $entity = new \App\Entities\LeaveBalance();
 
-                                    $amount = abs($detail->value);
-
                                     foreach ($range as $row) {
-                                        $arr[] = [
-                                            "record_id"         => $ID,
-                                            "table"             => $this->table,
-                                            "submissiontype"    => $sql->submissiontype,
-                                            "submissiondate"    => $row->date,
-                                            "md_employee_id"    => $sql->md_employee_id,
-                                            "amount"            => $amount,
-                                            "created_by"        => $rows['data']['updated_by'],
-                                            "updated_by"        => $rows['data']['updated_by']
-                                        ];
-
                                         $entity->record_id = $ID;
-                                        $entity->table = 'ijin';
+                                        $entity->table = $this->table;
                                         $entity->md_employee_id = $sql->md_employee_id;
+                                        $entity->submissiondate = $row->date;
                                         $entity->amount = $detail->value;
 
                                         $mLeaveBalance->save($entity);

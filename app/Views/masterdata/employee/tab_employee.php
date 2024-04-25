@@ -30,6 +30,7 @@
                     </li>
                     <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#kontak-darurat" role="tab" aria-selected="false">Kontak Darurat</a> </li>
                     <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#sim" role="tab" aria-selected="false">SIM</a> </li>
+                    <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#hari-kerja-karyawan" role="tab" aria-selected="false">Hari Kerja</a> </li>
                 </ul>
             </div>
             <div class="modal-body" id="employee">
@@ -58,6 +59,9 @@
                                 <div class="tab-pane fade" id="riwayat-pekerjaan" role="tabpanel" aria-labelledby="riwayat-pekerjaan-tab">
                                     <?= $this->include('masterdata/employee/form_emp_job'); ?>
                                 </div>
+                                <div class="tab-pane fade" id="riwayat-vaksin" role="tabpanel" aria-labelledby="riwayat-vaksin-tab">
+                                    <?= $this->include('masterdata/employee/form_emp_vaccine'); ?>
+                                </div>
                                 <div class="tab-pane fade" id="kursus" role="tabpanel" aria-labelledby="kursus-tab">
                                     <?= $this->include('masterdata/employee/form_emp_course'); ?>
                                 </div>
@@ -70,8 +74,8 @@
                                 <div class="tab-pane fade" id="sim" role="tabpanel" aria-labelledby="sim-tab">
                                     <?= $this->include('masterdata/employee/form_emp_license'); ?>
                                 </div>
-                                <div class="tab-pane fade" id="riwayat-vaksin" role="tabpanel" aria-labelledby="riwayat-vaksin-tab">
-                                    <?= $this->include('masterdata/employee/form_emp_vaccine'); ?>
+                                <div class="tab-pane fade" id="hari-kerja-karyawan" role="tabpanel" aria-labelledby="hari-kerja-karyawan-tab">
+                                    <?= $this->include('masterdata/employee/form_emp_workday'); ?>
                                 </div>
                             </div>
                         </div>
