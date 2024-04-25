@@ -11,7 +11,7 @@
                             <div class="form-group">
                                 <label for="submissiondate">Tanggal Tidak Masuk<span class="required">*</span></label>
                                 <div class="input-icon">
-                                    <input type="text" class="form-control datepicker" name="submissiondate">
+                                    <input type="text" class="form-control datepicker" name="submissiondate" readonly>
                                     <span class="input-icon-addon">
                                         <i class="fa fa-calendar"></i>
                                     </span>
@@ -49,7 +49,7 @@
                             <div class="form-group">
                                 <label for="submissiondate">Tanggal Tidak Masuk<span class="required">*</span></label>
                                 <div class="input-icon">
-                                    <input type="text" class="form-control datepicker" name="submissiondate">
+                                    <input type="text" class="form-control datepicker" name="submissiondate" readonly>
                                     <span class="input-icon-addon">
                                         <i class="fa fa-calendar"></i>
                                     </span>
