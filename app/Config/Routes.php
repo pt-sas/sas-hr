@@ -480,6 +480,18 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('realisasi-lembur', 'Backend\Realization::indexOvertime');
     $routes->match(['get', 'post'], 'realisasi-lembur/showAll', 'Backend\Realization::showAllOvertime');
     $routes->post('realisasi-lembur/create', 'Backend\Realization::createOvertime');
+
+    $routes->add('hari-kerja', 'Backend\Work::index');
+    $routes->match(['get', 'post'], 'hari-kerja/showAll', 'Backend\Work::showAll');
+    $routes->post('hari-kerja/create', 'Backend\Work::create');
+    $routes->get('hari-kerja/show/(:any)', 'Backend\Work::show/$1');
+    $routes->get('hari-kerja/destroy/(:any)', 'Backend\Work::destroy/$1');
+    $routes->post('hari-kerja/tableLine', 'Backend\Work::tableLine');
+
+    $routes->post('hari-kerja-karyawan/tableLine', 'Backend\EmpWorkDay::tableLine');
+    $routes->post('hari-kerja-karyawan/create', 'Backend\EmpWorkDay::create');
+    $routes->get('hari-kerja-karyawan/show', 'Backend\EmpWorkDay::show');
+    $routes->get('hari-kerja-karyawan/show/(:any)', 'Backend\EmpWorkDay::show/$1');
 });
 
 /*

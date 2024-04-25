@@ -13,6 +13,7 @@ class M_LeaveBalance extends Model
         'record_id',
         'table',
         'md_employee_id',
+        'submissiondate',
         'amount',
         'description',
         'created_by',
