@@ -328,15 +328,15 @@ class AllowanceAtt extends BaseController
                 $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
 
                 if (isset($attendance)) {
-                    if ($attendance->absent === 'N') {
+                    if ($attendance->absent === 'Y') {
                         $qty = 1;
                     }
 
-                    if ($attendance->absent === 'N' && $allow) {
+                    if ($attendance->absent === 'Y' && $allow) {
                         $qty = 1 - $allow->amount;
                     }
 
-                    if ($attendance->absent === 'Y' && $allow) {
+                    if ($attendance->absent === 'N' && $allow) {
                         $qty -= $allow->amount;
                     }
                 }
@@ -361,15 +361,15 @@ class AllowanceAtt extends BaseController
                 $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
 
                 if (isset($attendance)) {
-                    if ($attendance->absent === 'N') {
+                    if ($attendance->absent === 'Y') {
                         $qty = 1;
                     }
 
-                    if ($attendance->absent === 'N' && $allow) {
+                    if ($attendance->absent === 'Y' && $allow) {
                         $qty = 1 - $allow->amount;
                     }
 
-                    if ($attendance->absent === 'Y' && $allow) {
+                    if ($attendance->absent === 'N' && $allow) {
                         $qty -= $allow->amount;
                     }
                 }
