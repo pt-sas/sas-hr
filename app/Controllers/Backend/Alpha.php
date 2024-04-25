@@ -14,6 +14,7 @@ use App\Models\M_AllowanceAtt;
 use App\Models\M_Rule;
 use App\Models\M_Holiday;
 use Config\Services;
+use Kint\Zval\Value;
 
 class Alpha extends BaseController
 {
@@ -367,60 +368,228 @@ class Alpha extends BaseController
         return json_encode($table);
     }
 
+    // public function generateAlpa()
+    // {
+    //     $mAttendance = new M_Attendance($this->request);
+    //     $mEmployee = new M_Employee($this->request);
+    //     $mEmpBranch = new M_EmpBranch($this->request);
+    //     $mEmpDivision = new M_EmpDivision($this->request);
+    //     $todayTime = date('Y-m-d H:i:s');
+    //     $today = date('Y-m-d');
+    //     $agree = 'Y';
+
+    //     try {
+    //         $post = $this->request->getVar();
+    //         $post['necessary'] = 'AL';
+    //         $post['submissiondate'] = $today;
+
+    //         $attendance = $mAttendance->where('trx_attendance_id', $post['trx_attendance_id'])->find();
+    //         $employee = $mEmployee->where('nik', $attendance[0]->nik)->find();
+    //         $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
+    //         $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
+
+    //         $this->entity->setNecessary($post['necessary']);
+    //         $this->entity->setSubmissionType('alpa');
+    //         $this->entity->setEmployeeId($employee[0]->md_employee_id);
+    //         $this->entity->setNik($employee[0]->nik);
+    //         $this->entity->setBranchId($branch[0]->md_branch_id);
+    //         $this->entity->setDivisionId($division[0]->md_division_id);
+    //         $this->entity->setReceivedDate($todayTime);
+    //         $this->entity->setReason('');
+    //         $this->entity->setSubmissionDate($today);
+    //         $this->entity->setStartDate($attendance[0]->date);
+    //         $this->entity->setEndDate($attendance[0]->date);
+    //         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+    //         $docNo = $this->model->getInvNumber("submissiontype", 'alpa', $post);
+    //         $this->entity->setDocumentNo($docNo);
+    //         $this->save();
+
+    //         //* Foreignkey id 
+    //         $ID =  $this->insertID;
+
+    //         $this->model = new M_AbsentDetail($this->request);
+    //         $this->entity = new \App\Entities\AbsentDetail();
+    //         $this->entity->isagree = $agree;
+    //         $this->entity->trx_absent_id = $ID;
+    //         $this->entity->lineno = 1;
+    //         $this->entity->date = $attendance[0]->date;
+    //         $this->save();
+
+    //         $this->model = new M_Absent($this->request);
+    //         $this->entity = new \App\Entities\Absent();
+    //         $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+    //         $this->entity->setAbsentId($ID);
+    //         $this->save();
+
+    //         $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . $docNo);
+    //     } catch (\Exception $e) {
+    //         $response = message('error', false, $e->getMessage());
+    //     }
+
+    //     return $this->response->setJSON($response);
+    // }
+
+    // public function generateAlpa()
+    // {
+    //     $mAttendance = new M_Attendance($this->request);
+    //     $mEmployee = new M_Employee($this->request);
+    //     $mEmpBranch = new M_EmpBranch($this->request);
+    //     $mEmpDivision = new M_EmpDivision($this->request);
+    //     $todayTime = date('Y-m-d H:i:s');
+    //     $today = date('Y-m-d');
+    //     $agree = 'Y';
+
+    //     try {
+    //         $post = $this->request->getVar();
+
+    //         $attendance = $mAttendance->where('trx_attendance_id IN (' . implode(", ", $post['trx_attendance_id']) . ')')->find();
+    //         $employee = $mEmployee->where('nik', $attendance[0]->nik)->find();
+    //         $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
+    //         $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
+
+    //         // Getting List Date
+    //         $date = [];
+
+    //         foreach ($attendance as $key => $value) {
+    //             $date[] = $value->date;
+    //         }
+
+    //         $post['necessary'] = 'AL';
+    //         $post['submissiondate'] = $today;
+
+    //         $this->entity->setNecessary($post['necessary']);
+    //         $this->entity->setSubmissionType('alpa');
+    //         $this->entity->setEmployeeId($employee[0]->md_employee_id);
+    //         $this->entity->setNik($employee[0]->nik);
+    //         $this->entity->setBranchId($branch[0]->md_branch_id);
+    //         $this->entity->setDivisionId($division[0]->md_division_id);
+    //         $this->entity->setReceivedDate($todayTime);
+    //         $this->entity->setReason('');
+    //         $this->entity->setSubmissionDate($today);
+    //         $this->entity->setStartDate(min($date));
+    //         $this->entity->setEndDate(max($date));
+    //         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+    //         $docNo = $this->model->getInvNumber("submissiontype", 'alpa', $post);
+    //         $this->entity->setDocumentNo($docNo);
+    //         $this->save();
+
+    //         // //* Foreignkey id 
+    //         $ID =  $this->insertID;
+    //         $number = 1;
+
+    //         foreach ($attendance as $key => $value) {
+    //             $this->model = new M_AbsentDetail($this->request);
+    //             $this->entity = new \App\Entities\AbsentDetail();
+    //             $this->entity->isagree = $agree;
+    //             $this->entity->trx_absent_id = $ID;
+    //             $this->entity->lineno = $number;
+    //             $this->entity->date = $value->date;
+    //             $this->save();
+    //             $number++;
+    //         }
+
+    //         $this->model = new M_Absent($this->request);
+    //         $this->entity = new \App\Entities\Absent();
+    //         $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+    //         $this->entity->setAbsentId($ID);
+    //         $this->save();
+
+    //         $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . $docNo);
+    //     } catch (\Exception $e) {
+    //         $response = message('error', false, $e->getMessage());
+    //     }
+
+    //     return $this->response->setJSON($response);
+    // }
+
     public function generateAlpa()
     {
         $mAttendance = new M_Attendance($this->request);
         $mEmployee = new M_Employee($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDivision = new M_EmpDivision($this->request);
-        $todayTime = date('Y-m-d H:i:s');
         $today = date('Y-m-d');
+        $todayTime = date('Y-m-d H:i:s');
         $agree = 'Y';
 
         try {
             $post = $this->request->getVar();
-            $post['necessary'] = 'AL';
-            $post['submissiondate'] = $today;
+            // $doc = [];
 
-            $attendance = $mAttendance->where('trx_attendance_id', $post['trx_attendance_id'])->find();
-            $employee = $mEmployee->where('nik', $attendance[0]->nik)->find();
-            $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
-            $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
+            $attendance = $mAttendance->where('trx_attendance_id IN (' . implode(", ", $post['trx_attendance_id']) . ')')->find();
 
-            $this->entity->setNecessary($post['necessary']);
-            $this->entity->setSubmissionType('alpa');
-            $this->entity->setEmployeeId($employee[0]->md_employee_id);
-            $this->entity->setNik($employee[0]->nik);
-            $this->entity->setBranchId($branch[0]->md_branch_id);
-            $this->entity->setDivisionId($division[0]->md_division_id);
-            $this->entity->setReceivedDate($todayTime);
-            $this->entity->setReason('');
-            $this->entity->setSubmissionDate($today);
-            $this->entity->setStartDate($attendance[0]->date);
-            $this->entity->setEndDate($attendance[0]->date);
-            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-            $docNo = $this->model->getInvNumber("submissiontype", 'alpa', $post);
-            $this->entity->setDocumentNo($docNo);
-            $this->save();
+            // Grouping By Nik 
+            foreach ($attendance as $item) {
+                $header[$item->nik][] = $item;
+            }
 
-            //* Foreignkey id 
-            $ID =  $this->insertID;
+            // Creating Alpa Header
+            foreach ($header as $key => $value) {
 
-            $this->model = new M_AbsentDetail($this->request);
-            $this->entity = new \App\Entities\AbsentDetail();
-            $this->entity->isagree = $agree;
-            $this->entity->trx_absent_id = $ID;
-            $this->entity->lineno = 1;
-            $this->entity->date = $attendance[0]->date;
-            $this->save();
+                $employee = $mEmployee->where('nik', $value[0]->nik)->find();
+                $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
+                $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
 
-            $this->model = new M_Absent($this->request);
-            $this->entity = new \App\Entities\Absent();
-            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-            $this->entity->setAbsentId($ID);
-            $this->save();
+                // Getting List Date
 
-            $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . $docNo);
+                $date = [];
+
+                foreach ($value as $key => $value) {
+                    $date[] = $value->date;
+                }
+
+                $post['necessary'] = 'AL';
+                $post['submissiondate'] = $today;
+
+                $this->entity->setNecessary($post['necessary']);
+                $this->entity->setSubmissionType('alpa');
+                $this->entity->setEmployeeId($employee[0]->md_employee_id);
+                $this->entity->setNik($employee[0]->nik);
+                $this->entity->setBranchId($branch[0]->md_branch_id);
+                $this->entity->setDivisionId($division[0]->md_division_id);
+                $this->entity->setReceivedDate($todayTime);
+                $this->entity->setReason('');
+                $this->entity->setSubmissionDate($today);
+                $this->entity->setStartDate(min($date));
+                $this->entity->setEndDate(max($date));
+                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                $docNo = $this->model->getInvNumber("submissiontype", 'alpa', $post);
+                $this->entity->setDocumentNo($docNo);
+                $this->save();
+
+                // * Foreignkey id 
+                $ID =  $this->insertID;
+                $number = 1;
+
+
+                $data[] = $value;
+
+                foreach ($data as $key => $item) {
+                    // $data[] = $item;
+                    $mAbsentDetail = new M_AbsentDetail($this->request);
+                    $detailEntity = new \App\Entities\AbsentDetail();
+                    $detailEntity->isagree = $agree;
+                    $detailEntity->trx_absent_id = $ID;
+                    $detailEntity->lineno = $number;
+                    $detailEntity->date = $item->date;
+                    $detailEntity->save();
+                    $number++;
+                }
+
+                $doc[] = $docNo;
+
+
+
+                // $this->model = new M_Absent($this->request);
+                // $this->entity = new \App\Entities\Absent();
+                // $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                // $this->entity->setAbsentId($ID);
+                // $this->save();
+            }
+
+            $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . implode(", ", $doc));
+
+            // $response = $data;
         } catch (\Exception $e) {
             $response = message('error', false, $e->getMessage());
         }
