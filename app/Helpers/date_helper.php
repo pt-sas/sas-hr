@@ -36,8 +36,49 @@ function format_time($date)
     return date('H:i', strtotime($date));
 }
 
-function convertToMinutes ($date) {
+function convertToMinutes($date)
+{
     $time    = explode(':', $date);
     $minutes = ($time[0] * 60.0 + $time[1] * 1.0);
     return $minutes;
+}
+
+function formatDay_idn($day)
+{
+    switch ($day) {
+        case 0: {
+                $day = 'Minggu'; //Sunday
+            }
+            break;
+        case 1: {
+                $day = 'Senin'; // Monday
+            }
+            break;
+        case 2: {
+                $day = 'Selasa'; //Tuesday
+            }
+            break;
+        case 3: {
+                $day = 'Rabu'; //Wednesday
+            }
+            break;
+        case 4: {
+                $day = 'Kamis'; //Thursday
+            }
+            break;
+        case 5: {
+                $day = "Jum'at"; //Friday
+            }
+            break;
+        case 6: {
+                $day = 'Sabtu';  //Saturday
+            }
+            break;
+        default: {
+                $day = 'UnKnown';
+            }
+            break;
+    }
+
+    return $day;
 }
