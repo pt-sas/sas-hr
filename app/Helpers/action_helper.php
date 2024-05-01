@@ -367,7 +367,9 @@ function statusRealize($str)
     if ($str === "Y")
         return '<small class="badge badge-success">Disetujui</small>';
     else if ($str === "N")
-        return '<small class="badge badge-danger">Tidak Disetujui</small>';
+        return '<small class="badge badge-warning">Tidak Disetujui</small>';
+    else if ($str === "C")
+        return '<small class="badge badge-danger">Canceled</small>';
     else
         return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
 }
