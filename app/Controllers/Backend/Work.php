@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Models\M_Day;
 use App\Models\M_Work;
 use App\Models\M_WorkDetail;
+use App\Models\M_EmpWorkDay;
 use Config\Services;
 
 class Work extends BaseController
@@ -237,5 +238,37 @@ class Work extends BaseController
         }
 
         return json_encode($table);
+    }
+
+    public function daysOff($employeeId)
+    {
+        $mEmpWork = new M_EmpWorkDay($this->request);
+
+        if ($this->request->isAJAX()) {
+            try {
+                $today = date('Y-m-d');
+
+                $work = $mEmpWork->where([
+                    'md_employee_id'    => $employeeId,
+                    'validfrom <='      => $today
+                ])->orderBy('validfrom', 'ASC')->first();
+
+                if ($work) {
+                    //TODO : Get Work Detail
+                    $whereClause = "md_work_detail.isactive = 'Y'";
+                    $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                    $whereClause .= " AND md_work.md_work_id = $work->md_work_id";
+                    $workDetail = $this->modelDetail->getWorkDetail($whereClause)->getResult();
+
+                    $response = getDaysOff($workDetail);
+                } else {
+                    $response = [0, 6];
+                }
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
     }
 }

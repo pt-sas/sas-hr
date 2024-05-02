@@ -104,78 +104,77 @@ class M_Absent extends Model
 
     public function getSelectDetail()
     {
-        // $sql = $this->table . '.*,
-        //         md_employee.value as employee,
-        //         md_employee.fullname as employee_fullname,
-        //         md_branch.name as branch,
-        //         md_division.name as division,
-        //         trx_absent_detail.trx_absent_detail_id,
-        //         trx_absent_detail.isagree,
-        //         trx_absent_detail.date,
-        //         md_leavetype.name as leavetype';
+        $sql = $this->table . '.*,
+                md_employee.value as employee,
+                md_employee.fullname as employee_fullname,
+                md_branch.name as branch,
+                md_division.name as division,
+                trx_absent_detail.trx_absent_detail_id,
+                trx_absent_detail.isagree,
+                trx_absent_detail.date,
+                md_leavetype.name as leavetype';
 
-        // return $sql;
+        return $sql;
 
-        $post = $this->request->getPost();
+        // $post = $this->request->getPost();
 
-        $startDate = date('Y-m-d');
-        $endDate = date('Y-m-d');
+        // $startDate = date('Y-m-d');
+        // $endDate = date('Y-m-d');
 
-        foreach ($post['form'] as $value) :
-            if (!empty($value['value'])) {
-                $datetime = urldecode($value['value']);
-                $date = explode(" - ", $datetime);
+        // foreach ($post['form'] as $value) :
+        //     if (!empty($value['value'])) {
+        //         $datetime = urldecode($value['value']);
+        //         $date = explode(" - ", $datetime);
 
-                $startDate = $date[0];
-                $endDate = $date[1];
-            }
-        endforeach;
+        //         $startDate = $date[0];
+        //         $endDate = $date[1];
+        //     }
+        // endforeach;
 
-        $sql = "(SELECT
-                    ta.*,
-                    me.value as employee,
-                    me.fullname as employee_fullname,
-                    mb.name as branch,
-                    md.name as division,
-                    td.trx_absent_detail_id,
-                    td.isagree,
-                    td.date,
-                    ml.name as leavetype
-                    from trx_absent ta 
-                    left join trx_absent_detail td on ta.trx_absent_id = td.trx_absent_id 
-                    left join md_employee me on me.md_employee_id = ta.md_employee_id 
-                    left join md_branch mb on mb.md_branch_id = ta.md_branch_id 
-                    left join md_division md on md.md_division_id = ta.md_division_id 
-                    left join md_leavetype ml on ml.md_leavetype_id = ta.md_leavetype_id 
-                    where ta.docstatus = 'IP'
-                    and td.isagree = 'H'
-                    and ta.md_leavetype_id is null
-                    order by td.date asc)
-                    union all 
-                    (SELECT
-                    ta.*,
-                    me.value as employee,
-                    me.fullname as employee_fullname,
-                    mb.name as branch,
-                    md.name as division,
-                    (select max(td.trx_absent_detail_id)
-                        from trx_absent_detail td
-                        where td.trx_absent_id = ta.trx_absent_id)
-                    as trx_absent_detail_id,
-                    'H' as isagree,
-                    ta.startdate as date,
-                    ml.name as leavetype
-                    from trx_absent ta 
-                    left join md_employee me on me.md_employee_id = ta.md_employee_id 
-                    left join md_branch mb on mb.md_branch_id = ta.md_branch_id 
-                    left join md_division md on md.md_division_id = ta.md_division_id 
-                    left join md_leavetype ml on ml.md_leavetype_id = ta.md_leavetype_id 
-                    where ta.docstatus = 'IP'
-                    and ta.isapproved = 'Y'
-                    and ta.md_leavetype_id is not null
-                    order by ta.startdate asc)";
+        // $sql = "(SELECT
+        //             ta.*,
+        //             me.value as employee,
+        //             me.fullname as employee_fullname,
+        //             mb.name as branch,
+        //             md.name as division,
+        //             td.trx_absent_detail_id,
+        //             td.isagree,
+        //             td.date,
+        //             ml.name as leavetype
+        //             from trx_absent ta 
+        //             left join trx_absent_detail td on ta.trx_absent_id = td.trx_absent_id 
+        //             left join md_employee me on me.md_employee_id = ta.md_employee_id 
+        //             left join md_branch mb on mb.md_branch_id = ta.md_branch_id 
+        //             left join md_division md on md.md_division_id = ta.md_division_id 
+        //             left join md_leavetype ml on ml.md_leavetype_id = ta.md_leavetype_id 
+        //             where ta.docstatus = 'IP'
+        //             and td.isagree = 'H'
+        //             order by td.date asc)";
+        // union all 
+        // (SELECT
+        // ta.*,
+        // me.value as employee,
+        // me.fullname as employee_fullname,
+        // mb.name as branch,
+        // md.name as division,
+        // (select max(td.trx_absent_detail_id)
+        //     from trx_absent_detail td
+        //     where td.trx_absent_id = ta.trx_absent_id)
+        // as trx_absent_detail_id,
+        // 'H' as isagree,
+        // ta.startdate as date,
+        // ml.name as leavetype
+        // from trx_absent ta 
+        // left join md_employee me on me.md_employee_id = ta.md_employee_id 
+        // left join md_branch mb on mb.md_branch_id = ta.md_branch_id 
+        // left join md_division md on md.md_division_id = ta.md_division_id 
+        // left join md_leavetype ml on ml.md_leavetype_id = ta.md_leavetype_id 
+        // where ta.docstatus = 'IP'
+        // and ta.isapproved = 'Y'
+        // and ta.md_leavetype_id is not null
+        // order by ta.startdate asc)";
 
-        return $this->db->query($sql)->getResult();
+        // return $this->db->query($sql)->getResult();
     }
 
     public function getJoinDetail()
@@ -505,20 +504,59 @@ class M_Absent extends Model
                         }
 
                         foreach ($ruleDetail as $detail) {
-                            $balance = $mLeaveBalance->getBalance('md_employee_id', $sql->md_employee_id);
+                            $balance = $mLeaveBalance->getBalance(['trx_leavebalance.md_employee_id' => $sql->md_employee_id]);
 
                             if (!empty($balance)) {
                                 if ($detail->name === "Sanksi Alpa Cuti") {
                                     $entity = new \App\Entities\LeaveBalance();
+                                    $saldo = $balance->amount;
 
-                                    foreach ($range as $row) {
-                                        $entity->record_id = $ID;
-                                        $entity->table = $this->table;
-                                        $entity->md_employee_id = $sql->md_employee_id;
-                                        $entity->submissiondate = $row->date;
-                                        $entity->amount = $detail->value;
+                                    $calculate = $saldo + $detail->value;
 
-                                        $mLeaveBalance->save($entity);
+                                    if ($calculate > 0) {
+                                        foreach ($range as $row) {
+                                            $entity->record_id = $ID;
+                                            $entity->table = $this->table;
+                                            $entity->md_employee_id = $sql->md_employee_id;
+                                            $entity->submissiondate = $row->date;
+                                            $entity->amount = $detail->value;
+
+                                            $mLeaveBalance->save($entity);
+                                        }
+                                    } else {
+                                        foreach ($range as $row) {
+                                            $entity->record_id = $ID;
+                                            $entity->table = $this->table;
+                                            $entity->md_employee_id = $sql->md_employee_id;
+                                            $entity->submissiondate = $row->date;
+                                            $entity->amount = -$saldo;
+
+                                            $mLeaveBalance->save($entity);
+                                        }
+                                    }
+
+                                    if ($calculate < 0) {
+                                        $line = $mRuleDetail->where([
+                                            'md_rule_id' => $rule->md_rule_id,
+                                            'name'       => 'Sanksi Alpa No Cuti'
+                                        ])->first();
+
+                                        $amount = abs($line->value);
+
+                                        $amount = $amount - $saldo;
+
+                                        foreach ($range as $row) {
+                                            $arr[] = [
+                                                "record_id"         => $ID,
+                                                "table"             => $this->table,
+                                                "submissiontype"    => $sql->submissiontype,
+                                                "submissiondate"    => $row->date,
+                                                "md_employee_id"    => $sql->md_employee_id,
+                                                "amount"            => $amount,
+                                                "created_by"        => $rows['data']['updated_by'],
+                                                "updated_by"        => $rows['data']['updated_by']
+                                            ];
+                                        }
                                     }
                                 }
                             } else {
@@ -580,20 +618,59 @@ class M_Absent extends Model
                         }
 
                         foreach ($ruleDetail as $detail) {
-                            $balance = $mLeaveBalance->getBalance('md_employee_id', $sql->md_employee_id);
+                            $balance = $mLeaveBalance->getBalance(['trx_leavebalance.md_employee_id' => $sql->md_employee_id]);
 
                             if (!empty($balance)) {
                                 if ($detail->name === "Sanksi Ijin Cuti") {
                                     $entity = new \App\Entities\LeaveBalance();
+                                    $saldo = $balance->amount;
 
-                                    foreach ($range as $row) {
-                                        $entity->record_id = $ID;
-                                        $entity->table = $this->table;
-                                        $entity->md_employee_id = $sql->md_employee_id;
-                                        $entity->submissiondate = $row->date;
-                                        $entity->amount = $detail->value;
+                                    $calculate = $saldo + $detail->value;
 
-                                        $mLeaveBalance->save($entity);
+                                    if ($calculate > 0) {
+                                        foreach ($range as $row) {
+                                            $entity->record_id = $ID;
+                                            $entity->table = $this->table;
+                                            $entity->md_employee_id = $sql->md_employee_id;
+                                            $entity->submissiondate = $row->date;
+                                            $entity->amount = $detail->value;
+
+                                            $mLeaveBalance->save($entity);
+                                        }
+                                    } else {
+                                        foreach ($range as $row) {
+                                            $entity->record_id = $ID;
+                                            $entity->table = $this->table;
+                                            $entity->md_employee_id = $sql->md_employee_id;
+                                            $entity->submissiondate = $row->date;
+                                            $entity->amount = -$saldo;
+
+                                            $mLeaveBalance->save($entity);
+                                        }
+                                    }
+
+                                    if ($calculate < 0) {
+                                        $line = $mRuleDetail->where([
+                                            'md_rule_id' => $rule->md_rule_id,
+                                            'name'       => 'Sanksi Ijin No Cuti'
+                                        ])->first();
+
+                                        $amount = abs($line->value);
+
+                                        $amount = $amount - $saldo;
+
+                                        foreach ($range as $row) {
+                                            $arr[] = [
+                                                "record_id"         => $ID,
+                                                "table"             => $this->table,
+                                                "submissiontype"    => $sql->submissiontype,
+                                                "submissiondate"    => $row->date,
+                                                "md_employee_id"    => $sql->md_employee_id,
+                                                "amount"            => $amount,
+                                                "created_by"        => $rows['data']['updated_by'],
+                                                "updated_by"        => $rows['data']['updated_by']
+                                            ];
+                                        }
                                     }
                                 }
                             } else {

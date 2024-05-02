@@ -487,6 +487,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('hari-kerja/show/(:any)', 'Backend\Work::show/$1');
     $routes->get('hari-kerja/destroy/(:any)', 'Backend\Work::destroy/$1');
     $routes->post('hari-kerja/tableLine', 'Backend\Work::tableLine');
+    $routes->get('work/get-days-off/(:any)', 'Backend\Work::daysOff/$1');
 
     $routes->post('hari-kerja-karyawan/tableLine', 'Backend\EmpWorkDay::tableLine');
     $routes->post('hari-kerja-karyawan/create', 'Backend\EmpWorkDay::create');
