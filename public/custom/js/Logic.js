@@ -187,32 +187,6 @@ $("#form_overtime").on(
   }
 );
 
-function Generate(id) {
-  let formData = new FormData();
-  let url = ADMIN_URL + "alpa/generate";
-  let ID = id;
-  formData.append("trx_attendance_id", ID);
-
-  $.ajax({
-    url: url,
-    type: "post",
-    data: formData,
-    processData: false,
-    contentType: false,
-    cache: false,
-    dataType: "JSON",
-    success: function (result) {
-      if (result[0].success) {
-        Toast.fire({
-          type: "success",
-          title: result[0].message,
-        });
-        reloadTable();
-      }
-    },
-  });
-}
-
 _tableReport.on("click", ".btn_edit_att", function (e) {
   const tr = $(this).closest("tr");
   let description = tr.find("td:eq(4)").text();
@@ -310,3 +284,75 @@ $(".btn_close_attendance").click(function (e) {
   clearErrorForm(form);
   reloadTable();
 });
+
+_tableReport.on("click", ".check-alpa", function (e) {
+  const target = $(e.target);
+  const card = target.closest(".card");
+  const cardHeader = card.find(".card-header");
+  const floatRight = cardHeader.find(".float-right");
+  const checkbox = _tableReport
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-alpa");
+
+  let checkData = [];
+
+  $.each(checkbox, function (idx, item) {
+   if ($(this).is(":checked")) {
+        if ($(item).is(":checked")) checkData.push(item.value);
+        floatRight.removeClass("d-none");
+    }
+    else {
+        if (checkData.length == 0) floatRight.addClass("d-none");
+    }
+  });
+});
+
+function Generate() {
+
+  let formData = new FormData();
+  let url = ADMIN_URL + "alpa/generate";
+
+  const checkbox = _tableReport
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-alpa");
+
+  $.each(checkbox, function (idx, item) {
+   if ($(this).is(":checked")) { 
+    formData.append("trx_attendance_id[]", item.value);
+    }
+  });
+
+  $.ajax({
+    url: url,
+    type: "post",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      _this.prop("disabled", true);
+      $(".btn_generate_alpa").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      _this.removeAttr("disabled");
+      $(".btn_generate_alpa").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      console.log(result);
+      if (result[0].success) {
+        Toast.fire({
+          type: "success",
+          title: result[0].message,
+        });
+        reloadTable();
+      }
+    },
+  });
+}
