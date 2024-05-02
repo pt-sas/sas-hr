@@ -66,7 +66,7 @@ class ImportAttendance extends BaseController
                             $dateValue = $excel->getActiveSheet()->getCellByColumnAndRow(1, $row)->getFormattedValue();
                             $date = date('Y-m-d', strtotime($dateValue));
 
-                            if ($date === "1970-01-01" || $date > date('Y-m-d')) {
+                            if ($date === "1970-01-01") {
                                 $response = message('error', true, "Tanggal tidak sesuai pada cell B{$row}");
                                 break;
                             }

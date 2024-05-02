@@ -347,15 +347,31 @@ class Template
         return $allBtn;
     }
 
-    public function buttonGenerate($btnID)
+    public function buttonGenerate()
     {
         $uri = $this->request->uri->getSegment(2);
         $allBtn = '';
 
         $btnGenerate = '<div class="d-flex justify-content-between">
                             <div>
-                                <a class="btn btn-sm btn-danger rounded ml-auto btn_generate_alpa" onclick="Generate(' . "'" . $btnID . "'" . ')" id="' . $btnID . '" name="generate_alpa" data-toggle="tooltip" title="Generate Alpa" data-original-title="Generate Alpa"><i class="fas fa-cog"></i> Generate</a>
+                                <a class="btn btn-sm btn-danger rounded ml-auto btn_generate_alpa" onclick="Generate()" name="generate_alpa" data-toggle="tooltip" title="Generate Alpa" data-original-title="Generate Alpa"><i class="fas fa-cog"></i> Generate</a>
                             </div>
+                        </div>';
+
+        $create = $this->access->checkCrud($uri, $this->isCreate);
+
+        if ($create === 'Y')
+            $allBtn = $btnGenerate;
+
+        return $allBtn;
+    }
+
+    public function buttonEdit($btnID)
+    {
+        $uri = $this->request->uri->getSegment(2);
+        $allBtn = '';
+
+        $btnEdit = '<div class="d-flex justify-content-between">
                             <div>
                                 <a class="btn btn-sm btn-primary rounded ml-auto btn_edit_att" id="' . $btnID . '" name="attendance" data-toggle="tooltip" title="Edit Kehadiran" data-original-title="Edit Kehadiran"><i class="fas fa-edit"></i> Edit</a>
                             </div>
@@ -364,7 +380,7 @@ class Template
         $create = $this->access->checkCrud($uri, $this->isCreate);
 
         if ($create === 'Y')
-            $allBtn = $btnGenerate;
+            $allBtn = $btnEdit;
 
         return $allBtn;
     }

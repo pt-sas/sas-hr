@@ -12,6 +12,8 @@ class Overtime extends Entity
     protected $md_branch_id;
     protected $md_division_id;
     protected $submissiondate;
+    protected $startdate;
+    protected $enddate;
     protected $description;
     protected $docstatus;
     protected $isapproved;
@@ -131,6 +133,32 @@ class Overtime extends Entity
             return null;
 
         $this->attributes['approveddate'] = $approveddate;
+    }
+
+    public function getStartDate()
+    {
+        // if (!empty($this->attributes['startdate']))
+        // return format_dmy($this->attributes['startdate'], "-");
+
+        return $this->attributes['startdate'];
+    }
+
+    public function setStartDate($startdate)
+    {
+        $this->attributes['startdate'] = $startdate;
+    }
+
+    public function getEndDate()
+    {
+        // if (!empty($this->attributes['enddate']))
+        //     return format_dmy($this->attributes['enddate'], "-");
+
+        return $this->attributes['enddate'];
+    }
+
+    public function setEndDate($enddate)
+    {
+        $this->attributes['enddate'] = $enddate;
     }
 
     public function getWfScenarioId()

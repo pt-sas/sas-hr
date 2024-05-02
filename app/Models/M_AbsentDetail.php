@@ -58,4 +58,18 @@ class M_AbsentDetail extends Model
         $this->builder->where($where);
         return $this->builder->get();
     }
+
+    public function getLineNo($where)
+    {
+        $this->builder->select($this->table . '.*,
+            trx_absent.trx_absent_id');
+        $this->builder->join('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.trx_absent_id', 'left');
+        $this->builder->where($where);
+
+        $sql = $this->builder->get();
+
+        $lineNo = $sql->getNumRows() + 1;
+
+        return $lineNo;
+    }
 }
