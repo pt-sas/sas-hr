@@ -334,9 +334,21 @@ class OfficialPermission extends BaseController
                     if ($leavetype->duration_type === "D") {
                         $post['startdate'] = !empty($post['startdate']) ? $post['startdate'] : $today;
 
-                        $date = lastWorkingDays($post['startdate'], $holidays, $leavetype->getDuration(), false);
+                        // //TODO : Get work day employee
+                        // $workDay = $mEmpWork->where([
+                        //     'md_employee_id'    => $post['md_employee_id'],
+                        //     'validfrom <='      => $today
+                        // ])->orderBy('validfrom', 'ASC')->first();
 
-                        $response = $date[count($date) - 2];
+                        // //TODO : Get Work Detail
+                        // $whereClause = "md_work_detail.isactive = 'Y'";
+                        // $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                        // $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                        // $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                        $nextDate = lastWorkingDays($post['startdate'], $holidays, $leavetype->getDuration(), false);
+
+                        $response = end($nextDate);
                     } else if ($leavetype->duration_type === "M") {
                         $response = date('Y-m-d', strtotime($post["startdate"] . "+" . $leavetype->duration . "month - 1 days"));
                     }
