@@ -67,7 +67,7 @@ function formatDay_idn($day)
             }
             break;
         case 5: {
-                $day = "Jum'at"; //Friday
+                $day = "Jumat"; //Friday
             }
             break;
         case 6: {
@@ -76,6 +76,42 @@ function formatDay_idn($day)
             break;
         default: {
                 $day = 'UnKnown';
+            }
+            break;
+    }
+
+    return $day;
+}
+
+function convertDay_idn($day)
+{
+    switch (ucfirst(strtolower($day))) {
+        case 'Minggu': {
+                $day = 0; //Sunday
+            }
+            break;
+        case 'Senin': {
+                $day = 1; // Monday
+            }
+            break;
+        case 'Selasa': {
+                $day = 2; //Tuesday
+            }
+            break;
+        case 'Rabu': {
+                $day = 3; //Wednesday
+            }
+            break;
+        case 'Kamis': {
+                $day = 4; //Thursday
+            }
+            break;
+        case 'Jumat': {
+                $day = 5; //Friday
+            }
+            break;
+        case 'Sabtu': {
+                $day = 6; //Saturday
             }
             break;
     }
