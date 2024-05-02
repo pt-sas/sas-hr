@@ -155,6 +155,7 @@ class Overtime extends BaseController
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
+                $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);

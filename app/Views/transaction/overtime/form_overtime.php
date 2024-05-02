@@ -56,7 +56,7 @@
                 <div class="form-group">
                     <label for="date">Tanggal Mulai <span class="required">*</span></label>
                     <div class="input-group">
-                        <input type="text" class="form-control datepicker" name="startdate">
+                        <input type="text" class="form-control datepicker-lembur" name="startdate">
                         <div class="input-group-append">
                             <span class="input-group-text">
                                 <i class="fa fa-calendar"></i>
