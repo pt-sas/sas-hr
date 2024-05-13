@@ -492,6 +492,13 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('hari-kerja-karyawan/create', 'Backend\EmpWorkDay::create');
     $routes->get('hari-kerja-karyawan/show', 'Backend\EmpWorkDay::show');
     $routes->get('hari-kerja-karyawan/show/(:any)', 'Backend\EmpWorkDay::show/$1');
+
+    $routes->add('tugas-kantor-khusus', 'Backend\SpecialOfficeDuties::index');
+    $routes->match(['get', 'post'], 'tugas-kantor-khusus/showAll', 'Backend\SpecialOfficeDuties::showAll');
+    $routes->post('tugas-kantor-khusus/create', 'Backend\SpecialOfficeDuties::create');
+    $routes->get('tugas-kantor-khusus/show/(:any)', 'Backend\SpecialOfficeDuties::show/$1');
+    $routes->get('tugas-kantor-khusus/destroy/(:any)', 'Backend\SpecialOfficeDuties::destroy/$1');
+    $routes->get('tugas-kantor-khusus/processIt', 'Backend\SpecialOfficeDuties::processIt');
 });
 
 /*
