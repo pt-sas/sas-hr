@@ -133,6 +133,34 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
 
           if (form.find("select[name=md_division_id]").length)
             getOptionDivision(_this, result[0].md_division_id);
+
+          if (form.find(".datepicker-start").length) {
+            form.find(".datepicker-start").data("DateTimePicker").destroy();
+
+            form.find(".datepicker-start").datetimepicker({
+              format: "DD-MMM-YYYY",
+              showTodayButton: true,
+              showClear: true,
+              showClose: true,
+              daysOfWeekDisabled: getDaysOfWeek(value),
+              disabledDates: getHolidayDate(),
+              useCurrent: false,
+            });
+          }
+
+          if (form.find(".datepicker-end").length) {
+            form.find(".datepicker-end").data("DateTimePicker").destroy();
+
+            form.find(".datepicker-end").datetimepicker({
+              format: "DD-MMM-YYYY",
+              showTodayButton: true,
+              showClear: true,
+              showClose: true,
+              daysOfWeekDisabled: getDaysOfWeek(value),
+              disabledDates: getHolidayDate(),
+              useCurrent: false,
+            });
+          }
         }
       },
       error: function (jqXHR, exception) {

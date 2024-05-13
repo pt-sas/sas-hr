@@ -269,13 +269,16 @@ function replaceStrBracket(string $str)
  * @param string $format
  * @return array
  */
-function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s', string $exclude = "weekend")
+function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s', string $exclude = "weekend", $days_off = [])
 {
     $array = [];
 
     // Variable that store the date interval 
     // of period 1 day 
     $interval = new DateInterval('P1D');
+
+    // set format end date
+    $end = date($format, strtotime($end));
 
     $realEnd = new DateTime($end);
     $realEnd->add($interval);
@@ -291,6 +294,9 @@ function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s'
                 } else {
                     $array[] = $date->format($format);
                 }
+        } else if ($days_off) {
+            if (!in_array($date->format('w'), $days_off))
+                $array[] = $date->format($format);
         } else {
             $array[] = $date->format($format);
         }
@@ -374,17 +380,44 @@ function statusRealize($str)
         return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
 }
 
-function lastWorkingDays($date, $holidays, $countDays, $backwards = true)
+function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_off = [])
 {
     $workingDays = [];
 
+    if (empty($days_off))
+        $date = date("Y-m-d", strtotime($date . '- 1 days'));
+
     do {
         $direction = $backwards ? 'last' : 'next';
+        $realDate = new DateTime($date);
+
         $date = date("Y-m-d", strtotime("$direction weekday", strtotime($date)));
 
-        if (!in_array($date, $holidays))
+        if ($days_off && !in_array($realDate->format("w"), $days_off) && !in_array($date, $holidays))
+            $workingDays[] = $realDate->format("Y-m-d");
+
+        if (empty($days_off) && !in_array($date, $holidays))
             $workingDays[] = $date;
     } while (count($workingDays) < $countDays);
 
     return $workingDays;
+}
+
+function getDaysOff($workDays)
+{
+    $days = [0, 1, 2, 3, 4, 5, 6];
+
+    $array = [];
+    $arrDays = [];
+
+    foreach ($workDays as $value) {
+        $arrDays[] = convertDay_idn($value->day);
+    }
+
+    foreach ($days as $day) {
+        if (!in_array($day, $arrDays))
+            $array[] = $day;
+    }
+
+    return $array;
 }

@@ -51,15 +51,15 @@ class Realization extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
-            $list = $this->model->getSelectDetail();
-            // $join = $this->model->getJoinDetail();
+            $select = $this->model->getSelectDetail();
+            $join = $this->model->getJoinDetail();
             $order = $this->request->getPost('columns');
             $search = $this->request->getPost('search');
             $sort = [];
-            // $sort = ['trx_absent_detail.date' => 'ASC'];
+            $sort = ['trx_absent_detail.date' => 'ASC'];
 
-            // $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
-            // $where['trx_absent_detail.isagree'] = 'H';
+            $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
+            $where['trx_absent_detail.isagree'] = 'H';
 
             $data = [];
 
@@ -69,7 +69,7 @@ class Realization extends BaseController
             $fieldChk->setClass("check-realize");
 
             $number = $this->request->getPost('start');
-            // $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
             // $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search);
 
             foreach ($list as $value) :
@@ -80,8 +80,8 @@ class Realization extends BaseController
 
                 $reason = $value->reason;
 
-                if (!empty($value->leavetype))
-                    $reason = "<span class='badge badge-info' id=" . $value->md_leavetype_id . ">" . $value->leavetype . "</span>" . " - " . $value->reason;
+                // if (!empty($value->leavetype))
+                //     $reason = "<span class='badge badge-info' id=" . $value->md_leavetype_id . ">" . $value->leavetype . "</span>" . " - " . $value->reason;
 
                 // $row[] = $this->field->fieldTable($fieldChk);
                 $row[] = $number;
@@ -90,19 +90,19 @@ class Realization extends BaseController
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = format_dmy($value->date, '-');
                 $row[] = $reason;
-                $row[] = $this->template->tableButtonProcess($ID, $value->leavetype);
+                $row[] = $this->template->tableButtonProcess($ID);
                 $data[] = $row;
             endforeach;
 
-            $recordsTotal = count($data);
-            $recordsFiltered = count($data);
+            // $recordsTotal = count($data);
+            // $recordsFiltered = count($data);
 
             $result = [
                 'draw'              => $this->request->getPost('draw'),
-                // 'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
-                'recordsTotal'      => $recordsTotal,
-                // 'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
-                'recordsFiltered'   => $recordsFiltered,
+                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
+                // 'recordsTotal'      => $recordsTotal,
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
+                // 'recordsFiltered'   => $recordsFiltered,
                 'data'              => $data
             ];
 

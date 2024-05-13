@@ -1172,10 +1172,16 @@ $(".save_form").click(function (evt) {
             1500
           );
         } else {
-          Toast.fire({
+          Swal.fire({
+            toast: true,
             type: "error",
             title: result[0].message,
+            position: "center",
+            showConfirmButton: false,
+            showCloseButton: true,
+            timer: 15000,
           });
+
           clearErrorForm(form);
         }
       },
@@ -5580,6 +5586,27 @@ _table.on("click", "a.btn_print", function (evt) {
 function getHolidayDate() {
   let array = [];
   let url = `${ADMIN_URL}holiday/get-holiday`;
+
+  $.ajax({
+    url: url,
+    type: "GET",
+    async: false,
+    cache: false,
+    dataType: "JSON",
+    success: function (result) {
+      array = result;
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+
+  return array;
+}
+
+function getDaysOfWeek(employeeID) {
+  let array = [];
+  let url = `${ADMIN_URL}work/get-days-off/${employeeID}`;
 
   $.ajax({
     url: url,
