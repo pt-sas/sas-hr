@@ -371,11 +371,11 @@ class Alpha extends BaseController
                                 /**
                                  * Update Old Absent Detail
                                  */
-                                $this->model = new M_AbsentDetail($this->request);
-                                $this->entity = new \App\Entities\AbsentDetail();
-                                $this->entity->isagree = $cancel;
-                                $this->entity->trx_absent_detail_id = $refDetail->trx_absent_detail_id;
-                                $this->save();
+                                // $this->model = new M_AbsentDetail($this->request);
+                                // $this->entity = new \App\Entities\AbsentDetail();
+                                // $this->entity->isagree = $cancel;
+                                // $this->entity->trx_absent_detail_id = $refDetail->trx_absent_detail_id;
+                                // $this->save();
 
                                 /**
                                  * Inserting New Absent Detail

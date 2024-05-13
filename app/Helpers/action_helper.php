@@ -171,7 +171,7 @@ function docStatus(string $str, string $type = null, ?int $total = 0, ?int $avai
     if ($str === "IP" && (is_null($type) || strtoupper($type) !== "TERIMA")) {
         $msg = '<center><span class="badge badge-info">In Progress</span></center>';
     } else if ($str === "VO") {
-        $msg = '<center><span class="badge badge-danger">Canceled</span></center>';
+        $msg = '<center><span class="badge badge-danger">Anulir</span></center>';
     } else if ($str === "IN") {
         $msg = '<center><span class="badge badge-secondary">Invalid</span></center>';
     } else if ($str === "AP") {
@@ -369,7 +369,7 @@ function statusRealize($str)
     else if ($str === "N")
         return '<small class="badge badge-warning">Tidak Disetujui</small>';
     else if ($str === "C")
-        return '<small class="badge badge-danger">Canceled</small>';
+        return '<small class="badge badge-danger">Anulir</small>';
     else
         return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
 }
