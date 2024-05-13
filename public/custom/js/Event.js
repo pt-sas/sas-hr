@@ -1436,6 +1436,7 @@ _tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
   let formType = tr.find("td:eq(1)").text();
   let submissionDate = tr.find("td:eq(4)").text();
   let description = tr.find("td:eq(5)");
+  let startdate = tr.find("td:eq(5)").text();
   let enddate = tr.find("td:eq(6)").text();
   let starttime = tr.find("td:eq(7)").text();
   let endtime = tr.find("td:eq(8)").text();
@@ -1461,6 +1462,7 @@ _tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
       ID = id;
     } else if (form.is($("#form_overtime_realization_agree"))) {
       form.find("input[name=enddate]").val(enddate);
+      form.find("input[name=startdate]").val(startdate);
       form.find("input[name=starttime]").val(starttime);
       form.find("input[name=endtime]").val(endtime);
       form.find("input[name=isagree]").val("Y");
@@ -1552,6 +1554,7 @@ $(".btn_ok_realization").click(function (e) {
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
+      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",

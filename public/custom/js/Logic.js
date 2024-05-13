@@ -334,16 +334,6 @@ function Generate() {
     contentType: false,
     cache: false,
     dataType: "JSON",
-    beforeSend: function () {
-      _this.prop("disabled", true);
-      $(".btn_generate_alpa").prop("disabled", true);
-      loadingForm(form.prop("id"), "facebook");
-    },
-    complete: function () {
-      _this.removeAttr("disabled");
-      $(".btn_generate_alpa").removeAttr("disabled");
-      hideLoadingForm(form.prop("id"));
-    },
     success: function (result) {
       console.log(result);
       if (result[0].success) {
@@ -356,3 +346,39 @@ function Generate() {
     },
   });
 }
+
+// $("#form_overtime_realization_agree").on("dp.change", "#starttime, #endtime, #enddate" , function(e) {
+//   const form = $("#form_overtime_realization_agree");
+//   let startdate = new Date(form.find("[name=startdate]").val());
+//   let starttime = form.find("[name=starttime]").val();
+//   let enddate = new Date(form.find("[name=enddate]").val());
+//   let endtime = form.find("[name=endtime]").val();
+
+//   $(".datepicker").data("DateTimePicker").minDate(startdate);
+
+  
+//   console.log(startdate)
+//   console.log(starttime)
+//   console.log(enddate)
+//   console.log(endtime)
+// })
+
+_tableReport.on("click", ".btn_agree", function(e) {
+  const form = $("#form_overtime_realization_agree");
+  let startdate = new Date(form.find("[name=startdate]").val());
+  maxDate = new Date(startdate.getTime() + 24 * 60 * 60 * 1000)
+  let starttime = form.find("[name=starttime]").val();
+  let enddate = new Date(form.find("[name=enddate]").val());
+  let endtime = form.find("[name=endtime]").val();
+
+  if(startdate > maxDate) {
+    $(".datepicker").data("DateTimePicker").maxDate(maxDate);
+  $(".datepicker").data("DateTimePicker").minDate(startdate);
+  } else if ( startdate < maxDate) {
+    
+  $(".datepicker").data("DateTimePicker").minDate(startdate);
+  $(".datepicker").data("DateTimePicker").maxDate(maxDate);
+  }
+
+  console.log(startdate);
+})
