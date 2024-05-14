@@ -46,4 +46,33 @@ class M_LeaveBalance extends Model
         $this->builder->where($where);
         return $this->builder->get()->getRow();
     }
+
+    public function getSelect()
+    {
+        $sql = $this->table . '.*,
+                md_employee.value as employee,
+                md_employee.fullname as employee_fullname,
+                trx_absent.documentno';
+
+        return $sql;
+    }
+
+    public function getJoin()
+    {
+        $sql = [
+            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
+            $this->setDataJoin('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.record_id', 'left')
+        ];
+
+        return $sql;
+    }
+
+    private function setDataJoin($tableJoin, $columnJoin, $typeJoin = "inner")
+    {
+        return [
+            "tableJoin" => $tableJoin,
+            "columnJoin" => $columnJoin,
+            "typeJoin" => $typeJoin
+        ];
+    }
 }
