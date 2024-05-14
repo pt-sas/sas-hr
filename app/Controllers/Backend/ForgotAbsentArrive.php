@@ -10,9 +10,6 @@ use App\Models\M_AccessMenu;
 
 class ForgotAbsentArrive extends BaseController
 {
-    /** Pengajuan Lupa Absen Masuk */
-    protected $Pengajuan_Lupa_Absen_Masuk = 'lupa absen masuk';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -96,7 +93,7 @@ class ForgotAbsentArrive extends BaseController
                 $where['trx_absent.md_division_id'] = "";
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Lupa_Absen_Masuk;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Lupa_Absen_Pulang;
 
             $data = [];
 
@@ -142,7 +139,7 @@ class ForgotAbsentArrive extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Lupa_Absen_Masuk;
+            $post["submissiontype"] = $this->model->Pengajuan_Lupa_Absen_Pulang;
             $post["necessary"] = 'LM';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = $post["startdate"];
@@ -157,7 +154,7 @@ class ForgotAbsentArrive extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Lupa_Absen_Masuk, $post);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Lupa_Absen_Pulang, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 

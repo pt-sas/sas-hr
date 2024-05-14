@@ -16,9 +16,6 @@ use App\Models\M_EmpWorkDay;
 
 class HalfDayOfficeDuties extends BaseController
 {
-    /** Pengajuan Tugas Kantor Setengah Hari */
-    protected $Pengajuan_Tugas_Kantor_setengah_Hari = 'tugas kantor setengah hari';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -114,7 +111,7 @@ class HalfDayOfficeDuties extends BaseController
                 $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Tugas_Kantor_setengah_Hari;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Tugas_Kantor_setengah_Hari;
 
             $data = [];
 
@@ -165,7 +162,7 @@ class HalfDayOfficeDuties extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Tugas_Kantor_setengah_Hari;
+            $post["submissiontype"] = $this->model->Pengajuan_Tugas_Kantor_setengah_Hari;
             $post["necessary"] = 'TH';
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
@@ -246,7 +243,7 @@ class HalfDayOfficeDuties extends BaseController
                             if ($this->isNew()) {
                                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Tugas_Kantor_setengah_Hari, $post);
+                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Tugas_Kantor_setengah_Hari, $post);
                                 $this->entity->setDocumentNo($docNo);
                             }
 

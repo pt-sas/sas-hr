@@ -13,9 +13,6 @@ use TCPDF;
 
 class PermissionLeaveOffice extends BaseController
 {
-    /** Pengajuan Tugas Kantor Setengah Hari */
-    protected $Pengajuan_Ijin_Keluar_Kantor = 'ijin keluar kantor';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -98,7 +95,7 @@ class PermissionLeaveOffice extends BaseController
                 $where['trx_absent.md_division_id'] = "";
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin_Keluar_Kantor;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Ijin_Keluar_Kantor;
 
             $data = [];
 
@@ -144,7 +141,7 @@ class PermissionLeaveOffice extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Ijin_Keluar_Kantor;
+            $post["submissiontype"] = $this->model->Pengajuan_Ijin_Keluar_Kantor;
             $post["necessary"] = 'KK';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
@@ -161,7 +158,7 @@ class PermissionLeaveOffice extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin_Keluar_Kantor, $post);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin_Keluar_Kantor, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 

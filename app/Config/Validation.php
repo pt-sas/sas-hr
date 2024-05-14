@@ -1778,7 +1778,7 @@ class Validation
             ]
         ]
     ];
-  
+
     public $attendance = [
         'description'           => [
             'label'             => 'Keterangan',
@@ -1787,5 +1787,33 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ]
+    ];
+
+    public $doctype = [
+        'name'                 => [
+            'label'            => 'Nama',
+            'rules'            => 'required|is_unique[md_doctype.name,md_doctype_id,{id}]',
+            'errors'           => [
+                'is_unique'    => 'This {field} already exists.',
+                'required'     => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $anulir = [
+        // 'submissiontype'       => [
+        //     'label'            => 'Tipe Form',
+        //     'rules'            => 'required',
+        //     'errors'           => [
+        //         'required'     => 'Mohon mengisi {field} dahulu'
+        //     ]
+        // ],
+        'documentno'       => [
+            'label'            => 'Doc No',
+            'rules'            => 'required',
+            'errors'           => [
+                'required'     => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
     ];
 }

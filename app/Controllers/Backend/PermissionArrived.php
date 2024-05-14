@@ -10,9 +10,6 @@ use App\Models\M_AccessMenu;
 
 class PermissionArrived extends BaseController
 {
-    /** Pengajuan Ijin Datang Terlambat */
-    protected $Pengajuan_Datang_Terlambat = 'datang terlambat';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -95,7 +92,7 @@ class PermissionArrived extends BaseController
                 $where['trx_absent.md_division_id'] = "";
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Datang_Terlambat;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Datang_Terlambat;
 
             $data = [];
 
@@ -141,7 +138,7 @@ class PermissionArrived extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Datang_Terlambat;
+            $post["submissiontype"] = $this->model->Pengajuan_Datang_Terlambat;
             $post["necessary"] = 'DT';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
 
@@ -155,7 +152,7 @@ class PermissionArrived extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Datang_Terlambat, $post);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Datang_Terlambat, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 

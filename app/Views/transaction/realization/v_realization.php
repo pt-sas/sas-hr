@@ -24,10 +24,11 @@
                                 </div>
                             </th> -->
                             <th>#</th>
-                            <th>Tipe Form</th>
-                            <th>Karyawan</th>
-                            <th>Tanggal Pengajuan</th>
                             <th>Tanggal Tidak Masuk</th>
+                            <th>Tipe Form</th>
+                            <th>Cabang</th>
+                            <th>Divisi</th>
+                            <th>Karyawan</th>
                             <th>Keterangan</th>
                             <th class="text-center">Aksi</th>
                         </tr>

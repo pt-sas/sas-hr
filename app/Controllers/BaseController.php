@@ -82,23 +82,17 @@ class BaseController extends Controller
 	protected $DOCSTATUS_Suspended = "OS";
 	/** Aborted = AB */
 	protected $DOCSTATUS_Aborted = "AB";
+	/** Requested = RE */
+	protected $DOCSTATUS_Requested = "RE";
 	/** Aborted = XL */
 	protected $DOCSTATUS_Unlock = "XL";
-	/** Inventory In */
-	protected $Inventory_In = 'I+';
-	/** Inventory Out */
-	protected $Inventory_Out = 'I-';
-	/** Movement In */
-	protected $Movement_In = 'M+';
-	/** Movement Out */
-	protected $Movement_Out = 'M-';
 	/** Form Kelengkapan Absent */
 	protected $Form_Kelengkapan_Absent = 'FK';
 	/** Form Absent */
 	protected $Form_Absent = 'FA';
 	/** Status HIDUP*/
 	protected $Status_Hidup = 'HIDUP';
-	/** Form MENINGGAL */
+	/** Status MENINGGAL */
 	protected $Status_Meninggal = 'MENINGGAL';
 
 	/**
@@ -202,6 +196,13 @@ class BaseController extends Controller
 	 * @var int
 	 */
 	protected $Notif_Approved = 100002;
+
+	/**
+	 * Notification Create New Doc
+	 *
+	 * @var int
+	 */
+	protected $Notif_CreateDoc = 100004;
 
 	/**
 	 * Notification Text Not Approved

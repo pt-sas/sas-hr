@@ -10,9 +10,6 @@ use App\Models\M_AccessMenu;
 
 class PermissionLeaveEarly extends BaseController
 {
-    /** Pengajuan Ijin Pulang Cepat */
-    protected $Pengajuan_Pulang_Cepat = 'pulang cepat';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -95,7 +92,7 @@ class PermissionLeaveEarly extends BaseController
                 $where['trx_absent.md_division_id'] = "";
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Pulang_Cepat;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Pulang_Cepat;
 
             $data = [];
 
@@ -141,7 +138,7 @@ class PermissionLeaveEarly extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Pulang_Cepat;
+            $post["submissiontype"] = $this->model->Pengajuan_Pulang_Cepat;
             $post["necessary"] = 'PC';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
 
@@ -155,7 +152,7 @@ class PermissionLeaveEarly extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Pulang_Cepat, $post);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pulang_Cepat, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 

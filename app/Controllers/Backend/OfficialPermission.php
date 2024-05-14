@@ -13,9 +13,6 @@ use App\Models\M_Holiday;
 
 class OfficialPermission extends BaseController
 {
-    /** Pengajuan Ijin Resmi */
-    protected $Pengajuan_Ijin_Resmi = 'ijin resmi';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -111,7 +108,7 @@ class OfficialPermission extends BaseController
                 $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin_Resmi;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Ijin_Resmi;
 
             $data = [];
 
@@ -160,7 +157,7 @@ class OfficialPermission extends BaseController
             $post = $this->request->getVar();
             $file = $this->request->getFile('image');
 
-            $post["submissiontype"] = $this->Pengajuan_Ijin_Resmi;
+            $post["submissiontype"] = $this->model->Pengajuan_Ijin_Resmi;
             $post["necessary"] = 'IR';
 
             try {
@@ -176,7 +173,7 @@ class OfficialPermission extends BaseController
 
                 if ($file && $file->isValid()) {
                     $ext = $file->getClientExtension();
-                    $img_name = $this->Pengajuan_Ijin_Resmi . '_' . $value . '_' . $ymd . '.' . $ext;
+                    $img_name = $this->model->Pengajuan_Ijin_Resmi . '_' . $value . '_' . $ymd . '.' . $ext;
                     $post['image'] = $img_name;
                 }
 
@@ -192,7 +189,7 @@ class OfficialPermission extends BaseController
 
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin_Resmi, $post);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin_Resmi, $post);
                         $this->entity->setDocumentNo($docNo);
                     } else {
                         $row = $this->model->find($this->getID());

@@ -22,9 +22,6 @@ use Kint\Zval\Value;
 
 class Alpha extends BaseController
 {
-    /** Pengajuan Alpa */
-    protected $Pengajuan_Alpa = 'alpa';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -172,7 +169,7 @@ class Alpha extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Alpa;
+            $post["submissiontype"] = $this->model->Pengajuan_Alpa;
             $post["necessary"] = 'AL';
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];

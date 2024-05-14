@@ -46,14 +46,20 @@ class WActivity extends BaseController
                     $menu = $value->menu;
 
                     $menuName = $mMenu->getMenuBy($menu);
-                    $node = 'Approval ' . ucwords($menuName);
-
                     $trx = $this->model->getDataTrx($table, $record_id);
 
-                    if ($trx)
+                    $node = 'Approval ' . ucwords($menuName);
+
+                    if ($trx) {
                         $summary = ucwords($menuName) . ' ' . $trx->documentno . ': ' . $trx->usercreated_by;
-                    else
+
+                        if ($trx->docstatus === $this->DOCSTATUS_Requested) {
+                            $summary = ucwords($menuName) . ' ' . $trx->documentno . ': ' . $trx->userupdated_by;
+                            $node = 'Request Anulir ' . ucwords($menuName);
+                        }
+                    } else {
                         $summary = ucwords($menuName) . ' ' . $record_id;
+                    }
 
                     $row[] = $ID;
                     $row[] = $record_id;
@@ -170,9 +176,16 @@ class WActivity extends BaseController
                     if ($state === $this->DOCSTATUS_Aborted && $processed) {
                         $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by);
 
-                        $this->entity->docstatus = $this->DOCSTATUS_NotApproved;
-                        $this->entity->isapproved = "N";
-                        $this->entity->{$this->model->primaryKey} = $record_id;
+                        if ($trx->docstatus === $this->DOCSTATUS_Requested) {
+                            $this->entity->docstatus = $this->DOCSTATUS_Completed;
+                            $this->entity->isapproved = "N";
+                            $this->entity->{$this->model->primaryKey} = $record_id;
+                        } else {
+                            $this->entity->docstatus = $this->DOCSTATUS_NotApproved;
+                            $this->entity->isapproved = "N";
+                            $this->entity->{$this->model->primaryKey} = $record_id;
+                        }
+
                         $this->save();
 
                         //TODO : Get data Notification Not Approved Text Template
@@ -187,10 +200,19 @@ class WActivity extends BaseController
                         // $this->entity->docstatus = $state;
                         // $this->entity->receiveddate = date("Y-m-d H:i:s");
 
-                        $this->entity->isapproved = "Y";
-                        $this->entity->approveddate = date("Y-m-d H:i:s");
-                        $this->entity->updated_by = $user_by;
-                        $this->entity->{$this->model->primaryKey} = $record_id;
+                        if ($trx->docstatus === $this->DOCSTATUS_Requested) {
+                            $this->entity->docstatus = $this->DOCSTATUS_Voided;
+                            $this->entity->isapproved = "Y";
+                            $this->entity->approveddate = date("Y-m-d H:i:s");
+                            $this->entity->updated_by = $user_by;
+                            $this->entity->{$this->model->primaryKey} = $record_id;
+                        } else {
+                            $this->entity->isapproved = "Y";
+                            $this->entity->approveddate = date("Y-m-d H:i:s");
+                            $this->entity->updated_by = $user_by;
+                            $this->entity->{$this->model->primaryKey} = $record_id;
+                        }
+
                         $this->save();
 
                         //TODO : Get data Notification Approved Text Template
