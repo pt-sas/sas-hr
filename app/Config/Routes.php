@@ -493,6 +493,16 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('hari-kerja-karyawan/create', 'Backend\EmpWorkDay::create');
     $routes->get('hari-kerja-karyawan/show', 'Backend\EmpWorkDay::show');
     $routes->get('hari-kerja-karyawan/show/(:any)', 'Backend\EmpWorkDay::show/$1');
+
+    $routes->add('document-type', 'Backend\DocumentType::index');
+    $routes->match(['get', 'post'], 'document-type/showAll', 'Backend\DocumentType::showAll');
+    $routes->post('document-type/create', 'Backend\DocumentType::create');
+    $routes->get('document-type/show/(:any)', 'Backend\DocumentType::show/$1');
+    $routes->get('document-type/destroy/(:any)', 'Backend\DocumentType::destroy/$1');
+    $routes->match(['get', 'post'], 'document-type/getList', 'Backend\DocumentType::getList');
+
+    $routes->add('request-anulir', 'Backend\RequestAnulir::index');
+    $routes->post('request-anulir/create', 'Backend\RequestAnulir::create');
 });
 
 /*

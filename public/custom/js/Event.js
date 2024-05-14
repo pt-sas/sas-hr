@@ -68,6 +68,29 @@ $(document).ready(function () {
     },
   });
 
+  $(".select-submissiontype").select2({
+    placeholder: "Select an option",
+    width: "100%",
+    theme: "bootstrap",
+    allowClear: true,
+    ajax: {
+      dataType: "JSON",
+      url: ADMIN_URL + "document-type/getList",
+      delay: 250,
+      data: function (params) {
+        return {
+          search: params.term,
+        };
+      },
+      processResults: function (data, page) {
+        return {
+          results: data,
+        };
+      },
+      cache: true,
+    },
+  });
+
   $("#form_employee input[name=nik]").autocomplete({
     serviceUrl: ADMIN_URL + "karyawan/get-nik",
     dataType: "JSON",
@@ -1461,9 +1484,9 @@ $(".btn_filter_realize").on("click", function (e) {
 
 _tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
   const tr = $(this).closest("tr");
-  let formType = tr.find("td:eq(1)").text();
-  let submissionDate = tr.find("td:eq(4)").text();
-  let description = tr.find("td:eq(5)");
+  let formType = tr.find("td:eq(2)").text();
+  let submissionDate = tr.find("td:eq(1)").text();
+  let description = tr.find("td:eq(6)");
   let enddate = tr.find("td:eq(6)").text();
   let starttime = tr.find("td:eq(7)").text();
   let endtime = tr.find("td:eq(8)").text();
@@ -1722,4 +1745,71 @@ $("#form_official_permission").on("change", "#md_employee_id", function (e) {
   } else {
     form.find("input[name=startdate], input[name=enddate]").val(null);
   }
+});
+
+/**
+ * Event Click Button OK Anulir
+ */
+$(".btn_ok_anulir").on("click", function (evt) {
+  const target = $(evt.target);
+  const pageInner = target.closest(".page-inner");
+  const card = target.closest(".card");
+  const form = card.find("form");
+
+  let _this = $(this);
+  let oriElement = _this.html();
+  let formData = new FormData();
+
+  const field = form.find("input, select");
+
+  //? Populate value
+  for (let i = 0; i < field.length; i++) {
+    if (field[i].name !== "") {
+      formData.append(field[i].name, field[i].value);
+    }
+  }
+
+  let url = CURRENT_URL + CREATE;
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      loadingForm(form.prop("id"), "facebook");
+      $(_this)
+        .html(
+          '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
+        )
+        .prop("disabled", true);
+    },
+    complete: function () {
+      hideLoadingForm(form.prop("id"));
+      $(_this).html(oriElement).prop("disabled", false);
+    },
+    success: function (result) {
+      if (result[0].success) {
+        Toast.fire({
+          type: "success",
+          title: result[0].message,
+        });
+      } else if (result[0].error) {
+        errorForm(form, result);
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+
+        clearErrorForm(form);
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
 });

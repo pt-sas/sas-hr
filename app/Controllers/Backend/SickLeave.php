@@ -16,9 +16,6 @@ use Config\Services;
 
 class SickLeave extends BaseController
 {
-    /** Pengajuan Sakit */
-    protected $Pengajuan_Sakit = 'sakit';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -114,7 +111,7 @@ class SickLeave extends BaseController
                 $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Sakit;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Sakit;
 
             $data = [];
 
@@ -170,7 +167,7 @@ class SickLeave extends BaseController
             $file2 = $this->request->getFile('image2');
             $file3 = $this->request->getFile('image3');
 
-            $post["submissiontype"] = $this->Pengajuan_Sakit;
+            $post["submissiontype"] = $this->model->Pengajuan_Sakit;
             $post["necessary"] = 'SA';
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
@@ -191,19 +188,19 @@ class SickLeave extends BaseController
 
                 if ($file && $file->isValid()) {
                     $ext = $file->getClientExtension();
-                    $img_name = $this->Pengajuan_Sakit . '_' . $value . '_' . $ymd . '.' . $ext;
+                    $img_name = $this->model->Pengajuan_Sakit . '_' . $value . '_' . $ymd . '.' . $ext;
                     $post['image'] = $img_name;
                 }
 
                 if ($file2 && $file2->isValid()) {
                     $ext2 = $file2->getClientExtension();
-                    $img2_name = $this->Pengajuan_Sakit . '_' . $value . '2_' . $ymd . '.' . $ext2;
+                    $img2_name = $this->model->Pengajuan_Sakit . '_' . $value . '2_' . $ymd . '.' . $ext2;
                     $post['image2'] = $img2_name;
                 }
 
                 if ($file3 && $file3->isValid()) {
                     $ext3 = $file3->getClientExtension();
-                    $img3_name = $this->Pengajuan_Sakit . '_' . $value . '3_' . $ymd . '.' . $ext3;
+                    $img3_name = $this->model->Pengajuan_Sakit . '_' . $value . '3_' . $ymd . '.' . $ext3;
                     $post['image3'] = $img3_name;
                 }
 
@@ -345,7 +342,7 @@ class SickLeave extends BaseController
 
                             if ($this->isNew()) {
                                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Sakit, $post);
+                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Sakit, $post);
                                 $this->entity->setDocumentNo($docNo);
                             }
 

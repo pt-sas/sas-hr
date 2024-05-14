@@ -64,6 +64,32 @@ class M_Absent extends Model
     protected $request;
     protected $db;
     protected $builder;
+    /** Pengajuan Sakit */
+    protected $Pengajuan_Sakit      = 100001;
+    /** Pengajuan Alpa */
+    protected $Pengajuan_Alpa       = 100002;
+    /** Pengajuan Cuti */
+    protected $Pengajuan_Cuti       = 100003;
+    /** Pengajuan Ijin */
+    protected $Pengajuan_Ijin       = 100004;
+    /** Pengajuan Ijin Resmi */
+    protected $Pengajuan_Ijin_Resmi = 100005;
+    /** Pengajuan Tugas Kantor Setengah Hari */
+    protected $Pengajuan_Ijin_Keluar_Kantor = 100006;
+    /** Pengajuan Tugas Kantor */
+    protected $Pengajuan_Tugas_Kantor = 100007;
+    /** Pengajuan Tugas Khusus */
+    protected $Pengajuan_Tugas_Khusus = 100008;
+    /** Pengajuan Tugas Kantor Setengah Hari */
+    protected $Pengajuan_Tugas_Kantor_setengah_Hari = 100009;
+    /** Pengajuan Lupa Absen Masuk */
+    protected $Pengajuan_Lupa_Absen_Masuk = 100010;
+    /** Pengajuan Lupa Absen Pulang */
+    protected $Pengajuan_Lupa_Absen_Pulang = 100011;
+    /** Pengajuan Ijin Datang Terlambat */
+    protected $Pengajuan_Datang_Terlambat = 100012;
+    /** Pengajuan Ijin Pulang Cepat */
+    protected $Pengajuan_Pulang_Cepat = 100013;
 
     public function __construct(RequestInterface $request)
     {
@@ -112,7 +138,8 @@ class M_Absent extends Model
                 trx_absent_detail.trx_absent_detail_id,
                 trx_absent_detail.isagree,
                 trx_absent_detail.date,
-                md_leavetype.name as leavetype';
+                md_leavetype.name as leavetype,
+                md_doctype.name as doctype';
 
         return $sql;
 
@@ -185,6 +212,7 @@ class M_Absent extends Model
             $this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
             $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
             $this->setDataJoin('md_leavetype', 'md_leavetype.md_leavetype_id = ' . $this->table . '.md_leavetype_id', 'left'),
+            $this->setDataJoin('md_doctype', 'md_doctype.md_doctype_id = ' . $this->table . '.submissiontype', 'left'),
         ];
 
         return $sql;
@@ -257,6 +285,21 @@ class M_Absent extends Model
             $mAbsentDetail->builder->insertBatch($data);
         }
 
+        // if ($sql->docstatus === "RE" && !is_null($line)) {
+        //     $line = $mAbsentDetail->where($this->primaryKey, $rows['id'][0])->findAll();
+
+        //     $data = [];
+        //     foreach ($line as $val) :
+        //         $row = [];
+        //         $row[$mAbsentDetail->primaryKey] = $val->{$mAbsentDetail->primaryKey};
+        //         $row['isagree'] = 'H';
+        //         $row['updated_by'] = $rows['data']['updated_by'];
+        //         $data[] = $row;
+        //     endforeach;
+
+        //     $mAbsentDetail->builder->updateBatch($data, $mAbsentDetail->primaryKey);
+        // }
+
         $this->createAllowance($rows);
     }
 
@@ -299,8 +342,8 @@ class M_Absent extends Model
             $mAbsentDetail->builder->insertBatch($data);
         }
 
-        if ($sql->docstatus === "CO") {
-            if ($sql->submissiontype === "sakit") {
+        if (($sql->getIsApproved() === 'Y' || empty($sql->getIsApproved())) && $sql->docstatus === "CO") {
+            if ($sql->submissiontype == $this->Pengajuan_Sakit) {
                 $rule = $mRule->where([
                     'name'      => 'Sakit',
                     'isactive'  => 'Y'
@@ -336,7 +379,7 @@ class M_Absent extends Model
                 }
             }
 
-            if ($sql->submissiontype === "lupa absen masuk") {
+            if ($sql->submissiontype == $this->Pengajuan_Lupa_Absen_Masuk) {
                 $rule = $mRule->where([
                     'name'      => 'Lupa Absen Masuk',
                     'isactive'  => 'Y'
@@ -367,7 +410,7 @@ class M_Absent extends Model
                 }
             }
 
-            if ($sql->submissiontype === "lupa absen pulang") {
+            if ($sql->submissiontype == $this->Pengajuan_Lupa_Absen_Pulang) {
                 $rule = $mRule->where([
                     'name'      => 'Lupa Absen Pulang',
                     'isactive'  => 'Y'
@@ -398,7 +441,7 @@ class M_Absent extends Model
                 }
             }
 
-            if ($sql->submissiontype === "datang terlambat") {
+            if ($sql->submissiontype == $this->Pengajuan_Datang_Terlambat) {
                 $rule = $mRule->where('name', 'Terlambat')->first();
 
                 if ($rule) {
@@ -434,7 +477,7 @@ class M_Absent extends Model
                 }
             }
 
-            if ($sql->submissiontype === "pulang cepat") {
+            if ($sql->submissiontype == $this->Pengajuan_Pulang_Cepat) {
                 $rule = $mRule->where('name', 'Pulang Cepat')->find();
 
                 if ($rule) {
@@ -472,7 +515,7 @@ class M_Absent extends Model
                 }
             }
 
-            if ($sql->submissiontype === "alpa") {
+            if ($sql->submissiontype == $this->Pengajuan_Alpa) {
                 $rule = $mRule->where([
                     'name'      => 'Alpa',
                     'isactive'  => 'Y'
@@ -584,7 +627,7 @@ class M_Absent extends Model
                 }
             }
 
-            if ($sql->submissiontype === "ijin") {
+            if ($sql->submissiontype == $this->Pengajuan_Ijin) {
                 $rule = $mRule->where([
                     'name'      => 'Ijin',
                     'isactive'  => 'Y'
@@ -698,7 +741,7 @@ class M_Absent extends Model
                 }
             }
 
-            if ($sql->submissiontype === "tugas kantor") {
+            if ($sql->submissiontype == $this->Pengajuan_Tugas_Kantor) {
                 $rule = $mRule->where([
                     'name'      => 'Tugas Kantor 1 Hari',
                     'isactive'  => 'Y'
@@ -732,6 +775,87 @@ class M_Absent extends Model
                         $mAllowance->builder->insertBatch($arr);
                     }
                 }
+            }
+        }
+
+        if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "VO" && !is_null($line)) {
+            $line = $mAbsentDetail->where($this->primaryKey, $ID)->findAll();
+
+            $data = [];
+            foreach ($line as $val) :
+                $row = [];
+                $row[$mAbsentDetail->primaryKey] = $val->{$mAbsentDetail->primaryKey};
+                $row['isagree'] = 'N';
+                $row['updated_by'] = $rows['data']['updated_by'];
+                $data[] = $row;
+
+                $refDetail = $mAbsentDetail->where('trx_absent_detail_id', $val->ref_absent_detail_id)->first();
+                $whereClause = "trx_absent.trx_absent_id = " . $refDetail->trx_absent_id;
+                $lineNo = $mAbsentDetail->getLineNo($whereClause);
+
+                /**
+                 * Inserting New Absent Detail
+                 */
+                $this->entity = new \App\Entities\AbsentDetail();
+                $this->entity->trx_absent_id = $refDetail->trx_absent_id;
+                $this->entity->isagree = "H";
+                $this->entity->lineno = $lineNo;
+                $this->entity->date = $refDetail->date;
+                $mAbsentDetail->save($this->entity);
+
+                $this->entity = new \App\Entities\Absent();
+                $this->entity->setDocStatus("IP");
+                $this->entity->setAbsentId($refDetail->trx_absent_id);
+                $this->save($this->entity);
+            endforeach;
+
+            $mAbsentDetail->builder->updateBatch($data, $mAbsentDetail->primaryKey);
+
+            $whereParam = [
+                'table'             => $this->table,
+                'md_employee_id'    => $sql->md_employee_id,
+                'record_id'         => $ID
+            ];
+
+            $tkh = $mAllowance->where($whereParam)->findAll();
+
+            $saldo_cuti = $mLeaveBalance->where($whereParam)->findAll();
+
+            if ($tkh) {
+                $arr = [];
+
+                foreach ($tkh as $row) {
+                    $arr[] = [
+                        "record_id"         => $ID,
+                        "table"             => $this->table,
+                        "submissiontype"    => $row->submissiontype,
+                        "submissiondate"    => $row->submissiondate,
+                        "md_employee_id"    => $row->md_employee_id,
+                        "amount"            => - ($row->amount),
+                        "created_by"        => $rows['data']['updated_by'],
+                        "updated_by"        => $rows['data']['updated_by']
+                    ];
+                }
+
+                $mAllowance->builder->insertBatch($arr);
+            }
+
+            if ($saldo_cuti) {
+                $saldo = [];
+
+                foreach ($saldo_cuti as $row) {
+                    $saldo[] = [
+                        "record_id"         => $ID,
+                        "table"             => $this->table,
+                        "submissiondate"    => $row->submissiondate,
+                        "md_employee_id"    => $row->md_employee_id,
+                        "amount"            => abs($row->amount),
+                        "created_by"        => $rows['data']['updated_by'],
+                        "updated_by"        => $rows['data']['updated_by']
+                    ];
+                }
+
+                $mLeaveBalance->builder->insertBatch($saldo);
             }
         }
     }

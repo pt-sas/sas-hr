@@ -570,8 +570,29 @@ _tableReport = $(".table_report")
           //! Remove attribute disabled field
           disabled.removeAttr("disabled");
 
-          //* Serialize form array
-          formReport = form.serializeArray();
+          //TODO: Collect field array
+          let field = form
+            .find("input, select")
+            .map(function () {
+              if (typeof $(this).attr("name") !== "undefined") {
+                let row = {};
+
+                row["name"] = $(this).attr("name");
+
+                if (this.type !== "checkbox" && this.type !== "select-multiple")
+                  row["value"] = this.value;
+                else if (this.type === "select-multiple")
+                  row["value"] = $(this).val();
+                else row["value"] = this.checked ? "Y" : "N";
+
+                row["type"] = this.type;
+
+                return row;
+              }
+            })
+            .get();
+
+          formReport = field;
 
           //! Set attribute disabled field
           disabled.prop("disabled", true);
@@ -659,12 +680,7 @@ function checkFixedColumns() {
   if ($(".tb_display thead th").length > 10) {
     return {
       rightColumns: 1,
-      leftColumns: 0,
-    };
-  } else if ($(".tb_display thead th").length > 15) {
-    return {
-      rightColumns: 1,
-      leftColumns: 3,
+      leftColumns: 4,
     };
   }
 }
