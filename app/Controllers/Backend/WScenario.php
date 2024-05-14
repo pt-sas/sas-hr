@@ -345,11 +345,23 @@ class WScenario extends BaseController
                     $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                 }
             }
+        } else if ($trx && $docStatus === $this->DOCSTATUS_Requested) {
+            if ($table === 'trx_absent') {
+                $this->sys_wfscenario_id = $mWfs->getScenario('request-anulir');
+
+                if ($this->sys_wfscenario_id) {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Requested);
+                    $this->entity->setWfScenarioId($this->sys_wfscenario_id);
+                    $isWfscenario = true;
+                } else {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                }
+            }
         }
 
         $this->entity->setUpdatedBy($session->get('sys_user_id'));
         $this->entity->{$primaryKey} = $trxID;
-        $result = $this->save($this->entity);
+        $result = $this->save();
 
         if ($result && $isWfscenario)
             $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);

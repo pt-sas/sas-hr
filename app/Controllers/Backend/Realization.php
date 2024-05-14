@@ -54,7 +54,7 @@ class Realization extends BaseController
             $order = $this->request->getPost('columns');
             $search = $this->request->getPost('search');
             $sort = [];
-            $sort = ['trx_absent_detail.date' => 'ASC'];
+            $sort = ['trx_absent_detail.date' => 'ASC', 'md_employee.fullname' => 'ASC'];
 
             $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
             $where['trx_absent_detail.isagree'] = 'H';
@@ -83,10 +83,11 @@ class Realization extends BaseController
 
                 // $row[] = $this->field->fieldTable($fieldChk);
                 $row[] = $number;
-                $row[] = $value->submissiontype;
-                $row[] = $value->employee_fullname;
-                $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = format_dmy($value->date, '-');
+                $row[] = $value->doctype;
+                $row[] = $value->branch;
+                $row[] = $value->division;
+                $row[] = $value->employee_fullname;
                 $row[] = $reason;
                 $row[] = $this->template->tableButtonProcess($ID);
                 $data[] = $row;
@@ -223,13 +224,13 @@ class Realization extends BaseController
                         if ($post['submissiontype'] === 'ijin') {
                             $necessary = 'IJ';
                             $this->entity->setNecessary($necessary);
-                            $this->entity->setSubmissionType($post['submissiontype']);
+                            $this->entity->setSubmissionType($this->model->Pengajuan_Ijin);
                         }
 
                         if ($post['submissiontype'] === 'alpa') {
                             $necessary = 'AL';
                             $this->entity->setNecessary($necessary);
-                            $this->entity->setSubmissionType('alpa');
+                            $this->entity->setSubmissionType($this->model->Pengajuan_Alpa);
                         }
 
                         $this->entity->setEmployeeId($row->getEmployeeId());

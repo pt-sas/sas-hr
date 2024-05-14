@@ -15,9 +15,6 @@ use App\Models\M_EmpWorkDay;
 
 class OfficeDuties extends BaseController
 {
-    /** Pengajuan Tugas Kantor */
-    protected $Pengajuan_Tugas_Kantor = 'tugas kantor';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -113,7 +110,7 @@ class OfficeDuties extends BaseController
                 $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Tugas_Kantor;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Tugas_Kantor;
 
             $data = [];
 
@@ -164,7 +161,7 @@ class OfficeDuties extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Tugas_Kantor;
+            $post["submissiontype"] = $this->model->Pengajuan_Tugas_Kantor;
             $post["necessary"] = 'TK';
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
@@ -242,7 +239,7 @@ class OfficeDuties extends BaseController
                             if ($this->isNew()) {
                                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Tugas_Kantor, $post);
+                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Tugas_Kantor, $post);
                                 $this->entity->setDocumentNo($docNo);
                             }
 

@@ -16,9 +16,6 @@ use App\Models\M_WorkDetail;
 
 class Permission extends BaseController
 {
-    /** Pengajuan Ijin */
-    protected $Pengajuan_Ijin = 'ijin';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -114,7 +111,7 @@ class Permission extends BaseController
                 $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Ijin;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Ijin;
 
             $data = [];
 
@@ -166,7 +163,7 @@ class Permission extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Ijin;
+            $post["submissiontype"] = $this->model->Pengajuan_Ijin;
             $post["necessary"] = 'IJ';
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
@@ -279,7 +276,7 @@ class Permission extends BaseController
                             if ($this->isNew()) {
                                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Ijin, $post);
+                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin, $post);
                                 $this->entity->setDocumentNo($docNo);
                             }
 

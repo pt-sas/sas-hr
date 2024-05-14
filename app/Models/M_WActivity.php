@@ -37,12 +37,6 @@ class M_WActivity extends Model
 		$this->builder = $this->db->table($this->table);
 	}
 
-	public function index()
-	{
-		$d = $this->getActivity();
-		dd($d);
-	}
-
 	private function getRole()
 	{
 		$sql = "SELECT sys_user_role.sys_role_id 
@@ -94,12 +88,12 @@ class M_WActivity extends Model
 		$this->builder = $this->db->table($table);
 
 		$this->builder->select($table . '.*,
-						sys_user.name as usercreated_by');
+						sys_user.name as usercreated_by,
+						usp.name as userupdated_by');
 
 		$this->builder->join('sys_user', 'sys_user.sys_user_id = ' . $table . '.created_by');
-		$this->builder->where([
-			$table . ".docstatus" => "IP"
-		]);
+		$this->builder->join('sys_user usp', 'usp.sys_user_id = ' . $table . '.updated_by');
+		$this->builder->whereIn($table . ".docstatus", ["IP", "RE"]);
 
 		foreach ($fields as $field) {
 			if ($field->primary_key == 1) {

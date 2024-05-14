@@ -11,9 +11,6 @@ use App\Models\M_AccessMenu;
 
 class Leave extends BaseController
 {
-    /** Pengajuan Cuti */
-    protected $Pengajuan_Cuti = 'cuti';
-
     public function __construct()
     {
         $this->request = Services::request();

@@ -180,6 +180,8 @@ function docStatus(string $str, string $type = null, ?int $total = 0, ?int $avai
         $msg = '<center><span class="badge badge-black">Not Approved</span></center>';
     } else if ($str === "DR") {
         $msg = '<center><span class="badge badge-warning">Drafted</span></center>';
+    } else if ($str === "RE") {
+        $msg = '<center><span class="badge badge-primary">Requested</span></center>';
     } else {
         if (strtoupper($type) === "TERIMA") {
             if ($total == 0 && $available == 0)
