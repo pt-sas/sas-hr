@@ -434,6 +434,22 @@ _tableLine = $(".tb_displayline").DataTable({
       useCurrent: false,
       widgetParent: "body",
     });
+    $(this).find(".timepickerline-start").datetimepicker({
+      format: "HH:mm",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+      widgetParent: "body",
+    });
+    $(this).find(".timepickerline-end").datetimepicker({
+      format: "HH:mm",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+      widgetParent: "body",
+    });
     $(this).find(".datepicker-line").datetimepicker({
       format: "DD-MMM-YYYY",
       showTodayButton: true,
@@ -444,7 +460,7 @@ _tableLine = $(".tb_displayline").DataTable({
     });
 
     //For Pop Up DateTimePicker in Table
-    $(".timepicker, .datepicker-line").on("dp.show", function () {
+    $(".timepicker, .timepickerline-start, .timepickerline-end, .datepicker-line").on("dp.show", function () {
       var datepicker = $("body").find(".bootstrap-datetimepicker-widget:last");
       if (datepicker.hasClass("bottom")) {
         var top = $(this).offset().top + $(this).outerHeight();
@@ -5626,6 +5642,8 @@ function getDaysOfWeek(employeeID) {
 }
 
 $(".import_file").click(function (evt) {
+  let _this = $(this);
+  const form = $(this).closest("form");
   let url = CURRENT_URL + IMPORT;
   let formData = new FormData();
   let file = $("#file")[0].files[0];
@@ -5639,7 +5657,16 @@ $(".import_file").click(function (evt) {
     contentType: false,
     cache: false,
     dataType: "JSON",
+    beforeSend: function () {
+      _this.prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      _this.removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
     success: function (result) {
+      console.log(result)
       if (result[0].success) {
         Toast.fire({
           type: "success",
