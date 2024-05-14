@@ -14,8 +14,11 @@ use App\Models\M_AllowanceAtt;
 use App\Models\M_Rule;
 use App\Models\M_Holiday;
 use App\Models\M_EmpWorkDay;
+use App\Models\M_LeaveBalance;
+use App\Models\M_RuleDetail;
 use App\Models\M_WorkDetail;
 use Config\Services;
+use Kint\Zval\Value;
 
 class Alpha extends BaseController
 {
@@ -335,31 +338,139 @@ class Alpha extends BaseController
                         $response = $this->save();
                     } else if ($_DocAction === $this->DOCSTATUS_Voided) {
                         $mRule = new M_Rule($this->request);
+                        $mRuleDetail = new M_RuleDetail($this->request);
                         $mAllowance = new M_AllowanceAtt($this->request);
+                        $mLeaveBalance = new M_LeaveBalance($this->request);
 
+                        $detail = $this->modelDetail->where(['trx_absent_id' => $post['id'], 'isagree' => 'Y'])->find();
+
+                        /**
+                         * Update Pengajuan absent detail
+                         */
+                        foreach ($detail as $key => $value) {
+                            $hold = 'H';
+                            $cancel = 'C';
+
+                            $this->model = new M_AbsentDetail($this->request);
+                            $this->entity = new \App\Entities\AbsentDetail();
+                            $this->entity->isagree = $cancel;
+                            $this->entity->trx_absent_detail_id = $value->trx_absent_detail_id;
+                            $this->save();
+
+                            /**
+                             * Update Pengajuan ref absent detail
+                             */
+                            if ($value->ref_absent_detail_id != null) {
+                                $refDetail = $this->modelDetail->where('trx_absent_detail_id', $value->ref_absent_detail_id)->first();
+                                $whereClause = "trx_absent.trx_absent_id = " . $refDetail->trx_absent_id;
+                                $lineNo = $this->modelDetail->getLineNo($whereClause);
+
+                                /**
+                                 * Update Old Absent Detail
+                                 */
+                                $this->model = new M_AbsentDetail($this->request);
+                                $this->entity = new \App\Entities\AbsentDetail();
+                                $this->entity->isagree = $cancel;
+                                $this->entity->trx_absent_detail_id = $refDetail->trx_absent_detail_id;
+                                $this->save();
+
+                                /**
+                                 * Inserting New Absent Detail
+                                 */
+                                $this->model = new M_AbsentDetail($this->request);
+                                $this->entity = new \App\Entities\AbsentDetail();
+                                $this->entity->trx_absent_id = $refDetail->trx_absent_id;
+                                $this->entity->isagree = $hold;
+                                $this->entity->lineno = $lineNo;
+                                $this->entity->date = $refDetail->date;
+                                $this->save();
+
+                                /**
+                                 * Update DocStatus in Reference Document
+                                 */
+                                $this->model = new M_Absent($this->request);
+                                $this->entity = new \App\Entities\Absent();
+                                $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
+                                $this->entity->setAbsentId($refDetail->trx_absent_id);
+                                $this->save();
+                            }
+                        }
+
+                        $this->model = new M_Absent($this->request);
+                        $this->entity = new \App\Entities\Absent();
                         $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $this->save();
 
-
+                        // This Section for returning amount of sanksi
                         $rule = $mRule->where([
                             'name'      => 'Alpa',
                             'isactive'  => 'Y'
                         ])->first();
 
-                        $arr[] = [
-                            "record_id"         => $_ID,
-                            "table"             => $this->model->table,
-                            "submissiontype"    => $row->getSubmissionType(),
-                            "submissiondate"    => $row->getStartDate(),
-                            "md_employee_id"    => $row->getEmployeeId(),
-                            "amount"            => $rule->value,
-                            "created_by"        => $this->access->getSessionUser(),
-                            "updated_by"        => $this->access->getSessionUser()
-                        ];
+                        if ($rule) {
+                            $ruleDetail = $mRuleDetail->where('md_rule_id = ' . $rule->md_rule_id)->findAll();
 
-                        $mAllowance->builder->insertBatch($arr);
+                            if ($rule->condition === "")
+                                $amount = $rule->value;
 
-                        $response = message('success', true, 'Alpa dibatalkan');
+                            // Returning Amount Allowance
+                            if ($amount != 0 && $detail) {
+                                foreach ($detail as $item) {
+                                    $arr[] = [
+                                        "record_id"         => $_ID,
+                                        "table"             => $this->model->table,
+                                        "submissiontype"    => $row->getSubmissionType(),
+                                        "submissiondate"    => $item->date,
+                                        "md_employee_id"    => $row->getEmployeeId(),
+                                        "amount"            => $amount,
+                                        "created_by"        => $this->access->getSessionUser(),
+                                        "updated_by"        => $this->access->getSessionUser()
+                                    ];
+                                }
+                            }
+
+                            //  Return Leave or Allowance
+                            foreach ($ruleDetail as $value) {
+                                $balance = $mLeaveBalance->getBalance('md_employee_id', $row->getEmployeeId());
+
+                                if (!empty($balance)) {
+                                    if ($value->name === "Sanksi Alpa Cuti") {
+                                        $entity = new \App\Entities\LeaveBalance();
+
+                                        foreach ($detail as $item) {
+                                            $entity->record_id = $_ID;
+                                            $entity->table = $this->model->table;
+                                            $entity->md_employee_id = $row->getEmployeeId();
+                                            $entity->submissiondate = $item->date;
+                                            $entity->amount = abs($value->value);
+
+                                            $mLeaveBalance->save($entity);
+                                        }
+                                    }
+                                } else {
+                                    if ($value->name === "Sanksi Alpa No Cuti") {
+                                        $amount = $value->value;
+
+                                        foreach ($detail as $item) {
+                                            $arr[] = [
+                                                "record_id"         => $_ID,
+                                                "table"             => $this->model->table,
+                                                "submissiontype"    => $row->getSubmissionType(),
+                                                "submissiondate"    => $item->date,
+                                                "md_employee_id"    => $row->getEmployeeId(),
+                                                "amount"            => $amount,
+                                                "created_by"        => $this->access->getSessionUser(),
+                                                "updated_by"        => $this->access->getSessionUser()
+                                            ];
+                                        }
+                                    }
+                                }
+                            }
+
+                            $mAllowance->builder->insertBatch($arr);
+                        }
+
+                        $response = message('success', true, true);
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();
@@ -409,54 +520,93 @@ class Alpha extends BaseController
         $mEmployee = new M_Employee($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDivision = new M_EmpDivision($this->request);
-        $todayTime = date('Y-m-d H:i:s');
         $today = date('Y-m-d');
+        $todayTime = date('Y-m-d H:i:s');
         $agree = 'Y';
 
         try {
             $post = $this->request->getVar();
-            $post['necessary'] = 'AL';
-            $post['submissiondate'] = $today;
+            $doc = [];
 
-            $attendance = $mAttendance->where('trx_attendance_id', $post['trx_attendance_id'])->find();
-            $employee = $mEmployee->where('nik', $attendance[0]->nik)->find();
-            $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
-            $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
+            $attendance = $mAttendance->where('trx_attendance_id IN (' . implode(", ", $post['trx_attendance_id']) . ')')->find();
 
-            $this->entity->setNecessary($post['necessary']);
-            $this->entity->setSubmissionType('alpa');
-            $this->entity->setEmployeeId($employee[0]->md_employee_id);
-            $this->entity->setNik($employee[0]->nik);
-            $this->entity->setBranchId($branch[0]->md_branch_id);
-            $this->entity->setDivisionId($division[0]->md_division_id);
-            $this->entity->setReceivedDate($todayTime);
-            $this->entity->setReason('');
-            $this->entity->setSubmissionDate($today);
-            $this->entity->setStartDate($attendance[0]->date);
-            $this->entity->setEndDate($attendance[0]->date);
-            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-            $docNo = $this->model->getInvNumber("submissiontype", 'alpa', $post);
-            $this->entity->setDocumentNo($docNo);
-            $this->save();
+            // Grouping By Nik 
+            foreach ($attendance as $item) {
+                $header[$item->nik][] = $item;
+            }
 
-            //* Foreignkey id 
-            $ID =  $this->insertID;
+            $ID = [];
 
-            $this->model = new M_AbsentDetail($this->request);
-            $this->entity = new \App\Entities\AbsentDetail();
-            $this->entity->isagree = $agree;
-            $this->entity->trx_absent_id = $ID;
-            $this->entity->lineno = 1;
-            $this->entity->date = $attendance[0]->date;
-            $this->save();
+            // Creating Alpa Header
+            foreach ($header as $key => $value) {
+                $this->model = new M_Absent($this->request);
+                $this->entity = new \App\Entities\Absent();
 
-            $this->model = new M_Absent($this->request);
-            $this->entity = new \App\Entities\Absent();
-            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-            $this->entity->setAbsentId($ID);
-            $this->save();
+                $employee = $mEmployee->where('nik', $value[0]->nik)->find();
+                $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
+                $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
 
-            $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . $docNo);
+                // Getting List Date
+                $date = [];
+
+                foreach ($value as $key => $item) {
+                    $date[] = $item->date;
+                }
+
+                $post['necessary'] = 'AL';
+                $post['submissiondate'] = $today;
+
+                $this->entity->setNecessary($post['necessary']);
+                $this->entity->setSubmissionType('alpa');
+                $this->entity->setEmployeeId($employee[0]->md_employee_id);
+                $this->entity->setNik($employee[0]->nik);
+                $this->entity->setBranchId($branch[0]->md_branch_id);
+                $this->entity->setDivisionId($division[0]->md_division_id);
+                $this->entity->setReceivedDate($todayTime);
+                $this->entity->setReason('');
+                $this->entity->setSubmissionDate($today);
+                $this->entity->setStartDate(min($date));
+                $this->entity->setEndDate(max($date));
+                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                $docNo = $this->model->getInvNumber("submissiontype", 'alpa', $post);
+                $this->entity->setDocumentNo($docNo);
+                $this->save();
+
+                // * Foreignkey id 
+                $Ref = $this->insertID;
+                $ID[] = $this->insertID;
+                $number = 1;
+
+                // Creating Absent Line 
+                foreach ($value as $item) {
+                    $mAbsentDetail = new M_AbsentDetail($this->request);
+                    $detailEntity = new \App\Entities\AbsentDetail();
+                    $detailEntity->isagree = $agree;
+                    $detailEntity->trx_absent_id = $Ref;
+                    $detailEntity->lineno = $number;
+                    $detailEntity->date = $item->date;
+                    $mAbsentDetail->save($detailEntity);
+                    $number++;
+                }
+
+                $doc[] = $docNo;
+
+                $this->model = new M_Absent($this->request);
+                $this->entity = new \App\Entities\Absent();
+                $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                $this->entity->setAbsentId($Ref);
+                $response = $this->save();
+            }
+
+            // foreach ($ID as $item) {
+            //     $this->model = new M_Absent($this->request);
+            //     $this->entity = new \App\Entities\Absent();
+            //     $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+            //     $this->entity->setAbsentId($item);
+            //     $response = $this->save();
+            // }
+
+            $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . implode(", ", $doc));
         } catch (\Exception $e) {
             $response = message('error', false, $e->getMessage());
         }

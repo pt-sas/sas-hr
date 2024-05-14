@@ -2,6 +2,7 @@
 
 <?= $this->section('content') ?>
 <?= $this->include('transaction/overtimerealization/modal_realization') ?>
+<?= $this->include($filter) ?>
 
 <div class="row">
     <div class="col-md-12">

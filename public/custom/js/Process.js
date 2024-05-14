@@ -146,6 +146,15 @@ $(document).ready(function (e) {
       useCurrent: false,
     });
 
+    $(".datepicker-lembur").datetimepicker({
+      format: "DD-MMM-YYYY",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+      minDate: Date(),
+    });
+
     $(".datepick").datetimepicker({
       format: "DD-MMM-YYYY",
       showTodayButton: true,
@@ -834,6 +843,7 @@ $(".save_form").click(function (evt) {
           className.includes("datepicker") ||
           className.includes("datepicker-start") ||
           className.includes("datepicker-end") ||
+          className.includes("datepicker-lembur") ||
           className.includes("datetimepicker-start") ||
           className.includes("datetimepicker-end") ||
           className.includes("datepick") ||
@@ -3592,6 +3602,9 @@ function clearForm(evt) {
 
   if (form.find(".datetimepicker-start").length)
     form.find(".datetimepicker-start").data("DateTimePicker").clear();
+
+  if (form.find(".datepicker-lembur").length)
+    form.find(".datepicker-lembur").data("DateTimePicker").clear();
 
   if (form.find(".datepicker-end").length)
     form.find(".datepicker-end").data("DateTimePicker").clear();

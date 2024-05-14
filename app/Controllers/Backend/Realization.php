@@ -9,6 +9,8 @@ use App\Models\M_Overtime;
 use App\Models\M_OvertimeDetail;
 use App\Models\M_Rule;
 use App\Models\M_RuleDetail;
+use App\Models\M_EmpWorkDay;
+use App\Models\M_WorkDetail;
 use Config\Services;
 
 class Realization extends BaseController
@@ -316,8 +318,8 @@ class Realization extends BaseController
                 $response = message('error', false, $e->getMessage());
             }
 
-            // return $this->response->setJSON($response);
-            return json_encode($response);
+            return $this->response->setJSON($response);
+            // return json_encode($response);
         }
     }
 
@@ -345,7 +347,7 @@ class Realization extends BaseController
 
                         $startdate = date('Y-m-d', strtotime($line->startdate)) . " " . $post['starttime'];
                         $enddate =   date('Y-m-d', strtotime($post["enddate"])) . " " . $post['endtime'];
-                        $ovt = $this->getHourOvertime($startdate, $enddate);
+                        $ovt = $this->getHourOvertime($startdate, $enddate, $line->md_employee_id);
 
                         $this->entity->trx_overtime_detail_id = $post['id'];
                         $this->entity->startdate = $startdate;
@@ -384,8 +386,9 @@ class Realization extends BaseController
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
+            return $this->response->setJSON($response);
 
-            return json_encode($response);
+            // return json_encode($post);
         }
     }
 
@@ -431,14 +434,19 @@ class Realization extends BaseController
         }
     }
 
-    public function getHourOvertime($startdate, $endate)
+    public function getHourOvertime($startdate, $endate, $md_employee_id)
     {
         $mRule = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         $start = format_dmy($startdate, '-');
         $end = format_dmy($endate, '-');
+        $today = date('Y-m-d');
+        $day = date('w', strtotime($startdate));
 
+        // Getting Rule
         $rule = $mRule->where([
             'name'      => 'Lembur',
             'isactive'  => 'Y'
@@ -446,37 +454,108 @@ class Realization extends BaseController
 
         $detail = $mRuleDetail->where('md_rule_id', $rule->md_rule_id)->find();
 
+        // Getting Working Hour
+        $workDay = $mEmpWork->where([
+            'md_employee_id'    => $md_employee_id,
+            'validfrom <='      => $today
+        ])->orderBy('validfrom', 'ASC')->first();
+
+        $dayName = strtoupper(formatDay_idn($day));
+
+        if (isset($workDay) && !is_null($workDay)) {
+            $whereClause = "md_work_detail.isactive = 'Y'";
+            $whereClause .= " AND md_employee_work.md_employee_id = $md_employee_id";
+            $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+            $whereClause .= " AND md_day.name = '$dayName'";
+            $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+        }
+
         $data = [];
 
-        // if ($start = $end) {
         $starttime = format_time($startdate);
         $endtime = format_time($endate);
 
-        $startMinutes = convertToMinutes(format_time($starttime));
-        $endMinutes = convertToMinutes(format_time($endtime));
+        // If a employee have a workday
+        if (isset($work)) {
+            $startMinutes = convertToMinutes(format_time($starttime));
+            $endMinutes = convertToMinutes(format_time($endtime));
+            $endWork = convertToMinutes($work->endwork);
 
-        $balance = ($endMinutes - $startMinutes) / 60;
-        $total = $detail[0]->value * (int) $balance;
+            // Var for startdate < enddate
+            $endDayMinutes = convertToMinutes('23:59');
 
+            if ($startMinutes >= $endWork) {
 
-        $data['balance'] = (int) $balance;
-        $data['expense'] = $detail[0]->value;
-        $data['total'] = $total;
-        // } else if ($start < $end) {
-        //     $starttime = format_time($startdate);
-        //     $endtime = format_time($endate);
+                if ($start === $end) {
+                    $balance = ($endMinutes - $startMinutes) / 60;
+                } else {
+                    $balance = (($endDayMinutes - $startMinutes) + $endMinutes + 1) / 60;
+                }
 
-        //     $startMinutes = convertToMinutes(format_time($starttime));
-        //     $endMinutes = convertToMinutes(format_time($endtime));
+                $total = $detail[0]->value * (int) $balance;
 
-        //     $balance = ($endMinutes - $startMinutes) / 60;
-        //     $total = $detail[0]->value * (int) $balance;
+                $data['balance'] = (int) $balance;
+                $data['expense'] = $detail[0]->value;
+                $data['total'] = $total;
+            } else if ($startMinutes < $endWork) {
+                $startMinutes = $endWork;
 
+                if ($start === $end) {
+                    $balance = ($endMinutes - $startMinutes) / 60;
+                } else {
+                    $balance = (($endDayMinutes - $startMinutes) + $endMinutes + 1) / 60;
+                }
 
-        //     $data['balance'] = (int) $balance;
-        //     $data['expense'] = $detail[0]->value;
-        //     $data['total'] = $total;
-        // }
+                $total = $detail[0]->value * (int) $balance;
+
+                $data['balance'] = (int) $balance;
+                $data['expense'] = $detail[0]->value;
+                $data['total'] = $total;
+            }
+        } // If a Employee dont have a workday
+        else {
+            $startMinutes = convertToMinutes(format_time($starttime));
+            $endMinutes = convertToMinutes(format_time($endtime));
+            $endWork = '';
+
+            // Var for startdate < enddate just one day
+            $endDayMinutes = convertToMinutes('23:59');
+
+            if ($day <= 5) {
+                $endWork = convertToMinutes($detail[1]->value);
+            } else {
+                $endWork = convertToMinutes($detail[2]->value);
+            }
+
+            if ($startMinutes >= $endWork) {
+
+                if ($start === $end) {
+                    $balance = ($endMinutes - $startMinutes) / 60;
+                } else {
+                    $balance = (($endDayMinutes - $startMinutes) + $endMinutes + 1) / 60;
+                }
+
+                $total = $detail[0]->value * (int) $balance;
+
+                $data['balance'] = (int) $balance;
+                $data['expense'] = $detail[0]->value;
+                $data['total'] = $total;
+            } else if ($startMinutes < $endWork) {
+                $startMinutes = $endWork;
+
+                if ($start === $end) {
+                    $balance = ($endMinutes - $startMinutes) / 60;
+                } else {
+                    $balance = (($endDayMinutes - $startMinutes) + $endMinutes + 1) / 60;
+                }
+
+                $total = $detail[0]->value * (int) $balance;
+
+                $data['balance'] = (int) $balance;
+                $data['expense'] = $detail[0]->value;
+                $data['total'] = $total;
+            }
+        }
 
         return $data;
     }

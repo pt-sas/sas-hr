@@ -110,7 +110,7 @@ class AllowanceAtt extends BaseController
                         $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $val->nik, 'trx_attendance.date' => $value])->getRow();
 
                         if (isset($attendance)) {
-                            if ($attendance->absent === 'N') {
+                            if ($attendance->absent === 'Y') {
                                 $qty = 1;
                             }
                         }

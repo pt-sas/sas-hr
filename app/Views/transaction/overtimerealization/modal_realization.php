@@ -21,7 +21,7 @@
                             <div class="form-group">
                                 <label for="enddate">Tanggal Selesai<span class="required">*</span></label>
                                 <div class="input-icon">
-                                    <input type="text" class="form-control datepicker" name="enddate">
+                                    <input type="text" class="form-control datepicker-lembur" name="enddate">
                                     <span class="input-icon-addon">
                                         <i class="fa fa-calendar"></i>
                                     </span>
