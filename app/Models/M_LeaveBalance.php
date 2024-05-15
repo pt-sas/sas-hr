@@ -52,7 +52,9 @@ class M_LeaveBalance extends Model
         $sql = $this->table . '.*,
                 md_employee.value as employee,
                 md_employee.fullname as employee_fullname,
-                trx_absent.documentno';
+                trx_absent.documentno,
+                md_branch.name as branch,
+                md_division.name as divisi';
 
         return $sql;
     }
@@ -61,6 +63,10 @@ class M_LeaveBalance extends Model
     {
         $sql = [
             $this->setDataJoin('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
+            $this->setDataJoin('md_employee_branch', 'md_employee_branch.md_branch_id <> 0 AND md_employee_branch.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
+            $this->setDataJoin('md_branch', 'md_branch.md_branch_id = md_employee_branch.md_branch_id', 'left'),
+            $this->setDataJoin('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
+            $this->setDataJoin('md_division', 'md_division.md_division_id = md_employee_division.md_division_id', 'left'),
             $this->setDataJoin('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.record_id', 'left')
         ];
 
