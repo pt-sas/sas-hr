@@ -500,7 +500,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('tugas-kantor-khusus/show/(:any)', 'Backend\SpecialOfficeDuties::show/$1');
     $routes->get('tugas-kantor-khusus/destroy/(:any)', 'Backend\SpecialOfficeDuties::destroy/$1');
     $routes->get('tugas-kantor-khusus/processIt', 'Backend\SpecialOfficeDuties::processIt');
-  
+
     $routes->add('document-type', 'Backend\DocumentType::index');
     $routes->match(['get', 'post'], 'document-type/showAll', 'Backend\DocumentType::showAll');
     $routes->post('document-type/create', 'Backend\DocumentType::create');
@@ -510,6 +510,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('request-anulir', 'Backend\RequestAnulir::index');
     $routes->post('request-anulir/create', 'Backend\RequestAnulir::create');
+
+    $routes->add('laporan-saldo-cuti', 'Backend\Rpt_LeaveBalance::index');
+    $routes->match(['get', 'post'], 'laporan-saldo-cuti/showAll', 'Backend\Rpt_LeaveBalance::showAll');
 });
 
 /*
