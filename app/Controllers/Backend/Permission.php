@@ -228,16 +228,26 @@ class Permission extends BaseController
                         ])->first();
 
                         //TODO : Get next day attendance from enddate
-                        $attPresentNextDay = null;
+                        $presentNextDate = null;
 
                         if ($startDate <= $submissionDate) {
-                            $attPresentNextDay = $mAttendance->where([
-                                'nik'       => $nik,
-                                'date >'    => $endDate,
-                                'absent'    => 'Y'
-                            ])->orderBy('date', 'ASC')->first();
+                            $whereClause = "trx_absent.nik = $nik";
+                            $whereClause .= " AND trx_absent.enddate > '$endDate'";
+                            $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
+                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                            $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
 
-                            $presentNextDate =  $attPresentNextDay->date;
+                            if (is_null($trxPresentNextDay)) {
+                                $attPresentNextDay = $mAttendance->where([
+                                    'nik'       => $nik,
+                                    'date >'    => $endDate,
+                                    'absent'    => 'Y'
+                                ])->orderBy('date', 'ASC')->first();
+
+                                $presentNextDate = $attPresentNextDay ? $attPresentNextDay->date : $endDate;
+                            } else {
+                                $presentNextDate = $trxPresentNextDay->date;
+                            }
 
                             $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
 

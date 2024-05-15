@@ -10,6 +10,7 @@ use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
 use App\Models\M_Holiday;
 use App\Models\M_Levelling;
+use App\Models\M_Absent;
 use PHPExcel;
 use PHPExcel_IOFactory;
 use PHPExcel_Style_Alignment;
@@ -159,6 +160,7 @@ class AllowanceAtt extends BaseController
         $mEmployee = new M_Employee($this->request);
         $mLevel = new M_Levelling($this->request);
         $mAttendance = new M_Attendance($this->request);
+        $mAbsent = new M_Absent($this->request);
 
         $md_branch_id = null;
         $md_division_id = null;
@@ -171,7 +173,7 @@ class AllowanceAtt extends BaseController
         if (isset($post['md_division_id']))
             $md_division_id = $post['md_division_id'];
 
-        if (isset($post['md_employee_id']))
+        if (isset($post['md_employee_id']) && $post['md_employee_id'])
             $md_employee_id = $post['md_employee_id'];
 
         $periode = $post['periode'];
@@ -291,10 +293,18 @@ class AllowanceAtt extends BaseController
         $excel->getActiveSheet()->getStyle('C3:C4')->applyFromArray($style_col);
         $excel->getActiveSheet()->getStyle('D3:D4')->applyFromArray($style_col);
 
-        $sql = $mEmployee->where([
-            'isactive'          => 'Y',
-            'md_status_id <> '  => 100004
-        ])->orderBy('fullname', 'ASC')->findAll();
+        if ($md_employee_id) {
+            $sql = $mEmployee->where([
+                'isactive'          => 'Y',
+                'md_status_id <> '  => 100004
+            ])->whereIn('md_employee_id', $md_employee_id)
+                ->orderBy('fullname', 'ASC')->findAll();
+        } else {
+            $sql = $mEmployee->where([
+                'isactive'          => 'Y',
+                'md_status_id <> '  => 100004
+            ])->orderBy('fullname', 'ASC')->findAll();
+        }
 
         $no = 1; // Untuk penomoran tabel, di awal set dengan 1
         $numrow = 5; // Set baris pertama untuk isi tabel adalah baris ke 4
@@ -332,12 +342,12 @@ class AllowanceAtt extends BaseController
                         $qty = 1;
                     }
 
-                    if ($attendance->absent === 'Y' && $allow) {
-                        $qty = 1 - $allow->amount;
+                    if ($attendance->absent === 'N' && $allow && $allow->submissiontype == $mAbsent->Pengajuan_Tugas_Kantor) {
+                        $qty = $allow->amount;
                     }
 
-                    if ($attendance->absent === 'N' && $allow) {
-                        $qty -= $allow->amount;
+                    if ($attendance->absent === 'N' && $allow && $allow->submissiontype != $mAbsent->Pengajuan_Tugas_Kantor) {
+                        $qty = 1 - $allow->amount;
                     }
                 }
 
@@ -365,12 +375,12 @@ class AllowanceAtt extends BaseController
                         $qty = 1;
                     }
 
-                    if ($attendance->absent === 'Y' && $allow) {
-                        $qty = 1 - $allow->amount;
+                    if ($attendance->absent === 'N' && $allow && $allow->submissiontype == $mAbsent->Pengajuan_Tugas_Kantor) {
+                        $qty = $allow->amount;
                     }
 
-                    if ($attendance->absent === 'N' && $allow) {
-                        $qty -= $allow->amount;
+                    if ($attendance->absent === 'N' && $allow && $allow->submissiontype != $mAbsent->Pengajuan_Tugas_Kantor) {
+                        $qty = 1 - $allow->amount;
                     }
                 }
 
