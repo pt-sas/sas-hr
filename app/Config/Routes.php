@@ -513,6 +513,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('laporan-saldo-cuti', 'Backend\Rpt_LeaveBalance::index');
     $routes->match(['get', 'post'], 'laporan-saldo-cuti/showAll', 'Backend\Rpt_LeaveBalance::showAll');
+
+    $routes->add('laporan-saldo-cuti-summary', 'Backend\Rpt_LeaveBalance::indexSummary');
+    $routes->match(['get', 'post'], 'laporan-saldo-cuti-summary/showAll', 'Backend\Rpt_LeaveBalance::showAllSummary');
 });
 
 /*
