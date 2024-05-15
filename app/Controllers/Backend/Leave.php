@@ -93,7 +93,7 @@ class Leave extends BaseController
                 $where['trx_absent.md_division_id'] = "";
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Cuti;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Cuti;
 
             $data = [];
 
