@@ -395,7 +395,7 @@ function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_
 
         $date = date("Y-m-d", strtotime("$direction weekday", strtotime($date)));
 
-        if ($days_off && !in_array($realDate->format("w"), $days_off) && !in_array($date, $holidays))
+        if ($days_off && !in_array($realDate->format("w"), $days_off) && !in_array($realDate->format("Y-m-d"), $holidays))
             $workingDays[] = $realDate->format("Y-m-d");
 
         if (empty($days_off) && !in_array($date, $holidays))

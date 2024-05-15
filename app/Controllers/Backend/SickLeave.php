@@ -262,16 +262,26 @@ class SickLeave extends BaseController
                         ])->first();
 
                         //TODO : Get next day attendance from enddate
-                        $attPresentNextDay = null;
+                        $presentNextDate = null;
 
                         if ($startDate <= $submissionDate) {
-                            $attPresentNextDay = $mAttendance->where([
-                                'nik'       => $nik,
-                                'date >'    => $endDate,
-                                'absent'    => 'Y'
-                            ])->orderBy('date', 'ASC')->first();
+                            $whereClause = "trx_absent.nik = $nik";
+                            $whereClause .= " AND trx_absent.enddate > '$endDate'";
+                            $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
+                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                            $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
 
-                            $presentNextDate =  $attPresentNextDay->date;
+                            if (is_null($trxPresentNextDay)) {
+                                $attPresentNextDay = $mAttendance->where([
+                                    'nik'       => $nik,
+                                    'date >'    => $endDate,
+                                    'absent'    => 'Y'
+                                ])->orderBy('date', 'ASC')->first();
+
+                                $presentNextDate = $attPresentNextDay ? $attPresentNextDay->date : $endDate;
+                            } else {
+                                $presentNextDate = $trxPresentNextDay->date;
+                            }
 
                             $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
 
@@ -292,7 +302,7 @@ class SickLeave extends BaseController
                             $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
                         } else if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if (!is_null($attPresentNextDay) && !($lastDate >= $subDate) && $work && $attNotPresent) {
+                        } else if (!is_null($presentNextDate) && !($lastDate >= $subDate) && $work && $attNotPresent) {
                             $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
                         } else if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
