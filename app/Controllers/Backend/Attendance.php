@@ -58,23 +58,23 @@ class Attendance extends BaseController
                             ];
                         }
 
-                        if ($value['name'] === "md_division_id") {
-                            $arrDiv_id = $value['value'];
+                        // if ($value['name'] === "md_division_id") {
+                        //     $arrDiv_id = $value['value'];
 
-                            $listDiv = $mEmpDiv->whereIn("md_division_id", $arrDiv_id)->findAll();
-                            $where = [
-                                'md_employee.md_employee_id'     => array_column($listDiv, "md_employee_id")
-                            ];
-                        }
+                        //     $listDiv = $mEmpDiv->whereIn("md_division_id", $arrDiv_id)->findAll();
+                        //     $where = [
+                        //         'md_employee.md_employee_id'     => array_column($listDiv, "md_employee_id")
+                        //     ];
+                        // }
 
-                        if ($value['name'] === "md_branch_id") {
-                            $arrBranch_id = $value['value'];
+                        // if ($value['name'] === "md_branch_id") {
+                        //     $arrBranch_id = $value['value'];
 
-                            $listBranch = $mEmpBranch->whereIn("md_branch_id", $arrBranch_id)->findAll();
-                            $where = [
-                                'md_employee.md_employee_id'     => array_column($listBranch, "md_employee_id")
-                            ];
-                        }
+                        //     $listBranch = $mEmpBranch->whereIn("md_branch_id", $arrBranch_id)->findAll();
+                        //     $where = [
+                        //         'md_employee.md_employee_id'     => array_column($listBranch, "md_employee_id")
+                        //     ];
+                        // }
                     }
                 }
 
