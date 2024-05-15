@@ -16,9 +16,6 @@ use App\Models\M_EmpWorkDay;
 
 class SpecialOfficeDuties extends BaseController
 {
-    /** Pengajuan Tugas Kantor */
-    protected $Pengajuan_Tugas_Kantor_Khusus = 'tugas kantor khusus';
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -114,7 +111,7 @@ class SpecialOfficeDuties extends BaseController
                 $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['trx_absent.submissiontype'] = $this->Pengajuan_Tugas_Kantor_Khusus;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Tugas_Khusus;
 
             $data = [];
 
@@ -166,7 +163,7 @@ class SpecialOfficeDuties extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->Pengajuan_Tugas_Kantor_Khusus;
+            $post["submissiontype"] = $this->model->Pengajuan_Tugas_Khusus;
             $post["necessary"] = 'TS';
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
@@ -245,7 +242,7 @@ class SpecialOfficeDuties extends BaseController
                     if ($this->isNew()) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->Pengajuan_Tugas_Kantor_Khusus, $post);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Tugas_Khusus, $post);
                         $this->entity->setDocumentNo($docNo);
                     }
 
