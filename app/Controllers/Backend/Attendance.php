@@ -47,39 +47,6 @@ class Attendance extends BaseController
                 $search = $this->request->getPost('search');
                 $where = [];
 
-                foreach ($post['form'] as $value) {
-                    if (!empty($value['value'])) {
-                        if ($value['name'] === "submissiondate") {
-                            $datetime = urldecode($value['value']);
-                            $date = explode(" - ", $datetime);
-                            $where = [
-                                'trx_attendance.date >=' => date("Y-m-d", strtotime($date[0])),
-                                'trx_attendance.date <=' => date("Y-m-d", strtotime($date[1]))
-                            ];
-                        }
-
-                        // if ($value['name'] === "md_division_id") {
-                        //     $arrDiv_id = $value['value'];
-
-                        //     $listDiv = $mEmpDiv->whereIn("md_division_id", $arrDiv_id)->findAll();
-                        //     $where = [
-                        //         'md_employee.md_employee_id'     => array_column($listDiv, "md_employee_id")
-                        //     ];
-                        // }
-
-                        // if ($value['name'] === "md_branch_id") {
-                        //     $arrBranch_id = $value['value'];
-
-                        //     $listBranch = $mEmpBranch->whereIn("md_branch_id", $arrBranch_id)->findAll();
-                        //     $where = [
-                        //         'md_employee.md_employee_id'     => array_column($listBranch, "md_employee_id")
-                        //     ];
-                        // }
-                    }
-                }
-
-
-
                 $number = $this->request->getPost('start');
                 $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);
 
