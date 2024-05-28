@@ -14,6 +14,7 @@ class OvertimeDetail extends Entity
 	protected $description;
 	protected $overtime_balance;
 	protected $overtime_expense;
+	protected $enddate_realization;
 	protected $total;
 	protected $created_by;
 	protected $updated_by;
@@ -72,6 +73,17 @@ class OvertimeDetail extends Entity
 	{
 
 		$this->attributes['enddate'] = $enddate;
+	}
+
+	public function getEndDateRealization()
+	{
+		return $this->attributes['enddate_realization'];
+	}
+
+	public function setEndDateRealization($enddate_realization)
+	{
+
+		$this->attributes['enddate_realization'] = $enddate_realization;
 	}
 
 	public function getDescription()
