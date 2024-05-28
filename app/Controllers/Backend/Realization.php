@@ -5,12 +5,15 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
+use App\Models\M_Attendance;
 use App\Models\M_Overtime;
 use App\Models\M_OvertimeDetail;
 use App\Models\M_Rule;
 use App\Models\M_RuleDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
+use App\Models\M_AccessMenu;
+use App\Models\M_Employee;
 use Config\Services;
 
 class Realization extends BaseController
@@ -113,7 +116,10 @@ class Realization extends BaseController
 
     public function showAllOvertime()
     {
+        $mAccess = new M_AccessMenu($this->request);
         $mOvertime = new M_Overtime($this->request);
+        $mAttendance = new M_Attendance($this->request);
+        $mEmployee = new M_Employee($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $table = $mOvertime->table;
@@ -125,6 +131,45 @@ class Realization extends BaseController
 
             $where['trx_overtime.docstatus'] = $this->DOCSTATUS_Inprogress;
             $where['trx_overtime_detail.status'] = 'H';
+            $where['trx_overtime.isapproved'] = 'Y';
+
+            /**
+             * Hak akses
+             */
+            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                $arrBranch = $arrAccess["branch"];
+                $arrDiv = $arrAccess["division"];
+
+                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
+
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['trx_overtime.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['trx_overtime.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['trx_overtime.md_employee_id'] = [
+                        'value'     => $arrEmpBased
+                    ];
+                } else {
+                    $where['trx_overtime.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+            } else if (!empty($this->session->get('md_employee_id'))) {
+                $where['trx_overtime.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
+            } else {
+                $where['trx_overtime.md_employee_id'] = $this->session->get('md_employee_id');
+            }
 
             $data = [];
 
@@ -133,6 +178,8 @@ class Realization extends BaseController
 
             foreach ($list as $value) :
                 $row = [];
+                $attendance = $mAttendance->where(['md_employee_id' => $value->md_employee_id, 'date' => date('Y-m-d', strtotime($value->startdate_line))])->first();
+
                 $ID = $value->trx_overtime_detail_id;
 
                 $number++;
@@ -146,6 +193,8 @@ class Realization extends BaseController
                 $row[] = format_dmy($value->enddate_line, '-');
                 $row[] = format_time($value->startdate_line);
                 $row[] = format_time($value->enddate_line);
+                $row[] = $attendance ? format_dmy($attendance->date, '-') : '';
+                $row[] = $attendance ? format_time($attendance->clock_out) : '';
                 $row[] = $this->template->tableButtonProcess($ID);
                 $data[] = $row;
             endforeach;
@@ -225,12 +274,14 @@ class Realization extends BaseController
                         $necessary = '';
                         if ($post['submissiontype'] === 'ijin') {
                             $necessary = 'IJ';
+                            $submissionType = $this->model->Pengajuan_Ijin;
                             $this->entity->setNecessary($necessary);
                             $this->entity->setSubmissionType($this->model->Pengajuan_Ijin);
                         }
 
                         if ($post['submissiontype'] === 'alpa') {
                             $necessary = 'AL';
+                            $submissionType = $this->model->Pengajuan_Alpa;
                             $this->entity->setNecessary($necessary);
                             $this->entity->setSubmissionType($this->model->Pengajuan_Alpa);
                         }
@@ -346,12 +397,12 @@ class Realization extends BaseController
                     if ($isAgree === $agree) {
 
                         $startdate = date('Y-m-d', strtotime($line->startdate)) . " " . $post['starttime'];
-                        $enddate =   date('Y-m-d', strtotime($post["enddate"])) . " " . $post['endtime'];
+                        $enddate =   date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
                         $ovt = $this->getHourOvertime($startdate, $enddate, $line->md_employee_id);
 
                         $this->entity->trx_overtime_detail_id = $post['id'];
                         $this->entity->startdate = $startdate;
-                        $this->entity->enddate = $enddate;
+                        $this->entity->enddate_realization = $enddate;
                         $this->entity->status = $isAgree;
                         $this->entity->overtime_expense = $ovt['expense'];
                         $this->entity->overtime_balance = $ovt['balance'];

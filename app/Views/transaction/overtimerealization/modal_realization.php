@@ -11,43 +11,99 @@
                             <div class="form-group">
                                 <label for="starttime">Jam Masuk<span class="required">*</span></label>
                                 <div class="input-icon">
-                                    <input type="text" class="form-control timepicker" name="starttime">
-                                    <span class="input-icon-addon">
-                                        <i class="fa fa-clock"></i>
-                                    </span>
-                                </div>
-                                <small class="form-text text-danger" id="error_submissiondate"></small>
-                            </div>
-                            <div class="form-group">
-                                <label for="enddate">Tanggal Selesai<span class="required">*</span></label>
-                                <div class="input-icon">
-                                    <input type="text" class="form-control datepicker-lembur" name="enddate">
-                                    <span class="input-icon-addon">
-                                        <i class="fa fa-calendar"></i>
-                                    </span>
-                                </div>
-                                <small class="form-text text-danger" id="error_submissiondate"></small>
-                            </div>
-                            <div class="form-group">
-                                <label for="endtime">Jam keluar<span class="required">*</span></label>
-                                <div class="input-icon">
-                                    <input type="text" class="form-control timepicker" name="endtime">
-                                    <span class="input-icon-addon">
+                                    <input type="text" class="form-control timepicker" name="starttime" id="starttime">
+                                    <span class=" input-icon-addon">
                                         <i class="fa fa-clock"></i>
                                     </span>
                                 </div>
                                 <small class="form-text text-danger" id="error_submissiondate"></small>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="enddate">Tanggal Selesai</label>
+                                <div class="input-icon">
+                                    <input type="text" class="form-control" name="enddate" id="enddate" disabled>
+                                    <span class="input-icon-addon">
+                                        <i class="fa fa-calendar"></i>
+                                    </span>
+                                </div>
+                                <small class="form-text text-danger" id="error_submissiondate"></small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="endtime">Jam Selesai</label>
+                                <div class="input-icon">
+                                    <input type="text" class="form-control" name="endtime" id="endtime" disabled>
+                                    <span class=" input-icon-addon">
+                                        <i class="fa fa-clock"></i>
+                                    </span>
+                                </div>
+                                <small class="form-text text-danger" id="error_submissiondate"></small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="enddate_att">Tanggal Check Out</label>
+                                <div class="input-icon">
+                                    <input type="text" class="form-control" name="enddate_att" id="enddate_att"
+                                        disabled>
+                                    <span class="input-icon-addon">
+                                        <i class="fa fa-calendar"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="endtime_att">Jam Check Out</label>
+                                <div class="input-icon">
+                                    <input type="text" class="form-control" name="endtime_att" id="endtime_att"
+                                        disabled>
+                                    <span class=" input-icon-addon">
+                                        <i class="fa fa-clock"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="enddate_realization">Tanggal Realisasi <span
+                                        class="required">*</span></label>
+                                <div class="input-icon">
+                                    <input type="text" class="form-control datepicker" name="enddate_realization"
+                                        id="enddate_realization">
+                                    <span class="input-icon-addon">
+                                        <i class="fa fa-calendar"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="endtime_realization">Jam Realisasi <span class="required">*</span></label>
+                                <div class="input-icon">
+                                    <input type="text" class="form-control timepicker-end" name="endtime_realization"
+                                        id="endtime_realization">
+                                    <span class=" input-icon-addon">
+                                        <i class="fa fa-clock"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="startdate">
                         <input type="hidden" class="form-control" name="isagree">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-icon btn-round btn-danger btn_close_realization" data-toggle="tooltip" data-placement="top" title="Cancel" data-dismiss="modal">
+                <button type="button" class="btn btn-icon btn-round btn-danger btn_close_realization"
+                    data-toggle="tooltip" data-placement="top" title="Cancel" data-dismiss="modal">
                     <i class="fas fa-times"></i>
                 </button>
-                <button type="button" class="btn btn-icon btn-round btn-primary btn_ok_realization" data-toggle="tooltip" data-placement="top" title="OK">
+                <button type="button" class="btn btn-icon btn-round btn-primary btn_ok_realization"
+                    data-toggle="tooltip" data-placement="top" title="OK">
                     <i class="fas fa-check"></i>
                 </button>
             </div>
@@ -75,10 +131,12 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-icon btn-round btn-danger btn_close_realization" data-toggle="tooltip" data-placement="top" title="Cancel" data-dismiss="modal">
+                <button type="button" class="btn btn-icon btn-round btn-danger btn_close_realization"
+                    data-toggle="tooltip" data-placement="top" title="Cancel" data-dismiss="modal">
                     <i class="fas fa-times"></i>
                 </button>
-                <button type="button" class="btn btn-icon btn-round btn-primary btn_ok_realization" data-toggle="tooltip" data-placement="top" title="OK">
+                <button type="button" class="btn btn-icon btn-round btn-primary btn_ok_realization"
+                    data-toggle="tooltip" data-placement="top" title="OK">
                     <i class="fas fa-check"></i>
                 </button>
             </div>

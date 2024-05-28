@@ -20,6 +20,8 @@
                             <th>Tanggal Selesai</th>
                             <th>Jam Mulai</th>
                             <th>Jam Selesai</th>
+                            <th>Tanggal Check Out</th>
+                            <th>Jam Check Out</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
