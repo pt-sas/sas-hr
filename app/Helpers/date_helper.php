@@ -38,7 +38,8 @@ function format_time($date)
 
 function convertToMinutes($date)
 {
-    $time    = explode(':', $date);
+    $time = date('H:i', strtotime($date));
+    $time = explode(':', $time);
     $minutes = ($time[0] * 60.0 + $time[1] * 1.0);
     return $minutes;
 }

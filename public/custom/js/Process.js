@@ -204,6 +204,14 @@ $(document).ready(function (e) {
       disabledDates: getHolidayDate(),
       useCurrent: false,
     });
+
+    $(".timepick").datetimepicker({
+      format: "HH:mm",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+    });
   }
 
   //* start date picker on change event [select minimun date for end date datepicker]
@@ -460,7 +468,9 @@ _tableLine = $(".tb_displayline").DataTable({
     });
 
     //For Pop Up DateTimePicker in Table
-    $(".timepicker, .timepickerline-start, .timepickerline-end, .datepicker-line").on("dp.show", function () {
+    $(
+      ".timepicker, .timepickerline-start, .timepickerline-end, .datepicker-line"
+    ).on("dp.show", function () {
       var datepicker = $("body").find(".bootstrap-datetimepicker-widget:last");
       if (datepicker.hasClass("bottom")) {
         var top = $(this).offset().top + $(this).outerHeight();
@@ -5105,19 +5115,34 @@ $(".btn_record_info").click(function (evt) {
   let table = row[2];
   let menu = row[3];
 
-  let arrData = {
-    id: ID,
-    record_id: record_id,
-    table: table,
-    menu: menu,
-  };
+  let action = "view";
+  let checkAccess = isAccess(action, menu);
 
-  arrData = JSON.stringify(arrData);
+  if (checkAccess[0].success && checkAccess[0].message == "Y") {
+    let arrData = {
+      id: ID,
+      record_id: record_id,
+      table: table,
+      menu: menu,
+    };
 
-  sessionStorage.setItem("reloading", "true");
-  sessionStorage.setItem("data", arrData);
+    arrData = JSON.stringify(arrData);
 
-  window.open(ADMIN_URL + menu, "_self");
+    sessionStorage.setItem("reloading", "true");
+    sessionStorage.setItem("data", arrData);
+
+    window.open(ADMIN_URL + menu, "_self");
+  } else if (checkAccess[0].success && checkAccess[0].message == "N") {
+    Toast.fire({
+      type: "error",
+      title: "You are role don't have permission, please reload !!",
+    });
+  } else {
+    Toast.fire({
+      type: "error",
+      title: checkAccess[0].message,
+    });
+  }
 });
 
 window.onload = function () {
@@ -5666,7 +5691,7 @@ $(".import_file").click(function (evt) {
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
-      console.log(result)
+      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",

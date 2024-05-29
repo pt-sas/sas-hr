@@ -3,10 +3,15 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use Config\Services;
 use App\Models\M_Absent;
+use App\Models\M_AbsentDetail;
 use App\Models\M_Employee;
+use App\Models\M_Holiday;
+use App\Models\M_Rule;
+use App\Models\M_EmpWorkDay;
+use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
+use Config\Services;
 
 class PermissionLeaveEarly extends BaseController
 {
@@ -14,6 +19,7 @@ class PermissionLeaveEarly extends BaseController
     {
         $this->request = Services::request();
         $this->model = new M_Absent($this->request);
+        $this->modelDetail = new M_AbsentDetail($this->request);
         $this->entity = new \App\Entities\Absent();
     }
 
@@ -135,28 +141,95 @@ class PermissionLeaveEarly extends BaseController
 
     public function create()
     {
+        $mHoliday = new M_Holiday($this->request);
+        $mRule = new M_Rule($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
+
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->model->Pengajuan_Pulang_Cepat;
             $post["necessary"] = 'PC';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
+            $post["enddate"] = $post["startdate"];
+            $today = date('Y-m-d');
+            $employeeId = $post['md_employee_id'];
+            $day = date('w');
 
             try {
-                $this->entity->fill($post);
-
                 if (!$this->validation->run($post, 'pengajuan')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $holidays = $mHoliday->getHolidayDate();
+                    $startDate = $post['startdate'];
+                    $endDate = $post['enddate'];
+                    $nik = $post['nik'];
+                    $submissionDate = $post['submissiondate'];
+                    $subDate = date('Y-m-d', strtotime($submissionDate));
 
-                    if ($this->isNew()) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    $rule = $mRule->where([
+                        'name'      => 'Pulang Cepat',
+                        'isactive'  => 'Y'
+                    ])->first();
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pulang_Cepat, $post);
-                        $this->entity->setDocumentNo($docNo);
+                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
+                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
+
+                    //TODO : Get work day employee
+                    $workDay = $mEmpWork->where([
+                        'md_employee_id'    => $post['md_employee_id'],
+                        'validfrom <='      => $today
+                    ])->orderBy('validfrom', 'ASC')->first();
+
+                    if (is_null($workDay)) {
+                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    } else {
+                        $day = strtoupper(formatDay_idn($day));
+
+                        //TODO : Get Work Detail
+                        $whereClause = "md_work_detail.isactive = 'Y'";
+                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                        //TODO: Get Work Detail by day 
+                        $work = null;
+
+                        $whereClause .= " AND md_day.name = '$day'";
+                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+
+                        $daysOff = getDaysOff($workDetail);
+
+                        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+
+                        //* last index of array from variable nextDate
+                        $lastDate = end($nextDate);
+
+                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+
+                        //* last index of array from variable addDays
+                        $addDays = end($addDays);
+
+                        $endDate = date('Y-m-d', strtotime($endDate));
+
+                        if (is_null($work)) {
+                            $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
+                        } else if ($lastDate < $subDate || $endDate > $addDays) {
+                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
+                        } else {
+                            $this->entity->fill($post);
+
+                            if ($this->isNew()) {
+                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pulang_Cepat, $post);
+                                $this->entity->setDocumentNo($docNo);
+                            }
+
+                            $response = $this->save();
+                        }
                     }
-
-                    $response = $this->save();
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -225,13 +298,6 @@ class PermissionLeaveEarly extends BaseController
 
             $_ID = $post['id'];
             $_DocAction = $post['docaction'];
-            // $_Data = $this->model->where('trx_absent_id', $post['id'])->find();
-            // $_Rule = $mRule->where('name', 'Pulang Cepat')->find();
-            // $_RuleDetail = $mRuleDetail->where('md_rule_id = ' . $_Rule[0]->md_rule_id)->find();
-            // $jamMasuk = convertToMinutes(format_time('08:00'));
-            // $sore = ($jamMasuk + $_RuleDetail[0]->condition);
-            // $siang = ($jamMasuk + $_RuleDetail[1]->condition);
-            // $jam = convertToMinutes(format_time($_Data[0]->startdate));
 
             $row = $this->model->find($_ID);
             $menu = $this->request->uri->getSegment(2);
@@ -242,37 +308,7 @@ class PermissionLeaveEarly extends BaseController
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                        $response = message('success', true, $this->message);
-                        // $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                        // $response = $this->save();
-
-                        // $amount = 0;
-
-                        // // // Check Rule
-                        // if ($_Rule[0]->isdetail === 'Y') {
-                        //     if (getOperationResult($jam, $jamMasuk, $_RuleDetail[0]->operation) === true) {
-                        //         $amount = 0;
-                        //     } else if (getOperationResult($jam, $siang, $_RuleDetail[1]->operation) === true) {
-                        //         $amount = abs($_RuleDetail[1]->value);
-                        //     } else if (getOperationResult($jam, $sore, $_RuleDetail[0]->operation) === true) {
-                        //         $amount = abs($_RuleDetail[0]->value);
-                        //     }
-                        // }
-
-                        // if ($amount != 0) {
-                        //     $arr[] = [
-                        //         "record_id"         => $_ID,
-                        //         "table"             => $this->model->table,
-                        //         "submissiontype"    => $row->getSubmissionType(),
-                        //         "submissiondate"    => $row->getStartDate(),
-                        //         "md_employee_id"    => $row->getEmployeeId(),
-                        //         "amount"            => $amount,
-                        //         "created_by"        => $this->access->getSessionUser(),
-                        //         "updated_by"        => $this->access->getSessionUser(),
-                        //     ];
-
-                        //     $mAllowance->builder->insertBatch($arr);
-                        // }
+                        $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
@@ -291,5 +327,33 @@ class PermissionLeaveEarly extends BaseController
 
             return $this->response->setJSON($response);
         }
+    }
+
+    public function tableLine($set = null, $detail = [])
+    {
+        $table = [];
+
+        //? Update
+        if (!empty($set) && count($detail) > 0) {
+            foreach ($detail as $row) :
+                $docNoRef = "";
+                $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
+
+                if (!empty($row->ref_absent_detail_id)) {
+                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    $docNoRef = $lineRef->documentno;
+                }
+
+                $table[] = [
+                    $row->lineno,
+                    format_dmy($row->date, '-'),
+                    $line->getDocumentNo(),
+                    $docNoRef,
+                    statusRealize($row->isagree)
+                ];
+            endforeach;
+        }
+
+        return json_encode($table);
     }
 }

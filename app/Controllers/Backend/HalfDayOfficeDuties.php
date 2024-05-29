@@ -3,16 +3,15 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use Config\Services;
 use App\Models\M_Absent;
 use App\Models\M_Employee;
-use App\Models\M_AllowanceAtt;
 use App\Models\M_AccessMenu;
 use App\Models\M_AbsentDetail;
 use App\Models\M_Holiday;
 use App\Models\M_Rule;
 use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
+use Config\Services;
 
 class HalfDayOfficeDuties extends BaseController
 {
@@ -164,12 +163,11 @@ class HalfDayOfficeDuties extends BaseController
 
             $post["submissiontype"] = $this->model->Pengajuan_Tugas_Kantor_setengah_Hari;
             $post["necessary"] = 'TH';
+            $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
+            $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
             $day = date('w');
-
-            $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
-            $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
 
             try {
                 if (!$this->validation->run($post, 'pengajuantugas')) {
@@ -183,7 +181,7 @@ class HalfDayOfficeDuties extends BaseController
                     $subDate = date('Y-m-d', strtotime($submissionDate));
 
                     $rule = $mRule->where([
-                        'name'      => 'Tugas Kantor 1 Hari',
+                        'name'      => 'Tugas Kantor Setengah Hari',
                         'isactive'  => 'Y'
                     ])->first();
 
@@ -217,7 +215,7 @@ class HalfDayOfficeDuties extends BaseController
 
                         $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
 
-                        //* last index of array from variable attPresentNextDay
+                        //* last index of array from variable nextDate
                         $lastDate = end($nextDate);
 
                         //TODO : Get submission
@@ -227,7 +225,12 @@ class HalfDayOfficeDuties extends BaseController
                         $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
                         $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
 
-                        $addDays = date('Y-m-d H:i:s', strtotime($submissionDate . '+ ' . $maxDays . 'days'));
+                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+
+                        //* last index of array from variable addDays
+                        $addDays = end($addDays);
+
+                        $endDate = date('Y-m-d', strtotime($endDate));
 
                         if (is_null($work)) {
                             $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
@@ -273,7 +276,7 @@ class HalfDayOfficeDuties extends BaseController
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
-                //Need to set data into date field in form
+                //* Need to set data into date field in form
                 $list[0]->starttime = format_time($list[0]->startdate);
                 $list[0]->endtime = format_time($list[0]->enddate);
                 $list[0]->datestart = format_dmy($list[0]->startdate, "-");

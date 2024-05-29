@@ -40,6 +40,9 @@ class AccessMenu extends BaseController
 							'am.sys_role_id'		=> session()->get('sys_role_id')
 						])->getRow();
 
+						if ($post['action'] === 'view')
+							$value = $access->isview;
+
 						if ($post['action'] === 'create')
 							$value = $access->iscreate;
 
@@ -53,6 +56,9 @@ class AccessMenu extends BaseController
 							'am.sys_menu_id'		=> $parent->getMenuId(),
 							'am.sys_role_id'		=> $this->session->get('sys_role_id')
 						])->getRow();
+
+						if ($post['action'] === 'view')
+							$value = $access->isview;
 
 						if ($post['action'] === 'create')
 							$value = $access->iscreate;

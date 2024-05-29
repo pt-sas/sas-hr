@@ -382,7 +382,7 @@ function statusRealize($str)
         return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
 }
 
-function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_off = [])
+function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_off = [], $allDays = false)
 {
     $workingDays = [];
 
@@ -393,7 +393,10 @@ function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_
         $direction = $backwards ? 'last' : 'next';
         $realDate = new DateTime($date);
 
-        $date = date("Y-m-d", strtotime("$direction weekday", strtotime($date)));
+        if (!$allDays)
+            $date = date("Y-m-d", strtotime("$direction weekday", strtotime($date)));
+        else
+            $date = date("Y-m-d", strtotime("$direction days", strtotime($date)));
 
         if ($days_off && !in_array($realDate->format("w"), $days_off) && !in_array($realDate->format("Y-m-d"), $holidays))
             $workingDays[] = $realDate->format("Y-m-d");
