@@ -251,7 +251,7 @@ class Permission extends BaseController
 
                             $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
 
-                            //* last index of array from variable attPresentNextDay
+                            //* last index of array from variable nextDate
                             $lastDate = end($nextDate);
                         }
 
@@ -262,7 +262,12 @@ class Permission extends BaseController
                         $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
                         $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
 
-                        $addDays = date('Y-m-d H:i:s', strtotime($submissionDate . '+ ' . $maxDays . 'days'));
+                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+
+                        //* last index of array from variable addDays
+                        $addDays = end($addDays);
+
+                        $endDate = date('Y-m-d', strtotime($endDate));
 
                         if (is_null($work)) {
                             $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
