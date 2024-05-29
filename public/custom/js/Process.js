@@ -204,6 +204,14 @@ $(document).ready(function (e) {
       disabledDates: getHolidayDate(),
       useCurrent: false,
     });
+
+    $(".timepick").datetimepicker({
+      format: "HH:mm",
+      showTodayButton: true,
+      showClear: true,
+      showClose: true,
+      useCurrent: false,
+    });
   }
 
   //* start date picker on change event [select minimun date for end date datepicker]
