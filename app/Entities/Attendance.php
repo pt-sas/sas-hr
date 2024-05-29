@@ -8,6 +8,7 @@ class Attendance extends Entity
 {
     protected $trx_attendance_id;
     protected $nik;
+    protected $md_employee_id;
     protected $date;
     protected $clock_in;
     protected $clock_out;
@@ -40,6 +41,16 @@ class Attendance extends Entity
     public function setNik($nik)
     {
         $this->attributes['nik'] = $nik;
+    }
+
+    public function setEmployeeId($md_employee_id)
+    {
+        $this->attributes['md_employee_id'] = $md_employee_id;
+    }
+
+    public function getEmployeeId()
+    {
+        return $this->attributes['md_employee_id'];
     }
 
     public function getDate()

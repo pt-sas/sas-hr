@@ -31,6 +31,8 @@ class ImportAttendance extends BaseController
 
     public function import()
     {
+        $mEmployee = new M_Employee($this->request);
+
         if ($this->request->isAJAX()) {
             try {
                 $file = $this->request->getFile('file');
@@ -51,7 +53,6 @@ class ImportAttendance extends BaseController
                         $kolomnik = $excel->getActiveSheet()->getCellByColumnAndRow(0, $row)->getValue();
                         $kolommasuk = $excel->getActiveSheet()->getCellByColumnAndRow(2, $row)->getValue();
                         $kolompulang = $excel->getActiveSheet()->getCellByColumnAndRow(3, $row)->getValue();
-                        // $Kolomabsent = $excel->getActiveSheet()->getCellByColumnAndRow(4, $row)->getValue();
 
                         // Check NIK Data Type & Set NIK Variable
                         if (is_numeric($kolomnik) && strlen((string)$kolomnik) == 6) {
@@ -80,15 +81,11 @@ class ImportAttendance extends BaseController
                         $clock_out = $kolompulang;
 
                         // Check if employee absent or Not
-                        // if ($Kolomabsent === 'Y' || $Kolomabsent === "N") {
-                        //     $absent = $Kolomabsent;
-                        // } else {
                         if ($clock_in == null && $clock_out == null) {
                             $absent = 'N';
                         } else {
                             $absent = 'Y';
                         }
-                        // }
 
                         $data[] = ['nik' => $nik, 'date' => $date, 'clock_in' => $clock_in, 'clock_out' => $clock_out, 'absent' => $absent];
                         $row++;
@@ -97,6 +94,9 @@ class ImportAttendance extends BaseController
                     if (($Column_A - 1) == count($data)) {
                         // Process Checking if data need insert or Update Data in Database
                         foreach ($data as $key => $value) {
+                            $employee = $mEmployee->where('nik', $value['nik'])->first();
+
+                            $employee_id = $employee->md_employee_id;
                             $nik_data = $value['nik'];
                             $date_data = $value['date'];
                             $clock_in_data = $value['clock_in'];
@@ -109,6 +109,7 @@ class ImportAttendance extends BaseController
                             if (!empty($atten)) {
                                 $this->model->save([
                                     'trx_attendance_id' => $atten[0]->trx_attendance_id,
+                                    'md_employee_id' => $employee_id,
                                     'nik' => $nik_data,
                                     'date' => $date_data,
                                     'clock_in' => $clock_in_data,
@@ -118,6 +119,7 @@ class ImportAttendance extends BaseController
                                 $jmlhupdate++;
                             } else {
                                 $this->model->save([
+                                    'md_employee_id' => $employee_id,
                                     'nik' => $nik_data,
                                     'date' => $date_data,
                                     'clock_in' => $clock_in_data,

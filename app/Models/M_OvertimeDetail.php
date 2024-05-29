@@ -17,6 +17,7 @@ class M_OvertimeDetail extends Model
         'description',
         'overtime_balance',
         'overtime_expense',
+        'enddate_realization',
         'total',
         'status',
         'created_by',

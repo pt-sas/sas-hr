@@ -16,10 +16,10 @@
             </div>
         </div>
         <div class="form-group row">
-            <label for="submissiondate" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Tanggal</label>
+            <label for="date" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Tanggal</label>
             <div class="col-lg-6 col-md-9 col-sm-8 ">
                 <div class="input-icon">
-                    <input type="text" class="form-control daterange" name="submissiondate" value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
+                    <input type="text" class="form-control daterange" name="date" value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
                     <span class="input-icon-addon">
                         <i class="fas fa-calendar-alt"></i>
                     </span>

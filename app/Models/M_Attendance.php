@@ -17,7 +17,8 @@ class M_Attendance extends Model
         'absent',
         'created_by',
         'updated_by',
-        'description'
+        'description',
+        'md_employee_id'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Attendance';

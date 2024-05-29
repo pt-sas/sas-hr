@@ -45,33 +45,45 @@ class Overtime extends BaseController
             /**
              * Hak akses
              */
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get("md_employee_id"));
-            $arrEmployee = implode(",", $arrEmployee);
+            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
-            $access = $mAccess->getAccess($this->session->get("sys_user_id"));
+            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                $arrBranch = $arrAccess["branch"];
+                $arrDiv = $arrAccess["division"];
 
-            if ($access && isset($access["branch"]) && isset($access["division"])) {
-                $where['trx_absent.md_branch_id'] = [
-                    'value'     => $access["branch"]
-                ];
+                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
-                $where['trx_absent.md_division_id'] = [
-                    'value'     => $access["division"]
-                ];
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                if ($arrEmployee)
-                    $where = [
-                        '(trx_absent.created_by =' . $this->session->get("sys_user_id") . ' OR trx_absent.md_employee_id IN (' . $arrEmployee . '))'
+                    $where['trx_overtime.md_employee_id'] = [
+                        'value'     => $arrMerge
                     ];
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['trx_overtime.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['trx_overtime.md_employee_id'] = [
+                        'value'     => $arrEmpBased
+                    ];
+                } else {
+                    $where['trx_overtime.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+            } else if (!empty($this->session->get('md_employee_id'))) {
+                $where['trx_overtime.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
             } else {
-                $where['trx_absent.md_branch_id'] = "";
-                $where['trx_absent.md_division_id'] = "";
+                $where['trx_overtime.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $data = [];
 
             $number = $this->request->getPost('start');
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
 
             foreach ($list as $value) :
                 $row = [];
@@ -280,6 +292,12 @@ class Overtime extends BaseController
         $fieldDateEnd->setLength(150);
         $fieldDateEnd->setIsReadonly(true);
 
+        $fieldDateEndRealization = new \App\Entities\Table();
+        $fieldDateEndRealization->setName("dateend_realization");
+        $fieldDateEndRealization->setType("text");
+        $fieldDateEndRealization->setLength(150);
+        $fieldDateEndRealization->setIsReadonly(true);
+
         $fieldStartTime = new \App\Entities\Table();
         $fieldStartTime->setName("starttime");
         $fieldStartTime->setId("starttime");
@@ -293,6 +311,13 @@ class Overtime extends BaseController
         $fieldEndTime->setType("text");
         $fieldEndTime->setClass("timepicker");
         $fieldEndTime->setLength(100);
+
+        $fieldEndTimeRealization = new \App\Entities\Table();
+        $fieldEndTimeRealization->setName("endtime_realization");
+        $fieldEndTimeRealization->setType("text");
+        $fieldEndTimeRealization->setClass("timepicker");
+        $fieldEndTimeRealization->setLength(100);
+        $fieldEndTimeRealization->setIsReadonly(true);
 
         $fieldBalance = new \App\Entities\Table();
         $fieldBalance->setName("overtime_balance");
@@ -343,6 +368,8 @@ class Overtime extends BaseController
                     $this->field->fieldTable($fieldStartTime),
                     $this->field->fieldTable($fieldDateEnd),
                     $this->field->fieldTable($fieldEndTime),
+                    $this->field->fieldTable($fieldDateEndRealization),
+                    $this->field->fieldTable($fieldEndTimeRealization),
                     $this->field->fieldTable($fieldBalance),
                     $this->field->fieldTable($fieldExpense),
                     $this->field->fieldTable($fieldTotal),
@@ -368,6 +395,10 @@ class Overtime extends BaseController
                 $fieldStartTime->setValue(format_time($row->getStartDate()));
                 $fieldDateEnd->setValue(format_dmy($row->getEndDate(), '-'));
                 $fieldEndTime->setValue(format_time($row->getEndDate()));
+                if ($row->getEndDateRealization() != "0000-00-00 00:00:00") {
+                    $fieldDateEndRealization->setValue(format_dmy($row->getEndDateRealization(), '-'));
+                    $fieldEndTimeRealization->setValue(format_time($row->getEndDateRealization()));
+                }
                 $fieldDesctiprion->setValue($row->getDescription());
                 $fieldBalance->setValue($row->getOvertimeBalance());
                 $fieldExpense->setValue(formatRupiah($row->getOvertimeExpense()));
@@ -386,6 +417,8 @@ class Overtime extends BaseController
                     $this->field->fieldTable($fieldStartTime),
                     $this->field->fieldTable($fieldDateEnd),
                     $this->field->fieldTable($fieldEndTime),
+                    $this->field->fieldTable($fieldDateEndRealization),
+                    $this->field->fieldTable($fieldEndTimeRealization),
                     $this->field->fieldTable($fieldBalance),
                     $this->field->fieldTable($fieldExpense),
                     $this->field->fieldTable($fieldTotal),

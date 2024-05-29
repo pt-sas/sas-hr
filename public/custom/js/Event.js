@@ -1491,6 +1491,8 @@ _tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
   let enddate = tr.find("td:eq(6)").text();
   let starttime = tr.find("td:eq(7)").text();
   let endtime = tr.find("td:eq(8)").text();
+  let date_out = tr.find("td:eq(9)").text();
+  let clock_out = tr.find("td:eq(10)").text();
   let id = this.id;
 
   let leaveTypeID = 0;
@@ -1513,9 +1515,12 @@ _tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
       ID = id;
     } else if (form.is($("#form_overtime_realization_agree"))) {
       form.find("input[name=enddate]").val(enddate);
+      form.find("input[name=enddate_realization]").val(enddate);
       form.find("input[name=startdate]").val(startdate);
       form.find("input[name=starttime]").val(starttime);
       form.find("input[name=endtime]").val(endtime);
+      form.find("input[name=enddate_att]").val(date_out);
+      form.find("input[name=endtime_att]").val(clock_out);
       form.find("input[name=isagree]").val("Y");
       ID = id;
     }
