@@ -111,7 +111,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
                 }
             }
 
@@ -122,7 +122,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
 
                     $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
@@ -159,11 +159,11 @@ class M_AbsentDetail extends Model
                                             $mLeaveBalance->save($entityBal);
 
                                             //? Cek perbandingan dari calculate variable 
-                                            if ($calculate == -1 || $calculate == 0)
+                                            if ($calculate == 0)
                                                 $amount = 0;
                                         }
 
-                                        if ($calculate < -1) {
+                                        if ($calculate < 0) {
                                             $entity = new \App\Entities\AllowanceAtt();
 
                                             $rDetail = $mRuleDetail->where([
@@ -171,7 +171,7 @@ class M_AbsentDetail extends Model
                                                 'name'       => 'Sanksi Alpa No Cuti'
                                             ])->first();
 
-                                            $tkh = abs($rDetail->value);
+                                            $tkh = $rDetail->value;
                                             $hari = abs($rDetail->condition);
                                             $hari -= $saldo;
                                             $tkh *= $hari;
@@ -193,7 +193,7 @@ class M_AbsentDetail extends Model
                                 $entity = new \App\Entities\AllowanceAtt();
 
                                 if ($detail->name === "Sanksi Alpa No Cuti") {
-                                    $tkh = abs($detail->value);
+                                    $tkh = $detail->value;
                                     $tkh *= abs($detail->condition);
 
                                     if ($tkh != 0 && $line->isagree === 'Y') {
@@ -222,7 +222,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
 
                     $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
@@ -258,11 +258,12 @@ class M_AbsentDetail extends Model
 
                                             $mLeaveBalance->save($entityBal);
 
-                                            if ($calculate == -1 || $calculate == 0)
+                                            //? Cek perbandingan dari calculate variable 
+                                            if ($calculate == 0)
                                                 $amount = 0;
                                         }
 
-                                        if ($calculate < -1) {
+                                        if ($calculate < 0) {
                                             $entity = new \App\Entities\AllowanceAtt();
 
                                             $rDetail = $mRuleDetail->where([
@@ -270,7 +271,7 @@ class M_AbsentDetail extends Model
                                                 'name'       => 'Sanksi Ijin No Cuti'
                                             ])->first();
 
-                                            $tkh = abs($rDetail->value);
+                                            $tkh = $rDetail->value;
 
                                             $entity->record_id = $sql->{$mAbsent->primaryKey};
                                             $entity->table = $mAbsent->table;
@@ -289,7 +290,7 @@ class M_AbsentDetail extends Model
                                 $entity = new \App\Entities\AllowanceAtt();
 
                                 if ($detail->name === "Sanksi Ijin No Cuti") {
-                                    $tkh = abs($detail->value);
+                                    $tkh = $detail->value;
 
                                     if ($tkh != 0 && $line->isagree === 'Y') {
                                         $entity->record_id = $sql->{$mAbsent->primaryKey};
@@ -317,7 +318,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
                 }
             }
 
@@ -328,7 +329,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
                 }
             }
 
@@ -339,7 +340,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
                 }
             }
 
@@ -350,7 +351,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
                 }
             }
 
@@ -361,7 +362,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
 
                     $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
@@ -397,7 +398,7 @@ class M_AbsentDetail extends Model
 
                         foreach ($ruleDetail as $detail) {
                             if (($detail->name === "Terlambat 1/2 Hari" || $detail->name === "Terlambat") && getOperationResult($workTime, ($workHour + $detail->condition), $detail->operation)) {
-                                $amount = abs($detail->value);
+                                $amount = $detail->value;
                             }
                         }
                     }
@@ -411,7 +412,7 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 if ($rule) {
-                    $amount = $rule->condition ?: abs($rule->value);
+                    $amount = $rule->condition ?: $rule->value;
 
                     $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
@@ -447,7 +448,7 @@ class M_AbsentDetail extends Model
 
                         foreach ($ruleDetail as $detail) {
                             if (($detail->name === "Pulang Cepat 1/2 Hari" || $detail->name === "Pulang Cepat") && getOperationResult($workTime, ($workHour + $detail->condition), $detail->operation)) {
-                                $amount = abs($detail->value);
+                                $amount = $detail->value;
                             }
                         }
                     }
