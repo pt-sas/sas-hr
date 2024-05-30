@@ -79,6 +79,8 @@ class Alpha extends BaseController
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
 
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Alpa;
+
             /**
              * Hak akses
              */
@@ -116,8 +118,6 @@ class Alpha extends BaseController
             } else {
                 $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
-
-            $where = ['trx_absent.necessary' => 'AL'];
 
             $data = [];
 
