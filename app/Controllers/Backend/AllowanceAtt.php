@@ -401,6 +401,12 @@ class AllowanceAtt extends BaseController
                                 if ($allow && $allow->amount > 0) {
                                     $qty = $allow->amount;
                                 }
+                            } else {
+                                if ($attendance->clock_in > "08:30" && !$allow)
+                                    $qty = 0;
+
+                                if ($allow && $allow->amount < 0)
+                                    $qty += $allow->amount;
                             }
                         } else {
                             $qty = 0;
@@ -471,6 +477,12 @@ class AllowanceAtt extends BaseController
                                 if ($allow && $allow->amount > 0) {
                                     $qty = $allow->amount;
                                 }
+                            } else {
+                                if ($attendance->clock_in > "08:30" && !$allow)
+                                    $qty = 0;
+
+                                if ($allow && $allow->amount < 0)
+                                    $qty += $allow->amount;
                             }
                         } else {
                             $qty = 0;
