@@ -3,11 +3,17 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_AbsentDetail;
 use App\Models\M_Overtime;
 use App\Models\M_OvertimeDetail;
 use App\Models\M_AccessMenu;
-use Config\Services;
 use App\Models\M_Employee;
+use App\Models\M_Holiday;
+use App\Models\M_Rule;
+use App\Models\M_WorkDetail;
+use App\Models\M_EmpWorkDay;
+use App\Models\M_RuleDetail;
+use Config\Services;
 
 class Overtime extends BaseController
 {
@@ -119,32 +125,124 @@ class Overtime extends BaseController
 
     public function create()
     {
+        $mHoliday = new M_Holiday($this->request);
+        $mRule = new M_Rule($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
+
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
             $table = json_decode($post['table']);
 
-            // // ! Mandatory property for detail validation
+            //! Mandatory property for detail validation
             $post['line'] = countLine($table);
             $post['detail'] = [
                 'table' => arrTableLine($table)
             ];
 
             try {
-                $this->entity->fill($post);
+                $today = date('Y-m-d');
+                $time = date('H:i');
+                $employeeId = $post['md_employee_id'];
+                $day = date('w');
 
                 if (!$this->validation->run($post, 'lembur')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $holidays = $mHoliday->getHolidayDate();
+                    $startDate = $post['startdate'];
+                    $endDate = $post['enddate'];
+                    $submissionDate = $post['submissiondate'];
+                    $subDate = date('Y-m-d', strtotime($submissionDate));
 
-                    if ($this->isNew()) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    $rule = $mRule->where([
+                        'name'      => 'Lembur',
+                        'isactive'  => 'Y'
+                    ])->first();
 
-                        $docNo = $this->model->getInvNumber();
-                        $this->entity->setDocumentNo($docNo);
+                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
+                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
+
+                    //TODO : Get work day employee
+                    $workDay = $mEmpWork->where([
+                        'md_employee_id'    => $post['md_employee_id'],
+                        'validfrom <='      => $today
+                    ])->orderBy('validfrom', 'ASC')->first();
+
+                    if (is_null($workDay)) {
+                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    } else {
+                        $emp = $mEmployee->find($post['md_employee_id']);
+
+                        $day = strtoupper(formatDay_idn($day));
+
+                        //TODO : Get Work Detail
+                        $whereClause = "md_work_detail.isactive = 'Y'";
+                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                        //TODO: Get Work Detail by day 
+                        $work = null;
+
+                        $whereClause .= " AND md_day.name = '$day'";
+                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+
+                        $daysOff = getDaysOff($workDetail);
+
+                        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+
+                        //* last index of array from variable nextDate
+                        $lastDate = end($nextDate);
+
+                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+
+                        //* last index of array from variable addDays
+                        $addDays = end($addDays);
+
+                        $endDate = date('Y-m-d', strtotime($endDate));
+
+                        $operation = null;
+                        $submissionMaxTime = null;
+
+                        if ($rule) {
+                            $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+
+                            if ($ruleDetail) {
+                                foreach ($ruleDetail as $detail) {
+                                    if ($detail->name === "Batas Waktu Pengajuan") {
+                                        $operation = $detail->operation;
+                                        $submissionMaxTime = $detail->condition;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (is_null($work)) {
+                            $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
+                        } else if ($endDate > $addDays) {
+                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                        } else if ($lastDate < $subDate) {
+                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
+                        } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $subDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
+                            $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
+                        } else {
+                            $this->entity->fill($post);
+
+                            if ($this->isNew()) {
+                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                                $docNo = $this->model->getInvNumber();
+                                $this->entity->setDocumentNo($docNo);
+                            }
+
+                            $response = $this->save();
+                        }
                     }
-
-                    $response = $this->save();
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

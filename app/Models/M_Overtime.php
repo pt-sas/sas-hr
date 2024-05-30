@@ -51,7 +51,7 @@ class M_Overtime extends Model
         'trx_overtime.docstatus',
         'sys_user.name'
     ];
-    protected $order                = ['documentno' => 'ASC'];
+    protected $order                = ['submissiondate' => 'DESC'];
     protected $request;
     protected $db;
     protected $builder;
