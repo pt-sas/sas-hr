@@ -6,7 +6,9 @@ use App\Controllers\BaseController;
 use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
 use App\Models\M_Attendance;
+use App\Models\M_EmpWorkDay;
 use App\Models\M_Holiday;
+use App\Models\M_WorkDetail;
 use Config\Services;
 
 class ListAbsent extends BaseController
@@ -36,6 +38,8 @@ class ListAbsent extends BaseController
         $mAbsent = new M_Absent($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
@@ -62,6 +66,16 @@ class ListAbsent extends BaseController
 
                 $absent = $mAbsentDetail->getAbsentDetail($parAbsent)->getResult();
 
+                $day = strtoupper(formatDay_idn(date('w', strtotime($val->date))));
+
+                /**
+                 * Checking if employee have workday
+                 */
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= "AND md_day.name = '$day'";
+                $whereClause .= "AND md_employee_work.md_employee_id = $val->md_employee_id";
+                $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+
                 // Get Date Range From Absent Date
                 $holiday = $mHoliday->getHolidayDate();
                 $date_range = getDatesFromRange($val->date, date('Y-m-d'), $holiday);
@@ -72,7 +86,7 @@ class ListAbsent extends BaseController
                 $fieldChk->setType("checkbox");
                 $fieldChk->setClass("check-alpa");
 
-                if (empty($absent) && $totalrange > 3) {
+                if (empty($absent) && $totalrange > 3 && !is_null($work) && !in_array(date('Y-m-d', strtotime($val->date)), $holiday)) {
 
                     $row = [];
                     $ID = $val->trx_attendance_id;
