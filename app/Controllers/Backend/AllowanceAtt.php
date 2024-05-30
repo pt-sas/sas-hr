@@ -11,11 +11,14 @@ use App\Models\M_Employee;
 use App\Models\M_Holiday;
 use App\Models\M_Levelling;
 use App\Models\M_Absent;
+use App\Models\M_EmpWorkDay;
+use App\Models\M_WorkDetail;
 use PHPExcel;
 use PHPExcel_IOFactory;
 use PHPExcel_Style_Alignment;
 use PHPExcel_Style_Border;
 use PHPExcel_Cell_DataType;
+use PHPExcel_Style_Fill;
 use PHPExcel_Worksheet_PageSetup;
 use DateTime;
 use Config\Services;
@@ -161,6 +164,9 @@ class AllowanceAtt extends BaseController
         $mLevel = new M_Levelling($this->request);
         $mAttendance = new M_Attendance($this->request);
         $mAbsent = new M_Absent($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
+        $mHoliday = new M_Holiday($this->request);
 
         $md_branch_id = null;
         $md_division_id = null;
@@ -213,6 +219,22 @@ class AllowanceAtt extends BaseController
                 'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN) // Set border left dengan garis tipis
             )
         );
+        // Buat sebuah variabel untuk menampung pengaturan style dari isi tabel
+        $style_row_dayoff = [
+            'alignment' => array(
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER // Set text jadi di tengah secara vertical (middle)
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN), // Set border top dengan garis tipis
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),  // Set border right dengan garis tipis
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN), // Set border bottom dengan garis tipis
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN) // Set border left dengan garis tipis
+            ),
+            'fill' => array(
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => array('rgb' => 'FF0000')
+            )
+        ];
         $excel->setActiveSheetIndex(0)->setCellValue('A1', "LAPORAN ABSENSI HARIAN"); // Set kolom A1 dengan tulisan "LAPORAN ABSENSI HARIAN"
         $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE); // Set bold kolom A1
         $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15); // Set font size 15 untuk kolom A1
@@ -324,70 +346,147 @@ class AllowanceAtt extends BaseController
             $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
             $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
 
+            $holiday = $mHoliday->getHolidayDate();
+
             $cell = 'E';
             $prevTotal = [];
             foreach ($prevDateRange as $date) {
-                $qty = 0;
+                $qty = 1;
 
-                $parAllow = [
-                    'trx_allow_attendance.md_employee_id'    => $row->md_employee_id,
-                    'trx_allow_attendance.submissiondate'    => $date
-                ];
-                $allow = $this->model->getAllowance($parAllow)->getRow();
+                $day = date('w', strtotime($date));
 
-                $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+                //TODO : Get work day employee
+                $workDay = $mEmpWork->where([
+                    'md_employee_id'    => $row->md_employee_id,
+                    'validfrom <='      => $date
+                ])->orderBy('validfrom', 'ASC')->first();
 
-                if (isset($attendance)) {
-                    if ($attendance->absent === 'Y') {
-                        $qty = 1;
-                    }
+                if (is_null($workDay)) {
+                    $styleCell = $style_row_dayoff;
+                } else {
+                    $day = strtoupper(formatDay_idn($day));
 
-                    if ($attendance->absent === 'N' && $allow && $allow->submissiontype == $mAbsent->Pengajuan_Tugas_Kantor) {
-                        $qty = $allow->amount;
-                    }
+                    //TODO: Get Work Detail by day 
+                    $work = null;
 
-                    if ($attendance->absent === 'N' && $allow && $allow->submissiontype != $mAbsent->Pengajuan_Tugas_Kantor) {
-                        $qty = 1 - $allow->amount;
+                    $whereClause = "md_work_detail.isactive = 'Y'";
+                    $whereClause .= " AND md_employee_work.md_employee_id = $row->md_employee_id";
+                    $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                    $whereClause .= " AND md_day.name = '$day'";
+                    $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+
+                    if (is_null($work)) {
+                        $qty = 0;
+                        $styleCell = $style_row_dayoff;
+                    } else {
+                        $parAllow = [
+                            'trx_allow_attendance.md_employee_id'                           => $row->md_employee_id,
+                            'DATE_FORMAT(trx_allow_attendance.submissiondate, "%Y-%m-%d")'  => $date
+                        ];
+
+                        $allow = $this->model->getAllowance($parAllow)->getRow();
+
+                        $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+
+                        if (isset($attendance)) {
+                            if ($attendance->absent === 'N' || is_null($attendance->clock_in) || is_null($attendance->clock_out)) {
+                                if (!$allow) {
+                                    $qty = 0;
+                                }
+
+                                if ($allow && $allow->amount < 0) {
+                                    $qty += $allow->amount;
+                                }
+
+                                if ($allow && $allow->amount > 0) {
+                                    $qty = $allow->amount;
+                                }
+                            }
+                        } else {
+                            $qty = 0;
+                        }
+
+                        $styleCell = $style_row;
                     }
                 }
+
+                if (in_array($date, $holiday))
+                    $styleCell = $style_row_dayoff;
 
                 $value = $qty;
                 $prevTotal[] = $value;
                 $excel->setActiveSheetIndex(0)->setCellValue($cell . $numrow, $value);
-                $excel->getActiveSheet()->getStyle($cell . $numrow)->applyFromArray($style_row);
+                $excel->getActiveSheet()->getStyle($cell . $numrow)->applyFromArray($styleCell);
                 $cell++;
             }
 
             foreach ($dateRange as $date) {
-                $qty = 0;
+                $qty = 1;
 
-                $parAllow = [
-                    'trx_allow_attendance.md_employee_id'    => $row->md_employee_id,
-                    'trx_allow_attendance.submissiondate'    => $date
-                ];
+                $day = date('w', strtotime($date));
 
-                $allow = $this->model->getAllowance($parAllow)->getRow();
+                //TODO : Get work day employee
+                $workDay = $mEmpWork->where([
+                    'md_employee_id'    => $row->md_employee_id,
+                    'validfrom <='      => $date
+                ])->orderBy('validfrom', 'ASC')->first();
 
-                $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+                if (is_null($workDay)) {
+                    $styleCell = $style_row_dayoff;
+                } else {
+                    $day = strtoupper(formatDay_idn($day));
 
-                if (isset($attendance)) {
-                    if ($attendance->absent === 'Y') {
-                        $qty = 1;
-                    }
+                    //TODO: Get Work Detail by day 
+                    $work = null;
 
-                    if ($attendance->absent === 'N' && $allow && $allow->submissiontype == $mAbsent->Pengajuan_Tugas_Kantor) {
-                        $qty = $allow->amount;
-                    }
+                    $whereClause = "md_work_detail.isactive = 'Y'";
+                    $whereClause .= " AND md_employee_work.md_employee_id = $row->md_employee_id";
+                    $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                    $whereClause .= " AND md_day.name = '$day'";
+                    $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
-                    if ($attendance->absent === 'N' && $allow && $allow->submissiontype != $mAbsent->Pengajuan_Tugas_Kantor) {
-                        $qty = 1 - $allow->amount;
+                    if (is_null($work)) {
+                        $qty = 0;
+                        $styleCell = $style_row_dayoff;
+                    } else {
+                        $parAllow = [
+                            'trx_allow_attendance.md_employee_id'                           => $row->md_employee_id,
+                            'DATE_FORMAT(trx_allow_attendance.submissiondate, "%Y-%m-%d")'  => $date
+                        ];
+
+                        $allow = $this->model->getAllowance($parAllow)->getRow();
+
+                        $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+
+                        if (isset($attendance)) {
+                            if ($attendance->absent === 'N' || is_null($attendance->clock_in) || is_null($attendance->clock_out)) {
+                                if (!$allow) {
+                                    $qty = 0;
+                                }
+
+                                if ($allow && $allow->amount < 0) {
+                                    $qty += $allow->amount;
+                                }
+
+                                if ($allow && $allow->amount > 0) {
+                                    $qty = $allow->amount;
+                                }
+                            }
+                        } else {
+                            $qty = 0;
+                        }
+
+                        $styleCell = $style_row;
                     }
                 }
+
+                if (in_array($date, $holiday))
+                    $styleCell = $style_row_dayoff;
 
                 $value = $qty;
                 $prevTotal[] = $value;
                 $excel->setActiveSheetIndex(0)->setCellValue($cell . $numrow, $value);
-                $excel->getActiveSheet()->getStyle($cell . $numrow)->applyFromArray($style_row);
+                $excel->getActiveSheet()->getStyle($cell . $numrow)->applyFromArray($styleCell);
                 $cell++;
             }
 

@@ -38,9 +38,8 @@ class M_AllowanceAtt extends Model
     public function getAllowance($where, $order = null)
     {
         $this->builder->selectSum($this->table . '.amount');
-        $this->builder->select($this->table . '.submissiondate,' .
-            $this->table . '.md_employee_id,' .
-            $this->table . '.submissiontype');
+        $this->builder->select('DATE_FORMAT(' . $this->table . '.submissiondate, "%Y-%m-%d") as date,' .
+            $this->table . '.md_employee_id');
 
         $this->builder->join('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.record_id AND table = "trx_absent"', 'left');
 
@@ -48,15 +47,14 @@ class M_AllowanceAtt extends Model
             $this->builder->where($where);
 
         $this->builder->groupBy([
-            $this->table . '.submissiondate',
-            $this->table . '.md_employee_id',
-            $this->table . '.submissiontype'
+            'date',
+            $this->table . '.md_employee_id'
         ]);
 
         if ($order)
             $this->builder->orderBy($order);
         else
-            $this->builder->orderBy($this->table . '.submissiondate', 'ASC');
+            $this->builder->orderBy('date', 'ASC');
 
         return $this->builder->get();
     }
