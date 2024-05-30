@@ -376,6 +376,8 @@ class Realization extends BaseController
 
     public function createOvertime()
     {
+        $mEmployee = new M_Employee($this->request);
+
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
@@ -394,19 +396,24 @@ class Realization extends BaseController
 
                     $line = $this->model->find($post['id']);
 
+                    $isOvertime = $mEmployee->find($line->md_employee_id);
+
                     if ($isAgree === $agree) {
 
                         $startdate = date('Y-m-d', strtotime($line->startdate)) . " " . $post['starttime'];
                         $enddate =   date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
-                        $ovt = $this->getHourOvertime($startdate, $enddate, $line->md_employee_id);
+
+                        if ($isOvertime->isOvertime === 'Y') {
+                            $ovt = $this->getHourOvertime($startdate, $enddate, $line->md_employee_id);
+                        }
 
                         $this->entity->trx_overtime_detail_id = $post['id'];
                         $this->entity->startdate = $startdate;
                         $this->entity->enddate_realization = $enddate;
                         $this->entity->status = $isAgree;
-                        $this->entity->overtime_expense = $ovt['expense'];
-                        $this->entity->overtime_balance = $ovt['balance'];
-                        $this->entity->total = $ovt['total'];
+                        $this->entity->overtime_expense = isset($ovt) ? $ovt['expense'] : null;
+                        $this->entity->overtime_balance = isset($ovt) ? $ovt['balance'] : null;
+                        $this->entity->total = isset($ovt) ? $ovt['total'] : null;
 
                         $response = $this->save();
                     }
