@@ -557,7 +557,7 @@ class Alpha extends BaseController
                 $post['submissiondate'] = $today;
 
                 $this->entity->setNecessary($post['necessary']);
-                $this->entity->setSubmissionType('alpa');
+                $this->entity->setSubmissionType($this->model->Pengajuan_Alpa);
                 $this->entity->setEmployeeId($employee[0]->md_employee_id);
                 $this->entity->setNik($employee[0]->nik);
                 $this->entity->setBranchId($branch[0]->md_branch_id);
@@ -568,13 +568,13 @@ class Alpha extends BaseController
                 $this->entity->setStartDate(min($date));
                 $this->entity->setEndDate(max($date));
                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-                $docNo = $this->model->getInvNumber("submissiontype", 'alpa', $post);
+                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Alpa, $post);
                 $this->entity->setDocumentNo($docNo);
                 $this->save();
 
                 // * Foreignkey id 
                 $Ref = $this->insertID;
-                $ID[] = $this->insertID;
+                // $ID[] = $this->insertID;
                 $number = 1;
 
                 // Creating Absent Line 
