@@ -39,6 +39,7 @@ $routes->get('auth', 'Backend\Auth::index', ['filter' => 'auth']);
 $routes->post('auth/login', 'Backend\Auth::login');
 
 $routes->get('logout', 'Backend\Auth::logout');
+$routes->get('my-logs', 'Backend\AccessMenu::index');
 
 $routes->post('(:any)/AccessMenu/getAccess', 'Backend\AccessMenu::getAccess');
 
