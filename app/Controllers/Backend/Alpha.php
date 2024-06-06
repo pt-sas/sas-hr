@@ -206,7 +206,12 @@ class Alpha extends BaseController
                         'absent'    => 'Y'
                     ])->orderBy('date', 'ASC')->first();
 
-                    $nextDate = lastWorkingDays($attPresentNextDay->date, $holidays, $countDays, false);
+                    $nextDate = lastWorkingDays(
+                        $attPresentNextDay->date,
+                        $holidays,
+                        $countDays,
+                        false
+                    );
 
                     //* index array 1 from variable attPresentNextDay first date
                     $lastDate = $nextDate[1];
@@ -514,6 +519,106 @@ class Alpha extends BaseController
         return json_encode($table);
     }
 
+    // public function generateAlpa()
+    // {
+    //     $mAttendance = new M_Attendance($this->request);
+    //     $mEmployee = new M_Employee($this->request);
+    //     $mEmpBranch = new M_EmpBranch($this->request);
+    //     $mEmpDivision = new M_EmpDivision($this->request);
+    //     $today = date('Y-m-d');
+    //     $todayTime = date('Y-m-d H:i:s');
+    //     $agree = 'Y';
+
+    //     try {
+    //         $post = $this->request->getVar();
+    //         $doc = [];
+
+    //         $attendance = $mAttendance->where('trx_attendance_id IN (' . implode(", ", $post['trx_attendance_id']) . ')')->find();
+
+    //         // Grouping By Nik 
+    //         foreach ($attendance as $item) {
+    //             $header[$item->nik][] = $item;
+    //         }
+
+    //         $ID = [];
+
+    //         // Creating Alpa Header
+    //         foreach ($header as $key => $value) {
+    //             $this->model = new M_Absent($this->request);
+    //             $this->entity = new \App\Entities\Absent();
+
+    //             $employee = $mEmployee->where('nik', $value[0]->nik)->find();
+    //             $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
+    //             $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
+
+    //             // Getting List Date
+    //             $date = [];
+
+    //             foreach ($value as $key => $item) {
+    //                 $date[] = $item->date;
+    //             }
+
+    //             $post['necessary'] = 'AL';
+    //             $post['submissiondate'] = $today;
+
+    //             $this->entity->setNecessary($post['necessary']);
+    //             $this->entity->setSubmissionType($this->model->Pengajuan_Alpa);
+    //             $this->entity->setEmployeeId($employee[0]->md_employee_id);
+    //             $this->entity->setNik($employee[0]->nik);
+    //             $this->entity->setBranchId($branch[0]->md_branch_id);
+    //             $this->entity->setDivisionId($division[0]->md_division_id);
+    //             $this->entity->setReceivedDate($todayTime);
+    //             $this->entity->setReason('');
+    //             $this->entity->setSubmissionDate($today);
+    //             $this->entity->setStartDate(min($date));
+    //             $this->entity->setEndDate(max($date));
+    //             $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+    //             $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Alpa, $post);
+    //             $this->entity->setDocumentNo($docNo);
+    //             $this->save();
+
+    //             // * Foreignkey id 
+    //             $Ref = $this->insertID;
+    //             // $ID[] = $this->insertID;
+    //             $number = 1;
+
+    //             // Creating Absent Line 
+    //             foreach ($value as $item) {
+    //                 $mAbsentDetail = new M_AbsentDetail($this->request);
+    //                 $detailEntity = new \App\Entities\AbsentDetail();
+    //                 $detailEntity->isagree = $agree;
+    //                 $detailEntity->trx_absent_id = $Ref;
+    //                 $detailEntity->lineno = $number;
+    //                 $detailEntity->date = $item->date;
+    //                 $mAbsentDetail->save($detailEntity);
+    //                 $number++;
+    //             }
+
+    //             $doc[] = $docNo;
+
+    //             $this->model = new M_Absent($this->request);
+    //             $this->entity = new \App\Entities\Absent();
+    //             $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+    //             $this->entity->setAbsentId($Ref);
+    //             $response = $this->save();
+    //         }
+
+    //         // foreach ($ID as $item) {
+    //         //     $this->model = new M_Absent($this->request);
+    //         //     $this->entity = new \App\Entities\Absent();
+    //         //     $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+    //         //     $this->entity->setAbsentId($item);
+    //         //     $response = $this->save();
+    //         // }
+
+    //         $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . implode(", ", $doc));
+    //     } catch (\Exception $e) {
+    //         $response = message('error', false, $e->getMessage());
+    //     }
+
+    //     return $this->response->setJSON($response);
+    // }
+
     public function generateAlpa()
     {
         $mAttendance = new M_Attendance($this->request);
@@ -538,7 +643,7 @@ class Alpha extends BaseController
             $ID = [];
 
             // Creating Alpa Header
-            foreach ($header as $key => $value) {
+            foreach ($header as $value) {
                 $this->model = new M_Absent($this->request);
                 $this->entity = new \App\Entities\Absent();
 
@@ -549,7 +654,7 @@ class Alpha extends BaseController
                 // Getting List Date
                 $date = [];
 
-                foreach ($value as $key => $item) {
+                foreach ($value as $item) {
                     $date[] = $item->date;
                 }
 
@@ -570,7 +675,7 @@ class Alpha extends BaseController
                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                 $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Alpa, $post);
                 $this->entity->setDocumentNo($docNo);
-                $this->save();
+                // $this->save();
 
                 // * Foreignkey id 
                 $Ref = $this->insertID;
@@ -595,7 +700,7 @@ class Alpha extends BaseController
                 $this->entity = new \App\Entities\Absent();
                 $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                 $this->entity->setAbsentId($Ref);
-                $response = $this->save();
+                // $response = $this->save();
             }
 
             // foreach ($ID as $item) {
@@ -611,6 +716,6 @@ class Alpha extends BaseController
             $response = message('error', false, $e->getMessage());
         }
 
-        return $this->response->setJSON($response);
+        return $this->response->setJSON($header);
     }
 }
