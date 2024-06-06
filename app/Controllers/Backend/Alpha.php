@@ -18,6 +18,7 @@ use App\Models\M_LeaveBalance;
 use App\Models\M_RuleDetail;
 use App\Models\M_WorkDetail;
 use Config\Services;
+use DateTime;
 use Kint\Zval\Value;
 
 class Alpha extends BaseController
@@ -197,6 +198,8 @@ class Alpha extends BaseController
                         'nik'       => $nik,
                         'date'      => $startDate,
                         'absent'    => 'N'
+
+
                     ])->first();
 
                     //TODO : Get next day attendance from enddate
@@ -625,9 +628,14 @@ class Alpha extends BaseController
         $mEmployee = new M_Employee($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDivision = new M_EmpDivision($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mRule = new M_Rule($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
         $today = date('Y-m-d');
         $todayTime = date('Y-m-d H:i:s');
         $agree = 'Y';
+        $day = date('w');
 
         try {
             $post = $this->request->getVar();
@@ -651,13 +659,44 @@ class Alpha extends BaseController
                 $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
                 $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
 
-                // Getting List Date
-                $date = [];
+                $workDay = $mEmpWork->where([
+                    'md_employee_id'    => $value[0]->md_employee_id,
+                    'validfrom <='      => $today
+                ])->orderBy('validfrom', 'ASC')->first();
 
-                foreach ($value as $item) {
-                    $date[] = $item->date;
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND md_employee_work.md_employee_id = $workDay->md_employee_id";
+                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $daysOff = getDaysOff($workDetail);
+
+                $holidays = $mHoliday->getHolidayDate();
+
+                foreach ($holidays as $val) {
+                    $holiClause[] = "'" . date('Y-m-d H:i:s', strtotime($val)) . "'";
                 }
 
+                // Getting List Date
+                $date = [];
+                $dateRange = [];
+
+                foreach ($value as $item) {
+                    $whereClause = "trx_attendance.nik = " . $item->nik;
+                    $whereClause .= " AND trx_attendance.date > '$item->date'";
+                    $whereClause .= " AND trx_attendance.date NOT IN " . "(" . implode(", ", $holiClause) . ")";
+                    $nextDate = $mAttendance->getAttendance($whereClause)->getRow();
+
+                    $dateRange[] = $item->date;
+                }
+
+                $dateWorkRange = getDatesFromRange(min($dateRange), max($dateRange), $holidays, 'Y-m-d H:i:s', 'all', $daysOff);
+
+                // foreach ($dateWorkRange as $item) {
+                // if (in_array($item->date, $dateRange)) {
+                // $test = $dateWorkRange[0];
+                // }
+                // }
                 $post['necessary'] = 'AL';
                 $post['submissiondate'] = $today;
 
@@ -716,6 +755,6 @@ class Alpha extends BaseController
             $response = message('error', false, $e->getMessage());
         }
 
-        return $this->response->setJSON($header);
+        return $this->response->setJSON($dateWorkRange);
     }
 }
