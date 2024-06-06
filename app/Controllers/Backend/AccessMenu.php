@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Models\M_Role;
 use App\Models\M_Menu;
 use App\Models\M_Submenu;
+use App\Models\M_WActivity;
 use Config\Services;
 
 class AccessMenu extends BaseController
@@ -15,6 +16,26 @@ class AccessMenu extends BaseController
 	public function __construct()
 	{
 		$this->request = Services::request();
+	}
+
+	public function index()
+	{
+		// $mActivity = new M_WActivity($this->request);
+		// $cActivity = new WActivity();
+
+		// $where = 'ADDDATE(sys_wfactivity.created_at, INTERVAL 3 DAY) <= NOW()';
+
+		// $list = $mActivity->getActivity(null, $where);
+		// if ($list) {
+		// 	foreach ($list as $row) {
+		// 		// log_message("warning", $this->access->getSessionUser());
+		// 		$result = $cActivity->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, 1, $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu);
+		// 	}
+		log_message("error", "Test Error Message");
+
+		log_message("info", "Test Info Message");
+		// }
+		// dd($list);
 	}
 
 	public function getAccess()
@@ -40,6 +61,9 @@ class AccessMenu extends BaseController
 							'am.sys_role_id'		=> session()->get('sys_role_id')
 						])->getRow();
 
+						if ($post['action'] === 'view')
+							$value = $access->isview;
+
 						if ($post['action'] === 'create')
 							$value = $access->iscreate;
 
@@ -53,6 +77,9 @@ class AccessMenu extends BaseController
 							'am.sys_menu_id'		=> $parent->getMenuId(),
 							'am.sys_role_id'		=> $this->session->get('sys_role_id')
 						])->getRow();
+
+						if ($post['action'] === 'view')
+							$value = $access->isview;
 
 						if ($post['action'] === 'create')
 							$value = $access->iscreate;

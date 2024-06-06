@@ -59,12 +59,10 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="datestart">Tanggal Mulai <span class="required">*</span></label>
-                    <div class="input-group">
+                    <div class="input-icon">
                         <input type="text" class="form-control datepick-start" name="datestart" placeholder="Tanggal Mulai">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
-                            </span>
+                        <div class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
                         </div>
                     </div>
                     <small class="form-text text-danger" id="error_datestart"></small>
@@ -73,12 +71,10 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="starttime">Jam Mulai <span class="required">*</span></label>
-                    <div class="input-group">
+                    <div class="input-icon">
                         <input type="text" class="form-control timepicker-start" name="starttime" placeholder="Jam Mulai">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-clock"></i>
-                            </span>
+                        <div class="input-icon-addon">
+                            <i class="fa fa-clock"></i>
                         </div>
                     </div>
                     <small class="form-text text-danger" id="error_starttime"></small>
@@ -87,12 +83,10 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="dateend">Tanggal Selesai <span class="required">*</span></label>
-                    <div class="input-group">
+                    <div class="input-icon">
                         <input type="text" class="form-control datepick-end" name="dateend" placeholder="Tanggal Selesai" readonly>
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-calendar"></i>
-                            </span>
+                        <div class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
                         </div>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
@@ -101,12 +95,10 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="endtime">Jam Selesai <span class="required">*</span></label>
-                    <div class="input-group">
+                    <div class="input-icon">
                         <input type="text" class="form-control timepicker-end" name="endtime" placeholder="Jam Selesai">
-                        <div class="input-group-append">
-                            <span class="input-group-text">
-                                <i class="fa fa-clock"></i>
-                            </span>
+                        <div class="input-icon-addon">
+                            <i class="fa fa-clock"></i>
                         </div>
                     </div>
                     <small class="form-text text-danger" id="error_endtime"></small>

@@ -290,14 +290,14 @@ function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s'
     foreach ($period as $date) {
         if (!is_null($exclude) && $exclude === "weekend") {
             if ($date->format('N') < 6)
-                if ($arr_date) {
-                    if (!in_array($date->format("Y-m-d"), $arr_date))
-                        $array[] = $date->format($format);
-                } else {
+                if ($arr_date && !in_array($date->format("Y-m-d"), $arr_date))
                     $array[] = $date->format($format);
-                }
+                else
+                    $array[] = $date->format($format);
         } else if ($days_off) {
-            if (!in_array($date->format('w'), $days_off))
+            if ($arr_date && !in_array($date->format("Y-m-d"), $arr_date) && !in_array($date->format('w'), $days_off))
+                $array[] = $date->format($format);
+            else if (!$arr_date && !in_array($date->format('w'), $days_off))
                 $array[] = $date->format($format);
         } else {
             $array[] = $date->format($format);
@@ -382,7 +382,7 @@ function statusRealize($str)
         return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
 }
 
-function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_off = [])
+function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_off = [], $allDays = false)
 {
     $workingDays = [];
 
@@ -393,7 +393,10 @@ function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_
         $direction = $backwards ? 'last' : 'next';
         $realDate = new DateTime($date);
 
-        $date = date("Y-m-d", strtotime("$direction weekday", strtotime($date)));
+        if (!$allDays)
+            $date = date("Y-m-d", strtotime("$direction weekday", strtotime($date)));
+        else
+            $date = date("Y-m-d", strtotime("$direction days", strtotime($date)));
 
         if ($days_off && !in_array($realDate->format("w"), $days_off) && !in_array($realDate->format("Y-m-d"), $holidays))
             $workingDays[] = $realDate->format("Y-m-d");

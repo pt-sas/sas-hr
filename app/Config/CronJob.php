@@ -4,6 +4,8 @@ namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
 use Daycry\CronJob\Scheduler;
+use Daycry\CronJob\Loggers\Database as DatabaseLogger;
+use Daycry\CronJob\Loggers\File as FileLogger;
 
 class CronJob extends \Daycry\CronJob\Config\CronJob
 {
@@ -24,6 +26,11 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
     |
     */
     public string $logSavingMethod = 'database';
+
+    public array $logSavingMethodClassMap = [
+        'file' => FileLogger::class,
+        'database' => DatabaseLogger::class
+    ];
 
     /**
      * Directory
@@ -56,7 +63,7 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
     | Connect to a database group for logging, etc.
     |
     */
-    public string $databaseGroup = 'default';
+    public ?string $databaseGroup = 'default';
 
     /*
     |--------------------------------------------------------------------------
@@ -123,5 +130,7 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
         // $schedule->shell('cp foo bar')->daily( '11:00 pm' );
 
         // $schedule->call( function() { do something.... } )->everyMonday()->named( 'foo' )
+
+        $schedule->url(base_url('my-logs'))->named("CronMyJobs")->everyMinute();
     }
 }

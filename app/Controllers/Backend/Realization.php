@@ -276,14 +276,14 @@ class Realization extends BaseController
                             $necessary = 'IJ';
                             $submissionType = $this->model->Pengajuan_Ijin;
                             $this->entity->setNecessary($necessary);
-                            $this->entity->setSubmissionType($this->model->Pengajuan_Ijin);
+                            $this->entity->setSubmissionType($submissionType);
                         }
 
                         if ($post['submissiontype'] === 'alpa') {
                             $necessary = 'AL';
                             $submissionType = $this->model->Pengajuan_Alpa;
                             $this->entity->setNecessary($necessary);
-                            $this->entity->setSubmissionType($this->model->Pengajuan_Alpa);
+                            $this->entity->setSubmissionType($submissionType);
                         }
 
                         $this->entity->setEmployeeId($row->getEmployeeId());
@@ -300,7 +300,7 @@ class Realization extends BaseController
                         $post['submissiondate'] = $this->entity->getSubmissionDate();
                         $post['necessary'] = $necessary;
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $post['submissiontype'], $post);
+                        $docNo = $this->model->getInvNumber("submissiontype", $submissionType, $post);
                         $this->entity->setDocumentNo($docNo);
                         $this->isNewRecord = true;
 
