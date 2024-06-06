@@ -290,14 +290,14 @@ function getDatesFromRange($start, $end, $arr_date = [], $format = 'Y-m-d H:i:s'
     foreach ($period as $date) {
         if (!is_null($exclude) && $exclude === "weekend") {
             if ($date->format('N') < 6)
-                if ($arr_date) {
-                    if (!in_array($date->format("Y-m-d"), $arr_date))
-                        $array[] = $date->format($format);
-                } else {
+                if ($arr_date && !in_array($date->format("Y-m-d"), $arr_date))
                     $array[] = $date->format($format);
-                }
+                else
+                    $array[] = $date->format($format);
         } else if ($days_off) {
-            if (!in_array($date->format('w'), $days_off))
+            if ($arr_date && !in_array($date->format("Y-m-d"), $arr_date) && !in_array($date->format('w'), $days_off))
+                $array[] = $date->format($format);
+            else if (!$arr_date && !in_array($date->format('w'), $days_off))
                 $array[] = $date->format($format);
         } else {
             $array[] = $date->format($format);
