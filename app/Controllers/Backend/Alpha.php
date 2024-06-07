@@ -585,7 +585,7 @@ class Alpha extends BaseController
                     $beforeDay = $mAttendance->getAttendance($whereClause, 'DESC')->getRow();
 
 
-                    if (in_array($nextDay->date, $dateRange) || in_array($beforeDay->date, $dateRange)) {
+                    if (($nextDay && in_array($nextDay->date, $dateRange)) || ($beforeDay && in_array($beforeDay->date, $dateRange))) {
                         $date[$number][] = $item->date;
                     } else {
                         $date[$number][] = $item->date;
