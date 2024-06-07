@@ -56,9 +56,18 @@ class Realization extends BaseController
             $table = $this->model->table;
             $select = $this->model->getSelectDetail();
             $join = $this->model->getJoinDetail();
-            $order = $this->request->getPost('columns');
+            $order = [
+                '', // Number
+                'trx_absent_detail.date',
+                'md_doctype.name',
+                'md_branch.name',
+                'md_division.name',
+                'md_employee.fullname',
+                'trx_absent.reason',
+                'trx_absent.docstatus',
+                'sys_user.name'
+            ];
             $search = $this->request->getPost('search');
-            $sort = [];
             $sort = ['trx_absent_detail.date' => 'ASC', 'md_employee.fullname' => 'ASC'];
 
             $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
@@ -104,9 +113,7 @@ class Realization extends BaseController
             $result = [
                 'draw'              => $this->request->getPost('draw'),
                 'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
-                // 'recordsTotal'      => $recordsTotal,
                 'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
-                // 'recordsFiltered'   => $recordsFiltered,
                 'data'              => $data
             ];
 

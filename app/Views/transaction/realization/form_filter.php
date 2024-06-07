@@ -28,6 +28,13 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <div class="select2-input select2-primary">
+                                    <select class="form-control multiple-select-submissiontype" name="submissiontype"></select>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">

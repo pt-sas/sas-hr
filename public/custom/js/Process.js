@@ -19,7 +19,8 @@ let _table,
   _tableInfo,
   formReport,
   _tableReport,
-  _tableApproval;
+  _tableApproval,
+  _tableRealization;
 
 //* Field ID for collect data id
 let ID = 0;
@@ -662,6 +663,7 @@ _tableReport = $(".table_report")
     scrollX: true,
     scrollY: "70vh",
     scrollCollapse: true,
+    fixedColumns: checkFixedColumns(),
   })
   .columns.adjust();
 
@@ -699,6 +701,100 @@ _tableApproval = $(".table_approval")
   .columns.adjust();
 
 /**
+ * Table Realization
+ */
+_tableRealization = $(".table_realization")
+  .DataTable({
+    serverSide: true,
+    processing: true,
+    language: {
+      processing:
+        '<i class="fa fa-spinner fa-spin fa-10x fa-fw"></i><span> Processing...</span>',
+    },
+    ajax: {
+      url: CURRENT_URL + SHOWALL,
+      type: "POST",
+      data: function (d, setting) {
+        const container = $(setting.nTable).closest(".container");
+        const filter_page = container.find(".filter_page");
+
+        if (filter_page.length) {
+          const form = filter_page.find("form");
+          const disabled = form.find("[disabled]");
+
+          //! Remove attribute disabled field
+          disabled.removeAttr("disabled");
+
+          //TODO: Collect field array
+          let field = form
+            .find("input, select")
+            .map(function () {
+              if (typeof $(this).attr("name") !== "undefined") {
+                let row = {};
+
+                row["name"] = $(this).attr("name");
+
+                if (this.type !== "checkbox" && this.type !== "select-multiple")
+                  row["value"] = this.value;
+                else if (this.type === "select-multiple")
+                  row["value"] = $(this).val();
+                else row["value"] = this.checked ? "Y" : "N";
+
+                row["type"] = this.type;
+
+                return row;
+              }
+            })
+            .get();
+
+          formReport = field;
+
+          //! Set attribute disabled field
+          disabled.prop("disabled", true);
+        }
+
+        return $.extend({}, d, {
+          form: formReport,
+          clear: clear,
+        });
+      },
+    },
+    columnDefs: [
+      {
+        targets: [-1],
+        orderable: false,
+        width: "20%",
+      },
+      {
+        targets: 0,
+        orderable: false,
+        width: 2,
+      },
+      {
+        targets: 1,
+        width: "10%",
+      },
+    ],
+    lengthMenu: [
+      [10, 25, 50, 100, -1],
+      [10, 25, 50, 100, "All"],
+    ],
+    order: [],
+    displayLength: 50,
+    language: {
+      info: "Total Data <span class='badge badge-primary'>_TOTAL_</span>",
+      infoFiltered: "",
+      infoEmpty: "Total Data <span class='badge badge-primary'>_TOTAL_</span>",
+    },
+    searching: false,
+    autoWidth: false,
+    scrollX: true,
+    scrollY: "70vh",
+    scrollCollapse: true,
+  })
+  .columns.adjust();
+
+/**
  *
  * @returns check fixed column datatable
  */
@@ -707,6 +803,11 @@ function checkFixedColumns() {
     return {
       rightColumns: 1,
       leftColumns: 4,
+    };
+  }
+  if ($(".table_report thead th").length > 10) {
+    return {
+      leftColumns: 2,
     };
   }
 }
@@ -728,8 +829,10 @@ function checkScrollY() {
 }
 
 function reloadTable() {
-  if ($(".tb_display").length > 0) _table.ajax.reload(null, false);
-  else if ($(".table_report").length > 0) _tableReport.ajax.reload(null, false);
+  if ($(".tb_display").length) _table.ajax.reload(null, false);
+  else if ($(".table_report").length) _tableReport.ajax.reload(null, false);
+  else if ($(".table_realization").length)
+    _tableRealization.ajax.reload(null, false);
 }
 
 /**
