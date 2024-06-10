@@ -178,15 +178,11 @@ class WActivity extends BaseController
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
                             $this->entity->docstatus = $this->DOCSTATUS_Completed;
-                            $this->entity->isapproved = "N";
-                            $this->entity->{$this->model->primaryKey} = $record_id;
                         } else {
                             $this->entity->docstatus = $this->DOCSTATUS_NotApproved;
-                            $this->entity->isapproved = "N";
-                            $this->entity->{$this->model->primaryKey} = $record_id;
                         }
 
-                        $this->save();
+                        $this->entity->isapproved = "N";
 
                         //TODO : Get data Notification Not Approved Text Template
                         $dataNotif = $mNotifText->find($this->Notif_NotApproved);
@@ -202,22 +198,18 @@ class WActivity extends BaseController
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
                             $this->entity->docstatus = $this->DOCSTATUS_Voided;
-                            $this->entity->isapproved = "Y";
-                            $this->entity->approveddate = date("Y-m-d H:i:s");
-                            $this->entity->updated_by = $user_by;
-                            $this->entity->{$this->model->primaryKey} = $record_id;
-                        } else {
-                            $this->entity->isapproved = "Y";
-                            $this->entity->approveddate = date("Y-m-d H:i:s");
-                            $this->entity->updated_by = $user_by;
-                            $this->entity->{$this->model->primaryKey} = $record_id;
                         }
 
-                        $this->save();
+                        $this->entity->isapproved = "Y";
 
                         //TODO : Get data Notification Approved Text Template
                         $dataNotif = $mNotifText->find($this->Notif_Approved);
                     }
+
+                    $this->entity->approveddate = date("Y-m-d H:i:s");
+                    $this->entity->updated_by = $user_by;
+                    $this->entity->{$this->model->primaryKey} = $record_id;
+                    $this->save();
 
                     //TODO : Get data user based on createdby
                     $dataUser = $mUser->where($mUser->primaryKey, $trx->created_by)->findAll();

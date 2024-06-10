@@ -1,6 +1,6 @@
 $(document).ready(function () {
   $(".multiple-select-branch").select2({
-    placeholder: "Select an option",
+    placeholder: "Pilih opsi cabang",
     width: "100%",
     theme: "bootstrap",
     multiple: true,
@@ -23,7 +23,7 @@ $(document).ready(function () {
   });
 
   $(".multiple-select-division").select2({
-    placeholder: "Select an option",
+    placeholder: "Pilih opsi divisi",
     width: "100%",
     theme: "bootstrap",
     multiple: true,
@@ -69,10 +69,33 @@ $(document).ready(function () {
   });
 
   $(".select-submissiontype").select2({
-    placeholder: "Select an option",
+    placeholder: "Pilih opsi tipe form",
     width: "100%",
     theme: "bootstrap",
     allowClear: true,
+    ajax: {
+      dataType: "JSON",
+      url: ADMIN_URL + "document-type/getList",
+      delay: 250,
+      data: function (params) {
+        return {
+          search: params.term,
+        };
+      },
+      processResults: function (data, page) {
+        return {
+          results: data,
+        };
+      },
+      cache: true,
+    },
+  });
+
+  $(".multiple-select-submissiontype").select2({
+    placeholder: "Pilih opsi tipe form",
+    width: "100%",
+    theme: "bootstrap",
+    multiple: true,
     ajax: {
       dataType: "JSON",
       url: ADMIN_URL + "document-type/getList",
@@ -1482,7 +1505,7 @@ $(".btn_filter_realize").on("click", function (e) {
     }, 700));
 });
 
-_tableReport.on("click", ".btn_agree, .btn_not_agree", function (e) {
+_tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
   const tr = $(this).closest("tr");
   let formType = tr.find("td:eq(2)").text();
   let submissionDate = tr.find("td:eq(1)").text();
@@ -1610,7 +1633,6 @@ $(".btn_ok_realization").click(function (e) {
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",
