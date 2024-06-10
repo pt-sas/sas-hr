@@ -64,12 +64,18 @@ class M_Attendance extends Model
         ];
     }
 
-    public function getAttendance($where)
+    public function getAttendance($where, $order = null)
     {
         $sql = $this->table . '.*,
         md_employee.fullname';
 
         $this->builder->select($sql);
+
+        if ($order === 'ASC') {
+            $this->builder->orderBy('date', 'ASC');
+        } else if ($order === 'DESC') {
+            $this->builder->orderBy('date', 'DESC');
+        }
 
         $this->builder->join('md_employee', 'md_employee.nik = ' . $this->table . '.nik', 'left');
 
