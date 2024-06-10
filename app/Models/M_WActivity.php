@@ -56,7 +56,7 @@ class M_WActivity extends Model
 		return $role;
 	}
 
-	public function getActivity(string $type = null)
+	public function getActivity(string $type = null, string $where = null)
 	{
 		$role = $this->getRole();
 
@@ -70,6 +70,9 @@ class M_WActivity extends Model
 		// Saat user mempunyai lebih dari 1 role approval, dokumen yg harus diapprove belum muncul
 		if (!empty($role))
 			$this->builder->whereIn('sys_wfresponsible.sys_role_id', $role);
+
+		if ($where)
+			$this->builder->where($where);
 
 		$this->builder->orderBy($this->table . '.created_at', 'ASC');
 
