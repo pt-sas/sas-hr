@@ -313,6 +313,23 @@ class WActivity extends BaseController
         }
     }
 
+    public function doNotApproved()
+    {
+        $this->session->set([
+            'sys_user_id'       => 1,
+        ]);
+
+        $where = 'ADDDATE(sys_wfactivity.created_at, INTERVAL 3 DAY) <= NOW()';
+
+        $list = $this->model->getActivity(null, $where);
+
+        if ($list) {
+            foreach ($list as $row) {
+                $this->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, session()->get('sys_user_id'), $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu);
+            }
+        }
+    }
+
     private function getNextResponsible()
     {
         $mWfsD = new M_WScenarioDetail($this->request);
