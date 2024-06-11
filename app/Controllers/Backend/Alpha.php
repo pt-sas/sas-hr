@@ -537,7 +537,7 @@ class Alpha extends BaseController
             $post = $this->request->getVar();
             $doc = [];
 
-            $attendance = $mAttendance->where('trx_attendance_id IN (' . implode(", ", $post['trx_attendance_id']) . ')')->find();
+            $attendance = $mAttendance->where('trx_attendance_id IN (' . implode(", ", $post['trx_attendance_id']) . ')')->orderBy('date', 'ASC')->find();
 
             // Grouping By Nik 
             foreach ($attendance as $item) {
@@ -586,7 +586,12 @@ class Alpha extends BaseController
 
 
                     if (($nextDay && in_array($nextDay->date, $dateRange)) || ($beforeDay && in_array($beforeDay->date, $dateRange))) {
+
                         $date[$number][] = $item->date;
+
+                        if ($nextDay->absent === 'Y') {
+                            $number++;
+                        }
                     } else {
                         $date[$number][] = $item->date;
 
