@@ -532,6 +532,11 @@ class Alpha extends BaseController
         $today = date('Y-m-d');
         $todayTime = date('Y-m-d H:i:s');
         $agree = 'Y';
+        $mRule = new M_Rule($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
+        $mAllowance = new M_AllowanceAtt($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mLeaveBalance = new M_LeaveBalance($this->request);
 
         try {
             $post = $this->request->getVar();
@@ -627,6 +632,7 @@ class Alpha extends BaseController
                     // * Foreignkey id 
                     $Ref = $this->insertID;
                     $number = 1;
+                    $amount = 0;
 
                     // Creating Absent Line 
                     foreach ($item as $line) {
@@ -636,8 +642,110 @@ class Alpha extends BaseController
                         $detailEntity->trx_absent_id = $Ref;
                         $detailEntity->lineno = $number;
                         $detailEntity->date = $line;
+                        $detailEntity->created_by = $this->access->getSessionUser();
+                        $detailEntity->updated_by = $this->access->getSessionUser();
                         $mAbsentDetail->save($detailEntity);
                         $number++;
+
+                        if ($this->entity->getSubmissionType() == $this->model->Pengajuan_Alpa) {
+                            $rule = $mRule->where([
+                                'name'      => 'Alpa',
+                                'isactive'  => 'Y'
+                            ])->first();
+
+                            if ($rule) {
+                                $amount = $rule->condition ?: $rule->value;
+
+                                $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+
+                                if ($ruleDetail) {
+                                    $balance = $mLeaveBalance->getBalance(['trx_leavebalance.md_employee_id' => $this->entity->getEmployeeId()]);
+                                    $saldo = $balance->amount;
+
+                                    foreach ($ruleDetail as $detail) {
+                                        if ($saldo != 0) {
+                                            if ($detail->name === "Sanksi Alpa Cuti") {
+                                                $entityBal = new \App\Entities\LeaveBalance();
+                                                $tkh = $detail->value;
+
+                                                $calculate = $saldo + $tkh;
+
+                                                if ($tkh != 0 && $detailEntity->isagree === 'Y') {
+                                                    if ($calculate > 0) {
+                                                        $entityBal->record_id = $Ref;
+                                                        $entityBal->table = $this->model->table;
+                                                        $entityBal->md_employee_id = $this->entity->getEmployeeId();
+                                                        $entityBal->submissiondate = $detailEntity->date;
+                                                        $entityBal->amount = $tkh;
+
+                                                        $mLeaveBalance->save($entityBal);
+
+                                                        $amount = 0;
+                                                    } else if ($saldo != 0) {
+                                                        $entityBal->record_id = $Ref;
+                                                        $entityBal->table = $this->model->table;
+                                                        $entityBal->md_employee_id = $this->entity->getEmployeeId();
+                                                        $entityBal->submissiondate = $detailEntity->date;
+                                                        $entityBal->amount = -$saldo;
+
+                                                        $mLeaveBalance->save($entityBal);
+
+                                                        //? Cek perbandingan dari calculate variable 
+                                                        if ($calculate == 0)
+                                                            $amount = 0;
+                                                    }
+
+                                                    if ($calculate < 0) {
+                                                        $entity = new \App\Entities\AllowanceAtt();
+
+                                                        $rDetail = $mRuleDetail->where([
+                                                            'md_rule_id' => $rule->md_rule_id,
+                                                            'name'       => 'Sanksi Alpa No Cuti'
+                                                        ])->first();
+
+                                                        $tkh = $rDetail->value;
+                                                        $hari = abs($rDetail->condition);
+                                                        $hari -= $saldo;
+                                                        $tkh *= $hari;
+
+                                                        $entity->record_id = $Ref;
+                                                        $entity->table = $this->model->table;
+                                                        $entity->submissiontype = $this->entity->getSubmissionType();
+                                                        $entity->submissiondate = $detailEntity->date;
+                                                        $entity->md_employee_id = $this->entity->getEmployeeId();
+                                                        $entity->amount = $tkh;
+                                                        $entity->created_by = $this->access->getSessionUser();
+                                                        $entity->updated_by = $this->access->getSessionUser();
+
+                                                        $mAllowance->save($entity);
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            $entity = new \App\Entities\AllowanceAtt();
+
+                                            if ($detail->name === "Sanksi Alpa No Cuti") {
+                                                $tkh = $detail->value;
+                                                $tkh *= abs($detail->condition);
+
+                                                if ($tkh != 0 && $detailEntity->isagree === 'Y') {
+                                                    $entity->record_id = $Ref;
+                                                    $entity->table = $this->model->table;
+                                                    $entity->submissiontype = $this->entity->getSubmissionType();
+                                                    $entity->submissiondate = $detailEntity->date;
+                                                    $entity->md_employee_id = $this->entity->getEmployeeId();
+                                                    $entity->amount = $tkh;
+                                                    $entity->created_by = $this->access->getSessionUser();
+                                                    $entity->updated_by = $this->access->getSessionUser();
+
+                                                    $mAllowance->save($entity);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     $doc[] = $docNo;
