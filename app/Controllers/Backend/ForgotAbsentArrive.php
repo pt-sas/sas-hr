@@ -246,6 +246,7 @@ class ForgotAbsentArrive extends BaseController
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+                $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
@@ -263,7 +264,8 @@ class ForgotAbsentArrive extends BaseController
                 $fieldHeader->setList($list);
 
                 $result = [
-                    'header'    => $this->field->store($fieldHeader)
+                    'header'    => $this->field->store($fieldHeader),
+                    'line'      => $this->tableLine('edit', $detail)
                 ];
 
                 $response = message('success', true, $result);
