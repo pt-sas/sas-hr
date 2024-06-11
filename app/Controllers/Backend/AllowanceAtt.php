@@ -240,9 +240,9 @@ class AllowanceAtt extends BaseController
         $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15); // Set font size 15 untuk kolom A1
         $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER); // Set text center untuk kolom A1
         // Buat header tabel nya pada baris ke 3
-        $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO"); // Set kolom A3 dengan tulisan "NO"
+        $excel->setActiveSheetIndex(0)->setCellValue('A3', "No"); // Set kolom A3 dengan tulisan "NO"
         $excel->getActiveSheet()->mergeCells('A3:A4'); // Set Merge Cell
-        $excel->setActiveSheetIndex(0)->setCellValue('B3', "Kode"); // Set kolom B3 dengan tulisan "Kode"
+        $excel->setActiveSheetIndex(0)->setCellValue('B3', "NIK"); // Set kolom B3 dengan tulisan "Kode"
         $excel->getActiveSheet()->mergeCells('B3:B4'); // Set Merge Cell
         $excel->setActiveSheetIndex(0)->setCellValue('C3', "Nama"); // Set kolom C3 dengan tulisan "NAMA"
         $excel->getActiveSheet()->mergeCells('C3:C4'); // Set Merge Cell
@@ -303,8 +303,11 @@ class AllowanceAtt extends BaseController
         $excel->getActiveSheet()->mergeCells($firstCell . '3:' . $lastCell . '3'); // Set Merge Cell
         $excel->getActiveSheet()->getStyle($firstCell . '3:' . $lastCell . '3')->applyFromArray($style_col);
 
-        // $excel->setActiveSheetIndex(0)->setCellValue($cell . '3', "Total Hari Kerja"); // Set kolom E3 dengan tulisan "Bulan"
         // $excel->getActiveSheet()->mergeCells($cell . '3:' . $cell . '4'); // Set Merge Cell
+        // $excel->setActiveSheetIndex(0)->setCellValue('D3', "Jabatan"); // Set kolom D3 dengan tulisan "Jabatan"
+        $excel->setActiveSheetIndex(0)->setCellValue($cell . '3', "Total"); // Set kolom E3 dengan tulisan "Bulan"
+        $excel->getActiveSheet()->mergeCells($cell . '3:' . $cell . '4')->getStyle($cell . '3:' . $cell . '4')->applyFromArray($style_col); // Set Merge Cell
+        // $excel->setActiveSheetIndex(0)->setCellValue($cell . '3', $cell); // Set kolom E3 dengan tulisan "Bulan"
         // $excel->getActiveSheet()->getStyle($cell . '3:' . $cell . '4')->applyFromArray($style_col);
 
         $excel->getActiveSheet()->mergeCells('A1:' . $cell . '1'); // Set Merge Cell pada kolom A1 sampai F1
@@ -405,8 +408,8 @@ class AllowanceAtt extends BaseController
                                 if ($attendance->clock_in > "08:30" && !$allow)
                                     $qty = 0;
 
-                                if ($allow && $allow->amount < 0)
-                                    $qty += $allow->amount;
+                                //     if ($allow && $allow->amount < 0)
+                                //         $qty += $allow->amount;
                             }
                         } else {
                             $qty = 0;
@@ -481,8 +484,8 @@ class AllowanceAtt extends BaseController
                                 if ($attendance->clock_in > "08:30" && !$allow)
                                     $qty = 0;
 
-                                if ($allow && $allow->amount < 0)
-                                    $qty += $allow->amount;
+                                //     if ($allow && $allow->amount < 0)
+                                //         $qty += $allow->amount;
                             }
                         } else {
                             $qty = 0;
@@ -502,8 +505,8 @@ class AllowanceAtt extends BaseController
                 $cell++;
             }
 
-            // $excel->setActiveSheetIndex(0)->setCellValue($cell . $numrow, array_sum($prevTotal));
-
+            $excel->setActiveSheetIndex(0)->setCellValue($cell . $numrow, array_sum($prevTotal));
+            $excel->getActiveSheet()->getStyle($cell . $numrow)->applyFromArray($styleCell);
             $excel->getActiveSheet()->getRowDimension($numrow)->setRowHeight(20);
 
             $no++; // Tambah 1 setiap kali looping

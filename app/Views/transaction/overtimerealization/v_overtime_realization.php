@@ -8,7 +8,7 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-body">
-                <table class="table table-bordered table-hover table_report">
+                <table class="table table-bordered table-hover table_realization">
                     <thead>
                         <tr>
                             <th>No</th>
