@@ -586,7 +586,12 @@ class Alpha extends BaseController
 
 
                     if (($nextDay && in_array($nextDay->date, $dateRange)) || ($beforeDay && in_array($beforeDay->date, $dateRange))) {
+
                         $date[$number][] = $item->date;
+
+                        if ($nextDay->absent === 'Y') {
+                            $number++;
+                        }
                     } else {
                         $date[$number][] = $item->date;
 
