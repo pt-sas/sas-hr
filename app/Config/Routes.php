@@ -40,7 +40,7 @@ $routes->post('auth/login', 'Backend\Auth::login');
 
 $routes->get('logout', 'Backend\Auth::logout');
 
-$routes->post('(:any)/AccessMenu/getAccess', 'Backend\AccessMenu::getAccess');
+$routes->post('(:any)/accessmenu/getAccess', 'Backend\AccessMenu::getAccess');
 
 $routes->get('cron-not-approved', 'Backend\WActivity::doNotApproved');
 
