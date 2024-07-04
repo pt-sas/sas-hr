@@ -319,7 +319,7 @@ class Realization extends BaseController
                         $this->model = new M_AbsentDetail($this->request);
                         $this->entity = new \App\Entities\AbsentDetail();
 
-                        $this->entity->isagree = $agree;
+                        $this->entity->isagree = $holdAgree;
                         $this->entity->trx_absent_id = $ID;
                         $this->entity->lineno = 1;
                         $this->entity->date = date('Y-m-d', strtotime($submissionDate));
@@ -346,6 +346,7 @@ class Realization extends BaseController
                         $this->model = new M_AbsentDetail($this->request);
                         $this->entity = new \App\Entities\AbsentDetail();
                         $this->entity->ref_absent_detail_id = $post['foreignkey'];
+                        $this->entity->isagree = $agree;
                         $this->entity->trx_absent_detail_id = $lineID;
                         $this->save();
 

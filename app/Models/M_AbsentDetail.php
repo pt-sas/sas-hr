@@ -22,7 +22,7 @@ class M_AbsentDetail extends Model
     protected $returnType           = 'App\Entities\AbsentDetail';
     protected $allowCallbacks       = true;
     protected $beforeInsert         = [];
-    protected $afterInsert          = [];
+    protected $afterInsert          = ['createAllowance'];
     protected $beforeUpdate         = [];
     protected $afterUpdate          = ['createAllowance'];
     protected $beforeDelete         = [];
@@ -93,7 +93,7 @@ class M_AbsentDetail extends Model
 
         $amount = 0;
 
-        $ID = $rows['id'][0];
+        $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
         $updated_by = $rows['data']['updated_by'];
         $today = date('Y-m-d');
         $day = date('w');
