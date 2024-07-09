@@ -63,6 +63,7 @@ class M_Employee extends Model
 		'image',
 		'description',
 		'isactive',
+		'isovertime',
 		'created_by',
 		'updated_by'
 	];
