@@ -467,6 +467,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('laporan-kehadiran', 'Backend\Attendance::reportIndex');
     $routes->match(['get', 'post'], 'laporan-kehadiran/showAll', 'Backend\Attendance::reportShowAll');
 
+    $routes->add('laporan-kehadiran-new', 'Backend\AttendanceNew::reportIndex');
+    $routes->match(['get', 'post'], 'laporan-kehadiran-new/showAll', 'Backend\AttendanceNew::reportShowAll');
+
     $routes->add('import-kehadiran', 'Backend\ImportAttendance::index');
     $routes->post('import-kehadiran/import', 'Backend\ImportAttendance::import');
 

@@ -529,6 +529,8 @@ class Alpha extends BaseController
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDivision = new M_EmpDivision($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
         $today = date('Y-m-d');
         $todayTime = date('Y-m-d H:i:s');
         $agree = 'Y';
@@ -549,20 +551,33 @@ class Alpha extends BaseController
                 $header[$item->nik][] = $item;
             }
 
-            $ID = [];
-
             // Creating Alpa Header
             foreach ($header as $value) {
-                $employee = $mEmployee->where('nik', $value[0]->nik)->find();
-                $branch = $mEmpBranch->where('md_employee_id', $employee[0]->md_employee_id)->find();
-                $division = $mEmpDivision->where('md_employee_id', $employee[0]->md_employee_id)->find();
+                $employee = $mEmployee->where('nik', $value[0]->nik)->first();
+                $branch = $mEmpBranch->where('md_employee_id', $employee->md_employee_id)->find();
+                $division = $mEmpDivision->where('md_employee_id', $employee->md_employee_id)->find();
 
                 $holidays = $mHoliday->getHolidayDate();
 
-                // Adding '' for each data
+                // Adding '' for each data date
                 foreach ($holidays as $val) {
                     $holiClause[] = "'" . date('Y-m-d H:i:s', strtotime($val)) . "'";
                 }
+
+                /**
+                 *  This Section for getting employee days off
+                 */
+                $workDay = $mEmpWork->where([
+                    'md_employee_id'    => $employee->md_employee_id,
+                    'validfrom <='      => $today
+                ])->orderBy('validfrom', 'ASC')->first();
+
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND md_employee_work.md_employee_id = " . $employee->md_employee_id;
+                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $daysOff = getDaysOff($workDetail);
 
                 // Getting List Date
                 $date = [];
@@ -582,11 +597,13 @@ class Alpha extends BaseController
                     $whereClause = "trx_attendance.nik = " . $item->nik;
                     $whereClause .= " AND trx_attendance.date > '$item->date'";
                     $whereClause .= " AND trx_attendance.date NOT IN " . "(" . implode(", ", $holiClause) . ")";
+                    $whereClause .= " AND DATE_FORMAT(trx_attendance.date," . "'%w'" . ") NOT IN " . "(" . implode(", ", $daysOff) . ")";
                     $nextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
 
                     $whereClause = "trx_attendance.nik = " . $item->nik;
                     $whereClause .= " AND trx_attendance.date < '$item->date'";
                     $whereClause .= " AND trx_attendance.date NOT IN " . "(" . implode(", ", $holiClause) . ")";
+                    $whereClause .= " AND DATE_FORMAT(trx_attendance.date," . "'%w'" . ") NOT IN " . "(" . implode(", ", $daysOff) . ")";
                     $beforeDay = $mAttendance->getAttendance($whereClause, 'DESC')->getRow();
 
 
@@ -615,8 +632,8 @@ class Alpha extends BaseController
 
                     $this->entity->setNecessary($post['necessary']);
                     $this->entity->setSubmissionType($this->model->Pengajuan_Alpa);
-                    $this->entity->setEmployeeId($employee[0]->md_employee_id);
-                    $this->entity->setNik($employee[0]->nik);
+                    $this->entity->setEmployeeId($employee->md_employee_id);
+                    $this->entity->setNik($employee->nik);
                     $this->entity->setBranchId($branch[0]->md_branch_id);
                     $this->entity->setDivisionId($division[0]->md_division_id);
                     $this->entity->setReceivedDate($todayTime);
@@ -658,7 +675,6 @@ class Alpha extends BaseController
                     $response = $this->save();
                 }
             }
-
             $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . implode(", ", $doc));
         } catch (\Exception $e) {
             $response = message('error', false, $e->getMessage());
