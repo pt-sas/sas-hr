@@ -41,7 +41,7 @@ class M_AttendanceNew extends Model
     public function getJoin()
     {
         $sql = [
-            $this->setDataJoin('md_employee', 'md_employee.nik = ' . $this->table . '.nik', 'left'),
+            $this->setDataJoin('md_employee', 'md_employee.nik = ' . $this->table . '.nik', 'inner'),
             $this->setDataJoin('md_employee_branch', 'md_employee_branch.md_employee_id = md_employee.md_employee_id', 'left'),
             $this->setDataJoin('md_employee_division', 'md_employee_division.md_employee_id = md_employee.md_employee_id', 'left')
         ];
