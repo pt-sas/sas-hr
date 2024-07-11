@@ -59,6 +59,7 @@ class Employee extends Entity
 	protected $image;
 	protected $description;
 	protected $isactive;
+	protected $isovertime;
 	protected $created_by;
 	protected $updated_by;
 
@@ -608,6 +609,16 @@ class Employee extends Entity
 	public function setIsActive($isactive)
 	{
 		return $this->attributes['isactive'] = $isactive;
+	}
+
+	public function getIsOvertime()
+	{
+		return $this->attributes['isovertime'];
+	}
+
+	public function setIsOvertime($isovertime)
+	{
+		return $this->attributes['isovertime'] = $isovertime;
 	}
 
 	public function getCreatedAt()

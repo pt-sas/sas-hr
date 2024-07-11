@@ -67,7 +67,8 @@ class M_Attendance extends Model
     public function getAttendance($where, $order = null)
     {
         $sql = $this->table . '.*,
-        md_employee.fullname';
+        md_employee.fullname,
+        DATE_FORMAT(trx_attendance.date, "%w") AS day';
 
         $this->builder->select($sql);
 

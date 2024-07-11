@@ -51,11 +51,19 @@
                 <input type="text" class="form-control" id="nickname" name="nickname">
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-3">
             <div class="form-check mt-4">
                 <label class="form-check-label">
                     <input type="checkbox" class="form-check-input active" name="isactive">
                     <span class="form-check-sign">Aktif</span>
+                </label>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-check mt-4">
+                <label class="form-check-label">
+                    <input type="checkbox" class="form-check-input" name="isovertime">
+                    <span class="form-check-sign">Lembur?</span>
                 </label>
             </div>
         </div>
@@ -209,20 +217,20 @@
         </div>
         <div class="col-md-3">
             <div class="form-group">
-                <label for="md_position_id">Posisi <span class="required">*</span></label>
+                <label for="md_position_id">Jabatan <span class="required">*</span></label>
                 <select class="form-control select-data" id="md_position_id" name="md_position_id"
                     data-url="position/getList">
-                    <option value="">Select Posisi</option>
+                    <option value="">Select Jabatan</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_position_id"></small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="form-group">
-                <label for="md_levelling_id">Jabatan <span class="required">*</span></label>
+                <label for="md_levelling_id">Level <span class="required">*</span></label>
                 <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id"
                     data-url="levelling/getList">
-                    <option value="">Select Jabatan</option>
+                    <option value="">Select Level</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_levelling_id"></small>
             </div>

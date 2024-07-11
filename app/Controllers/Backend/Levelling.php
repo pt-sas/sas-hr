@@ -132,7 +132,7 @@ class Levelling extends BaseController
                     $number = "0" . $number;
                 }
 
-                $docno = "JB" . $number;
+                $docno = "LV" . $number;
 
                 $response = message('success', true, $docno);
             } catch (\Exception $e) {
