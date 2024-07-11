@@ -534,6 +534,11 @@ class Alpha extends BaseController
         $today = date('Y-m-d');
         $todayTime = date('Y-m-d H:i:s');
         $agree = 'Y';
+        $mRule = new M_Rule($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
+        $mAllowance = new M_AllowanceAtt($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mLeaveBalance = new M_LeaveBalance($this->request);
 
         try {
             $post = $this->request->getVar();
@@ -644,6 +649,7 @@ class Alpha extends BaseController
                     // * Foreignkey id 
                     $Ref = $this->insertID;
                     $number = 1;
+                    $amount = 0;
 
                     // Creating Absent Line 
                     foreach ($item as $line) {
@@ -653,6 +659,8 @@ class Alpha extends BaseController
                         $detailEntity->trx_absent_id = $Ref;
                         $detailEntity->lineno = $number;
                         $detailEntity->date = $line;
+                        $detailEntity->created_by = $this->access->getSessionUser();
+                        $detailEntity->updated_by = $this->access->getSessionUser();
                         $mAbsentDetail->save($detailEntity);
                         $number++;
                     }

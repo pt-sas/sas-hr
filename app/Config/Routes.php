@@ -40,9 +40,11 @@ $routes->post('auth/login', 'Backend\Auth::login');
 
 $routes->get('logout', 'Backend\Auth::logout');
 
-$routes->post('(:any)/AccessMenu/getAccess', 'Backend\AccessMenu::getAccess');
+$routes->post('(:any)/accessmenu/getAccess', 'Backend\AccessMenu::getAccess');
 
 $routes->get('cron-not-approved', 'Backend\WActivity::doNotApproved');
+$routes->get('/iclock/cdata', 'IclockApi::handshake');
+$routes->post('/iclock/cdata', 'IclockApi::receive');
 
 $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('/', 'Backend\Dashboard::index');
@@ -522,6 +524,23 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('laporan-saldo-cuti-summary', 'Backend\Rpt_LeaveBalance::indexSummary');
     $routes->match(['get', 'post'], 'laporan-saldo-cuti-summary/showAll', 'Backend\Rpt_LeaveBalance::showAllSummary');
+
+    $routes->add('calendar', 'Backend\Year::index');
+    $routes->match(['get', 'post'], 'calendar/showAll', 'Backend\Year::showAll');
+    $routes->post('calendar/create', 'Backend\Year::create');
+    $routes->get('calendar/show/(:any)', 'Backend\Year::show/$1');
+    $routes->get('calendar/destroy/(:any)', 'Backend\Year::destroy/$1');
+
+    // $routes->post('rule-detail/create', 'Backend\RuleDetail::create');
+    // $routes->get('rule-detail/show', 'Backend\RuleDetail::show');
+    // $routes->get('rule-detail/show/(:any)', 'Backend\RuleDetail::show/$1');
+    // $routes->post('rule-detail/tableLine', 'Backend\RuleDetail::tableLine');
+    // $routes->get('rule-detail/getDataBy/(:num)', 'Backend\RuleDetail::getBy/$1');
+
+    // $routes->post('rule-value/create', 'Backend\RuleValue::create');
+    // $routes->get('rule-value/show', 'Backend\RuleValue::show');
+    // $routes->get('rule-value/show/(:any)', 'Backend\RuleValue::show/$1');
+    // $routes->post('rule-value/tableLine', 'Backend\RuleValue::tableLine');
 });
 
 /*

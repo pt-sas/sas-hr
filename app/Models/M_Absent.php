@@ -257,17 +257,42 @@ class M_Absent extends Model
     {
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         $sql = $this->find($rows['id'][0]);
         $line = $mAbsentDetail->where($this->primaryKey, $rows['id'][0])->first();
 
         if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP" && is_null($line)) {
             $holiday = $mHoliday->getHolidayDate();
+            $today = date('Y-m-d');
 
-            if ($sql->getSubmissionType() == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $sql->getSubmissionType() == $this->Pengajuan_Ijin_Keluar_Kantor) {
-                $date_range = getDatesFromRange($sql->getEndDate(), $sql->getEndDate(), $holiday);
+            //TODO : Get work day employee
+            $workDay = $mEmpWork->where([
+                'md_employee_id'    => $sql->md_employee_id,
+                'validfrom <='      => $today
+            ])->orderBy('validfrom', 'ASC')->first();
+
+            if (is_null($workDay)) {
+                if ($sql->getSubmissionType() == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $sql->getSubmissionType() == $this->Pengajuan_Ijin_Keluar_Kantor) {
+                    $date_range = getDatesFromRange($sql->getEndDate(), $sql->getEndDate(), $holiday);
+                } else {
+                    $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday);
+                }
             } else {
-                $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday);
+                //TODO : Get Work Detail
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
+                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $daysOff = getDaysOff($workDetail);
+
+                if ($sql->getSubmissionType() == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $sql->getSubmissionType() == $this->Pengajuan_Ijin_Keluar_Kantor) {
+                    $date_range = getDatesFromRange($sql->getEndDate(), $sql->getEndDate(), $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
+                } else {
+                    $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
+                }
             }
 
             $data = [];
@@ -315,6 +340,10 @@ class M_Absent extends Model
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
         $mLeaveBalance = new M_LeaveBalance($this->request);
+        $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         $amount = 0;
 
@@ -324,11 +353,30 @@ class M_Absent extends Model
 
         if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP" && is_null($line)) {
             $holiday = $mHoliday->getHolidayDate();
+            $today = date('Y-m-d');
 
-            if ($sql->getSubmissionType() == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $sql->getSubmissionType() == $this->Pengajuan_Ijin_Keluar_Kantor) {
-                $date_range = getDatesFromRange($sql->getEndDate(), $sql->getEndDate(), $holiday);
-            } else {
+            //TODO : Get work day employee
+            $workDay = $mEmpWork->where([
+                'md_employee_id'    => $sql->md_employee_id,
+                'validfrom <='      => $today
+            ])->orderBy('validfrom', 'ASC')->first();
+
+            if (is_null($workDay)) {
                 $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday);
+            } else {
+                //TODO : Get Work Detail
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
+                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $daysOff = getDaysOff($workDetail);
+
+                if ($sql->getSubmissionType() == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $sql->getSubmissionType() == $this->Pengajuan_Ijin_Keluar_Kantor) {
+                    $date_range = getDatesFromRange($sql->getEndDate(), $sql->getEndDate(), $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
+                } else {
+                    $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
+                }
             }
 
             $data = [];
