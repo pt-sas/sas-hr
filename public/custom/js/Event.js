@@ -1882,7 +1882,7 @@ _tableRealization.on("click", ".btn_view_image", function (e) {
 
         $.each(result, function (i, item) {
           html += '<div class="item">';
-          html += '<img class="img-fluid" src="' + item + '">';
+          html += '<img class="img-thumbnail" src="' + item + '">';
           html += "</div>";
         });
         html += "</div>";
