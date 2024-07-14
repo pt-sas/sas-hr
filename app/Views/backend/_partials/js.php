@@ -48,6 +48,8 @@
 <script src="<?= base_url('atlantis-pro/js/plugin/bootstrap-treefy/js/bootstrap-treefy.min.js') ?>"></script>
 <!-- Scanner Auto Focus -->
 <script src="<?= base_url('atlantis-pro/js/plugin/jquery-scanner/jquery.scannerdetection.js') ?>"></script>
+<!-- Owl Carousel -->
+<script src="<?= base_url('atlantis-pro/js/plugin/owl-carousel/owl.carousel.min.js') ?>"></script>
 <!-- Websocket Pusher -->
 <script src="https://js.pusher.com/7.2/pusher.min.js"></script>
 <!-- Custom Process -->

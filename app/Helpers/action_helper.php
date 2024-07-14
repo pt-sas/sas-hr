@@ -426,3 +426,13 @@ function getDaysOff($workDays)
 
     return $array;
 }
+
+function viewImage(int $id, string $img)
+{
+    if (empty($img))
+        return null;
+
+    $img = '<button class="btn btn-icon btn-rounded btn-sm btn-info btn_view_image" id="' . $id . '" name="image" data-toggle="tooltip" title="Lihat Gambar" data-original-title="Lihat Gambar"><i class="fas fa-eye"></i></button>';
+
+    return $img;
+}
