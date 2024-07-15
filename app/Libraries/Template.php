@@ -116,7 +116,7 @@ class Template
         if ($update === 'Y' && !empty($status) && ($status === 'CO' || $status === 'DR' || $status === 'NA'))
             $allBtn .= $btnProcess;
 
-        if (!is_null($type) && $type === $this->BTN_Print)
+        if (!is_null($type) && $type === $this->BTN_Print && ($status === 'CO' || $status === 'IP' || $status === 'NA'))
             $allBtn .= $btnPrint;
 
         if ($delete === 'Y')
