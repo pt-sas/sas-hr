@@ -337,7 +337,7 @@ function Generate() {
   });
 }
 
-_tableReport.on("click", ".btn_agree", function (e) {
+_tableRealization.on("click", ".btn_agree", function (e) {
   const form = $("#form_overtime_realization_agree");
   let startdate = new Date(form.find("[name=startdate]").val());
   let date_out = new Date(form.find("[name=enddate_att]").val());

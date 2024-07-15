@@ -617,7 +617,7 @@ class Alpha extends BaseController
                     } else {
                         $date[$number][] = $item->date;
 
-                        if ($beforeDay->absent === 'Y') {
+                        if ($beforeDay && $beforeDay->absent === 'Y') {
                             $number++;
                         }
                     }

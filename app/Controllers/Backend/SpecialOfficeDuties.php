@@ -13,6 +13,8 @@ use App\Models\M_Attendance;
 use App\Models\M_Rule;
 use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
+use App\Models\M_Division;
+use TCPDF;
 
 class SpecialOfficeDuties extends BaseController
 {
@@ -137,7 +139,7 @@ class SpecialOfficeDuties extends BaseController
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
-                $row[] = $this->template->tableButton($ID, $value->docstatus);
+                $row[] = $this->template->tableButton($ID, $value->docstatus, $this->BTN_Print);
                 $data[] = $row;
             endforeach;
 
@@ -374,5 +376,67 @@ class SpecialOfficeDuties extends BaseController
         }
 
         return json_encode($table);
+    }
+
+    public function exportPDF($id)
+    {
+        $mEmployee = new M_Employee($this->request);
+        $mDivision = new M_Division($this->request);
+        $list = $this->model->find($id);
+        $employee = $mEmployee->where($mEmployee->primaryKey, $list->md_employee_id)->first();
+        $division = $mDivision->where($mDivision->primaryKey, $list->md_division_id)->first();
+        $tglpenerimaan = '';
+
+        if ($list->receiveddate !== null) {
+            $tglpenerimaan = format_dmy($list->receiveddate, '-');
+        };
+
+        //bagian PF
+        $pdf = new TCPDF('L', PDF_UNIT, 'A5', true, 'UTF-8', false);
+
+        $pdf->setPrintHeader(false);
+        $pdf->AddPage();
+        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(50, 0, 'No Form : ' . $list->documentno, 0, 1, 'L', false, '', 0, false);
+        $pdf->setFont('helvetica', 'B', 20);
+        $pdf->Cell(0, 25, 'FORM TUGAS KANTOR KHUSUS', 0, 1, 'C');
+        $pdf->setFont('helvetica', '', 12);
+        //Ini untuk bagian field nama dan tanggal pengajuan
+        $pdf->Cell(30, 0, 'Nama ', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . $employee->fullname, 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, 'Tanggal Pengajuan', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(30, 0, ': ' . format_dmy($list->submissiondate, '-'), 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(2);
+        //Ini untuk bagian field divisi dan Tanggal diterima
+        $pdf->Cell(30, 0, 'Divisi ', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . $division->name, 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, 'Tanggal Diterima', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(30, 0, ': ' . $tglpenerimaan, 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(10);
+        //Ini bagian tanggal ijin dan jam
+        $pdf->Cell(30, 0, 'Tanggal', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, ': ' . format_dmy($list->startdate, '-') . ' s/d ' . format_dmy($list->enddate, '-'), 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(2);
+        //Ini bagian Alasan
+        $pdf->Cell(30, 0, 'Alasan', 0, 0, 'L');
+        $pdf->Cell(3, 0, ':', 0, 0, 'L');
+        $pdf->MultiCell(0, 20, $list->reason, 0, '', false, 1, null, null, false, 0, false, false, 20);
+        $pdf->Ln(2);
+        //Bagian ttd
+        $pdf->setFont('helvetica', '', 10);
+        $pdf->Cell(63, 0, 'Dibuat oleh,', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Disetujui oleh,', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Diketahui oleh,', 0, 0, 'C');
+        $pdf->Ln(25);
+        $pdf->Cell(63, 0, $employee->fullname, 0, 0, 'C');
+        $pdf->Cell(63, 0, '(                          )', 0, 0, 'C');
+        $pdf->Cell(63, 0, '(                          )', 0, 1, 'C');
+        $pdf->Cell(63, 0, 'Karyawan Ybs', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Mgr. Dept. Ybs', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'HRD', 0, 0, 'C');
+
+        $this->response->setContentType('application/pdf');
+        $pdf->IncludeJS("print();");
+        $pdf->Output('pengajuan.pdf', 'I');
     }
 }
