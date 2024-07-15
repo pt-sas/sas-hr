@@ -1,6 +1,7 @@
 <?= $this->extend('backend/_partials/overview') ?>
 
 <?= $this->section('content') ?>
+<?= $this->include('backend/modal/image_slide') ?>
 <?= $this->include('transaction/realization/modal_realization') ?>
 <?= $this->include($filter) ?>
 <div class="row">
@@ -29,6 +30,7 @@
                             <th>Cabang</th>
                             <th>Divisi</th>
                             <th>Karyawan</th>
+                            <th>Foto</th>
                             <th>Keterangan</th>
                             <th class="text-center">Aksi</th>
                         </tr>

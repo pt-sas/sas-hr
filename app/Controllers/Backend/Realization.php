@@ -102,6 +102,7 @@ class Realization extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = $value->employee_fullname;
+                $row[] = viewImage($value->trx_absent_id, $value->image);
                 $row[] = $reason;
                 $row[] = $this->template->tableButtonProcess($ID);
                 $data[] = $row;
@@ -624,5 +625,29 @@ class Realization extends BaseController
         }
 
         return $data;
+    }
+
+    public function getImage($id)
+    {
+        $response = [];
+
+        try {
+            $row = $this->model->find($id);
+
+            $response = [];
+
+            if (!empty($row->getImage()))
+                array_push($response, base_url('uploads/pengajuan/' . $row->getImage()));
+
+            if (!empty($row->getImage2()))
+                array_push($response, base_url('uploads/pengajuan/' . $row->getImage2()));
+
+            if (!empty($row->getImage3()))
+                array_push($response, base_url('uploads/pengajuan/' . $row->getImage3()));
+        } catch (\Exception $e) {
+            $response = message('error', false, $e->getMessage());
+        }
+
+        return $this->response->setJSON($response);
     }
 }

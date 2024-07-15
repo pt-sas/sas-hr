@@ -477,6 +477,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'realisasi/showAll', 'Backend\Realization::showAll');
     $routes->post('realisasi/create', 'Backend\Realization::create');
     $routes->match(['get', 'post'], 'realisasi/getList', 'Backend\Realization::getList');
+    $routes->get('realisasi/show-image/(:any)', 'Backend\Realization::getImage/$1');
 
     $routes->add('list-absent', 'Backend\ListAbsent::index');
     $routes->post('list-absent/showAll', 'Backend\ListAbsent::showAll');

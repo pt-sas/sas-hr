@@ -1843,3 +1843,62 @@ $(".btn_ok_anulir").on("click", function (evt) {
     },
   });
 });
+
+_tableRealization.on("click", ".btn_view_image", function (e) {
+  const tr = $(this).closest("tr");
+  let submissionDate = tr.find("td:eq(1)").text();
+  let formType = tr.find("td:eq(2)").text();
+  let employee = tr.find("td:eq(5)").text();
+  let id = this.id;
+
+  const modal = $("#modal_image_slide");
+  const modalBody = modal.find(".modal-body");
+  let url = CURRENT_URL + "/show-image/" + id;
+
+  modal.modal({
+    backdrop: "static",
+    keyboard: false,
+  });
+
+  let title = `${employee} / ${submissionDate} / ${formType}`;
+
+  modal.find(".modal-title").html(title);
+
+  $.ajax({
+    url: url,
+    type: "GET",
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      loadingForm(modalBody.prop("id"), "facebook");
+    },
+    complete: function () {
+      hideLoadingForm(modalBody.prop("id"));
+    },
+    success: function (result) {
+      if (result.length) {
+        let html =
+          '<div class="owl-carousel owl-theme owl-img-responsive image-carousel">';
+
+        $.each(result, function (i, item) {
+          html += '<div class="item">';
+          html += '<img class="img-thumbnail" src="' + item + '">';
+          html += "</div>";
+        });
+        html += "</div>";
+
+        modalBody.html(html);
+
+        $(".image-carousel").owlCarousel({
+          nav: true, // Show next and prev buttons
+          autoplaySpeed: 300,
+          navSpeed: 400,
+          items: 1,
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+});
