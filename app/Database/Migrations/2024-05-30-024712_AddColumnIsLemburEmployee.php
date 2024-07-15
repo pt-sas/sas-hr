@@ -9,7 +9,7 @@ class AddColumnIsLemburEmployee extends Migration
     public function up()
     {
         $fields = [
-            'isOvertime'              =>  [
+            'isovertime'              =>  [
                 'type'          => 'CHAR',
                 'constraint'    => 1,
                 'null'          => false,
@@ -23,7 +23,7 @@ class AddColumnIsLemburEmployee extends Migration
 
     public function down()
     {
-        $fields = ['isOvertime'];
+        $fields = ['isovertime'];
 
         $this->forge->dropColumn('md_employee', $fields);
     }
