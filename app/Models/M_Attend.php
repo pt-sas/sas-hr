@@ -37,14 +37,14 @@ class M_Attend extends Model
 
     public function getAttendance($where)
     {
-        $this->builder = $this->db->table("v_attendance");
+        $builder = $this->db->table("v_attendance");
 
-        $this->builder->select('*');
+        $builder->select('*');
 
         if ($where)
-            $this->builder->where($where);
+            $builder->where($where);
 
-        return $this->builder->get();
+        return $builder->get();
     }
 
     private function setDataJoin($tableJoin, $columnJoin, $typeJoin = "inner")
