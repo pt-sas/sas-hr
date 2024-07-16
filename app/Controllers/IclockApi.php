@@ -224,7 +224,7 @@ STR;
 
                                         if (
                                             $detail->name === "Pulang Cepat 1/2 Hari"
-                                            && getOperationResult($workOutTime, ($endBreakHour + $detail->condition), $detail->operation)
+                                            && getOperationResult($workOutTime, ($workHour + $detail->condition), $detail->operation)
                                             && !empty($clockIn) && !empty($clockOut)
                                         ) {
                                             $checkTime = $clockOut;
@@ -310,7 +310,7 @@ STR;
 
             $textResponse = "OK :" . $jml;
 
-            return $this->respond($textResponse, 200)
+            return $this->respond($amount, 200)
                 ->setHeader('Content-Type', 'text/plain');
         } catch (\Exception $e) {
             return $this->respond($e->getMessage(), 400);

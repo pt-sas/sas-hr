@@ -73,6 +73,17 @@ class Realization extends BaseController
             $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
             $where['trx_absent_detail.isagree'] = 'H';
 
+            $formType = [
+                $this->model->Pengajuan_Lupa_Absen_Masuk,
+                $this->model->Pengajuan_Lupa_Absen_Pulang,
+                $this->model->Pengajuan_Datang_Terlambat,
+                $this->model->Pengajuan_Pulang_Cepat,
+            ];
+
+            $where = [
+                'trx_absent.submissiontype NOT IN (' . implode(",", $formType) . ')'
+            ];
+
             $data = [];
 
             $fieldChk = new \App\Entities\Table();
