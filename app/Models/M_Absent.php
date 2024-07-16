@@ -421,11 +421,14 @@ class M_Absent extends Model
                 $this->entity->isagree = "H";
                 $this->entity->lineno = $lineNo;
                 $this->entity->date = $refDetail->date;
+                $this->entity->created_by = $rows['data']['updated_by'];
+                $this->entity->updated_by = $rows['data']['updated_by'];
                 $mAbsentDetail->save($this->entity);
 
                 $this->entity = new \App\Entities\Absent();
                 $this->entity->setDocStatus("IP");
                 $this->entity->setAbsentId($refDetail->trx_absent_id);
+                $this->entity->setUpdatedBy($rows['data']['updated_by']);
                 $this->save($this->entity);
             endforeach;
 
