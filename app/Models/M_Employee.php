@@ -265,14 +265,17 @@ class M_Employee extends Model
 		return $arr;
 	}
 
-	public function getEmployee($branchId, $divisionId)
+	public function getEmployee($where)
 	{
 		$this->builder->join('md_employee_branch', 'md_employee_branch.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
 		$this->builder->join('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
 		$this->builder->select($this->table . '.*,' .
 			'md_employee_branch.md_branch_id,
 			md_employee_division.md_division_id');
-		$this->builder->where(['md_employee_branch.md_branch_id' => $branchId, 'md_employee_division.md_division_id' => $divisionId]);
+
+		if ($where)
+			$this->builder->where($where);
+
 		$result = $this->find();
 
 		return $result;

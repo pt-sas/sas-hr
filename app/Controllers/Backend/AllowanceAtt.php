@@ -11,6 +11,7 @@ use App\Models\M_Employee;
 use App\Models\M_Holiday;
 use App\Models\M_Levelling;
 use App\Models\M_Absent;
+use App\Models\M_AbsentDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use PHPExcel;
@@ -22,6 +23,7 @@ use PHPExcel_Style_Fill;
 use PHPExcel_Worksheet_PageSetup;
 use DateTime;
 use Config\Services;
+use App\Models\M_Attend;
 
 class AllowanceAtt extends BaseController
 {
@@ -167,6 +169,8 @@ class AllowanceAtt extends BaseController
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mAttend = new M_Attend($this->request);
+        $mAbsentDetail = new M_AbsentDetail($this->request);
 
         $md_branch_id = null;
         $md_division_id = null;
@@ -389,11 +393,40 @@ class AllowanceAtt extends BaseController
 
                         $allow = $this->model->getAllowance($parAllow)->getRow();
 
-                        $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+                        // $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+                        $attend = $mAttend->getAttendance([
+                            'nik'        => $row->nik,
+                            'date'       => $date
+                        ])->getRow();
 
-                        if (isset($attendance)) {
-                            if ($attendance->absent === 'N' || is_null($attendance->clock_in) || is_null($attendance->clock_out)) {
+                        $parAbsent = [
+                            'DATE_FORMAT(trx_absent_detail.date, "%Y-%m-%d")' => $date,
+                            'trx_absent.docstatus' => 'CO',
+                            'trx_absent.md_employee_id' => $row->md_employee_id,
+                            'trx_absent_detail.isagree' => 'Y'
+                        ];
+
+                        $absent = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
+
+                        if ($attend) {
+                            // if ($attendance->absent === 'N' || is_null($attendance->clock_in) || is_null($attendance->clock_out)) {
+                            //     if (!$allow) {
+                            //         $qty = 0;
+                            //     }
+
+                            //     if ($allow && $allow->amount < 0) {
+                            //         $qty += $allow->amount;
+                            //     }
+
+                            //     if ($allow && $allow->amount > 0) {
+                            //         $qty = $allow->amount;
+                            //     }
+                            if (empty($attend->clock_in) || empty($attend->clock_out)) {
                                 if (!$allow) {
+                                    $qty = 0;
+                                }
+
+                                if ($allow && empty($absent)) {
                                     $qty = 0;
                                 }
 
@@ -405,11 +438,15 @@ class AllowanceAtt extends BaseController
                                     $qty = $allow->amount;
                                 }
                             } else {
-                                if ($attendance->clock_in > "08:30" && !$allow)
+                                if ($allow && empty($absent)) {
+                                    $qty = 0;
+                                }
+
+                                if ($attend->clock_in > "08:30" && !$allow)
                                     $qty = 0;
 
-                                //     if ($allow && $allow->amount < 0)
-                                //         $qty += $allow->amount;
+                                if ($allow && $allow->amount < 0 && $absent)
+                                    $qty += $allow->amount;
                             }
                         } else {
                             $qty = 0;
@@ -467,9 +504,39 @@ class AllowanceAtt extends BaseController
 
                         $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
 
-                        if (isset($attendance)) {
-                            if ($attendance->absent === 'N' || is_null($attendance->clock_in) || is_null($attendance->clock_out)) {
+                        $attend = $mAttend->getAttendance([
+                            'nik'        => $row->nik,
+                            'date'       => $date
+                        ])->getRow();
+
+                        $parAbsent = [
+                            'DATE_FORMAT(trx_absent_detail.date, "%Y-%m-%d")' => $date,
+                            'trx_absent.docstatus' => 'CO',
+                            'trx_absent.md_employee_id' => $row->md_employee_id,
+                            'trx_absent_detail.isagree' => 'Y'
+                        ];
+
+                        $absent = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
+
+                        if ($attend) {
+                            // if ($attendance->absent === 'N' || is_null($attendance->clock_in) || is_null($attendance->clock_out)) {
+                            //     if (!$allow) {
+                            //         $qty = 0;
+                            //     }
+
+                            //     if ($allow && $allow->amount < 0) {
+                            //         $qty += $allow->amount;
+                            //     }
+
+                            //     if ($allow && $allow->amount > 0) {
+                            //         $qty = $allow->amount;
+                            //     }
+                            if (empty($attend->clock_in) || empty($attend->clock_out)) {
                                 if (!$allow) {
+                                    $qty = 0;
+                                }
+
+                                if ($allow && empty($absent)) {
                                     $qty = 0;
                                 }
 
@@ -481,11 +548,15 @@ class AllowanceAtt extends BaseController
                                     $qty = $allow->amount;
                                 }
                             } else {
-                                if ($attendance->clock_in > "08:30" && !$allow)
+                                if ($allow && empty($absent)) {
+                                    $qty = 0;
+                                }
+
+                                if ($attend->clock_in > "08:30" && !$allow)
                                     $qty = 0;
 
-                                //     if ($allow && $allow->amount < 0)
-                                //         $qty += $allow->amount;
+                                if ($allow && $allow->amount < 0 && $absent)
+                                    $qty += $allow->amount;
                             }
                         } else {
                             $qty = 0;
