@@ -114,6 +114,29 @@ $(document).ready(function () {
     },
   });
 
+  $(".multiple-select-realizationtype").select2({
+    placeholder: "Pilih opsi tipe form",
+    width: "100%",
+    theme: "bootstrap",
+    multiple: true,
+    ajax: {
+      dataType: "JSON",
+      url: ADMIN_URL + "document-type/getList?isinternal=Y",
+      delay: 250,
+      data: function (params) {
+        return {
+          search: params.term,
+        };
+      },
+      processResults: function (data, page) {
+        return {
+          results: data,
+        };
+      },
+      cache: true,
+    },
+  });
+
   $("#form_employee input[name=nik]").autocomplete({
     serviceUrl: ADMIN_URL + "karyawan/get-nik",
     dataType: "JSON",

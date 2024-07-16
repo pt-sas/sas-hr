@@ -129,14 +129,31 @@ class DocumentType extends BaseController
 
             try {
                 if (isset($post['search'])) {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->like('name', $post['search'])
-                        ->orderBy('name', 'ASC')
-                        ->findAll();
+                    if (isset($post['isinternal']) && $post['isinternal'] === "Y") {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereIn('md_doctype_id', [100010, 100011, 100012, 100013])
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereNotIn('md_doctype_id', [100010, 100011, 100012, 100013])
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
                 } else {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->orderBy('name', 'ASC')
-                        ->findAll();
+                    if (isset($post['isinternal']) && $post['isinternal'] === "Y") {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereIn('md_doctype_id', [100010, 100011, 100012, 100013])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereNotIn('md_doctype_id', [100010, 100011, 100012, 100013])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
                 }
 
                 foreach ($list as $key => $row) :
