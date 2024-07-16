@@ -454,7 +454,11 @@ class Overtime extends BaseController
             } else {
 
                 if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
-                    $dataEmployee = $employee->getEmployee($post['md_branch_id'], $post['md_division_id']);
+                    $dataEmployee = $employee->getEmployee([
+                        'md_employee.isovertime'                => 'Y',
+                        'md_employee_branch.md_branch_id'       => $post['md_branch_id'],
+                        'md_employee_division.md_division_id'   => $post['md_division_id']
+                    ]);
                     $fieldEmployee->setList($dataEmployee);
                 }
 
@@ -485,7 +489,11 @@ class Overtime extends BaseController
                 $id = $row->getOvertimeId();
                 $header = $this->model->where('trx_overtime_id', $id)->first();
 
-                $dataEmployee = $employee->getEmployee($header->md_branch_id, $header->md_division_id);
+                $dataEmployee = $employee->getEmployee([
+                    'md_employee.isovertime'                => 'Y',
+                    'md_employee_branch.md_branch_id'       => $header->md_branch_id,
+                    'md_employee_division.md_division_id'   => $header->md_division_id
+                ]);
                 $fieldEmployee->setList($dataEmployee);
 
                 $fieldEmployee->setValue($row->getEmployeeId());
