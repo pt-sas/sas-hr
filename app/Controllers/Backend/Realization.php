@@ -50,6 +50,19 @@ class Realization extends BaseController
         return $this->template->render('transaction/overtimerealization/v_overtime_realization', $data);
     }
 
+    public function indexAttendance()
+    {
+        $start_date = format_dmy(date('Y-m-d', strtotime('- 1 days')), "-");
+        $end_date = format_dmy(date('Y-m-d'), "-");
+
+        $data = [
+            'date_range'            => $start_date . ' - ' . $end_date,
+            'toolbarRealization'    => $this->template->toolbarButtonProcess()
+        ];
+
+        return $this->template->render('transaction/attendancerealization/v_realization', $data);
+    }
+
     public function showAll()
     {
         if ($this->request->getMethod(true) === 'POST') {
@@ -217,6 +230,124 @@ class Realization extends BaseController
                 $row[] = $this->template->tableButtonProcess($ID);
                 $data[] = $row;
             endforeach;
+
+            $result = [
+                'draw'              => $this->request->getPost('draw'),
+                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
+                'data'              => $data
+            ];
+
+            return $this->response->setJSON($result);
+        }
+    }
+
+    public function showAllAttendance()
+    {
+        $mAccess = new M_AccessMenu($this->request);
+        $mOvertime = new M_Overtime($this->request);
+        $mAttendance = new M_Attendance($this->request);
+        $mEmployee = new M_Employee($this->request);
+
+        if ($this->request->getMethod(true) === 'POST') {
+            $table = $this->model->table;
+            $select = $this->model->getSelectDetail();
+            $join = $this->model->getJoinDetail();
+            $order = [
+                '', // Number
+                'trx_absent_detail.date',
+                'md_doctype.name',
+                'md_branch.name',
+                'md_division.name',
+                'md_employee.fullname',
+                'trx_absent.reason',
+                'trx_absent.docstatus',
+                'sys_user.name'
+            ];
+            $search = $this->request->getPost('search');
+            $sort = ['trx_absent_detail.date' => 'ASC', 'md_employee.fullname' => 'ASC'];
+
+            /**
+             * Hak akses
+             */
+            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                $arrBranch = $arrAccess["branch"];
+                $arrDiv = $arrAccess["division"];
+
+                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
+
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrEmpBased
+                    ];
+                } else {
+                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+            } else if (!empty($this->session->get('md_employee_id'))) {
+                $where['trx_absent.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
+            } else {
+                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+            }
+
+            $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
+            $where['trx_absent_detail.isagree'] = 'H';
+            $typeForm = [$this->model->Pengajuan_Lupa_Absen_Masuk, $this->model->Pengajuan_Lupa_Absen_Pulang, $this->model->Pengajuan_Datang_Terlambat, $this->model->Pengajuan_Pulang_Cepat];
+            $where['trx_absent.submissiontype'] = ['value' => $typeForm];
+
+            $data = [];
+
+            $fieldChk = new \App\Entities\Table();
+            $fieldChk->setName("ischecked");
+            $fieldChk->setType("checkbox");
+            $fieldChk->setClass("check-realize");
+
+            $number = $this->request->getPost('start');
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+            // $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search);
+
+            foreach ($list as $value) :
+                $row = [];
+                $ID = $value->trx_absent_detail_id;
+
+                $number++;
+
+                $reason = $value->reason;
+
+                // if (!empty($value->leavetype))
+                //     $reason = "<span class='badge badge-info' id=" . $value->md_leavetype_id . ">" . $value->leavetype . "</span>" . " - " . $value->reason;
+
+                // $row[] = $this->field->fieldTable($fieldChk);
+                $row[] = $number;
+                $row[] = format_dmy($value->date, '-');
+                $row[] = format_time($value->date);
+                $row[] = $value->documentno;
+                $row[] = $value->doctype;
+                $row[] = $value->branch;
+                $row[] = $value->division;
+                $row[] = $value->employee_fullname;
+                $row[] = $reason;
+                $row[] = $this->template->tableButtonProcess($ID, null, 'ada');
+                $data[] = $row;
+            endforeach;
+
+            // $recordsTotal = count($data);
+            // $recordsFiltered = count($data);
 
             $result = [
                 'draw'              => $this->request->getPost('draw'),
@@ -460,6 +591,78 @@ class Realization extends BaseController
                         $oEntity->setDocStatus($this->DOCSTATUS_Completed);
                         $mOvertime->save($oEntity);
                     }
+                }
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+            return $this->response->setJSON($response);
+
+            // return json_encode($post);
+        }
+    }
+
+    public function createAttendance()
+    {
+        if ($this->request->getMethod(true) === 'POST') {
+            $post = $this->request->getVar();
+
+            $agree = 'Y';
+            $notAgree = 'N';
+            $holdAgree = 'H';
+
+            $isAgree = $post['isagree'];
+
+            try {
+                if (!$this->validation->run($post, 'realisasi_kehadiran') && $isAgree === 'Y') {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $mAbsent = new M_Absent($this->request);
+                    $this->model = new M_AbsentDetail($this->request);
+                    $this->entity = new \App\Entities\AbsentDetail();
+
+                    $id = $this->model->find($post['id']);
+
+                    $list = $mAbsent->where('trx_absent_id', $id->trx_absent_id)->first();
+
+                    if ($isAgree === $agree) {
+                        $this->model = new M_AbsentDetail($this->request);
+                        $this->entity = new \App\Entities\AbsentDetail();
+
+                        $enddate =   date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
+                        $this->entity->trx_absent_detail_id = $post['id'];
+                        $this->entity->date = $enddate;
+                        $this->entity->isagree = $isAgree;
+                        $response = $this->save();
+
+
+                        $mAbsent = new M_Absent($this->request);
+                        $absentEntity = new \App\Entities\Absent();
+
+                        $absentEntity->setAbsentId($list->trx_absent_id);
+                        $absentEntity->setStartDate($enddate);
+                        $absentEntity->setEndDate($enddate);
+                        $absentEntity->setEndDateRealization($enddate);
+
+                        $mAbsent->save($absentEntity);
+                    }
+
+                    if ($isAgree === $notAgree) {
+                        $this->model = new M_AbsentDetail($this->request);
+                        $this->entity = new \App\Entities\AbsentDetail();
+                        $this->entity->trx_absent_detail_id = $post['id'];
+                        $this->entity->isagree = $isAgree;
+
+                        $response = $this->save();
+                    }
+
+                    // if (is_null($list)) {
+                    $mAbsent = new M_Absent($this->request);
+                    $aEntity = new \App\Entities\Absent();
+
+                    $aEntity->setAbsentId($list->trx_absent_id);
+                    $aEntity->setDocStatus($this->DOCSTATUS_Completed);
+                    $mAbsent->save($aEntity);
+                    // }
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

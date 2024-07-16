@@ -31,7 +31,8 @@ class M_Absent extends Model
         'updated_by',
         'md_leavetype_id',
         'image2',
-        'image3'
+        'image3',
+        'enddate_realization'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';

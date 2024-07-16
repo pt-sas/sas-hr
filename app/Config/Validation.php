@@ -1779,6 +1779,23 @@ class Validation
         ]
     ];
 
+    public $realisasi_kehadiran = [
+        'enddate_realization'        => [
+            'label'             => 'Tanggal Selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'endtime_realization'        => [
+            'label'             => 'Jam Selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
     public $attendance = [
         'description'           => [
             'label'             => 'Keterangan',

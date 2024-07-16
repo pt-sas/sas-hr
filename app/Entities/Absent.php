@@ -30,6 +30,7 @@ class Absent extends Entity
     protected $md_leavetype_id;
     protected $image2;
     protected $image3;
+    protected $enddate_realization;
 
     protected $dates   = [
         'created_at',
@@ -300,5 +301,16 @@ class Absent extends Entity
     public function setImage3($image3)
     {
         $this->attributes['image3'] = $image3;
+    }
+
+    public function getEndDateRealization()
+    {
+        return $this->attributes['enddate_realization'];
+    }
+
+    public function setEndDateRealization($enddate_realization)
+    {
+
+        $this->attributes['enddate_realization'] = $enddate_realization;
     }
 }

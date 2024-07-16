@@ -498,6 +498,10 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'realisasi-lembur/showAll', 'Backend\Realization::showAllOvertime');
     $routes->post('realisasi-lembur/create', 'Backend\Realization::createOvertime');
 
+    $routes->add('realisasi-kehadiran', 'Backend\Realization::indexAttendance');
+    $routes->match(['get', 'post'], 'realisasi-kehadiran/showAll', 'Backend\Realization::showAllAttendance');
+    $routes->post('realisasi-kehadiran/create', 'Backend\Realization::createAttendance');
+
     $routes->add('hari-kerja', 'Backend\Work::index');
     $routes->match(['get', 'post'], 'hari-kerja/showAll', 'Backend\Work::showAll');
     $routes->post('hari-kerja/create', 'Backend\Work::create');
