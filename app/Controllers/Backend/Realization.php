@@ -210,7 +210,11 @@ class Realization extends BaseController
 
             foreach ($list as $value) :
                 $row = [];
-                $attendance = $mAttendance->where(['md_employee_id' => $value->md_employee_id, 'date' => date('Y-m-d', strtotime($value->startdate_line))])->first();
+
+                $whereClause = "md_employee_id = " . $value->md_employee_id;
+                $whereClause .= " AND date = '" . date('Y-m-d', strtotime($value->startdate_line)) . "'";
+                $whereClause .= " AND clock_out IS NOT null";
+                $attendance = $mAttendance->where($whereClause)->first();
 
                 $ID = $value->trx_overtime_detail_id;
 
