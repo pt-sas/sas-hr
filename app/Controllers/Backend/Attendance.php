@@ -3,6 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Attend;
 use App\Models\M_Attendance;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
@@ -29,8 +30,6 @@ class Attendance extends BaseController
 
     public function reportShowAll()
     {
-        $mEmpBranch = new M_EmpBranch($this->request);
-        $mEmpDiv = new M_EmpDivision($this->request);
         $post = $this->request->getVar();
         $data = [];
 
@@ -77,6 +76,34 @@ class Attendance extends BaseController
             ];
 
             return $this->response->setJSON($result);
+        }
+    }
+
+    public function getClockInOut()
+    {
+        $mAttend = new M_Attend($this->request);
+
+        if ($this->request->isAJAX()) {
+            $post = $this->request->getVar();
+
+            try {
+                $date = date('Y-m-d', strtotime($post['startdate']));
+                $data = '';
+
+                $attendance = $mAttend->getAttendance(['date' => $date, 'nik' => $post['nik']])->getRow();
+
+                if ($post['typeform'] == 100012 && $attendance) {
+                    $data = format_time($attendance->clock_in);
+                } else if ($post['typeform'] == 100013 && $attendance) {
+                    $data = format_time($attendance->clock_out);
+                }
+
+                $response['clock'] = $data;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
         }
     }
 }
