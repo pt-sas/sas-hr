@@ -1530,29 +1530,48 @@ $(".btn_filter_realize").on("click", function (e) {
 
 _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
   const tr = $(this).closest("tr");
-  let formType = tr.find("td:eq(2)").text();
-  let submissionDate = tr.find("td:eq(1)").text();
-  let description = tr.find("td:eq(6)");
-  let startdate = tr.find("td:eq(5)").text();
-  let enddate = tr.find("td:eq(6)").text();
-  let starttime = tr.find("td:eq(7)").text();
-  let endtime = tr.find("td:eq(8)").text();
-  let date_out = tr.find("td:eq(9)").text();
-  let clock_out = tr.find("td:eq(10)").text();
+  let formType;
+  let submissionDate;
+  let description;
+  let startdate;
+  let enddate;
+  let starttime;
+  let endtime;
+  let date_out;
+  let clock_out;
   let id = this.id;
-
   let leaveTypeID = 0;
 
-  if (description.find("span").length)
-    leaveTypeID = description.find("span").attr("id");
+  const form = $(
+    "#form_realization_agree, #form_overtime_realization_agree, #form_attendance_realization_agree"
+  );
+
+  if (form.is($("#form_realization_agree"))) {
+    formType = tr.find("td:eq(2)").text();
+    submissionDate = tr.find("td:eq(1)").text();
+    description = tr.find("td:eq(6)");
+    if (description.find("span").length)
+      leaveTypeID = description.find("span").attr("id");
+  } else if (form.is($("#form_overtime_realization_agree"))) {
+    startdate = tr.find("td:eq(5)").text();
+    enddate = tr.find("td:eq(6)").text();
+    starttime = tr.find("td:eq(7)").text();
+    endtime = tr.find("td:eq(8)").text();
+    date_out = tr.find("td:eq(9)").text();
+    clock_out = tr.find("td:eq(10)").text();
+  } else if (form.is($("#form_attendance_realization_agree"))) {
+    submissionDate = tr.find("td:eq(1)").text();
+    date_out = tr.find("td:eq(8)").text();
+    clock_out = tr.find("td:eq(9)").text();
+  }
 
   if (this.name === "agree") {
-    $("#modal_realization_agree, #modal_overtime_realization_agree").modal({
+    $(
+      "#modal_realization_agree, #modal_overtime_realization_agree, #modal_attendance_realization_agree"
+    ).modal({
       backdrop: "static",
       keyboard: false,
     });
-
-    const form = $("#form_realization_agree, #form_overtime_realization_agree");
 
     if (form.is($("#form_realization_agree"))) {
       form.find("input[name=submissiondate]").val(submissionDate);
@@ -1569,6 +1588,27 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
       form.find("input[name=endtime_att]").val(clock_out);
       form.find("input[name=isagree]").val("Y");
       ID = id;
+    } else if (form.is($("#form_attendance_realization_agree"))) {
+      form.find("input[name=submissiondate]").val(submissionDate);
+      form.find("input[name=isagree]").val("Y");
+      form.find("input[name=enddate_att]").val(date_out);
+      form.find("input[name=endtime_att]").val(clock_out);
+      form.find("input[name=enddate_realization]").val(submissionDate);
+      ID = id;
+
+      if (date_out !== "" || clock_out !== "") {
+        form
+          .find("input[name=endtime_realization]")
+          .val(clock_out)
+          .change()
+          .prop("disabled", true);
+      } else if (date_out === "" || clock_out === "") {
+        form
+          .find("input[name=endtime_realization]")
+          .val(null)
+          .change()
+          .prop("disabled", false);
+      }
     }
   } else {
     $(
@@ -1581,6 +1621,14 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
     const form = $(
       "#form_realization_not_agree, #form_overtime_realization_not_agree"
     );
+
+    if (form.is($("#form_realization_not_agree"))) {
+      formType = tr.find("td:eq(2)").text();
+      submissionDate = tr.find("td:eq(1)").text();
+      description = tr.find("td:eq(6)");
+      if (description.find("span").length)
+        leaveTypeID = description.find("span").attr("id");
+    }
 
     if (form.is($("#form_realization_not_agree"))) {
       form.find("input[name=submissiondate]").val(submissionDate);
@@ -1626,14 +1674,7 @@ $(".btn_ok_realization").click(function (e) {
 
   if (ID != 0) formData.append("id", ID);
 
-  if (
-    form.is($("#form_overtime_realization_agree")) ||
-    form.is($("#form_overtime_realization_not_agree"))
-  ) {
-    url = "realisasi-lembur/create";
-  } else {
-    url = `${SITE_URL}${CREATE}`;
-  }
+  url = `${SITE_URL}${CREATE}`;
 
   $.ajax({
     url: url,
@@ -1924,4 +1965,59 @@ _tableRealization.on("click", ".btn_view_image", function (e) {
       showError(jqXHR, exception);
     },
   });
+});
+
+$(".form-half-day").on("change dp.change", "#nik, #startdate", function (e) {
+  let _this = $(this);
+  const form = _this.closest("form");
+  let formData = new FormData();
+  let today = Date();
+  let nik = $("#nik").val();
+  let startdate = $("#startdate").val();
+  let typeForm;
+
+  if (form.is($("#form_permission_arrived"))) {
+    // DocumentType Datang Terlambat
+    typeForm = 100012;
+  } else if (form.is($("#form_permission_leave_early"))) {
+    // DocumentType Pulang Cepat
+    typeForm = 100013;
+  }
+
+  formData.append("startdate", startdate);
+  formData.append("nik", nik);
+  formData.append("typeform", typeForm);
+
+  let url = ADMIN_URL + "Kehadiran/getJamAbsen";
+
+  if (new Date($("#startdate").val()).getTime() <= new Date(today).getTime()) {
+    $("#starttime").prop("disabled", true);
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".x_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "facebook");
+      },
+      complete: function () {
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        form.find("[name=starttime]").val(result.clock);
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+  } else {
+    $("#starttime").prop("disabled", false);
+  }
 });
