@@ -12,6 +12,8 @@ use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
 use App\Models\M_Division;
+use App\Models\M_Attend;
+use App\Models\M_RuleDetail;
 use TCPDF;
 use Config\Services;
 
@@ -145,6 +147,8 @@ class PermissionArrived extends BaseController
     {
         $mHoliday = new M_Holiday($this->request);
         $mRule = new M_Rule($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
+        $mAttendance = new M_Attend($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
 
@@ -157,7 +161,7 @@ class PermissionArrived extends BaseController
             $post["enddate"] = $post["startdate"];
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
-            $day = date('w');
+            $day = date('w', strtotime($post["startdate"]));
 
             try {
                 if (!$this->validation->run($post, 'pengajuan')) {
@@ -175,6 +179,7 @@ class PermissionArrived extends BaseController
                         'isactive'  => 'Y'
                     ])->first();
 
+                    $ruleDetail = $mRuleDetail->where('md_rule_id', $rule->md_rule_id)->find();
                     $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
                     $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
 
@@ -203,10 +208,36 @@ class PermissionArrived extends BaseController
 
                         $daysOff = getDaysOff($workDetail);
 
-                        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+                        //TODO : Get next day attendance from enddate
+                        $presentNextDate = null;
 
-                        //* last index of array from variable attPresentNextDay
-                        $lastDate = end($nextDate);
+                        if ($startDate <= $submissionDate) {
+                            $whereClause = "trx_absent.nik = $nik";
+                            $whereClause .= " AND trx_absent.enddate > '$endDate'";
+                            $whereClause .= " AND trx_absent.submissiontype IN (" . $this->model->Pengajuan_Tugas_Kantor . ")";
+                            $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
+                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                            $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+
+                            if (is_null($trxPresentNextDay)) {
+                                $attPresentNextDay = $mAttendance->getAttendance([
+                                    'nik'       => $nik,
+                                    'date >'    => $endDate
+                                ])->getRow();
+
+                                $presentNextDate = $attPresentNextDay ? $attPresentNextDay->date : $endDate;
+                            } else {
+                                $presentNextDate = $trxPresentNextDay->date;
+                            }
+
+                            $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
+
+                            //* last index of array from variable nextDate
+                            $lastDate = end($nextDate);
+                        }
+
+                        //* Late Hour
+                        $latehour = convertToMinutes($work->startwork) + $ruleDetail[0]->condition;
 
                         $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
 
@@ -217,8 +248,12 @@ class PermissionArrived extends BaseController
 
                         if (is_null($work)) {
                             $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
-                        } else if ($lastDate < $subDate || $endDate > $addDays) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
+                        } else if ($endDate > $addDays) {
+                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                        } else if (!is_null($presentNextDate) && !($lastDate >= $subDate) && $work) {
+                            $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
+                        } else if ($latehour >= (convertToMinutes($startDate))) {
+                            $response = message('success', false, 'Jam absen masuk tidak melebihi jam ' . date('H:i', strtotime($work->startwork)));
                         } else {
                             $this->entity->fill($post);
 
@@ -248,6 +283,7 @@ class PermissionArrived extends BaseController
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+                $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
@@ -265,7 +301,8 @@ class PermissionArrived extends BaseController
                 $fieldHeader->setList($list);
 
                 $result = [
-                    'header'    => $this->field->store($fieldHeader)
+                    'header'    => $this->field->store($fieldHeader),
+                    'line'      => $this->tableLine('edit', $detail)
                 ];
 
                 $response = message('success', true, $result);
