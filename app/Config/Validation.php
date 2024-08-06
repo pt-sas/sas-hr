@@ -1816,4 +1816,14 @@ class Validation
             ]
         ],
     ];
+
+    public $wactivity = [
+        'textmsg'        => [
+            'label'             => 'message',
+            'rules'             => 'required_based_field_value[isanswer, W]',
+            'errors'            => [
+                'required_based_field_value'    => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
 }
