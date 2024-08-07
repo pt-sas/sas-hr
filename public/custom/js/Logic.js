@@ -456,3 +456,11 @@ $(".week-picker")
         moment(endDate).format("DD-MMM-YYYY")
     );
   });
+
+$("#form_special_office_duties").on(
+  "dp.change",
+  "input[name=startdate]",
+  function (e) {
+    $("[name=enddate]").data("DateTimePicker").date(moment(e.date));
+  }
+);
