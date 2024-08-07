@@ -464,6 +464,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('lembur/destroy/(:any)', 'Backend\Overtime::destroy/$1');
     $routes->get('lembur/processIt', 'Backend\Overtime::processIt');
     $routes->post('lembur/tableLine', 'Backend\Overtime::tableLine');
+    $routes->match(['get', 'post'], 'lembur/print/(:any)', 'Backend\Overtime::exportPDF/$1');
 
     $routes->get('wactivity/showNotif', 'Backend\WActivity::showNotif');
     $routes->post('wactivity/create', 'Backend\WActivity::create');
@@ -551,6 +552,25 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('calendar/create', 'Backend\Year::create');
     $routes->get('calendar/show/(:any)', 'Backend\Year::show/$1');
     $routes->get('calendar/destroy/(:any)', 'Backend\Year::destroy/$1');
+
+    $routes->add('supplier', 'Backend\Supplier::index');
+    $routes->match(['get', 'post'], 'supplier/showAll', 'Backend\Supplier::showAll');
+    $routes->post('supplier/create', 'Backend\Supplier::create');
+    $routes->get('supplier/show/(:any)', 'Backend\Supplier::show/$1');
+    $routes->get('supplier/destroy/(:any)', 'Backend\Supplier::destroy/$1');
+    $routes->get('supplier/getSeqCode', 'Backend\Supplier::getSeqCode');
+    $routes->get('supplier/getList', 'Backend\Supplier::getList');
+
+    $routes->add('outsource', 'Backend\Outsourcing::index');
+    $routes->match(['get', 'post'], 'outsource/showAll', 'Backend\Outsourcing::showAll');
+    $routes->get('outsource/getDataBy/(:num)', 'Backend\Outsourcing::getBy/$1');
+    $routes->match(['get', 'post'], 'outsource/getDetail', 'Backend\Outsourcing::getDetailEmployee');
+    $routes->match(['get', 'post'], 'outsource/getList', 'Backend\Outsourcing::getList');
+    $routes->match(['get', 'post'], 'outsource/superior', 'Backend\Outsourcing::getSuperior');
+    $routes->get('outsource/destroy/(:any)', 'Backend\Outsourcing::destroy/$1');
+    $routes->post('outsource/create', 'Backend\Outsourcing::create');
+    $routes->get('outsource/show/(:any)', 'Backend\Outsourcing::show/$1');
+    $routes->get('outsource/get-nik', 'Backend\Outsourcing::getNik');
 
     // $routes->post('rule-detail/create', 'Backend\RuleDetail::create');
     // $routes->get('rule-detail/show', 'Backend\RuleDetail::show');
