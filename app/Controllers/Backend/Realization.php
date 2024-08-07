@@ -13,6 +13,7 @@ use App\Models\M_RuleDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
+use App\Models\M_Attend;
 use App\Models\M_Employee;
 use Config\Services;
 
@@ -48,6 +49,19 @@ class Realization extends BaseController
         ];
 
         return $this->template->render('transaction/overtimerealization/v_overtime_realization', $data);
+    }
+
+    public function indexAttendance()
+    {
+        $start_date = format_dmy(date('Y-m-d', strtotime('- 1 days')), "-");
+        $end_date = format_dmy(date('Y-m-d'), "-");
+
+        $data = [
+            'date_range'            => $start_date . ' - ' . $end_date,
+            'toolbarRealization'    => $this->template->toolbarButtonProcess()
+        ];
+
+        return $this->template->render('transaction/attendancerealization/v_realization', $data);
     }
 
     public function showAll()
@@ -197,7 +211,11 @@ class Realization extends BaseController
 
             foreach ($list as $value) :
                 $row = [];
-                $attendance = $mAttendance->where(['md_employee_id' => $value->md_employee_id, 'date' => date('Y-m-d', strtotime($value->startdate_line))])->first();
+
+                $whereClause = "md_employee_id = " . $value->md_employee_id;
+                $whereClause .= " AND date = '" . date('Y-m-d', strtotime($value->startdate_line)) . "'";
+                $whereClause .= " AND clock_out IS NOT null";
+                $attendance = $mAttendance->where($whereClause)->first();
 
                 $ID = $value->trx_overtime_detail_id;
 
@@ -215,6 +233,138 @@ class Realization extends BaseController
                 $row[] = $attendance ? format_dmy($attendance->date, '-') : '';
                 $row[] = $attendance ? format_time($attendance->clock_out) : '';
                 $row[] = $this->template->tableButtonProcess($ID);
+                $data[] = $row;
+            endforeach;
+
+            $result = [
+                'draw'              => $this->request->getPost('draw'),
+                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
+                'data'              => $data
+            ];
+
+            return $this->response->setJSON($result);
+        }
+    }
+
+    public function showAllAttendance()
+    {
+        $mAccess = new M_AccessMenu($this->request);
+        $mAttendance = new M_Attend($this->request);
+        $mEmployee = new M_Employee($this->request);
+
+        if ($this->request->getMethod(true) === 'POST') {
+            $table = $this->model->table;
+            $select = $this->model->getSelectDetail();
+            $join = $this->model->getJoinDetail();
+            $order = [
+                '', // Number
+                'trx_absent_detail.date',
+                'md_doctype.name',
+                'md_branch.name',
+                'md_division.name',
+                'md_employee.fullname',
+                'trx_absent.reason',
+                'trx_absent.docstatus',
+                'sys_user.name'
+            ];
+            $search = $this->request->getPost('search');
+            $sort = ['trx_absent_detail.date' => 'ASC', 'md_employee.fullname' => 'ASC'];
+
+            /**
+             * Hak akses
+             */
+            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                $arrBranch = $arrAccess["branch"];
+                $arrDiv = $arrAccess["division"];
+
+                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
+
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrEmpBased
+                    ];
+                } else {
+                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+            } else if (!empty($this->session->get('md_employee_id'))) {
+                $where['trx_absent.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
+            } else {
+                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+            }
+
+            $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
+            $where['trx_absent_detail.isagree'] = 'H';
+            $typeForm = [$this->model->Pengajuan_Lupa_Absen_Masuk, $this->model->Pengajuan_Lupa_Absen_Pulang, $this->model->Pengajuan_Datang_Terlambat, $this->model->Pengajuan_Pulang_Cepat];
+            $where['trx_absent.submissiontype'] = ['value' => $typeForm];
+
+            $data = [];
+
+            $number = $this->request->getPost('start');
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+
+            foreach ($list as $value) :
+                $row = [];
+                $ID = $value->trx_absent_detail_id;
+                $tanggal = '';
+                $clock = '';
+
+                if ($value->doctype === "Pulang Cepat") {
+                    $whereClause = "nik = " . $value->nik;
+                    $whereClause .= " AND date = '" . date('Y-m-d', strtotime($value->startdate)) . "'";
+                    $whereClause .= " AND clock_out IS NOT null";
+                } else if ($value->doctype === "Datang Terlambat") {
+                    $whereClause = "nik = " . $value->nik;
+                    $whereClause .= " AND date = '" . date('Y-m-d', strtotime($value->startdate)) . "'";
+                    $whereClause .= " AND clock_in IS NOT null";
+                }
+
+                if (isset($whereClause)) {
+                    $attendance = $mAttendance->getAttendance($whereClause)->getRow();
+                }
+
+                if (isset($attendance)) {
+                    if ($value->doctype === "Datang Terlambat") {
+                        $tanggal = format_dmy($attendance->date, '-');
+                        $clock = format_time($attendance->clock_in);
+                    } else if ($value->doctype === "Pulang Cepat") {
+                        $tanggal = format_dmy($attendance->date, '-');
+                        $clock = format_time($attendance->clock_out);
+                    }
+                }
+
+                $number++;
+
+                $reason = $value->reason;
+
+                $row[] = $number;
+                $row[] = format_dmy($value->date, '-');
+                $row[] = format_time($value->date);
+                $row[] = $value->documentno;
+                $row[] = $value->doctype;
+                $row[] = $value->branch;
+                $row[] = $value->division;
+                $row[] = $value->employee_fullname;
+                $row[] = isset($tanggal) ? $tanggal : '';
+                $row[] = isset($clock) ? $clock : '';
+                $row[] = $reason;
+                $row[] = $this->template->tableButtonProcess($ID, true);
                 $data[] = $row;
             endforeach;
 
@@ -404,6 +554,7 @@ class Realization extends BaseController
             $agree = 'Y';
             $notAgree = 'N';
             $holdAgree = 'H';
+            $today = date('Y-m-d');
 
             $isAgree = $post['isagree'];
 
@@ -455,11 +606,73 @@ class Realization extends BaseController
                     if (is_null($list)) {
                         $mOvertime = new M_Overtime($this->request);
                         $oEntity = new \App\Entities\Overtime();
-
+                        $oEntity->setReceivedDate($today);
                         $oEntity->setOvertimeId($line->trx_overtime_id);
                         $oEntity->setDocStatus($this->DOCSTATUS_Completed);
                         $mOvertime->save($oEntity);
                     }
+                }
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+            return $this->response->setJSON($response);
+
+            // return json_encode($post);
+        }
+    }
+
+    public function createAttendance()
+    {
+        if ($this->request->getMethod(true) === 'POST') {
+            $post = $this->request->getVar();
+
+            $agree = 'Y';
+            $notAgree = 'N';
+            $holdAgree = 'H';
+            $today = date('Y-m-d');
+
+            $isAgree = $post['isagree'];
+
+            try {
+                if (!$this->validation->run($post, 'realisasi_kehadiran') && $isAgree === 'Y') {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    $mAbsent = new M_Absent($this->request);
+                    $this->model = new M_AbsentDetail($this->request);
+                    $this->entity = new \App\Entities\AbsentDetail();
+
+                    $id = $this->model->find($post['id']);
+
+                    $list = $mAbsent->where('trx_absent_id', $id->trx_absent_id)->first();
+
+                    if ($isAgree === $agree) {
+                        $this->model = new M_AbsentDetail($this->request);
+                        $this->entity = new \App\Entities\AbsentDetail();
+
+                        $enddate =   date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
+                        $this->entity->trx_absent_detail_id = $post['id'];
+                        $this->entity->date = $enddate;
+                        $this->entity->isagree = $isAgree;
+                        $response = $this->save();
+                    }
+
+                    // if ($isAgree === $notAgree) {
+                    //     $this->model = new M_AbsentDetail($this->request);
+                    //     $this->entity = new \App\Entities\AbsentDetail();
+                    //     $this->entity->trx_absent_detail_id = $post['id'];
+                    //     $this->entity->isagree = $isAgree;
+
+                    //     $response = $this->save();
+                    // }
+
+                    $mAbsent = new M_Absent($this->request);
+                    $aEntity = new \App\Entities\Absent();
+
+                    $aEntity->setAbsentId($list->trx_absent_id);
+                    $aEntity->setDocStatus($this->DOCSTATUS_Completed);
+                    $aEntity->setReceivedDate($today);
+                    $aEntity->setEndDateRealization($enddate);
+                    $mAbsent->save($aEntity);
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

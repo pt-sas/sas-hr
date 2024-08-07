@@ -309,15 +309,17 @@ class Template
         $create = $this->access->checkCrud($uri, $this->isCreate);
         $update = $this->access->checkCrud($uri, $this->isUpdate);
 
-        if ($create === 'Y' && $update === 'Y' && is_null($type))
+        if ($create === 'Y' && $update === 'Y' && is_null($type)) {
+
             $allBtn = '<div class="d-flex justify-content-between">
-                        <div>
-                            <button class="btn btn-sm btn-success rounded ml-auto btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check"></i> Setuju</button>
-                        </div>
-                        <div>
-                            <button class="btn btn-sm btn-danger rounded ml-auto btn_not_agree" id="' . $btnID . '" name="not_agree" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times"></i> Tidak Setuju</button>
-                        </div>
-                    </div>';
+                            <div>
+                                <button class="btn btn-sm btn-success rounded ml-auto btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check"></i> Setuju</button>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-danger rounded ml-auto btn_not_agree" id="' . $btnID . '" name="not_agree" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times"></i> Tidak Setuju</button>
+                            </div>
+                        </div>';
+        }
 
         if ($create === 'Y' && $update === 'Y' && !is_null($type))
             $allBtn = '<div class="d-flex justify-content-center">

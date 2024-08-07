@@ -325,7 +325,6 @@ function Generate() {
     cache: false,
     dataType: "JSON",
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",
@@ -341,17 +340,20 @@ _tableRealization.on("click", ".btn_agree", function (e) {
   const form = $("#form_overtime_realization_agree");
   let startdate = new Date(form.find("[name=startdate]").val());
   let date_out = new Date(form.find("[name=enddate_att]").val());
-  maxtgl = new Date(startdate.getTime() + 24 * 60 * 60 * 1000);
+  let maxtgl = new Date(startdate.getTime() + 24 * 60 * 60 * 1000);
   // let maxtime = new textToTime(form.find("[name=endtime_att]").val());
-  let mintime = new textToTime(form.find("[name=starttime]").val());
+  let mintime;
   let maxtime;
 
-  if (form.find("[name=endtime_att]").val() != "") {
-    maxtime = new textToTime(form.find("[name=endtime_att]").val());
-  } else {
-    maxtime = new textToTime("05:00");
-  }
   if (form.is($("#form_overtime_realization_agree"))) {
+    mintime = new textToTime(form.find("[name=starttime]").val());
+
+    if (form.find("[name=endtime_att]").val() != "") {
+      maxtime = new textToTime(form.find("[name=endtime_att]").val());
+    } else {
+      maxtime = new textToTime("05:00");
+    }
+
     /**
      * Logic for refresh and set min & max value of Date
      */
@@ -367,6 +369,7 @@ _tableRealization.on("click", ".btn_agree", function (e) {
       if (maxtime != "Invalid Date") {
         $(".timepicker-end")
           .data("DateTimePicker")
+          .date(moment(maxtime))
           .maxDate(maxtime)
           .minDate(mintime);
       }
@@ -401,10 +404,17 @@ _tableRealization.on("click", ".btn_agree", function (e) {
           .data("DateTimePicker")
           .maxDate(false)
           .minDate(false);
-        $(".timepicker-end")
-          .data("DateTimePicker")
-          .maxDate(false)
-          .minDate(mintime);
+        if (form.find("[name=endtime_att]").val() != "") {
+          $(".timepicker-end")
+            .data("DateTimePicker")
+            .maxDate(maxtime)
+            .minDate(mintime);
+        } else {
+          $(".timepicker-end")
+            .data("DateTimePicker")
+            .maxDate(false)
+            .minDate(mintime);
+        }
       }
     });
   }
@@ -419,3 +429,30 @@ function textToTime(time) {
   date.setHours(Number(hours), Number(minutes), 0);
   return date;
 }
+
+$(".week-picker")
+  .datepicker({
+    clearBtn: true,
+    weekStart: 1,
+    calendarWeeks: true,
+    forceParse: false,
+  })
+  .on("changeDate", function (e) {
+    var date = e.date;
+    let startDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate() - date.getDay() + 1
+    );
+    let endDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate() - date.getDay() + 7
+    );
+    $("#week-picker").datepicker("update", startDate);
+    $("#week-picker").val(
+      moment(startDate).format("DD-MMM-YYYY") +
+        " - " +
+        moment(endDate).format("DD-MMM-YYYY")
+    );
+  });

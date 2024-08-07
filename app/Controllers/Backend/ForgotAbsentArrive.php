@@ -12,6 +12,7 @@ use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
 use App\Models\M_Division;
+use App\Models\M_Attend;
 use TCPDF;
 use Config\Services;
 
@@ -145,6 +146,7 @@ class ForgotAbsentArrive extends BaseController
     {
         $mHoliday = new M_Holiday($this->request);
         $mRule = new M_Rule($this->request);
+        $mAttendance = new M_Attend($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
 
@@ -157,7 +159,7 @@ class ForgotAbsentArrive extends BaseController
             $post["enddate"] = $post["startdate"];
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
-            $day = date('w');
+            $day = date('w', strtotime($post["startdate"]));
 
             try {
                 if (!$this->validation->run($post, 'pengajuan')) {
@@ -195,16 +197,47 @@ class ForgotAbsentArrive extends BaseController
 
                         $daysOff = getDaysOff($workDetail);
                         $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+                      
+                        //TODO : Get next day attendance from enddate
+                        $presentNextDate = null;
 
-                        //* last index of array from variable nextDate
-                        $lastDate = end($nextDate);
+                        if ($startDate <= $submissionDate) {
+                            $whereClause = "trx_absent.nik = $nik";
+                            $whereClause .= " AND trx_absent.enddate > '$endDate'";
+                            $whereClause .= " AND trx_absent.submissiontype IN (" . $this->model->Pengajuan_Tugas_Kantor . ")";
+                            $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
+                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                            $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+
+                            if (is_null($trxPresentNextDay)) {
+                                $attPresentNextDay = $mAttendance->getAttendance([
+                                    'nik'       => $nik,
+                                    'date >'    => $endDate
+                                ])->getRow();
+
+                                $presentNextDate = $attPresentNextDay ? $attPresentNextDay->date : $endDate;
+                            } else {
+                                $presentNextDate = $trxPresentNextDay->date;
+                            }
+
+                            $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
+
+                            //* last index of array from variable nextDate
+                            $lastDate = end($nextDate);
+                        }
 
                         //* last index of array from variable addDays
                         $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
-                        if ($lastDate < $subDate || $endDate > $addDays) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
+                        $attend = $mAttendance->getAttendance(['nik' => $nik, 'date' => $endDate])->getRow();
+
+                        if ($endDate > $addDays) {
+                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                        } else if (!is_null($presentNextDate) && !($lastDate >= $subDate) && $work) {
+                            $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
+                        } else if ($attend && ($attend->clock_in !== '')) {
+                            $response = message('success', false, 'Anda sudah ada absen masuk');
                         } else {
                             $this->entity->fill($post);
 
