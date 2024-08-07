@@ -83,6 +83,7 @@ class M_Overtime extends Model
         trx_overtime_detail.trx_overtime_detail_id,
         trx_overtime_detail.md_employee_id,
         md_employee.fullname as employee_name,
+        md_employee.nik,
         trx_overtime_detail.startdate as startdate_line,
         trx_overtime_detail.enddate as enddate_line,
         trx_overtime_detail.description,
@@ -156,15 +157,35 @@ class M_Overtime extends Model
         return $prefix;
     }
 
-    public function getDetail($field = null, $where = null)
+    public function getOvertimeDetail($where = null)
     {
+        $this->builder->select($this->table . '.*,
+        trx_overtime_detail.trx_overtime_detail_id,
+        trx_overtime_detail.md_employee_id,
+        md_employee.fullname as employee_name,
+        md_employee.nik,
+        trx_overtime_detail.startdate as startdate_line,
+        trx_overtime_detail.enddate as enddate_line,
+        trx_overtime_detail.enddate_realization,
+        trx_overtime_detail.description,
+        trx_overtime_detail.overtime_balance,
+        trx_overtime_detail.overtime_expense,
+        trx_overtime_detail.total,
+        trx_overtime_detail.status,
+        md_branch.name as branch_name,
+        md_division.name as division_name');
+
         $this->builder->join('trx_overtime_detail', 'trx_overtime_detail.trx_overtime_id = ' . $this->table . '.trx_overtime_id', 'left');
+        $this->builder->join('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left');
+        $this->builder->join('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left');
+        $this->builder->join('md_employee', 'md_employee.md_employee_id = trx_overtime_detail.md_employee_id', 'left');
 
-        if (!empty($field) && !empty($where)) {
-            $this->builder->where($field, $where);
-        }
+        if ($where)
+            $this->builder->where($where);
 
-        $this->builder->orderBy($this->table . '.created_at', 'DESC');
+        $this->builder->orderBy('trx_overtime.md_division_id', 'ASC');
+        $this->builder->orderBy('md_employee.fullname', 'ASC');
+        $this->builder->orderBy('trx_overtime_detail.startdate', 'ASC');
 
         return $this->builder->get();
     }
