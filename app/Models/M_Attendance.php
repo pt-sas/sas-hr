@@ -11,14 +11,14 @@ class M_Attendance extends Model
     protected $primaryKey           = 'trx_attendance_id';
     protected $allowedFields        = [
         'nik',
-        'date',
-        'clock_in',
-        'clock_out',
-        'absent',
+        'checktime',
+        'status',
+        'verify',
+        'reserved',
+        'reserved2',
+        'serialnumber',
         'created_by',
         'updated_by',
-        'description',
-        'md_employee_id'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Attendance';
@@ -39,7 +39,7 @@ class M_Attendance extends Model
     {
         $sql = $this->table . '.*,
                 md_employee.md_employee_id,
-                md_employee.fullname as fullname';
+                md_employee.fullname';
 
         return $sql;
     }
@@ -48,8 +48,8 @@ class M_Attendance extends Model
     {
         $sql = [
             $this->setDataJoin('md_employee', 'md_employee.nik = ' . $this->table . '.nik', 'left'),
-            $this->setDataJoin('md_employee_branch', 'md_employee_branch.md_employee_id = md_employee.md_employee_id', 'left'),
-            $this->setDataJoin('md_employee_division', 'md_employee_division.md_employee_id = md_employee.md_employee_id', 'left')
+            // $this->setDataJoin('md_employee_branch', 'md_employee_branch.md_employee_id = md_employee.md_employee_id', 'left'),
+            // $this->setDataJoin('md_employee_division', 'md_employee_division.md_employee_id = md_employee.md_employee_id', 'left')
         ];
 
         return $sql;
@@ -66,23 +66,25 @@ class M_Attendance extends Model
 
     public function getAttendance($where, $order = null)
     {
-        $sql = $this->table . '.*,
-        md_employee.fullname,
-        DATE_FORMAT(trx_attendance.date, "%w") AS day';
+        $builder = $this->db->table("v_attendance");
 
-        $this->builder->select($sql);
+        $sql = 'v_attendance.*,
+        md_employee.fullname,
+        DATE_FORMAT(v_attendance.date, "%w") AS day';
+
+        $builder->select($sql);
 
         if ($order === 'ASC') {
-            $this->builder->orderBy('date', 'ASC');
+            $builder->orderBy('v_attendance.date', 'ASC');
         } else if ($order === 'DESC') {
-            $this->builder->orderBy('date', 'DESC');
+            $builder->orderBy('v_attendance.date', 'DESC');
         }
 
-        $this->builder->join('md_employee', 'md_employee.nik = ' . $this->table . '.nik', 'left');
+        $builder->join('md_employee', 'md_employee.nik = v_attendance.nik', 'left');
 
         if ($where)
-            $this->builder->where($where);
+            $builder->where($where);
 
-        return $this->builder->get();
+        return $builder->get();
     }
 }
