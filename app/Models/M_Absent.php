@@ -32,6 +32,7 @@ class M_Absent extends Model
         'md_leavetype_id',
         'image2',
         'image3',
+        'comment',
         'enddate_realization'
     ];
     protected $useTimestamps        = true;

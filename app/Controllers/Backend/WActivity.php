@@ -79,7 +79,7 @@ class WActivity extends BaseController
         }
     }
 
-    public function setActivity($sys_wfactivity_id, $sys_wfscenario_id, $sys_wfresponsible_id, $user_by, $state, $processed, $textmsg, $table, $record_id, $menu)
+    public function setActivity($sys_wfactivity_id, $sys_wfscenario_id, $sys_wfresponsible_id, $user_by, $state, $processed, $textmsg, $table, $record_id, $menu, $isanswer = null)
     {
         $mWResponsible = new M_Responsible($this->request);
         $mWEvent = new M_WEvent($this->request);
@@ -196,6 +196,9 @@ class WActivity extends BaseController
                         // $this->entity->docstatus = $state;
                         // $this->entity->receiveddate = date("Y-m-d H:i:s");
 
+                        if ($isanswer === "W")
+                            $this->entity->comment = $textmsg;
+
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
                             $this->entity->docstatus = $this->DOCSTATUS_Voided;
                         }
@@ -290,20 +293,26 @@ class WActivity extends BaseController
             $txtMsg = $post['textmsg'];
 
             try {
-                $activity = $this->model->find($_ID);
-
-                if ($isAnswer === 'Y') {
-                    $eList = $mWEvent->where($this->model->primaryKey, $_ID)->orderBy('created_at', 'ASC')->findAll();
-
-                    foreach ($eList as $event) :
-                        $this->wfResponsibleId[] = $event->getWfResponsibleId();
-                    endforeach;
-
-                    $this->wfScenarioId = $activity->getWfScenarioId();
-
-                    $response = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Completed, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu());
+                if (!$this->validation->run($post, 'wactivity')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $response = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Aborted, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu());
+                    $activity = $this->model->find($_ID);
+
+                    if ($isAnswer !== 'N') {
+                        $eList = $mWEvent->where($this->model->primaryKey, $_ID)->orderBy('created_at', 'ASC')->findAll();
+
+                        foreach ($eList as $event) :
+                            $this->wfResponsibleId[] = $event->getWfResponsibleId();
+                        endforeach;
+
+                        $this->wfScenarioId = $activity->getWfScenarioId();
+
+                        $result = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Completed, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer);
+                    } else {
+                        $result = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Aborted, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu());
+                    }
+
+                    $response = message('success', true, $result);;
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

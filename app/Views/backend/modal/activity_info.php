@@ -30,9 +30,10 @@
                     <div class="form-group row">
                         <label for="isanswer" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Answer </label>
                         <div class="col-lg-7">
-                            <select class="form-control col-md-2" id="isanswer" name="isanswer">
+                            <select class="form-control col-md-3" id="isanswer" name="isanswer">
                                 <option value="N" selected>No</option>
                                 <option value="Y">Yes</option>
+                                <option value="W">Yes (With Note)</option>
                             </select>
                         </div>
                         <div class="col-lg-2">
@@ -45,6 +46,7 @@
                         <label for="textmsg" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Message </label>
                         <div class="col-lg-7">
                             <input type="text" class="form-control col-md-12" id="textmsg" name="textmsg">
+                            <small class="form-text text-danger" id="error_textmsg"></small>
                         </div>
                         <div class="col-lg-2">
                             <button type="button" class="btn btn-icon btn-success btn_ok_answer" data-toggle="tooltip" data-placement="top" title="OK">

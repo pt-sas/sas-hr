@@ -386,4 +386,11 @@ class Template
 
         return $allBtn;
     }
+
+    public function buttonExport()
+    {
+        $btnExport = '<a id="dt-button"></a> ';
+
+        return $btnExport;
+    }
 }
