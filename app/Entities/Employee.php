@@ -62,6 +62,7 @@ class Employee extends Entity
 	protected $isovertime;
 	protected $created_by;
 	protected $updated_by;
+	protected $md_supplier_id;
 
 	protected $dates   = [
 		'created_at',
@@ -649,5 +650,15 @@ class Employee extends Entity
 	public function setUpdatedBy($updated_by)
 	{
 		$this->attributes['updated_by'] = $updated_by;
+	}
+
+	public function getSupplierId()
+	{
+		return $this->attributes['md_supplier_id'];
+	}
+
+	public function setSupplierId($md_supplier_id)
+	{
+		$this->attributes['md_supplier_id'] = $md_supplier_id;
 	}
 }
