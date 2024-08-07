@@ -297,7 +297,7 @@ class Template
         return $sidebar;
     }
 
-    public function tableButtonProcess($btnID, $type = null, $status = null)
+    public function tableButtonProcess($btnID, $type = null)
     {
         $uri = $this->request->uri->getSegment(2);
         $allBtn = "";
@@ -311,8 +311,7 @@ class Template
 
         if ($create === 'Y' && $update === 'Y' && is_null($type)) {
 
-            if ($status === null) {
-                $allBtn = '<div class="d-flex justify-content-between">
+            $allBtn = '<div class="d-flex justify-content-between">
                             <div>
                                 <button class="btn btn-sm btn-success rounded ml-auto btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check"></i> Setuju</button>
                             </div>
@@ -320,13 +319,6 @@ class Template
                                 <button class="btn btn-sm btn-danger rounded ml-auto btn_not_agree" id="' . $btnID . '" name="not_agree" data-toggle="tooltip" title="Tidak Setuju" data-original-title="Tidak Setuju"><i class="fas fa-times"></i> Tidak Setuju</button>
                             </div>
                         </div>';
-            } else {
-                $allBtn = '<div class="d-flex justify-content-between">
-                            <div>
-                                <button class="btn btn-sm btn-success rounded ml-auto btn_agree" id="' . $btnID . '" name="agree" data-toggle="tooltip" title="Setuju" data-original-title="Setuju"><i class="fas fa-check"></i> Setuju</button>
-                            </div>
-                        </div>';
-            }
         }
 
         if ($create === 'Y' && $update === 'Y' && !is_null($type))

@@ -41,6 +41,8 @@ class M_Attend extends Model
 
         $builder->select('*');
 
+        $builder->orderBy('date', 'ASC');
+
         if ($where)
             $builder->where($where);
 

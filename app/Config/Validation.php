@@ -1776,6 +1776,20 @@ class Validation
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
+        ],
+        'enddate_realization'        => [
+            'label'             => 'Tanggal Realisasi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'endtime_realization'        => [
+            'label'             => 'Jam Realisasi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
         ]
     ];
 

@@ -32,6 +32,8 @@
                             <th>Cabang</th>
                             <th>Divisi</th>
                             <th>Karyawan</th>
+                            <th>Tanggal Absen</th>
+                            <th>Jam Absen</th>
                             <th>Keterangan</th>
                             <th class="text-center">Aksi</th>
                         </tr>

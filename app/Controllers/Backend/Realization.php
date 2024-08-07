@@ -13,6 +13,7 @@ use App\Models\M_RuleDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
+use App\Models\M_Attend;
 use App\Models\M_Employee;
 use Config\Services;
 
@@ -210,7 +211,11 @@ class Realization extends BaseController
 
             foreach ($list as $value) :
                 $row = [];
-                $attendance = $mAttendance->where(['md_employee_id' => $value->md_employee_id, 'date' => date('Y-m-d', strtotime($value->startdate_line))])->first();
+
+                $whereClause = "md_employee_id = " . $value->md_employee_id;
+                $whereClause .= " AND date = '" . date('Y-m-d', strtotime($value->startdate_line)) . "'";
+                $whereClause .= " AND clock_out IS NOT null";
+                $attendance = $mAttendance->where($whereClause)->first();
 
                 $ID = $value->trx_overtime_detail_id;
 
@@ -245,8 +250,7 @@ class Realization extends BaseController
     public function showAllAttendance()
     {
         $mAccess = new M_AccessMenu($this->request);
-        $mOvertime = new M_Overtime($this->request);
-        $mAttendance = new M_Attendance($this->request);
+        $mAttendance = new M_Attend($this->request);
         $mEmployee = new M_Employee($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
@@ -312,27 +316,43 @@ class Realization extends BaseController
 
             $data = [];
 
-            $fieldChk = new \App\Entities\Table();
-            $fieldChk->setName("ischecked");
-            $fieldChk->setType("checkbox");
-            $fieldChk->setClass("check-realize");
-
             $number = $this->request->getPost('start');
             $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
-            // $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search);
 
             foreach ($list as $value) :
                 $row = [];
                 $ID = $value->trx_absent_detail_id;
+                $tanggal = '';
+                $clock = '';
+
+                if ($value->doctype === "Pulang Cepat") {
+                    $whereClause = "nik = " . $value->nik;
+                    $whereClause .= " AND date = '" . date('Y-m-d', strtotime($value->startdate)) . "'";
+                    $whereClause .= " AND clock_out IS NOT null";
+                } else if ($value->doctype === "Datang Terlambat") {
+                    $whereClause = "nik = " . $value->nik;
+                    $whereClause .= " AND date = '" . date('Y-m-d', strtotime($value->startdate)) . "'";
+                    $whereClause .= " AND clock_in IS NOT null";
+                }
+
+                if (isset($whereClause)) {
+                    $attendance = $mAttendance->getAttendance($whereClause)->getRow();
+                }
+
+                if (isset($attendance)) {
+                    if ($value->doctype === "Datang Terlambat") {
+                        $tanggal = format_dmy($attendance->date, '-');
+                        $clock = format_time($attendance->clock_in);
+                    } else if ($value->doctype === "Pulang Cepat") {
+                        $tanggal = format_dmy($attendance->date, '-');
+                        $clock = format_time($attendance->clock_out);
+                    }
+                }
 
                 $number++;
 
                 $reason = $value->reason;
 
-                // if (!empty($value->leavetype))
-                //     $reason = "<span class='badge badge-info' id=" . $value->md_leavetype_id . ">" . $value->leavetype . "</span>" . " - " . $value->reason;
-
-                // $row[] = $this->field->fieldTable($fieldChk);
                 $row[] = $number;
                 $row[] = format_dmy($value->date, '-');
                 $row[] = format_time($value->date);
@@ -341,13 +361,12 @@ class Realization extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = $value->employee_fullname;
+                $row[] = isset($tanggal) ? $tanggal : '';
+                $row[] = isset($clock) ? $clock : '';
                 $row[] = $reason;
-                $row[] = $this->template->tableButtonProcess($ID, null, 'ada');
+                $row[] = $this->template->tableButtonProcess($ID, true);
                 $data[] = $row;
             endforeach;
-
-            // $recordsTotal = count($data);
-            // $recordsFiltered = count($data);
 
             $result = [
                 'draw'              => $this->request->getPost('draw'),
@@ -535,6 +554,7 @@ class Realization extends BaseController
             $agree = 'Y';
             $notAgree = 'N';
             $holdAgree = 'H';
+            $today = date('Y-m-d');
 
             $isAgree = $post['isagree'];
 
@@ -586,7 +606,7 @@ class Realization extends BaseController
                     if (is_null($list)) {
                         $mOvertime = new M_Overtime($this->request);
                         $oEntity = new \App\Entities\Overtime();
-
+                        $oEntity->setReceivedDate($today);
                         $oEntity->setOvertimeId($line->trx_overtime_id);
                         $oEntity->setDocStatus($this->DOCSTATUS_Completed);
                         $mOvertime->save($oEntity);
@@ -609,6 +629,7 @@ class Realization extends BaseController
             $agree = 'Y';
             $notAgree = 'N';
             $holdAgree = 'H';
+            $today = date('Y-m-d');
 
             $isAgree = $post['isagree'];
 
@@ -633,36 +654,25 @@ class Realization extends BaseController
                         $this->entity->date = $enddate;
                         $this->entity->isagree = $isAgree;
                         $response = $this->save();
-
-
-                        $mAbsent = new M_Absent($this->request);
-                        $absentEntity = new \App\Entities\Absent();
-
-                        $absentEntity->setAbsentId($list->trx_absent_id);
-                        $absentEntity->setStartDate($enddate);
-                        $absentEntity->setEndDate($enddate);
-                        $absentEntity->setEndDateRealization($enddate);
-
-                        $mAbsent->save($absentEntity);
                     }
 
-                    if ($isAgree === $notAgree) {
-                        $this->model = new M_AbsentDetail($this->request);
-                        $this->entity = new \App\Entities\AbsentDetail();
-                        $this->entity->trx_absent_detail_id = $post['id'];
-                        $this->entity->isagree = $isAgree;
+                    // if ($isAgree === $notAgree) {
+                    //     $this->model = new M_AbsentDetail($this->request);
+                    //     $this->entity = new \App\Entities\AbsentDetail();
+                    //     $this->entity->trx_absent_detail_id = $post['id'];
+                    //     $this->entity->isagree = $isAgree;
 
-                        $response = $this->save();
-                    }
+                    //     $response = $this->save();
+                    // }
 
-                    // if (is_null($list)) {
                     $mAbsent = new M_Absent($this->request);
                     $aEntity = new \App\Entities\Absent();
 
                     $aEntity->setAbsentId($list->trx_absent_id);
                     $aEntity->setDocStatus($this->DOCSTATUS_Completed);
+                    $aEntity->setReceivedDate($today);
+                    $aEntity->setEndDateRealization($enddate);
                     $mAbsent->save($aEntity);
-                    // }
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

@@ -474,6 +474,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('laporan-kehadiran', 'Backend\Attendance::reportIndex');
     $routes->match(['get', 'post'], 'laporan-kehadiran/showAll', 'Backend\Attendance::reportShowAll');
+    $routes->match(['get', 'post'], 'Kehadiran/getJamAbsen', 'Backend\Attendance::getClockInOut');
 
     $routes->add('laporan-kehadiran-new', 'Backend\AttendanceNew::reportIndex');
     $routes->match(['get', 'post'], 'laporan-kehadiran-new/showAll', 'Backend\AttendanceNew::reportShowAll');
@@ -538,6 +539,12 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('laporan-saldo-cuti-summary', 'Backend\Rpt_LeaveBalance::indexSummary');
     $routes->match(['get', 'post'], 'laporan-saldo-cuti-summary/showAll', 'Backend\Rpt_LeaveBalance::showAllSummary');
+
+    $routes->add('laporan-lembur', 'Backend\Rpt_Overtime::index');
+    $routes->match(['get', 'post'], 'laporan-lembur/showAll', 'Backend\Rpt_Overtime::showAll');
+
+    $routes->add('laporan-lembur-mingguan', 'Backend\Rpt_Overtime::indexWeekly');
+    $routes->match(['get', 'post'], 'laporan-lembur-mingguan/showAll', 'Backend\Rpt_Overtime::showAllWeekly');
 
     $routes->add('calendar', 'Backend\Year::index');
     $routes->match(['get', 'post'], 'calendar/showAll', 'Backend\Year::showAll');
