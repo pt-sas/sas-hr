@@ -750,7 +750,7 @@ $("#form_responsible").on(
   }
 );
 
-$("#form_employee").on(
+$("#form_employee, #form_outsourcing").on(
   "change",
   "select[name=md_country_id], select[name=md_country_dom_id]",
   function (e) {
@@ -890,7 +890,7 @@ $("#form_employee").on(
   }
 );
 
-$("#form_employee").on(
+$("#form_employee, #form_outsourcing").on(
   "change",
   "select[name=md_province_id], select[name=md_province_dom_id]",
   function (e) {
@@ -1041,7 +1041,7 @@ $("#form_employee").on(
   }
 );
 
-$("#form_employee").on(
+$("#form_employee, #form_outsourcing").on(
   "change",
   "select[name=md_city_id], select[name=md_city_dom_id]",
   function (e) {
@@ -1187,7 +1187,7 @@ $("#form_employee").on(
   }
 );
 
-$("#form_employee").on(
+$("#form_employee, #form_outsourcing").on(
   "change",
   "select[name=md_district_id], select[name=md_district_dom_id]",
   function (e) {
@@ -1329,50 +1329,54 @@ $("#form_employee").on(
   }
 );
 
-$("#form_employee").on("change", "input[name=issameaddress]", function (e) {
-  const _this = $(this);
-  const target = $(e.target);
-  const form = target.closest("form");
+$("#form_employee, #form_outsourcing").on(
+  "change",
+  "input[name=issameaddress]",
+  function (e) {
+    const _this = $(this);
+    const target = $(e.target);
+    const form = target.closest("form");
 
-  const fields = _this
-    .attr("hide-field")
-    .split(",")
-    .map((element) => element.trim());
+    const fields = _this
+      .attr("hide-field")
+      .split(",")
+      .map((element) => element.trim());
 
-  if (_this.is(":checked")) {
-    for (let i = 0; i < fields.length; i++) {
-      form
-        .find(
-          "input[name=" +
-            fields[i] +
-            "], textarea[name=" +
-            fields[i] +
-            "], select[name=" +
-            fields[i] +
-            "]"
-        )
-        .not(".line")
-        .closest(".form-group")
-        .hide();
-    }
-  } else {
-    for (let i = 0; i < fields.length; i++) {
-      form
-        .find(
-          "input[name=" +
-            fields[i] +
-            "], textarea[name=" +
-            fields[i] +
-            "], select[name=" +
-            fields[i] +
-            "]"
-        )
-        .not(".line")
-        .closest(".form-group")
-        .show();
+    if (_this.is(":checked")) {
+      for (let i = 0; i < fields.length; i++) {
+        form
+          .find(
+            "input[name=" +
+              fields[i] +
+              "], textarea[name=" +
+              fields[i] +
+              "], select[name=" +
+              fields[i] +
+              "]"
+          )
+          .not(".line")
+          .closest(".form-group")
+          .hide();
+      }
+    } else {
+      for (let i = 0; i < fields.length; i++) {
+        form
+          .find(
+            "input[name=" +
+              fields[i] +
+              "], textarea[name=" +
+              fields[i] +
+              "], select[name=" +
+              fields[i] +
+              "]"
+          )
+          .not(".line")
+          .closest(".form-group")
+          .show();
+      }
     }
   }
-});
+);
 
 _table.on("click", "a.popup-image", function (e) {
   e.preventDefault();
@@ -1967,57 +1971,63 @@ _tableRealization.on("click", ".btn_view_image", function (e) {
   });
 });
 
-$(".form-half-day").on("change dp.change", "#nik, #startdate", function (e) {
-  let _this = $(this);
-  const form = _this.closest("form");
-  let formData = new FormData();
-  let today = Date();
-  let nik = $("#nik").val();
-  let startdate = $("#startdate").val();
-  let typeForm;
+$(".form-half-day").on(
+  "change dp.change",
+  "#nik, #startdate, #submissiondate",
+  function (e) {
+    let _this = $(this);
+    const form = _this.closest("form");
+    let formData = new FormData();
+    let nik = $("#nik").val();
+    let startdate = $("#startdate").val();
+    let typeForm;
 
-  if (form.is($("#form_permission_arrived"))) {
-    // DocumentType Datang Terlambat
-    typeForm = 100012;
-  } else if (form.is($("#form_permission_leave_early"))) {
-    // DocumentType Pulang Cepat
-    typeForm = 100013;
+    if (form.is($("#form_permission_arrived"))) {
+      // DocumentType Datang Terlambat
+      typeForm = 100012;
+    } else if (form.is($("#form_permission_leave_early"))) {
+      // DocumentType Pulang Cepat
+      typeForm = 100013;
+    }
+
+    formData.append("startdate", startdate);
+    formData.append("nik", nik);
+    formData.append("typeform", typeForm);
+
+    let url = ADMIN_URL + "Kehadiran/getJamAbsen";
+
+    if (
+      new Date($("#startdate").val()).getTime() <=
+      new Date($("#submissiondate").val()).getTime()
+    ) {
+      $("#starttime").prop("disabled", true);
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".x_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+          loadingForm(form.prop("id"), "facebook");
+        },
+        complete: function () {
+          $(".x_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+          hideLoadingForm(form.prop("id"));
+        },
+        success: function (result) {
+          form.find("[name=starttime]").val(result.clock);
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    } else {
+      $("#starttime").prop("disabled", false);
+    }
   }
-
-  formData.append("startdate", startdate);
-  formData.append("nik", nik);
-  formData.append("typeform", typeForm);
-
-  let url = ADMIN_URL + "Kehadiran/getJamAbsen";
-
-  if (new Date($("#startdate").val()).getTime() <= new Date(today).getTime()) {
-    $("#starttime").prop("disabled", true);
-    $.ajax({
-      url: url,
-      type: "POST",
-      data: formData,
-      processData: false,
-      contentType: false,
-      cache: false,
-      dataType: "JSON",
-      beforeSend: function () {
-        $(".x_form").prop("disabled", true);
-        $(".close_form").prop("disabled", true);
-        loadingForm(form.prop("id"), "facebook");
-      },
-      complete: function () {
-        $(".x_form").removeAttr("disabled");
-        $(".close_form").removeAttr("disabled");
-        hideLoadingForm(form.prop("id"));
-      },
-      success: function (result) {
-        form.find("[name=starttime]").val(result.clock);
-      },
-      error: function (jqXHR, exception) {
-        showError(jqXHR, exception);
-      },
-    });
-  } else {
-    $("#starttime").prop("disabled", false);
-  }
-});
+);
