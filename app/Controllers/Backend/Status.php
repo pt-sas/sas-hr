@@ -95,7 +95,7 @@ class Status extends BaseController
                 $fieldHeader->setList($list);
 
                 $result = [
-                    'header'   => $this->field->store($fieldheader)
+                    'header'   => $this->field->store($fieldHeader)
                 ];
 
                 $response = message('success', true, $result);
@@ -152,10 +152,55 @@ class Status extends BaseController
 
             try {
                 if (isset($post['search'])) {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->like('name', $post['search'])
-                        ->orderBy('name', 'ASC')
-                        ->findAll();
+                    if (!empty($post['name'])) {
+                        if ($post['name'] === "OUTSOURCING") {
+                            $list = $this->model->where([
+                                'isactive'  => 'Y'
+                            ])->whereIn('name', [$post['name'], "RESIGN"])
+                                ->like('name', $post['search'])
+                                ->orderBy('name', 'ASC')
+                                ->findAll();
+                        } else if ($post['name'] === "EMPLOYEE") {
+                            $list = $this->model->where([
+                                'isactive'  => 'Y',
+                                'name <>'   => "OUTSOURCING"
+                            ])->like('name', $post['search'])
+                                ->orderBy('name', 'ASC')
+                                ->findAll();
+                        } else {
+                            $list = $this->model->where([
+                                'isactive'  => 'Y',
+                                'name'      => $post['name']
+                            ])->like('name', $post['search'])
+                                ->orderBy('name', 'ASC')
+                                ->findAll();
+                        }
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
+                } else if (!empty($post['name'])) {
+                    if ($post['name'] === "OUTSOURCING") {
+                        $list = $this->model->where([
+                            'isactive'  => 'Y'
+                        ])->whereIn('name', [$post['name'], "RESIGN"])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else if ($post['name'] === "EMPLOYEE") {
+                        $list = $this->model->where([
+                            'isactive'  => 'Y',
+                            'name <>'   => "OUTSOURCING"
+                        ])->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where([
+                            'isactive'  => 'Y',
+                            'name'      => $post['name']
+                        ])->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
                 } else {
                     $list = $this->model->where('isactive', 'Y')
                         ->orderBy('name', 'ASC')
@@ -165,7 +210,6 @@ class Status extends BaseController
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getStatusId();
                     $response[$key]['text'] = $row->getName();
-
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
