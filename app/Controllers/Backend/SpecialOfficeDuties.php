@@ -8,12 +8,9 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AccessMenu;
 use App\Models\M_AbsentDetail;
-use App\Models\M_Holiday;
-use App\Models\M_Attendance;
 use App\Models\M_Rule;
-use App\Models\M_WorkDetail;
-use App\Models\M_EmpWorkDay;
 use App\Models\M_Division;
+use App\Models\M_RuleDetail;
 use TCPDF;
 
 class SpecialOfficeDuties extends BaseController
@@ -156,100 +153,50 @@ class SpecialOfficeDuties extends BaseController
 
     public function create()
     {
-        $mHoliday = new M_Holiday($this->request);
-        $mAttendance = new M_Attendance($this->request);
         $mRule = new M_Rule($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-
+        $mRuleDetail = new M_RuleDetail($this->request);
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->model->Pengajuan_Tugas_Khusus;
             $post["necessary"] = 'TS';
-            $today = date('Y-m-d');
-            $employeeId = $post['md_employee_id'];
-            $day = date('w');
 
             try {
                 if (!$this->validation->run($post, 'absent')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    // $holidays = $mHoliday->getHolidayDate();
-                    // $startDate = $post['startdate'];
-                    // $endDate = $post['enddate'];
-                    // $nik = $post['nik'];
-                    // $submissionDate = $post['submissiondate'];
+                    $rule = $mRule->where([
+                        'name'      => 'Tugas Kantor Khusus',
+                        'isactive'  => 'Y'
+                    ])->first();
 
-                    // $rule = $mRule->where([
-                    //     'name'      => 'Tugas Kantor 1 Hari',
-                    //     'isactive'  => 'Y'
-                    // ])->first();
+                    $ruleDetail = $rule ? $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'isactive' => 'Y'])->first() : null;
 
-                    // $countDays = $rule && !empty($rule->min) ? $rule->min : 1;
+                    $startDate = $post['startdate'];
+                    $submissionDate = $post['submissiondate'];
+                    $today = date('H:i');
+                    $todayMinutes = convertToMinutes($today);
+                    $maxMinutes = $ruleDetail ? convertToMinutes(date("H:i", strtotime($ruleDetail->condition))) : null;
 
-                    //TODO : Get attendance not present employee
-                    // $attNotPresent = $mAttendance->where([
-                    //     'nik'       => $nik,
-                    //     'date'      => $startDate,
-                    //     'absent'    => 'N'
-                    // ])->first();
+                    $dateReq = date('Y-m-d', strtotime($startDate));
+                    $subDate = date('Y-m-d', strtotime($submissionDate));
 
-                    //TODO : Get next day attendance from enddate
-                    // $attPresentNextDay = $mAttendance->where([
-                    //     'nik'       => $nik,
-                    //     'date >'    => $endDate,
-                    //     'absent'    => 'Y'
-                    // ])->orderBy('date', 'ASC')->first();
+                    if ($dateReq < $subDate) {
+                        $response = message('success', false, 'Tanggal pengajuan sudah melewati hari lembur');
+                    } else if ($dateReq === $subDate && ($maxMinutes && ($todayMinutes > $maxMinutes))) {
+                        $response = message('success', false, 'Maksimal jam pengajuan ' . $ruleDetail->condition);
+                    } else {
+                        $this->entity->fill($post);
 
-                    // $nextDate = lastWorkingDays($attPresentNextDay->date, $holidays, $countDays, false);
+                        if ($this->isNew()) {
+                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    //* index array 1 from variable attPresentNextDay first date
-                    // $lastDate = $nextDate[1];
+                            $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Tugas_Khusus, $post);
+                            $this->entity->setDocumentNo($docNo);
+                        }
 
-                    //TODO : Get submission
-                    // $whereClause = "trx_absent.nik = $nik";
-                    // $whereClause .= " AND trx_absent.startdate >= '$startDate' AND trx_absent.enddate <= '$endDate'";
-                    // $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
-                    // $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                    // $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
-
-                    // $subDate = date('Y-m-d', strtotime($submissionDate));
-
-                    // $workDay = $mEmpWork->where([
-                    //     'md_employee_id'    => $post['md_employee_id'],
-                    //     'validfrom <='      => $today
-                    // ])->orderBy('validfrom', 'ASC')->first();
-
-                    // $day = strtoupper(formatDay_idn($day));
-
-                    //TODO : Get Work Detail
-                    // $whereClause = "md_work_detail.isactive = 'Y'";
-                    // $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                    // $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                    // $whereClause .= " AND md_day.name = '$day'";
-                    // $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
-
-                    // if (is_null($workDay)) {
-                    //     $response = message('success', false, 'Hari kerja belum ditentukan');
-                    // } else if (is_null($work)) {
-                    //     $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
-                    // } else if (!is_null($attPresentNextDay) && !($lastDate >= $subDate) && $workDay && $work && $attNotPresent) {
-                    //     $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
-                    // } else if ($trx) {
-                    //     $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
-                    // } else {
-                    $this->entity->fill($post);
-
-                    if ($this->isNew()) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Tugas_Khusus, $post);
-                        $this->entity->setDocumentNo($docNo);
+                        $response = $this->save();
                     }
-
-                    $response = $this->save();
-                    // }
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

@@ -1593,6 +1593,13 @@ class Validation
             'errors'        => [
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
+        ],
+        'description'       => [
+            'label'         => 'Deskripsi',
+            'rules'         => 'required',
+            'errors'        => [
+                'required'      => 'Mohon isi {field} dahulu'
+            ]
         ]
     ];
 
@@ -1847,7 +1854,195 @@ class Validation
             ]
         ],
     ];
+  
+    public $supplier = [
+        'value'                => [
+            'label'            => 'Supplier Code',
+            'rules'            => 'required|min_length[7]|max_length[7]|is_unique[md_supplier.value,md_supplier_id,{id}]',
+            'errors'           => [
+                'is_unique'    => 'This {field} already exists.',
+                'required'     => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'name'                 => [
+            'label'            => 'Supplier Name',
+            'rules'            => 'required|is_unique[md_supplier.name,md_supplier_id,{id}]',
+            'errors'           => [
+                'is_unique'    => 'This {field} already exists.',
+                'required'     => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'address'              => [
+            'label'            => 'Address',
+            'rules'            => 'required',
+            'errors'           => [
+                'required'     => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
 
+    public $outsourcing = [
+        'value' => [
+            'label'            => 'value',
+            'rules'            => 'required|is_unique[md_employee.value,md_employee_id,{id}]',
+            'errors'           => [
+                'is_unique'    => 'This {field} already exists.',
+                'required'     => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'nik'                   => [
+            'label'             => 'nik',
+            'rules'             => 'required|min_length[6]|max_length[6]|is_unique[md_employee.nik,md_employee_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'min_length'    => 'Minimal {field} harus {param} karakter',
+                'max_length'    => 'Maksimal {field} harus {param} karakter',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'fullname'              => [
+            'label'             => 'nama lengkap',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'pob'                   => [
+            'label'             => 'tempat lahir',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'birthday'              => [
+            'label'             => 'tanggal lahir',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'gender'                => [
+            'label'             => 'jenis kelamin',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'nationality'           => [
+            'label'             => 'kewarganegaraan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'phone'                 => [
+            'label'             => 'no hp pribadi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_position_id'        => [
+            'label'             => 'jabatan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_levelling_id'       => [
+            'label'             => 'level',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_status_id'          => [
+            'label'             => 'status karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id.*'      => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'address_dom'           => [
+            'label'             => 'alamat domisili',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_country_dom_id'     => [
+            'label'             => 'negara',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_province_dom_id'    => [
+            'label'             => 'provinsi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_city_dom_id'        => [
+            'label'             => 'kota',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_district_dom_id'    => [
+            'label'             => 'kecamatan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_subdistrict_dom_id' => [
+            'label'             => 'kelurahan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'postalcode_dom'        => [
+            'label'             => 'kode pos',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'card_id'               => [
+            'label'             => 'no ktp',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_supplier_id'               => [
+            'label'             => 'vendor',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+
+    ];
+  
     public $wactivity = [
         'textmsg'        => [
             'label'             => 'message',

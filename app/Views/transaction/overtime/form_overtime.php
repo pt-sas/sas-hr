@@ -5,13 +5,15 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Pemohon<span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList/$Access">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
+                        data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -38,7 +40,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan</label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?>>
+                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                        value=<?= $today ?>>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
@@ -79,9 +82,9 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="reason">Alasan <span class="required">*</span></label>
-                    <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
-                    <small class="form-text text-danger" id="error_reason"></small>
+                    <label for="description">Deskripsi <span class="required">*</span></label>
+                    <textarea type="text" class="form-control" name="description" rows="4"></textarea>
+                    <small class="form-text text-danger" id="error_description"></small>
                 </div>
             </div>
         </div>
@@ -89,7 +92,8 @@
             <div class="col-md-12">
                 <div class="form-group">
                     <div class="text-right">
-                        <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row" title="Tambah Baru"><i class="fa fa-plus fa-fw"></i> Tambah</button>
+                        <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row"
+                            title="Tambah Baru"><i class="fa fa-plus fa-fw"></i> Tambah</button>
                     </div>
                 </div>
             </div>

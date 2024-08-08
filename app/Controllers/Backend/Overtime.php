@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Models\M_AbsentDetail;
 use App\Models\M_Overtime;
 use App\Models\M_OvertimeDetail;
+use App\Models\M_Division;
 use App\Models\M_AccessMenu;
 use App\Models\M_Employee;
 use App\Models\M_Holiday;
@@ -13,6 +14,7 @@ use App\Models\M_Rule;
 use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_RuleDetail;
+use TCPDF;
 use Config\Services;
 
 class Overtime extends BaseController
@@ -108,7 +110,7 @@ class Overtime extends BaseController
                 $row[] = $value->description;
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
-                $row[] = $this->template->tableButton($ID, $value->docstatus);
+                $row[] = $this->template->tableButton($ID, $value->docstatus, $this->BTN_Print);
                 $data[] = $row;
             endforeach;
 
@@ -536,5 +538,105 @@ class Overtime extends BaseController
         }
 
         return json_encode($table);
+    }
+
+    public function exportPDF($id)
+    {
+        $mEmployee = new M_Employee($this->request);
+        $mDivision = new M_Division($this->request);
+
+
+        $list = $this->model->find($id);
+        $mOvertimeDetail = new M_OvertimeDetail($this->request);
+        $employee = $mEmployee->where($mEmployee->primaryKey, $list->md_employee_id)->first();
+        $division = $mDivision->where($mDivision->primaryKey, $list->md_division_id)->first();
+        $tglpenerimaan = '';
+
+        if ($list->receiveddate !== null) {
+            $tglpenerimaan = format_dmy($list->receiveddate, '-');
+        };
+
+        //bagian PF
+        $pdf = new TCPDF('P', PDF_UNIT, 'A4', true, 'UTF-8', false);
+
+        $pdf->setPrintHeader(false);
+        $pdf->AddPage();
+        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(50, 0, 'No Form : ' . $list->documentno, 0, 1, 'L', false, '', 0, false);
+        $pdf->setFont('helvetica', 'B', 20);
+        $pdf->Cell(0, 25, 'SURAT PERINTAH LEMBUR', 0, 1, 'C');
+        $pdf->setFont('helvetica', '', 12);
+        //Ini untuk bagian field nama dan tanggal pengajuan
+        $pdf->Ln(2);
+        //Ini untuk bagian field divisi dan Tanggal diterima
+        $pdf->Cell(30, 0, 'Divisi ', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . $division->name, 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, 'Tanggal Diterima', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(30, 0, ': ' . $tglpenerimaan, 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(2);
+        //Ini bagian tanggal ijin dan jam
+        $pdf->Cell(30, 0, 'Tanggal', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, ': ' . format_dmy($list->startdate, '-'), 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(2);
+        //Ini bagian Alasan
+        $pdf->Cell(30, 0, 'Alasan', 0, 0, 'L');
+        $pdf->Cell(3, 0, ':', 0, 0, 'L');
+        $pdf->MultiCell(0, 20, $list->description, 0, '', false, 1, null, null, false, 0, false, false, 20);
+        $pdf->Ln(2);
+
+        $header = ['No', 'Karyawan', 'Keterangan', 'Jam Mulai', 'Jam Selesai'];
+
+        $detail = $mOvertimeDetail->where('trx_overtime_id', $list->trx_overtime_id)->find();
+
+        // Colors, line width and bold font
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetTextColor(0);
+        $pdf->SetDrawColor(0, 0, 0);
+        $pdf->SetLineWidth(0.3);
+        $pdf->SetFont('', 'B');
+        // Header
+        $w = array(10, 50, 70, 30, 30);
+        $num_headers = count($header);
+        for ($i = 0; $i < $num_headers; ++$i) {
+            $pdf->Cell($w[$i], 7, $header[$i], 1, 0, 'C', 1);
+        }
+        $pdf->Ln();
+        // Color and font restoration
+        $pdf->SetFillColor(224, 235, 255);
+        $pdf->SetTextColor(0);
+        $pdf->SetFont('');
+
+
+        // Data table line
+        $number = 1;
+        foreach ($detail as $row) {
+            $employeeDetail = $mEmployee->where('md_employee_id', $row->md_employee_id)->first();
+
+            $pdf->Cell($w[0], 6, $number, 1, 0, 'C');
+            $pdf->Cell($w[1], 6, $employeeDetail->value, 1, 0, 'L');
+            $pdf->Cell($w[2], 6, $row->description, 1, 0, 'L', false, '', 1);
+            $pdf->Cell($w[3], 6, format_time($row->startdate), 1, 0, 'C');
+            $pdf->Cell($w[4], 6, format_time($row->enddate), 1, 0, 'C');
+            $pdf->Ln();
+            $number++;
+        }
+        // $pdf->Cell(array_sum($w), 0, '', 'T');
+
+        //Bagian ttd
+        $pdf->Ln(10);
+        $pdf->setFont('helvetica', '', 10);
+        $pdf->Cell(63, 0, 'Dibuat oleh,', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Disetujui oleh,', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Diketahui oleh,', 0, 0, 'C');
+        $pdf->Ln(25);
+        $pdf->Cell(63, 0, $employee->fullname, 0, 0, 'C');
+        $pdf->Cell(63, 0, '(                          )', 0, 0, 'C');
+        $pdf->Cell(63, 0, '(                          )', 0, 1, 'C');
+        // $pdf->Cell(63, 0, 'Karyawan Ybs', 0, 0, 'C');
+        // $pdf->Cell(63, 0, 'Mgr. Dept. Ybs', 0, 0, 'C');
+        // $pdf->Cell(63, 0, 'HRD', 0, 0, 'C');
+
+        $this->response->setContentType('application/pdf');
+        $pdf->Output('detail-laporan,pdf', 'I');
     }
 }

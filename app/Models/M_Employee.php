@@ -65,7 +65,8 @@ class M_Employee extends Model
 		'isactive',
 		'isovertime',
 		'created_by',
-		'updated_by'
+		'updated_by',
+		'md_supplier_id'
 	];
 	protected $useTimestamps        = true;
 	protected $returnType 			= 'App\Entities\Employee';

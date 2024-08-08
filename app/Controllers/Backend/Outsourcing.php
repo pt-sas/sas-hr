@@ -18,9 +18,10 @@ use App\Models\M_ReferenceDetail;
 use App\Models\M_Religion;
 use App\Models\M_Role;
 use App\Models\M_Status;
+use App\Models\M_Supplier;
 use Config\Services;
 
-class Employee extends BaseController
+class Outsourcing extends BaseController
 {
     protected $PATH_Karyawan = "karyawan";
 
@@ -59,7 +60,7 @@ class Employee extends BaseController
                 ->findAll()
         ];
 
-        return $this->template->render('masterdata/employee/v_employee', $data);
+        return $this->template->render('masterdata/outsourcing/v_outsourcing', $data);
     }
 
     public function showAll()
@@ -109,7 +110,7 @@ class Employee extends BaseController
                 $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['md_employee.md_supplier_id'] = 0;
+            $where['md_employee.md_supplier_id <>'] = 0;
 
             $data = [];
 
@@ -127,13 +128,13 @@ class Employee extends BaseController
 
                 $row[] = $ID;
                 $row[] = $number;
-                $row[] = imageShow($path, $value->image, $fullName);
+                // $row[] = imageShow($path, $value->image, $fullName);
                 $row[] = $value->value;
                 $row[] = $fullName;
                 $row[] = $value->pob;
                 $row[] = format_dmy($value->birthday, "-");
                 $row[] = $value->gender_name;
-                $row[] = $value->religion_name;
+                // $row[] = $value->religion_name;
                 $row[] = active($value->isactive);
                 $row[] = $this->template->tableButton($ID);
                 $data[] = $row;
@@ -154,37 +155,37 @@ class Employee extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
-            $file = $this->request->getFile('image');
+            // $file = $this->request->getFile('image');
 
             try {
-                $img_name = "";
+                // $img_name = "";
 
                 //TODO: Set null data for gender combobox not choose
                 if (!isset($post['gender']))
                     $post['gender'] = "";
 
-                if ($file && $file->isValid()) {
-                    $img_name = $file->getName();
-                    $post['image'] = $img_name;
-                }
+                // if ($file && $file->isValid()) {
+                //     $img_name = $file->getName();
+                //     $post['image'] = $img_name;
+                // }
 
-                if (!$this->validation->run($post, 'employee')) {
+                if (!$this->validation->run($post, 'outsourcing')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
+                    // $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
 
-                    if ($this->isNew()) {
-                        uploadFile($file, $path);
-                    } else {
-                        $row = $this->model->find($this->getID());
+                    // if ($this->isNew()) {
+                    //     uploadFile($file, $path);
+                    // } else {
+                    //     $row = $this->model->find($this->getID());
 
-                        if ($post['image'] !== $row->getImage()) {
-                            if (file_exists($path . $row->getImage())) {
-                                unlink($path . $row->getImage());
-                                $response = $file->move($path);
-                            }
-                        }
-                    }
+                    //     if ($post['image'] !== $row->getImage()) {
+                    //         if (file_exists($path . $row->getImage())) {
+                    //             unlink($path . $row->getImage());
+                    //             $response = $file->move($path);
+                    //         }
+                    //     }
+                    // }
 
                     $this->entity->fill($post);
 
@@ -340,212 +341,6 @@ class Employee extends BaseController
             try {
                 $result = $this->delete($id);
                 $response = message('success', true, $result);
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
-
-            return $this->response->setJSON($response);
-        }
-    }
-
-    public function getBy($id)
-    {
-        if ($this->request->isAJAX()) {
-            $response = [];
-
-            try {
-                $row = $this->model->find($id);
-                $response['text'] = $row->fullname;
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
-
-            return $this->response->setJSON($response);
-        }
-    }
-
-    public function getDetailEmployee()
-    {
-        if ($this->request->isAJAX()) {
-            $post = $this->request->getVar();
-            $response = [];
-
-            try {
-                $mEmpBranch = new M_EmpBranch($this->request);
-                $mEmpDiv = new M_EmpDivision($this->request);
-                $mBranch = new M_Branch($this->request);
-                $mDiv = new M_Division($this->request);
-
-                $id = $post["md_employee_id"];
-                $list = $this->model->where($this->model->primaryKey, $id)->findAll();
-                $rowBranch = $mEmpBranch->where($this->model->primaryKey, $id)->findAll();
-                $rowDiv = $mEmpDiv->where($this->model->primaryKey, $id)->findAll();
-
-                $list = $this->field->setDataSelect($mEmpBranch->table, $list, $mBranch->primaryKey, $mBranch->primaryKey, "name", $rowBranch);
-                $list = $this->field->setDataSelect($mEmpDiv->table, $list, $mDiv->primaryKey, $mDiv->primaryKey, "name", $rowDiv);
-
-                $response = $list;
-
-                // $response = gettype($rowBranch);
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
-
-            return $this->response->setJSON($response);
-        }
-    }
-
-    public function getList()
-    {
-        $mAccess = new M_AccessMenu($this->request);
-
-        if ($this->request->isAjax()) {
-            $post = $this->request->getVar();
-
-            $response = [];
-
-            try {
-                $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-                $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-                $arrEmployee = $this->model->getChartEmployee($this->session->get('md_employee_id'));
-
-                if (isset($post['search'])) {
-                    if (!empty($post['name'])) {
-                        if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                            $arrBranch = $arrAccess["branch"];
-                            $arrDiv = $arrAccess["division"];
-
-                            $arrEmpBased = $this->model->getEmployeeBased($arrBranch, $arrDiv);
-
-                            if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                                $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                                $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                    ->whereIn('md_employee_id', $arrMerge)
-                                    ->like('value', $post['search'])
-                                    ->orderBy('value', 'ASC')
-                                    ->findAll();
-                            } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                                $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                    ->whereIn('md_employee_id', $arrEmployee)
-                                    ->like('value', $post['search'])
-                                    ->orderBy('value', 'ASC')
-                                    ->findAll();
-                            } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                                $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                    ->whereIn('md_employee_id', $arrEmpBased)
-                                    ->like('value', $post['search'])
-                                    ->orderBy('value', 'ASC')
-                                    ->findAll();
-                            } else {
-                                $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                    ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
-                                    ->like('value', $post['search'])
-                                    ->orderBy('value', 'ASC')
-                                    ->findAll();
-                            }
-                        } else if (!empty($this->session->get('md_employee_id'))) {
-                            $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                ->whereIn('md_employee_id', $arrEmployee)
-                                ->like('value', $post['search'])
-                                ->orderBy('value', 'ASC')
-                                ->findAll();
-                        } else {
-                            $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
-                                ->orderBy('value', 'ASC')
-                                ->findAll();
-                        }
-                    } else {
-                        $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                            ->like('value', $post['search'])
-                            ->orderBy('value', 'ASC')
-                            ->findAll();
-                    }
-                } else if (!empty($post['name'])) {
-                    if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                        $arrBranch = $arrAccess["branch"];
-                        $arrDiv = $arrAccess["division"];
-
-                        $arrEmpBased = $this->model->getEmployeeBased($arrBranch, $arrDiv);
-
-                        if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                            $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                            $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                ->whereIn('md_employee_id', $arrMerge)
-                                ->orderBy('value', 'ASC')
-                                ->findAll();
-                        } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                            $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                ->whereIn('md_employee_id', $arrEmployee)
-                                ->orderBy('value', 'ASC')
-                                ->findAll();
-                        } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                            $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                ->whereIn('md_employee_id', $arrEmpBased)
-                                ->orderBy('value', 'ASC')
-                                ->findAll();
-                        } else {
-                            $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                                ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
-                                ->orderBy('value', 'ASC')
-                                ->findAll();
-                        }
-                    } else if (!empty($this->session->get('md_employee_id'))) {
-                        $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                            ->whereIn('md_employee_id', $arrEmployee)
-                            ->orderBy('value', 'ASC')
-                            ->findAll();
-                    } else {
-                        $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                            ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
-                            ->orderBy('value', 'ASC')
-                            ->findAll();
-                    }
-                } else {
-                    $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
-                        ->orderBy('value', 'ASC')
-                        ->findAll();
-                }
-
-                foreach ($list as $key => $row) :
-                    $response[$key]['id'] = $row->getEmployeeId();
-                    $response[$key]['text'] = $row->getValue();
-                endforeach;
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
-
-            return $this->response->setJSON($response);
-        }
-    }
-
-    public function getSuperior()
-    {
-        if ($this->request->isAjax()) {
-            $post = $this->request->getVar();
-
-            $response = [];
-
-            try {
-                if (isset($post['search'])) {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->whereNotIn('md_levelling_id', [100005, 100006])
-                        ->like('fullname', $post['search'])
-                        ->orderBy('fullname', 'ASC')
-                        ->findAll();
-                } else {
-                    $list = $this->model->where('isactive', 'Y')
-                        ->whereNotIn('md_levelling_id', [100005, 100006])
-                        ->orderBy('fullname', 'ASC')
-                        ->findAll();
-                }
-
-                foreach ($list as $key => $row) :
-                    $response[$key]['id'] = $row->getEmployeeId();
-                    $response[$key]['text'] = $row->getFullName();
-                endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
