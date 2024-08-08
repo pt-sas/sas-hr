@@ -168,8 +168,8 @@ class PermissionArrived extends BaseController
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $holidays = $mHoliday->getHolidayDate();
-                    $startDate = $post['startdate'];
-                    $endDate = $post['enddate'];
+                    $startDate = date('Y-m-d', strtotime($post['startdate']));
+                    $endDate = date('Y-m-d', strtotime($post['enddate']));
                     $nik = $post['nik'];
                     $submissionDate = $post['submissiondate'];
                     $subDate = date('Y-m-d', strtotime($submissionDate));
@@ -192,21 +192,14 @@ class PermissionArrived extends BaseController
                     if (is_null($workDay)) {
                         $response = message('success', false, 'Hari kerja belum ditentukan');
                     } else {
-                        $day = strtoupper(formatDay_idn($day));
-
                         //TODO : Get Work Detail
                         $whereClause = "md_work_detail.isactive = 'Y'";
                         $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
                         $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
                         $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                        //TODO: Get Work Detail by day 
-                        $work = null;
-
-                        $whereClause .= " AND md_day.name = '$day'";
-                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
-
                         $daysOff = getDaysOff($workDetail);
+                        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
 
                         //TODO : Get next day attendance from enddate
                         $presentNextDate = null;
@@ -239,16 +232,11 @@ class PermissionArrived extends BaseController
                         //* Late Hour
                         $latehour = convertToMinutes($work->startwork) + $ruleDetail[0]->condition;
 
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
-
                         //* last index of array from variable addDays
+                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
-                        $endDate = date('Y-m-d', strtotime($endDate));
-
-                        if (is_null($work)) {
-                            $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
-                        } else if ($endDate > $addDays) {
+                        if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                         } else if (!is_null($presentNextDate) && !($lastDate >= $subDate) && $work) {
                             $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));

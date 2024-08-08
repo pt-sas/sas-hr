@@ -1710,25 +1710,25 @@ class Validation
             'rules'             => 'uploaded[image]|max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
                 'uploaded'      => 'Mohon upload {field} dahulu',
-                'max_size'      => 'Data {field} melebehi batas maksimum 1 Mb',
+                'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
             ]
         ],
         'image2'                 => [
             'label'             => 'foto 2',
-            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image2, 1024]|is_image[image2]|mime_in[image3,image/jpg,image/jpeg,image/png]',
             'errors'            => [
-                'max_size'      => 'Data {field} melebehi batas maksimum 1 Mb',
+                'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
             ]
         ],
         'image3'                 => [
             'label'             => 'foto 3',
-            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image3, 1024]|is_image[image3]|mime_in[image3,image/jpg,image/jpeg,image/png]',
             'errors'            => [
-                'max_size'      => 'Data {field} melebehi batas maksimum 1 Mb',
+                'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
             ]
@@ -1854,7 +1854,7 @@ class Validation
             ]
         ],
     ];
-
+  
     public $supplier = [
         'value'                => [
             'label'            => 'Supplier Code',
@@ -2041,5 +2041,15 @@ class Validation
             ]
         ],
 
+    ];
+  
+    public $wactivity = [
+        'textmsg'        => [
+            'label'             => 'message',
+            'rules'             => 'required_based_field_value[isanswer, W]',
+            'errors'            => [
+                'required_based_field_value'    => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
     ];
 }

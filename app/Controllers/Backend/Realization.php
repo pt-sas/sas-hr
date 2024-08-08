@@ -32,7 +32,7 @@ class Realization extends BaseController
 
         $data = [
             'date_range'            => $start_date . ' - ' . $end_date,
-            'toolbarRealization'    => $this->template->toolbarButtonProcess()
+            'toolbarRealization'    => $this->template->buttonExport()
         ];
 
         return $this->template->render('transaction/realization/v_realization', $data);
@@ -117,8 +117,8 @@ class Realization extends BaseController
 
                 $reason = $value->reason;
 
-                // if (!empty($value->leavetype))
-                //     $reason = "<span class='badge badge-info' id=" . $value->md_leavetype_id . ">" . $value->leavetype . "</span>" . " - " . $value->reason;
+                if ($value->comment)
+                    $reason .= " | <small class='text-danger'>{$value->comment}</small>";
 
                 // $row[] = $this->field->fieldTable($fieldChk);
                 $row[] = $number;
