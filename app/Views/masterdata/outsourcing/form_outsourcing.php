@@ -18,37 +18,13 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-6">
-
             <div class="form-group">
                 <label for="fullname">Nama Lengkap <span class="required">*</span></label>
                 <input type="text" class="form-control" id="fullname" name="fullname">
                 <small class="form-text text-danger" id="error_fullname"></small>
             </div>
         </div>
-        <!-- </div> -->
-        <!-- <div class="col-md-6">
-            <div class="form-group">
-                <label></label>
-                <div class="form-upload-result">
-                    <label class="col-md-6 form-result" id="product-result">
-                        <button type="button" class="close-img" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                        <img class="img-result">
-                    </label>
-                </div>
-                <div class="form-upload">
-                    <label class="col-md-6 form-upload-foto" id="product-upload">
-                        <input type="file" class="control-upload-image" id="image" name="image"
-                            onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
-                        <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
-                    </label>
-                    <small class="form-text text-danger" id="error_image"></small>
-                </div>
-            </div>
-        </div> -->
+        <div class="col-md-6"></div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="nickname">Nama Panggilan </label>
@@ -92,31 +68,15 @@
                 <small class="form-text text-danger" id="error_birthday"></small>
             </div>
         </div>
-        <!-- <div class="col-md-3">
-            <div class="form-group">
-                <label for="md_bloodtype_id">Golongan Darah </label>
-                <select class="form-control select-data" id="md_bloodtype_id" name="md_bloodtype_id"
-                    data-url="bloodtype/getList">
-                    <option value="">Select Golongan Darah</option>
-                </select>
-            </div>
-        </div> -->
-        <!-- <div class="col-md-3">
-            <div class="form-group">
-                <label for="rhesus">Rhesus </label>
-                <select class="form-control select-data" id="rhesus" name="rhesus" data-url="reference/getList/$Rhesus">
-                    <option value="">Select Rhesus</option>
-                </select>
-            </div>
-        </div> -->
+        <div class="col-md-6"></div>
         <div class="col-md-3">
             <div class="form-check">
                 <label>Jenis Kelamin <span class="required">*</span></label><br />
                 <?php foreach ($ref_list as $row) : ?>
-                <label class="form-radio-label">
-                    <input class="form-radio-input" type="radio" name="gender" value="<?= $row->value ?>">
-                    <span class="form-radio-sign"><?= $row->name ?></span>
-                </label>
+                    <label class="form-radio-label">
+                        <input class="form-radio-input" type="radio" name="gender" value="<?= $row->value ?>">
+                        <span class="form-radio-sign"><?= $row->name ?></span>
+                    </label>
                 <?php endforeach; ?>
                 <small class="form-text text-danger" id="error_gender"></small>
             </div>
@@ -124,39 +84,12 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="nationality">Kewarganegaraan <span class="required">*</span></label>
-                <select class="form-control select-data" id="nationality" name="nationality"
-                    data-url="reference/getList/$Nationality">
+                <select class="form-control select-data" id="nationality" name="nationality" data-url="reference/getList/$Nationality">
                     <option value="">Select Kewarganegaraan</option>
                 </select>
                 <small class="form-text text-danger" id="error_nationality"></small>
             </div>
         </div>
-        <!-- <div class="col-md-3">
-            <div class="form-group">
-                <label for="md_religion_id">Agama <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_religion_id" name="md_religion_id"
-                    data-url="religion/getList">
-                    <option value="">Select Agama</option>
-                </select>
-                <small class="form-text text-danger" id="error_md_religion_id"></small>
-            </div>
-        </div> -->
-        <!-- <div class="col-md-3">
-            <div class="form-group">
-                <label for="marital_status">Status Menikah <span class="required">*</span></label>
-                <select class="form-control select-data" id="marital_status" name="marital_status"
-                    data-url="reference/getList/$MaritalStatus">
-                    <option value="">Select Status Menikah</option>
-                </select>
-                <small class="form-text text-danger" id="error_marital_status"></small>
-            </div>
-        </div> -->
-        <!-- <div class="col-md-6">
-            <div class="form-group">
-                <label for="email">Email Pribadi </label>
-                <input type="text" class="form-control" name="email">
-            </div>
-        </div> -->
         <div class="col-md-3">
             <div class="form-group">
                 <label for="phone">No HP Pribadi <span class="required">*</span></label>
@@ -168,6 +101,59 @@
             <div class="form-group">
                 <label for="phone2">No HP Pribadi 2 </label>
                 <input type="text" class="form-control" id="phone2" name="phone2">
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="md_branch_id">Cabang <span class="required">*</span></label>
+                <div class="select2-input select2-primary">
+                    <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id" multiple="multiple" style="width: 100%;">
+                        <?php foreach ($branch as $row) : ?>
+                            <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-text text-danger" id="error_md_branch_id"></small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="md_division_id">Divisi <span class="required">*</span></label>
+                <div class="select2-input select2-primary">
+                    <select class="form-control multiple-select" id="md_division_id" name="md_division_id" multiple="multiple" style="width: 100%;">
+                        <?php foreach ($division as $row) : ?>
+                            <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-text text-danger" id="error_md_division_id"></small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="superior_id">Superior</label>
+                <select class="form-control select-data" id="superior_id" name="superior_id" data-url="karyawan/superior">
+                    <option value="">Select Superior</option>
+                </select>
+                <small class="form-text text-danger" id="error_superior_id"></small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="md_position_id">Jabatan <span class="required">*</span></label>
+                <select class="form-control select-data" id="md_position_id" name="md_position_id" data-url="position/getList">
+                    <option value="">Select Jabatan</option>
+                </select>
+                <small class="form-text text-danger" id="error_md_position_id"></small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="md_levelling_id">Level <span class="required">*</span></label>
+                <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id" data-url="levelling/getList">
+                    <option value="">Select Level</option>
+                </select>
+                <small class="form-text text-danger" id="error_md_levelling_id"></small>
             </div>
         </div>
         <div class="col-md-3">
@@ -186,98 +172,36 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="md_status_id">Status Karyawan <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_status_id" name="md_status_id"
-                    data-url="status/getList">
+                <select class="form-control select-data" id="md_status_id" name="md_status_id" hide-field="resigndate" data-url="status/getList/$OUTSOURCING">
                     <option value="">Select Status</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_status_id"></small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="resigndate">Tanggal Berhenti <span class="required">*</span></label>
+                <div class="input-group">
+                    <input type="text" class="form-control datepicker" id="resigndate" name="resigndate">
+                    <div class="input-group-append">
+                        <span class="input-group-text">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                </div>
+                <small class="form-text text-danger" id="error_resigndate"></small>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_supplier_id">Vendor <span class="required">*</span></label>
                 <div class="select2-input select2-primary">
-                    <select class="form-control select-data" id="md_supplier_id" name="md_supplier_id"
-                        style="width: 100%;" data-url="supplier/getList">
+                    <select class="form-control select-data" id="md_supplier_id" name="md_supplier_id" data-url="supplier/getList">
                     </select>
                     <small class="form-text text-danger" id="error_md_supplier_id"></small>
                 </div>
             </div>
         </div>
-        <!-- <div class="col-md-6">
-            <div class="form-group">
-                <label for="homestatus">Status Rumah <span class="required">*</span></label>
-                <select class="form-control select-data" id="homestatus" name="homestatus"
-                    data-url="reference/getList/$HomeStatus">
-                    <option value="">Select Status Rumah</option>
-                </select>
-                <small class="form-text text-danger" id="error_homestatus"></small>
-            </div>
-        </div> -->
-        <div class="col-md-6">
-            <div class="form-group">
-                <label for="superior_id">Superior</label>
-                <select class="form-control select-data" id="superior_id" name="superior_id"
-                    data-url="karyawan/superior">
-                    <option value="">Select Superior</option>
-                </select>
-                <small class="form-text text-danger" id="error_superior_id"></small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="md_branch_id">Cabang <span class="required">*</span></label>
-                <div class="select2-input select2-primary">
-                    <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id"
-                        multiple="multiple" style="width: 100%;">
-                        <?php foreach ($branch as $row) : ?>
-                        <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-text text-danger" id="error_md_branch_id"></small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="md_division_id">Divisi <span class="required">*</span></label>
-                <div class="select2-input select2-primary">
-                    <select class="form-control multiple-select" id="md_division_id" name="md_division_id"
-                        multiple="multiple" style="width: 100%;">
-                        <?php foreach ($division as $row) : ?>
-                        <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-text text-danger" id="error_md_division_id"></small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="md_position_id">Jabatan <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_position_id" name="md_position_id"
-                    data-url="position/getList">
-                    <option value="">Select Jabatan</option>
-                </select>
-                <small class="form-text text-danger" id="error_md_position_id"></small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="md_levelling_id">Level <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id"
-                    data-url="levelling/getList">
-                    <option value="">Select Level</option>
-                </select>
-                <small class="form-text text-danger" id="error_md_levelling_id"></small>
-            </div>
-        </div>
-        <!-- <div class="col-md-6">
-            <div class="form-group">
-                <label for="officephone">No HP Kantor </label>
-                <input type="text" class="form-control" id="officephone" name="officephone">
-            </div>
-        </div> -->
     </div>
     <div class="separator-solid"></div>
     <div class="row">
@@ -292,8 +216,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_country_id">Negara <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_country_dom_id" name="md_country_dom_id"
-                    data-url="country/getList">
+                <select class="form-control select-data" id="md_country_dom_id" name="md_country_dom_id" data-url="country/getList">
                     <option value="">Select Negara</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_country_dom_id"></small>
@@ -345,8 +268,7 @@
         <div class="col-md-6">
             <div class="form-check">
                 <label class="form-check-label">
-                    <input type="checkbox" class="form-check-input" id="issameaddress" name="issameaddress" checked
-                        hide-field="address,md_country_id,md_province_id,md_city_id,md_district_id,md_subdistrict_id,postalcode">
+                    <input type="checkbox" class="form-check-input" id="issameaddress" name="issameaddress" checked hide-field="address,md_country_id,md_province_id,md_city_id,md_district_id,md_subdistrict_id,postalcode">
                     <span class=" form-check-sign">Sama dengan alamat domisili</span>
                 </label>
             </div>
@@ -360,8 +282,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_country_id">Negara <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_country_id" name="md_country_id"
-                    data-url="country/getList">
+                <select class="form-control select-data" id="md_country_id" name="md_country_id" data-url="country/getList">
                     <option value="">Select Negara</option>
                 </select>
             </div>
