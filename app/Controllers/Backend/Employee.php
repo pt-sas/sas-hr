@@ -174,15 +174,16 @@ class Employee extends BaseController
                     $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
 
                     if ($this->isNew()) {
-                        uploadFile($file, $path);
+                        uploadFile($file, $path, $img_name);
                     } else {
                         $row = $this->model->find($this->getID());
 
                         if ($post['image'] !== $row->getImage()) {
-                            if (file_exists($path . $row->getImage())) {
+                            if (file_exists($path . $row->getImage()))
                                 unlink($path . $row->getImage());
-                                $response = $file->move($path);
-                            }
+
+                            if ($file && $file->isValid())
+                                uploadFile($file, $path, $img_name);
                         }
                     }
 
