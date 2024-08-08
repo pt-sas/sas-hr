@@ -1527,7 +1527,7 @@ $(".btn_filter_realize").on("click", function (e) {
     reloadTable(),
     setTimeout(function () {
       checkAll.prop("checked", false);
-      floatRight.addClass("d-none");
+      // floatRight.addClass("d-none");
       pageInner.removeClass("is-loading");
     }, 700));
 });
