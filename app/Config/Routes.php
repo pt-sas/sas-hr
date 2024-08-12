@@ -572,6 +572,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('outsource/show/(:any)', 'Backend\Outsourcing::show/$1');
     $routes->get('outsource/get-nik', 'Backend\Outsourcing::getNik');
 
+    $routes->add('absent-manual', 'Backend\AbsentManual::index');
+    $routes->post('absent-manual/create', 'Backend\AbsentManual:;create');
+
     // $routes->post('rule-detail/create', 'Backend\RuleDetail::create');
     // $routes->get('rule-detail/show', 'Backend\RuleDetail::show');
     // $routes->get('rule-detail/show/(:any)', 'Backend\RuleDetail::show/$1');
