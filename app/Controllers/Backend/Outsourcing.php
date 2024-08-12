@@ -4,7 +4,6 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_AccessMenu;
-use App\Models\M_BloodType;
 use App\Models\M_Branch;
 use App\Models\M_Country;
 use App\Models\M_Division;
@@ -15,7 +14,6 @@ use App\Models\M_Levelling;
 use App\Models\M_Position;
 use App\Models\M_Reference;
 use App\Models\M_ReferenceDetail;
-use App\Models\M_Religion;
 use App\Models\M_Role;
 use App\Models\M_Status;
 use App\Models\M_Supplier;
@@ -123,18 +121,14 @@ class Outsourcing extends BaseController
                 $fullName = $value->fullname;
 
                 $number++;
-                // $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
-                $path = $path = 'uploads/' . $this->PATH_Karyawan . '/';
 
                 $row[] = $ID;
                 $row[] = $number;
-                // $row[] = imageShow($path, $value->image, $fullName);
                 $row[] = $value->value;
                 $row[] = $fullName;
                 $row[] = $value->pob;
                 $row[] = format_dmy($value->birthday, "-");
                 $row[] = $value->gender_name;
-                // $row[] = $value->religion_name;
                 $row[] = active($value->isactive);
                 $row[] = $this->template->tableButton($ID);
                 $data[] = $row;
@@ -155,38 +149,15 @@ class Outsourcing extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
-            // $file = $this->request->getFile('image');
 
             try {
-                // $img_name = "";
-
                 //TODO: Set null data for gender combobox not choose
                 if (!isset($post['gender']))
                     $post['gender'] = "";
 
-                // if ($file && $file->isValid()) {
-                //     $img_name = $file->getName();
-                //     $post['image'] = $img_name;
-                // }
-
                 if (!$this->validation->run($post, 'outsourcing')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    // $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
-
-                    // if ($this->isNew()) {
-                    //     uploadFile($file, $path);
-                    // } else {
-                    //     $row = $this->model->find($this->getID());
-
-                    //     if ($post['image'] !== $row->getImage()) {
-                    //         if (file_exists($path . $row->getImage())) {
-                    //             unlink($path . $row->getImage());
-                    //             $response = $file->move($path);
-                    //         }
-                    //     }
-                    // }
-
                     $this->entity->fill($post);
 
                     if ($this->entity->getIsSameAddress() === "Y") {
@@ -221,8 +192,6 @@ class Outsourcing extends BaseController
     public function show($id)
     {
         $mRefDetail = new M_ReferenceDetail($this->request);
-        $mReligion = new M_Religion($this->request);
-        $mBlood = new M_BloodType($this->request);
         $mStatus = new M_Status($this->request);
         $mPosition = new M_Position($this->request);
         $mLeveling = new M_Levelling($this->request);
@@ -231,24 +200,11 @@ class Outsourcing extends BaseController
         $mEmpDiv = new M_EmpDivision($this->request);
         $mBranch = new M_Branch($this->request);
         $mDiv = new M_Division($this->request);
+        $mSupplier = new M_Supplier($this->request);
 
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
-
-                $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
-
-                if (file_exists($path . $list[0]->image)) {
-                    $path = 'uploads/' . $this->PATH_Karyawan . '/';
-                    $list[0]->image = $path . $list[0]->image;
-                } else {
-                    $list[0]->image = "";
-                }
-
-                if (!empty($list[0]->getReligionId())) {
-                    $rowFeligion = $mReligion->find($list[0]->getReligionId());
-                    $list = $this->field->setDataSelect($mReligion->table, $list, $mReligion->primaryKey, $rowFeligion->getReligionId(), $rowFeligion->getName());
-                }
 
                 if (!empty($list[0]->getStatusId())) {
                     $rowStatus = $mStatus->find($list[0]->getStatusId());
@@ -285,16 +241,6 @@ class Outsourcing extends BaseController
                     $list = $this->field->setDataSelect($mRefDetail->table, $list, "nationality", $rowNationality->getValue(), $rowNationality->getName());
                 }
 
-                if (!empty($list[0]->getMaritalStatus())) {
-                    $rowMarital = $mRefDetail->where("name", $list[0]->getMaritalStatus())->first();
-                    $list = $this->field->setDataSelect($mRefDetail->table, $list, "marital_status", $rowMarital->getValue(), $rowMarital->getName());
-                }
-
-                if (!empty($list[0]->getHomeStatus())) {
-                    $rowHome = $mRefDetail->where("name", $list[0]->getHomeStatus())->first();
-                    $list = $this->field->setDataSelect($mRefDetail->table, $list, "homestatus", $rowHome->getValue(), $rowHome->getName());
-                }
-
                 $rowBranch = $mEmpBranch->where($this->model->primaryKey, $id)->findAll();
                 $rowDiv = $mEmpDiv->where($this->model->primaryKey, $id)->findAll();
 
@@ -306,14 +252,9 @@ class Outsourcing extends BaseController
                     $list = $this->field->setDataSelect($mEmpDiv->table, $list, $mDiv->primaryKey, $mDiv->primaryKey, $mDiv->primaryKey, $rowDiv);
                 }
 
-                if (!empty($list[0]->getRhesus())) {
-                    $rowRhesus = $mRefDetail->where("name", $list[0]->getRhesus())->first();
-                    $list = $this->field->setDataSelect($mRefDetail->table, $list, "rhesus", $rowRhesus->getValue(), $rowRhesus->getName());
-                }
-
-                if (!empty($list[0]->getBloodTypeId())) {
-                    $rowBlood = $mBlood->find($list[0]->getBloodTypeId());
-                    $list = $this->field->setDataSelect($mBlood->table, $list, $mBlood->primaryKey, $rowBlood->getBloodTypeId(), $rowBlood->getName());
+                if (!empty($list[0]->getSupplierId())) {
+                    $rowSupplier = $mSupplier->find($list[0]->getSupplierId());
+                    $list = $this->field->setDataSelect($mSupplier->table, $list, $mSupplier->primaryKey, $rowSupplier->getSupplierId(), $rowSupplier->getName());
                 }
 
                 $fieldHeader = new \App\Entities\Table();
@@ -341,27 +282,6 @@ class Outsourcing extends BaseController
             try {
                 $result = $this->delete($id);
                 $response = message('success', true, $result);
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
-
-            return $this->response->setJSON($response);
-        }
-    }
-
-    public function getNik()
-    {
-        if ($this->request->isAjax()) {
-
-            $response = [];
-
-            try {
-                $nik = $this->model->getLastNik();
-
-                $response["suggestions"][] = [
-                    'value' => $nik,
-                    'name'  => $nik,
-                ];
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

@@ -349,6 +349,37 @@ $(document).ready(function (e) {
 
     _table.buttons().container().appendTo($("#dt-button"));
   }
+
+  if ($(".table_realization").length) {
+    new $.fn.dataTable.Buttons(_tableRealization, {
+      buttons: [
+        {
+          extend: "collection",
+          className: "btn btn-warning btn-sm btn-round ml-auto text-white mr-1",
+          text: '<i class="fas fa-download fa-fw"></i> Export',
+          autoClose: true,
+          buttons: [
+            {
+              extend: "excelHtml5",
+              text: '<i class="fas fa-file-excel"></i> Excel',
+              titleAttr: "Export to Excel",
+              title: "", //Set null value first row in file
+              customize: function (xlsx) {
+                var sheet = xlsx.xl.worksheets["sheet1.xml"];
+                //* Bold and Border first column
+                $("row:first c", sheet).attr("s", "2");
+              },
+              exportOptions: {
+                columns: ":visible:not(:last-child)",
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    _tableRealization.buttons().container().appendTo($("#dt-button"));
+  }
 });
 
 /**
@@ -5184,25 +5215,32 @@ $(".btn_ok_answer").click(function (evt) {
           '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
         )
         .prop("disabled", true);
-      // $('.x_form').prop('disabled', true);
-      // $('.close_form').prop('disabled', true);
       loadingForm(modalBody.prop("id"), "facebook");
     },
     complete: function () {
       $(_this).html(oriElement).prop("disabled", false);
-      // $('.x_form').removeAttr('disabled');
-      // $('.close_form').removeAttr('disabled');
       hideLoadingForm(modalBody.prop("id"));
     },
     success: function (result) {
-      if (result) {
+      if (result[0].success) {
         ID = 0;
-        form.find("input").prop("readonly", true);
+
+        form.find("input").prop("readonly", true).val("");
         form.find('select[name="isanswer"]').val("N").prop("disabled", true);
         form.find("button").prop("disabled", true);
+        form.find("button").prop("disabled", true);
+        clearErrorForm(form);
 
         url = ADMIN_URL + "wactivity" + "/showActivityInfo";
         _tableApproval.ajax.url(url).load().columns.adjust();
+      } else if (result[0].error) {
+        errorForm(form, result);
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+        clearErrorForm(form);
       }
     },
   });

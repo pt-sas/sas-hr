@@ -1527,7 +1527,7 @@ $(".btn_filter_realize").on("click", function (e) {
     reloadTable(),
     setTimeout(function () {
       checkAll.prop("checked", false);
-      floatRight.addClass("d-none");
+      // floatRight.addClass("d-none");
       pageInner.removeClass("is-loading");
     }, 700));
 });
@@ -2029,5 +2029,22 @@ $(".form-half-day").on(
     } else {
       $("#starttime").prop("disabled", false);
     }
+  }
+);
+
+$("#form_employee, #form_outsourcing").on(
+  "change",
+  "select[name=md_status_id]",
+  function (e) {
+    const _this = $(this);
+    const target = $(e.target);
+    const form = target.closest("form");
+    let value = this.value;
+
+    //? Condition field and contain attribute hide-field
+    if (_this.attr("hide-field"))
+      if (value === "100004")
+        form.find("input[name=resigndate]").closest(".form-group").show();
+      else form.find("input[name=resigndate]").closest(".form-group").hide();
   }
 );
