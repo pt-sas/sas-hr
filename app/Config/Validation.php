@@ -1854,7 +1854,7 @@ class Validation
             ]
         ],
     ];
-  
+
     public $supplier = [
         'value'                => [
             'label'            => 'Supplier Code',
@@ -2033,16 +2033,22 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'md_supplier_id'               => [
+        'md_supplier_id'        => [
             'label'             => 'vendor',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-
+        'resigndate'            => [
+            'label'             => 'tanggal berhenti',
+            'rules'             => 'required_based_field_value[md_status_id, 100004]',
+            'errors'            => [
+                'required_based_field_value'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
     ];
-  
+
     public $wactivity = [
         'textmsg'        => [
             'label'             => 'message',

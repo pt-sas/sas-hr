@@ -94,6 +94,14 @@ class BaseController extends Controller
 	protected $Status_Hidup = 'HIDUP';
 	/** Status MENINGGAL */
 	protected $Status_Meninggal = 'MENINGGAL';
+	/** Status PERMANENT*/
+	protected $Status_PERMANENT = 100001;
+	/** Status PROBATION */
+	protected $Status_PROBATION = 100002;
+	/** Status OUTSOURCING*/
+	protected $Status_OUTSOURCING = 100003;
+	/** Status RESIGN */
+	protected $Status_RESIGN = 100004;
 
 	/**
 	 * The column used for primaryKey int
@@ -436,7 +444,7 @@ class BaseController extends Controller
 
 			//? Check function is exists 
 			if (method_exists($model, 'doChangeValueField'))
-				$data = $model->doChangeValueField($data, $this->getID());
+				$data = $model->doChangeValueField($data, $this->getID(), $obj);
 
 			//* Must be called first so we don't
 			$data = $this->doStripLine($data);

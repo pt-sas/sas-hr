@@ -571,20 +571,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('outsource/create', 'Backend\Outsourcing::create');
     $routes->get('outsource/show/(:any)', 'Backend\Outsourcing::show/$1');
     $routes->get('outsource/get-nik', 'Backend\Outsourcing::getNik');
-
-    $routes->add('absent-manual', 'Backend\AbsentManual::index');
-    $routes->post('absent-manual/create', 'Backend\AbsentManual:;create');
-
-    // $routes->post('rule-detail/create', 'Backend\RuleDetail::create');
-    // $routes->get('rule-detail/show', 'Backend\RuleDetail::show');
-    // $routes->get('rule-detail/show/(:any)', 'Backend\RuleDetail::show/$1');
-    // $routes->post('rule-detail/tableLine', 'Backend\RuleDetail::tableLine');
-    // $routes->get('rule-detail/getDataBy/(:num)', 'Backend\RuleDetail::getBy/$1');
-
-    // $routes->post('rule-value/create', 'Backend\RuleValue::create');
-    // $routes->get('rule-value/show', 'Backend\RuleValue::show');
-    // $routes->get('rule-value/show/(:any)', 'Backend\RuleValue::show/$1');
-    // $routes->post('rule-value/tableLine', 'Backend\RuleValue::tableLine');
 });
 
 /*

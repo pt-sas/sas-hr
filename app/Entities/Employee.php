@@ -63,6 +63,7 @@ class Employee extends Entity
 	protected $created_by;
 	protected $updated_by;
 	protected $md_supplier_id;
+	protected $resigndate;
 
 	protected $dates   = [
 		'created_at',
@@ -660,5 +661,18 @@ class Employee extends Entity
 	public function setSupplierId($md_supplier_id)
 	{
 		$this->attributes['md_supplier_id'] = $md_supplier_id;
+	}
+
+	public function getResignDate()
+	{
+		return $this->attributes['resigndate'];
+	}
+
+	public function setResignDate($resigndate)
+	{
+		if (empty($resigndate))
+			$this->attributes['resigndate'] = null;
+		else
+			$this->attributes['resigndate'] = $resigndate;
 	}
 }
