@@ -119,3 +119,8 @@ function convertDay_idn($day)
 
     return $day;
 }
+
+function convertMinutesToHour($minutes)
+{
+    return floor($minutes / 60) . ':' . ($minutes -   floor($minutes / 60) * 60);
+}
