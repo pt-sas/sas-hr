@@ -18,7 +18,7 @@
                 <th>Alasan</th>
                 <th>Doc Status</th>
                 <th>Createdby</th>
-                <th>Actions</th>
+                <th>Aksi</th>
             </tr>
         </thead>
     </table>

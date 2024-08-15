@@ -37,20 +37,19 @@ class M_OvertimeDetail extends Model
         $this->request = $request;
     }
 
-
     /**
      * Change value of field data
      *
-     * @param array $data Data
+     * @param $data Data
      * @return array
      */
-    public function doChangeValueField(array $data): array
+    public function doChangeValueField($data, $id, $dataHeader): array
     {
         $result = [];
 
         foreach ($data as $row) :
-            $row->startdate = date('Y-m-d', strtotime($row->datestart)) . " " . $row->starttime;
-            $row->enddate = date('Y-m-d', strtotime($row->dateend)) . " " . $row->endtime;
+            $row->startdate = date('Y-m-d', strtotime($dataHeader->startdate)) . " " . $row->starttime;
+            $row->enddate = date('Y-m-d', strtotime($dataHeader->enddate)) . " " . $row->endtime;
             $result[] = $row;
         endforeach;
 

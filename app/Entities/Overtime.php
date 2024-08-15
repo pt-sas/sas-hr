@@ -22,6 +22,9 @@ class Overtime extends Entity
     protected $created_by;
     protected $updated_by;
     protected $isactive;
+    protected $isoutsourcing;
+    protected $md_supplier_id;
+    protected $receiveddate;
 
     protected $dates   = [
         'created_at',
@@ -137,9 +140,6 @@ class Overtime extends Entity
 
     public function getStartDate()
     {
-        // if (!empty($this->attributes['startdate']))
-        // return format_dmy($this->attributes['startdate'], "-");
-
         return $this->attributes['startdate'];
     }
 
@@ -150,9 +150,6 @@ class Overtime extends Entity
 
     public function getEndDate()
     {
-        // if (!empty($this->attributes['enddate']))
-        //     return format_dmy($this->attributes['enddate'], "-");
-
         return $this->attributes['enddate'];
     }
 
@@ -209,5 +206,38 @@ class Overtime extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
+    }
+
+    public function getIsOutSourcing()
+    {
+        return $this->attributes['isoutsourcing'];
+    }
+
+    public function setIsOutSourcing($isoutsourcing)
+    {
+        $this->attributes['isoutsourcing'] = $isoutsourcing;
+    }
+
+    public function getSupplierId()
+    {
+        return $this->attributes['md_supplier_id'];
+    }
+
+    public function setSupplierId($md_supplier_id)
+    {
+        $this->attributes['md_supplier_id'] = $md_supplier_id;
+    }
+
+    public function getReceivedDate()
+    {
+        return $this->attributes['receiveddate'];
+    }
+
+    public function setReceivedDate($receiveddate)
+    {
+        if (empty($receiveddate) || isset($this->attributes['receiveddate']))
+            return null;
+
+        $this->attributes['receiveddate'] = $receiveddate;
     }
 }

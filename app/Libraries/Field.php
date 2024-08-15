@@ -152,12 +152,13 @@ class Field
                         if (strpos($row, $str))
                             $row = str_replace($str, '', $row);
 
-                        if (!empty($key2))
+                        if (!empty($key2) && is_string($key2)) {
                             $result[] = [
                                 'error' => 'error_' . $key2,
                                 'field' => $row,
                                 'label' => $this->validation->getError($errorField)
                             ];
+                        }
                     endforeach;
                 endforeach;
             }
