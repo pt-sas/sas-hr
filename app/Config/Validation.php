@@ -1541,11 +1541,18 @@ class Validation
             'errors'        => [
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
-        ]
+        ],
+        'md_supplier_id'        => [
+            'label'             => 'Asal Outsourcing',
+            'rules'             => 'required_based_field_value[isemployee, N]',
+            'errors'            => [
+                'required_based_field_value'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
     ];
 
     public $lembur = [
-        'md_employee_id'          => [
+        'md_employee_id'        => [
             'label'             => 'Karyawan',
             'rules'             => 'required',
             'errors'            => [
@@ -1561,16 +1568,37 @@ class Validation
         ],
         'md_division_id'        => [
             'label'             => 'Divisi',
+            'rules'             => 'is_exist[md_division.name,md_division_id,{id},md_division_id,{md_division_id}]',
+            'errors'            => [
+                'is_exist'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'startdate'             => [
+            'label'             => 'Tanggal',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
         ],
-        'startdate'         => [
-            'label'         => 'Tanggal',
-            'rules'         => 'required',
-            'errors'        => [
+        'enddate'               => [
+            'label'             => 'Tanggal',
+            'rules'             => 'required',
+            'errors'            => [
                 'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'description'           => [
+            'label'             => 'Deskripsi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu'
+            ]
+        ],
+        'md_supplier_id'        => [
+            'label'             => 'Asal Outsourcing',
+            'rules'             => 'required_based_field_value[isemployee, N]',
+            'errors'            => [
+                'required_based_field_value'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'line'                  => [
@@ -1587,20 +1615,6 @@ class Validation
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
         ],
-        'startdate'         => [
-            'label'         => 'Tanggal',
-            'rules'         => 'required',
-            'errors'        => [
-                'required'      => 'Mohon pilih {field} dahulu'
-            ]
-        ],
-        'description'       => [
-            'label'         => 'Deskripsi',
-            'rules'         => 'required',
-            'errors'        => [
-                'required'      => 'Mohon isi {field} dahulu'
-            ]
-        ]
     ];
 
     public $alpa = [

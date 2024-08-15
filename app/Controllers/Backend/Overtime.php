@@ -29,7 +29,6 @@ class Overtime extends BaseController
 
     public function index()
     {
-
         $data = [
             'today'     => date('d-M-Y')
         ];
@@ -129,10 +128,9 @@ class Overtime extends BaseController
     {
         $mHoliday = new M_Holiday($this->request);
         $mRule = new M_Rule($this->request);
+        $mEmployee = new M_Employee($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
-        $mEmployee = new M_Employee($this->request);
-        $mAbsentDetail = new M_AbsentDetail($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
@@ -150,14 +148,15 @@ class Overtime extends BaseController
                 $today = date('Y-m-d');
                 $time = date('H:i');
                 $employeeId = $post['md_employee_id'];
-                $day = date('w');
+                $day = date('w', strtotime($post['startdate']));
 
                 if (!$this->validation->run($post, 'lembur')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $response = $post;
                     $holidays = $mHoliday->getHolidayDate();
-                    $startDate = $post['startdate'];
-                    $endDate = $post['enddate'];
+                    $startDate = date('Y-m-d', strtotime($post['startdate']));
+                    $endDate = date('Y-m-d', strtotime($post['enddate']));
                     $submissionDate = $post['submissiondate'];
                     $subDate = date('Y-m-d', strtotime($submissionDate));
 
@@ -171,86 +170,89 @@ class Overtime extends BaseController
 
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today
+                        'md_employee_id'                           => $post['md_employee_id'],
+                        'date_format(validto, "%Y-%m-%d") >='      => $today
                     ])->orderBy('validfrom', 'ASC')->first();
 
-                    if (is_null($workDay)) {
-                        $response = message('success', false, 'Hari kerja belum ditentukan');
-                    } else {
-                        $emp = $mEmployee->find($post['md_employee_id']);
+                    //TODO : Get Work Detail
+                    $whereClause = "md_work_detail.isactive = 'Y'";
+                    $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                    $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                    $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                        $day = strtoupper(formatDay_idn($day));
+                    $daysOff = getDaysOff($workDetail);
 
-                        //TODO : Get Work Detail
-                        $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                    //* last index of array from variable nextDate
+                    $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+                    $lastDate = end($nextDate);
 
-                        //TODO: Get Work Detail by day 
-                        $work = null;
+                    //* last index of array from variable addDays
+                    $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                    $addDays = end($addDays);
 
-                        $whereClause .= " AND md_day.name = '$day'";
-                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+                    $operation = null;
+                    $submissionMaxTime = null;
 
-                        $daysOff = getDaysOff($workDetail);
+                    if ($rule) {
+                        $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
-                        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
-
-                        //* last index of array from variable nextDate
-                        $lastDate = end($nextDate);
-
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
-
-                        //* last index of array from variable addDays
-                        $addDays = end($addDays);
-
-                        $endDate = date('Y-m-d', strtotime($endDate));
-
-                        $operation = null;
-                        $submissionMaxTime = null;
-
-                        if ($rule) {
-                            $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
-
-                            if ($ruleDetail) {
-                                foreach ($ruleDetail as $detail) {
-                                    if ($detail->name === "Batas Waktu Pengajuan") {
-                                        $operation = $detail->operation;
-                                        $submissionMaxTime = $detail->condition;
-                                    }
+                        if ($ruleDetail) {
+                            foreach ($ruleDetail as $detail) {
+                                if ($detail->name === "Batas Waktu Pengajuan") {
+                                    $operation = $detail->operation;
+                                    $submissionMaxTime = $detail->condition;
                                 }
                             }
                         }
+                    }
 
-                        if (is_null($work)) {
-                            $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
-                        } else if ($endDate > $addDays) {
-                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if ($lastDate < $subDate) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
-                        } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $subDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
-                            $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
-                        } else {
-                            $this->entity->fill($post);
+                    $arrEmpId = array_map(function ($value) {
+                        return $value->md_employee_id;
+                    }, $table);
 
-                            if ($this->isNew()) {
-                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    $empWork = $mEmployee
+                        ->whereIn("md_employee_id", $arrEmpId)
+                        ->where("NOT EXISTS (SELECT 1 
+                                                FROM md_employee_work mew
+						                        WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
+                                                AND date_format(validto, '%Y-%m-%d') >= '{$startDate}'
+                                                AND (SELECT mwd.md_day_id
+                                                    FROM md_work_detail mwd
+                                                    WHERE mwd.md_work_id = mew.md_work_id
+                                                    AND mwd.md_day_id = {$day}))")
+                        ->findAll();
 
-                                $docNo = $this->model->getInvNumber();
-                                $this->entity->setDocumentNo($docNo);
-                            }
+                    if ($endDate > $addDays) {
+                        $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                    } else if ($lastDate < $subDate) {
+                        $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
+                    } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $subDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
+                        $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
+                    } else if ($empWork) {
+                        $value = implode(", ", array_map(function ($row) {
+                            return $row->value;
+                        }, $empWork));
 
-                            $response = $this->save();
+                        $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
+                    } else {
+                        $this->entity->fill($post);
+
+                        if ($this->isNew()) {
+                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                            $docNo = $this->model->getInvNumber();
+                            $this->entity->setDocumentNo($docNo);
                         }
+
+                        $response = $this->save();
                     }
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
 
-            return $this->response->setJSON($response);
+            // return $this->response->setJSON($response);
+            return json_encode($response);
         }
     }
 
@@ -378,24 +380,10 @@ class Overtime extends BaseController
         ]);
         $fieldEmployee->setLength(200);
 
-        $fieldDateStart = new \App\Entities\Table();
-        $fieldDateStart->setName("datestart");
-        $fieldDateStart->setType("text");
-        $fieldDateStart->setClass("datepicker");
-        $fieldDateStart->setLength(150);
-        $fieldDateStart->setIsReadonly(true);
-
-        $fieldDateEnd = new \App\Entities\Table();
-        $fieldDateEnd->setName("dateend");
-        $fieldDateEnd->setType("text");
-        $fieldDateEnd->setClass("datepicker");
-        $fieldDateEnd->setLength(150);
-        $fieldDateEnd->setIsReadonly(true);
-
         $fieldDateEndRealization = new \App\Entities\Table();
         $fieldDateEndRealization->setName("dateend_realization");
         $fieldDateEndRealization->setType("text");
-        $fieldDateEndRealization->setLength(150);
+        $fieldDateEndRealization->setLength(200);
         $fieldDateEndRealization->setIsReadonly(true);
 
         $fieldStartTime = new \App\Entities\Table();
@@ -412,30 +400,11 @@ class Overtime extends BaseController
         $fieldEndTime->setClass("timepicker");
         $fieldEndTime->setLength(100);
 
-        $fieldEndTimeRealization = new \App\Entities\Table();
-        $fieldEndTimeRealization->setName("endtime_realization");
-        $fieldEndTimeRealization->setType("text");
-        $fieldEndTimeRealization->setClass("timepicker");
-        $fieldEndTimeRealization->setLength(100);
-        $fieldEndTimeRealization->setIsReadonly(true);
-
         $fieldBalance = new \App\Entities\Table();
         $fieldBalance->setName("overtime_balance");
         $fieldBalance->setType("text");
         $fieldBalance->setLength(100);
         $fieldBalance->setIsReadonly(true);
-
-        $fieldExpense = new \App\Entities\Table();
-        $fieldExpense->setName("overtime_expense");
-        $fieldExpense->setType("text");
-        $fieldExpense->setLength(150);
-        $fieldExpense->setIsReadonly(true);
-
-        $fieldTotal = new \App\Entities\Table();
-        $fieldTotal->setName("total");
-        $fieldTotal->setType("text");
-        $fieldTotal->setLength(150);
-        $fieldTotal->setIsReadonly(true);
 
         $fieldDesctiprion = new \App\Entities\Table();
         $fieldDesctiprion->setName("description");
@@ -449,34 +418,33 @@ class Overtime extends BaseController
         $btnDelete->setClass("delete");
 
         // ? Create
-
         if (empty($set)) {
             if (!$this->validation->run($post, 'lemburAddRow')) {
                 $table = $this->field->errorValidation($this->model->table, $post);
             } else {
-
                 if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
-                    $dataEmployee = $employee->getEmployee([
-                        'md_employee.isovertime'                => 'Y',
-                        'md_employee_branch.md_branch_id'       => $post['md_branch_id'],
-                        'md_employee_division.md_division_id'   => $post['md_division_id']
-                    ]);
+                    $whereClause = "md_employee.isactive = 'Y'";
+                    $whereClause .= " AND md_employee.isovertime = 'Y'";
+                    $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}";
+                    $whereClause .= " AND md_employee_division.md_division_id = {$post['md_division_id']}";
+                    $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
+
+                    if (!empty($post['md_supplier_id']))
+                        $whereClause .= " AND md_employee.md_supplier_id = {$post['md_supplier_id']}";
+                    else
+                        $whereClause .= " AND md_employee.md_status_id <> {$this->Status_OUTSOURCING}";
+
+                    $dataEmployee = $employee->getEmployee($whereClause);
+
                     $fieldEmployee->setList($dataEmployee);
                 }
 
-                $fieldDateStart->setValue(format_dmy($post['startdate'], "-"));
-                $fieldDateEnd->setValue(format_dmy($post['enddate'], "-"));
                 $table = [
                     $this->field->fieldTable($fieldEmployee),
-                    $this->field->fieldTable($fieldDateStart),
                     $this->field->fieldTable($fieldStartTime),
-                    $this->field->fieldTable($fieldDateEnd),
                     $this->field->fieldTable($fieldEndTime),
                     $this->field->fieldTable($fieldDateEndRealization),
-                    $this->field->fieldTable($fieldEndTimeRealization),
                     $this->field->fieldTable($fieldBalance),
-                    $this->field->fieldTable($fieldExpense),
-                    $this->field->fieldTable($fieldTotal),
                     $this->field->fieldTable($fieldDesctiprion),
                     '',
                     $this->field->fieldTable($btnDelete)
@@ -486,50 +454,49 @@ class Overtime extends BaseController
 
         //? Update
         if (!empty($set) && count($detail) > 0) {
-
             foreach ($detail as $row) :
                 $id = $row->getOvertimeId();
                 $header = $this->model->where('trx_overtime_id', $id)->first();
 
-                $dataEmployee = $employee->getEmployee([
-                    'md_employee.isovertime'                => 'Y',
-                    'md_employee_branch.md_branch_id'       => $header->md_branch_id,
-                    'md_employee_division.md_division_id'   => $header->md_division_id
-                ]);
+                $whereClause = "md_employee.isactive = 'Y'";
+                $whereClause .= " AND md_employee.isovertime = 'Y'";
+                $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}";
+                $whereClause .= " AND md_employee_division.md_division_id = {$header->md_division_id}";
+                $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
+
+                if (!empty($header->md_supplier_id))
+                    $whereClause .= " AND md_employee.md_supplier_id = {$header->md_supplier_id}";
+                else
+                    $whereClause .= " AND md_employee.md_status_id <> {$this->Status_OUTSOURCING}";
+
+                $dataEmployee = $employee->getEmployee($whereClause);
                 $fieldEmployee->setList($dataEmployee);
 
                 $fieldEmployee->setValue($row->getEmployeeId());
-                $fieldDateStart->setValue(format_dmy($row->getStartDate(), '-'));
                 $fieldStartTime->setValue(format_time($row->getStartDate()));
-                $fieldDateEnd->setValue(format_dmy($row->getEndDate(), '-'));
                 $fieldEndTime->setValue(format_time($row->getEndDate()));
-                if ($row->getEndDateRealization() != "0000-00-00 00:00:00") {
-                    $fieldDateEndRealization->setValue(format_dmy($row->getEndDateRealization(), '-'));
-                    $fieldEndTimeRealization->setValue(format_time($row->getEndDateRealization()));
-                }
+
+                if ($row->getEndDateRealization() != "0000-00-00 00:00:00")
+                    $fieldDateEndRealization->setValue(format_dmy($row->getEndDateRealization(), '-') . " " . format_time($row->getEndDateRealization()));
+
                 $fieldDesctiprion->setValue($row->getDescription());
                 $fieldBalance->setValue($row->getOvertimeBalance());
-                $fieldExpense->setValue(formatRupiah($row->getOvertimeExpense()));
-                $fieldTotal->setValue(formatRupiah($row->getTotal()));
                 $btnDelete->setValue($row->getOvertimeDetailId());
 
-                if ($header->docstatus == 'IP' || $header->docstatus == 'CO') {
+                if (
+                    $header->docstatus === $this->DOCSTATUS_Inprogress ||
+                    $header->docstatus === $this->DOCSTATUS_Completed
+                )
                     $status = statusRealize($row->status);
-                } else {
+                else
                     $status = '';
-                }
 
                 $table[] = [
                     $this->field->fieldTable($fieldEmployee),
-                    $this->field->fieldTable($fieldDateStart),
                     $this->field->fieldTable($fieldStartTime),
-                    $this->field->fieldTable($fieldDateEnd),
                     $this->field->fieldTable($fieldEndTime),
                     $this->field->fieldTable($fieldDateEndRealization),
-                    $this->field->fieldTable($fieldEndTimeRealization),
                     $this->field->fieldTable($fieldBalance),
-                    $this->field->fieldTable($fieldExpense),
-                    $this->field->fieldTable($fieldTotal),
                     $this->field->fieldTable($fieldDesctiprion),
                     $status,
                     $this->field->fieldTable($btnDelete)
@@ -544,7 +511,6 @@ class Overtime extends BaseController
     {
         $mEmployee = new M_Employee($this->request);
         $mDivision = new M_Division($this->request);
-
 
         $list = $this->model->find($id);
         $mOvertimeDetail = new M_OvertimeDetail($this->request);
