@@ -24,6 +24,9 @@ class M_Overtime extends Model
         'sys_wfscenario_id',
         'created_by',
         'updated_by',
+        'isoutsourcing',
+        'md_supplier_id',
+        'receiveddate',
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Overtime';
