@@ -427,7 +427,7 @@ function getDaysOff($workDays)
     return $array;
 }
 
-function viewImage(int $id, string $img)
+function viewImage(int $id, ?string $img)
 {
     if (empty($img))
         return null;
