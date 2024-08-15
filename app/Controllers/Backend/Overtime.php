@@ -174,45 +174,48 @@ class Overtime extends BaseController
                         'date_format(validto, "%Y-%m-%d") >='      => $today
                     ])->orderBy('validfrom', 'ASC')->first();
 
-                    //TODO : Get Work Detail
-                    $whereClause = "md_work_detail.isactive = 'Y'";
-                    $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                    $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                    $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                    if (is_null($workDay)) {
+                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    } else {
+                        //TODO : Get Work Detail
+                        $whereClause = "md_work_detail.isactive = 'Y'";
+                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                    $daysOff = getDaysOff($workDetail);
+                        $daysOff = getDaysOff($workDetail);
 
-                    //* last index of array from variable nextDate
-                    $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
-                    $lastDate = end($nextDate);
+                        //* last index of array from variable nextDate
+                        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+                        $lastDate = end($nextDate);
 
-                    //* last index of array from variable addDays
-                    $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
-                    $addDays = end($addDays);
+                        //* last index of array from variable addDays
+                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                        $addDays = end($addDays);
 
-                    $operation = null;
-                    $submissionMaxTime = null;
+                        $operation = null;
+                        $submissionMaxTime = null;
 
-                    if ($rule) {
-                        $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+                        if ($rule) {
+                            $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
-                        if ($ruleDetail) {
-                            foreach ($ruleDetail as $detail) {
-                                if ($detail->name === "Batas Waktu Pengajuan") {
-                                    $operation = $detail->operation;
-                                    $submissionMaxTime = $detail->condition;
+                            if ($ruleDetail) {
+                                foreach ($ruleDetail as $detail) {
+                                    if ($detail->name === "Batas Waktu Pengajuan") {
+                                        $operation = $detail->operation;
+                                        $submissionMaxTime = $detail->condition;
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    $arrEmpId = array_map(function ($value) {
-                        return $value->md_employee_id;
-                    }, $table);
+                        $arrEmpId = array_map(function ($value) {
+                            return $value->md_employee_id;
+                        }, $table);
 
-                    $empWork = $mEmployee
-                        ->whereIn("md_employee_id", $arrEmpId)
-                        ->where("NOT EXISTS (SELECT 1 
+                        $empWork = $mEmployee
+                            ->whereIn("md_employee_id", $arrEmpId)
+                            ->where("NOT EXISTS (SELECT 1 
                                                 FROM md_employee_work mew
 						                        WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
                                                 AND date_format(validto, '%Y-%m-%d') >= '{$startDate}'
@@ -220,31 +223,32 @@ class Overtime extends BaseController
                                                     FROM md_work_detail mwd
                                                     WHERE mwd.md_work_id = mew.md_work_id
                                                     AND mwd.md_day_id = {$day}))")
-                        ->findAll();
+                            ->findAll();
 
-                    if ($endDate > $addDays) {
-                        $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                    } else if ($lastDate < $subDate) {
-                        $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
-                    } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $subDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
-                        $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
-                    } else if ($empWork) {
-                        $value = implode(", ", array_map(function ($row) {
-                            return $row->value;
-                        }, $empWork));
+                        if ($endDate > $addDays) {
+                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                        } else if ($lastDate < $subDate) {
+                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
+                        } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $subDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
+                            $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
+                        } else if ($empWork) {
+                            $value = implode(", ", array_map(function ($row) {
+                                return $row->value;
+                            }, $empWork));
 
-                        $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
-                    } else {
-                        $this->entity->fill($post);
+                            $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
+                        } else {
+                            $this->entity->fill($post);
 
-                        if ($this->isNew()) {
-                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                            if ($this->isNew()) {
+                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                            $docNo = $this->model->getInvNumber();
-                            $this->entity->setDocumentNo($docNo);
+                                $docNo = $this->model->getInvNumber();
+                                $this->entity->setDocumentNo($docNo);
+                            }
+
+                            $response = $this->save();
                         }
-
-                        $response = $this->save();
                     }
                 }
             } catch (\Exception $e) {
