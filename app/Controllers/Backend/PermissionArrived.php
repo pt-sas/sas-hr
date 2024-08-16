@@ -147,9 +147,9 @@ class PermissionArrived extends BaseController
     {
         $mHoliday = new M_Holiday($this->request);
         $mRule = new M_Rule($this->request);
-        $mRuleDetail = new M_RuleDetail($this->request);
         $mAttendance = new M_Attend($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
@@ -162,6 +162,7 @@ class PermissionArrived extends BaseController
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
             $day = date('w', strtotime($post["startdate"]));
+            $startWork = "08:00";
 
             try {
                 if (!$this->validation->run($post, 'pengajuan')) {
@@ -179,7 +180,11 @@ class PermissionArrived extends BaseController
                         'isactive'  => 'Y'
                     ])->first();
 
-                    $ruleDetail = $mRuleDetail->where('md_rule_id', $rule->md_rule_id)->find();
+                    $ruleDetail = $mRuleDetail->where([
+                        'name'      => 'Terlambat 1/2 Hari',
+                        'isactive'  => 'Y'
+                    ])->first();
+
                     $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
                     $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
 
@@ -192,67 +197,89 @@ class PermissionArrived extends BaseController
                     if (is_null($workDay)) {
                         $response = message('success', false, 'Hari kerja belum ditentukan');
                     } else {
+                        $day = strtoupper(formatDay_idn($day));
+
                         //TODO : Get Work Detail
                         $whereClause = "md_work_detail.isactive = 'Y'";
                         $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
                         $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
                         $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                        $daysOff = getDaysOff($workDetail);
-                        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+                        //TODO: Get Work Detail by day
+                        $whereClause .= " AND md_day.name = '{$day}'";
+                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
-                        //TODO : Get next day attendance from enddate
-                        $presentNextDate = null;
+                        //TODO : Get submission Tugas Kantor, Tugas Kantor Khusus
+                        $whereClause = "trx_absent.nik = '{$nik}'";
+                        $whereClause .= " AND DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$startDate}'";
+                        $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
+                        $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                        $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Khusus})";
+                        $trx = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
 
-                        if ($startDate <= $submissionDate) {
-                            $whereClause = "trx_absent.nik = $nik";
-                            $whereClause .= " AND trx_absent.enddate > '$endDate'";
-                            $whereClause .= " AND trx_absent.submissiontype IN (" . $this->model->Pengajuan_Tugas_Kantor . ")";
-                            $whereClause .= " AND trx_absent.docstatus = '$this->DOCSTATUS_Completed'";
-                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                            $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                            if (is_null($trxPresentNextDay)) {
-                                $attPresentNextDay = $mAttendance->getAttendance([
-                                    'nik'       => $nik,
-                                    'date >'    => $endDate
-                                ])->getRow();
-
-                                $presentNextDate = $attPresentNextDay ? $attPresentNextDay->date : $endDate;
-                            } else {
-                                $presentNextDate = $trxPresentNextDay->date;
-                            }
-
-                            $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
-
-                            //* last index of array from variable nextDate
-                            $lastDate = end($nextDate);
-                        }
-
-                        //* Late Hour
-                        $latehour = convertToMinutes($work->startwork) + $ruleDetail[0]->condition;
-
-                        //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
-                        $addDays = end($addDays);
-
-                        if ($endDate > $addDays) {
-                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if (!is_null($presentNextDate) && !($lastDate >= $subDate) && $work) {
-                            $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
-                        } else if ($latehour >= (convertToMinutes($startDate))) {
-                            $response = message('success', false, 'Jam absen masuk tidak melebihi jam ' . date('H:i', strtotime($work->startwork)));
+                        if ($startDate > $subDate && (is_null($work) || is_null($trx))) {
+                            $response = message('success', false, 'Tidak terdaftar pada hari kerja');
                         } else {
-                            $this->entity->fill($post);
+                            $daysOff = getDaysOff($workDetail);
+                            $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
 
-                            if ($this->isNew()) {
-                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                            //TODO : Get next day attendance from enddate
+                            $presentNextDate = null;
 
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Datang_Terlambat, $post);
-                                $this->entity->setDocumentNo($docNo);
+                            if ($startDate <= $subDate) {
+                                $whereClause = "v_attendance.nik = '{$nik}'";
+                                $whereClause .= " AND v_attendance.date > '{$endDate}'";
+                                $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
+
+                                if (is_null($attPresentNextDay)) {
+                                    $whereClause = "trx_absent.nik = {$nik}";
+                                    $whereClause .= " AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') > '{$endDate}'";
+                                    $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
+                                    $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                                    $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Khusus})";
+                                    $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+
+                                    $presentNextDate = $trxPresentNextDay ? $trxPresentNextDay->date : $endDate;
+                                } else {
+                                    $presentNextDate = $attPresentNextDay->date;
+                                }
+
+                                $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
+
+                                //* last index of array from variable nextDate
+                                $lastDate = end($nextDate);
                             }
 
-                            $response = $this->save();
+                            //* last index of array from variable addDays
+                            $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                            $addDays = end($addDays);
+
+                            //* Late Hour
+                            $startWork = $work ? $work->startwork : $startWork;
+                            $lateHour = $ruleDetail->condition > 0 ? convertToMinutes($startWork) + $ruleDetail->condition : 0;
+
+                            if ($endDate > $addDays) {
+                                $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                            } else if ($presentNextDate && !($lastDate >= $subDate) && $work) {
+                                $lastDate = format_dmy($lastDate, '-');
+
+                                $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
+                            } else if ($lateHour >= convertToMinutes($post['startdate'])) {
+                                $hours = convertMinutesToHour($lateHour);
+
+                                $response = message('success', false, "Jam absen masuk tidak melebihi jam terlambat {$hours}");
+                            } else {
+                                $this->entity->fill($post);
+
+                                if ($this->isNew()) {
+                                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Datang_Terlambat, $post);
+                                    $this->entity->setDocumentNo($docNo);
+                                }
+
+                                $response = $this->save();
+                            }
                         }
                     }
                 }
