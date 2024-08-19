@@ -45,15 +45,32 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?>>
+                    <div class="input-icon">
+                        <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?>>
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="receiveddate">Tanggal Diterima</label>
-                    <input type="text" class="form-control datepicker" id="receiveddate" name="receiveddate" readonly>
+                    <label for="receiveddate">Tanggal Diterima </label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control datepicker" id="receiveddate" name="receiveddate" readonly>
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
                     <small class="form-text text-danger" id="error_receiveddate"></small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="reason">Alasan <span class="required">*</span></label>
+                    <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
+                    <small class="form-text text-danger" id="error_reason"></small>
                 </div>
             </div>
             <div class="col-md-3">
@@ -78,13 +95,6 @@
                         </span>
                     </div>
                     <small class="form-text text-danger" id="error_enddate"></small>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="reason">Alasan <span class="required">*</span></label>
-                    <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
-                    <small class="form-text text-danger" id="error_reason"></small>
                 </div>
             </div>
         </div>

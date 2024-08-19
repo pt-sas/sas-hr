@@ -525,102 +525,94 @@ class Alpha extends BaseController
     public function generateAlpa()
     {
         $mAttendance = new M_Attendance($this->request);
-        $mEmployee = new M_Employee($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDivision = new M_EmpDivision($this->request);
         $mHoliday = new M_Holiday($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
-        $today = date('Y-m-d');
-        $todayTime = date('Y-m-d H:i:s');
-        $agree = 'Y';
-        $mRule = new M_Rule($this->request);
-        $mRuleDetail = new M_RuleDetail($this->request);
-        $mAllowance = new M_AllowanceAtt($this->request);
         $mHoliday = new M_Holiday($this->request);
-        $mLeaveBalance = new M_LeaveBalance($this->request);
 
         try {
             $post = $this->request->getVar();
+            $attendance = json_decode($post['employee']);
+
+            $today = date('Y-m-d');
+            $todayTime = date('Y-m-d H:i:s');
+            $agree = 'Y';
+
+            $holidays = $mHoliday->getHolidayDate();
             $doc = [];
 
-            $attendance = $mAttendance->where('trx_attendance_id IN (' . implode(", ", $post['trx_attendance_id']) . ')')->orderBy('date', 'ASC')->find();
+            //TODO: Adding for each data date
+            $holidayClause = [];
 
-            // Grouping By Nik 
+            foreach ($holidays as $value) {
+                $date = date('Y-m-d H:i:s', strtotime($value));
+                $holidayClause[] = "'{$date}'";
+            }
+
+            //TODO: Grouping By Nik 
             foreach ($attendance as $item) {
+                $item->date = date('Y-m-d', strtotime($item->date));
                 $header[$item->nik][] = $item;
             }
 
-            // Creating Alpa Header
+            //TODO: Creating Alpa Header
             foreach ($header as $value) {
-                $employee = $mEmployee->where('nik', $value[0]->nik)->first();
-                $branch = $mEmpBranch->where('md_employee_id', $employee->md_employee_id)->find();
-                $division = $mEmpDivision->where('md_employee_id', $employee->md_employee_id)->find();
+                $_id = $value[0]->id;
+                $_nik = $value[0]->nik;
 
-                $holidays = $mHoliday->getHolidayDate();
-
-                // Adding '' for each data date
-                foreach ($holidays as $val) {
-                    $holiClause[] = "'" . date('Y-m-d H:i:s', strtotime($val)) . "'";
-                }
+                $branch = $mEmpBranch->where('md_employee_id', $_id)->first();
+                $division = $mEmpDivision->where('md_employee_id', $_id)->first();
 
                 /**
                  *  This Section for getting employee days off
                  */
                 $workDay = $mEmpWork->where([
-                    'md_employee_id'    => $employee->md_employee_id,
+                    'md_employee_id'    => $_id,
                     'validfrom <='      => $today
                 ])->orderBy('validfrom', 'ASC')->first();
 
                 $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND md_employee_work.md_employee_id = " . $employee->md_employee_id;
-                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                $whereClause .= " AND md_employee_work.md_employee_id = {$_id}";
+                $whereClause .= " AND md_work.md_work_id = {$workDay->md_work_id}";
                 $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
                 $daysOff = getDaysOff($workDetail);
 
-                // Getting List Date
+                //* Getting List Date
                 $date = [];
-                $dateRange = [];
-
-                foreach ($value as $item) {
-                    $dateRange[] = $item->date;
-                }
-
-                $number = 1;
+                $number = 0;
 
                 /** 
                  * This for grouping date when creating document alpha
                  */
                 foreach ($value as $item) {
+                    $whereClause = "v_attendance.nik = {$item->nik}";
+                    $whereClause .= " AND v_attendance.date NOT IN " . "(" . implode(", ", $holidayClause) . ")";
+                    $whereClause .= " AND DATE_FORMAT(v_attendance.date," . "'%w'" . ") NOT IN " . "(" . implode(", ", $daysOff) . ")";
 
-                    $whereClause = "trx_attendance.nik = " . $item->nik;
-                    $whereClause .= " AND trx_attendance.date > '$item->date'";
-                    $whereClause .= " AND trx_attendance.date NOT IN " . "(" . implode(", ", $holiClause) . ")";
-                    $whereClause .= " AND DATE_FORMAT(trx_attendance.date," . "'%w'" . ") NOT IN " . "(" . implode(", ", $daysOff) . ")";
-                    $nextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
+                    $whereDate = " AND v_attendance.date > '$item->date'";
+                    $nextClause = $whereClause;
+                    $nextClause .= $whereDate;
+                    $nextDay = $mAttendance->getAttendance($nextClause)->getRow();
 
-                    $whereClause = "trx_attendance.nik = " . $item->nik;
-                    $whereClause .= " AND trx_attendance.date < '$item->date'";
-                    $whereClause .= " AND trx_attendance.date NOT IN " . "(" . implode(", ", $holiClause) . ")";
-                    $whereClause .= " AND DATE_FORMAT(trx_attendance.date," . "'%w'" . ") NOT IN " . "(" . implode(", ", $daysOff) . ")";
-                    $beforeDay = $mAttendance->getAttendance($whereClause, 'DESC')->getRow();
+                    $whereDate = " AND v_attendance.date < '$item->date'";
+                    $beforeClause = $whereClause;
+                    $beforeClause .= $whereDate;
+                    $beforeDay = $mAttendance->getAttendance($beforeClause)->getRow();
 
-
-                    if (($nextDay && in_array($nextDay->date, $dateRange)) || ($beforeDay && in_array($beforeDay->date, $dateRange))) {
-
-                        $date[$number][] = $item->date;
-
-                        if ($nextDay->absent === 'Y') {
-                            $number++;
-                        }
-                    } else {
-                        $date[$number][] = $item->date;
-
-                        if ($beforeDay && $beforeDay->absent === 'Y') {
-                            $number++;
-                        }
+                    if (
+                        is_null($nextDay) && // Next attendance is null
+                        $beforeDay && // Before attendance is exists
+                        count($date) > 0 && // array date is exists data
+                        count($date[$number]) > 0 && // array date[$number] is exists data
+                        count(getDatesFromRange(end($date[$number]), $item->date, $holidays, "Y-m-d", "all", $daysOff)) > 2 // Check range date
+                    ) {
+                        $number++;
                     }
+
+                    $date[$number][] = $item->date;
                 }
 
                 $post['necessary'] = 'AL';
@@ -630,51 +622,58 @@ class Alpha extends BaseController
                     $this->model = new M_Absent($this->request);
                     $this->entity = new \App\Entities\Absent();
 
+                    $startDate = min($item);
+                    $endDate = max($item);
+
                     $this->entity->setNecessary($post['necessary']);
                     $this->entity->setSubmissionType($this->model->Pengajuan_Alpa);
-                    $this->entity->setEmployeeId($employee->md_employee_id);
-                    $this->entity->setNik($employee->nik);
-                    $this->entity->setBranchId($branch[0]->md_branch_id);
-                    $this->entity->setDivisionId($division[0]->md_division_id);
+                    $this->entity->setEmployeeId($_id);
+                    $this->entity->setNik($_nik);
+                    $this->entity->setBranchId($branch->md_branch_id);
+                    $this->entity->setDivisionId($division->md_division_id);
                     $this->entity->setReceivedDate($todayTime);
-                    $this->entity->setReason('');
                     $this->entity->setSubmissionDate($today);
-                    $this->entity->setStartDate(min($item));
-                    $this->entity->setEndDate(max($item));
+                    $this->entity->setStartDate($startDate);
+                    $this->entity->setEndDate($endDate);
                     $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
                     $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Alpa, $post);
                     $this->entity->setDocumentNo($docNo);
+
                     $this->save();
 
                     // * Foreignkey id 
-                    $Ref = $this->insertID;
-                    $number = 1;
-                    $amount = 0;
+                    $_refID = $this->insertID;
+                    $lineNo = 1;
 
-                    // Creating Absent Line 
+                    //TODO: Creating Absent Line 
                     foreach ($item as $line) {
                         $mAbsentDetail = new M_AbsentDetail($this->request);
                         $detailEntity = new \App\Entities\AbsentDetail();
+
                         $detailEntity->isagree = $agree;
-                        $detailEntity->trx_absent_id = $Ref;
-                        $detailEntity->lineno = $number;
+                        $detailEntity->trx_absent_id = $_refID;
+                        $detailEntity->lineno = $lineNo;
                         $detailEntity->date = $line;
                         $detailEntity->created_by = $this->access->getSessionUser();
                         $detailEntity->updated_by = $this->access->getSessionUser();
+
                         $mAbsentDetail->save($detailEntity);
-                        $number++;
+
+                        $lineNo++;
                     }
 
                     $doc[] = $docNo;
 
                     $this->model = new M_Absent($this->request);
                     $this->entity = new \App\Entities\Absent();
+
                     $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                    $this->entity->setDocStatus('CO');
-                    $this->entity->setAbsentId($Ref);
-                    $response = $this->save();
+                    $this->entity->setAbsentId($_refID);
+                    $this->save();
                 }
             }
+
             $response = message('success', true, 'Alpa telah digenerate dengan nomor ' . implode(", ", $doc));
         } catch (\Exception $e) {
             $response = message('error', false, $e->getMessage());
