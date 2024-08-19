@@ -1221,6 +1221,7 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
+        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
@@ -2485,9 +2486,12 @@ $(".add_row").click(function (evt) {
 
     const field = form.find("input, textarea, select").not(".line");
     const errorText = form.find("small");
+    let formData = new FormData();
 
     for (let i = 0; i < field.length; i++) {
       if (field[i].name !== "") {
+        let className = field[i].className.split(/\s+/);
+
         form
           .find(
             "input:checkbox[name=" +
@@ -2496,11 +2500,100 @@ $(".add_row").click(function (evt) {
               field[i].name +
               "]"
           )
+          .not(".line")
           .removeAttr("disabled");
+
+        //* Set field and value to formData
+        if (
+          field[i].type == "text" ||
+          field[i].type == "textarea" ||
+          field[i].type == "select-one" ||
+          field[i].type == "password" ||
+          field[i].type == "hidden"
+        )
+          formData.append(field[i].name, field[i].value);
+
+        //* Field type input radio
+        if (field[i].type == "radio") {
+          if (field[i].checked) formData.append(field[i].name, field[i].value);
+        }
+
+        //* Field type input file and containing class control-upload-image
+        if (
+          field[i].type == "file" &&
+          className.includes("control-upload-image")
+        ) {
+          //? Check condition upload add new image or not upload
+          if (field[i].files.length > 0) {
+            formData.append(field[i].name, field[i].files[0]);
+          } else {
+            const group = $(field[i]).closest(".form-group");
+            let source = group.find(".img-result").attr("src");
+            let imgSrc = source;
+
+            if (typeof source !== "undefined" && source !== "")
+              imgSrc = source.substr(source.lastIndexOf("/") + 1);
+
+            formData.append(field[i].name, imgSrc);
+          }
+        }
+
+        //* Field type textarea class summernote isEmpty to set value null
+        if (
+          form.find("textarea.summernote[name=" + field[i].name + "]").length &&
+          $("[name =" + field[i].name + "]").summernote("isEmpty")
+        ) {
+          formData.append(field[i].name, "");
+        }
+
+        //* Field type Multiple select
+        if (field[i].type === "select-multiple") {
+          formData.append(
+            field[i].name,
+            $("[name = " + field[i].name + "]").val()
+          );
+        }
+
+        //* Field type input checkbox
+        if (field[i].type == "checkbox") {
+          let checked = field[i].checked ? "Y" : "N";
+
+          formData.append(field[i].name, checked);
+        }
+
+        //* Field containing class datepicker
+        if (
+          className.includes("datepicker") ||
+          className.includes("datepicker-start") ||
+          className.includes("datepicker-end") ||
+          className.includes("datepicker-lembur") ||
+          className.includes("datetimepicker-start") ||
+          className.includes("datetimepicker-end") ||
+          className.includes("datepick") ||
+          className.includes("datepick-start") ||
+          className.includes("datepick-end") ||
+          className.includes("date-start") ||
+          className.includes("date-end")
+        ) {
+          let date = field[i].value;
+
+          if (date !== "") {
+            let dateTime = moment(date).format("YYYY-MM-DD HH:mm:ss");
+            formData.append(field[i].name, dateTime);
+          }
+        }
+
+        //* Field containing class rupiah
+        if (className.includes("rupiah")) {
+          formData.append(field[i].name, replaceRupiah(field[i].value));
+        }
+
+        //* Field containing class foreignkey
+        if (className.includes("foreignkey")) {
+          formData.append(field[i].name, $(field[i]).attr("set-id"));
+        }
       }
     }
-
-    let formData = new FormData(form[0]);
 
     $.ajax({
       url: url,
@@ -2547,7 +2640,7 @@ $(".add_row").click(function (evt) {
             if (field[i].name !== "") {
               form
                 .find(
-                  "input:checkbox[name=" +
+                  "input[name=" +
                     field[i].name +
                     "], select[name=" +
                     field[i].name +
