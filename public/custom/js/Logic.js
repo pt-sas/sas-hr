@@ -464,3 +464,53 @@ $("#form_special_office_duties").on(
     $("[name=enddate]").data("DateTimePicker").date(moment(e.date));
   }
 );
+
+$("#form_office_duties").on("change", "input[name=isbranch]", function (e) {
+  const _this = $(this);
+  const target = $(e.target);
+  const form = target.closest("form");
+
+  const fields = _this
+    .attr("hide-id")
+    .split(",")
+    .map((element) => element.trim());
+
+  if (_this.is(":checked")) {
+    for (let i = 0; i < fields.length; i++) {
+      form
+        .find(
+          "input[name=" +
+            fields[i] +
+            "], textarea[name=" +
+            fields[i] +
+            "], select[name=" +
+            fields[i] +
+            "]"
+        )
+        .not(".line")
+        .closest(".form-group")
+        .show();
+    }
+  } else {
+    for (let i = 0; i < fields.length; i++) {
+      form
+        .find(
+          "input[name=" +
+            fields[i] +
+            "], textarea[name=" +
+            fields[i] +
+            "], select[name=" +
+            fields[i] +
+            "]"
+        )
+        .not(".line")
+        .closest(".form-group")
+        .hide();
+    }
+  }
+});
+
+$("#form_office_duties").on("change", "#md_branch_id", function (e) {
+  let _this = $(this);
+  getOptionBranchTo(_this);
+});
