@@ -168,6 +168,13 @@ class Branch extends BaseController
                         ->like('name', $post['search'])
                         ->orderBy('name', 'ASC')
                         ->findAll();
+                } else if (isset($post['isbranch'])) {
+                    $id = explode(",", $post[$this->model->primaryKey]);
+
+                    $list = $this->model->where('isactive', 'Y')
+                        ->whereNotIn($this->model->primaryKey, $id)
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
                 } else if (isset($post[$this->model->primaryKey])) {
                     $id = explode(",", $post[$this->model->primaryKey]);
 
