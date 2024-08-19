@@ -7,7 +7,7 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <div class="float-right d-none">
+                <div class="float-right">
                     <?= $toolbarRealization ?>
                 </div>
             </div>
@@ -15,12 +15,20 @@
                 <table class="table table-bordered table-hover table_report">
                     <thead>
                         <tr>
-                            <th>No</th>
+                            <th>
+                                <!-- <div class="form-check">
+                                    <label class="form-check-label">
+                                        <input type="checkbox" class="form-check-input ischeckall-absent" id="ischeckall" name="ischeckall">
+                                        <span class="form-check-sign"></span>
+                                    </label>
+                                </div> -->
+                                #
+                            </th>
                             <th>NIK</th>
                             <th>Karyawan</th>
                             <th>Tanggal Tidak Absen</th>
-                            <th>Keterangan</th>
-                            <th class="text-center">Aksi</th>
+                            <!-- <th>Keterangan</th> -->
+                            <!-- <th class="text-center">Aksi</th> -->
                         </tr>
                     </thead>
                 </table>
