@@ -170,7 +170,7 @@ class OfficeDuties extends BaseController
             $day = date('w');
 
             try {
-                if (!$this->validation->run($post, 'absent')) {
+                if ($post['isbranch'] === "Y" ? !$this->validation->run($post, 'tugasKantor') : !$this->validation->run($post, 'absent')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $holidays = $mHoliday->getHolidayDate();
