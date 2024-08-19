@@ -33,7 +33,9 @@ class M_Absent extends Model
         'image2',
         'image3',
         'comment',
-        'enddate_realization'
+        'enddate_realization',
+        'isbranch',
+        'branch_to'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';
