@@ -769,8 +769,8 @@ class BaseController extends Controller
 		$post = $this->request->getVar();
 
 		//? Check property id or object primaryKey
-		if (((isset($post['id']) && isset($this->entity->{$this->primaryKey})) ||
-				isset($post['id']) ||
+		if (((isset($post['id']) && !empty($post['id']) && isset($this->entity->{$this->primaryKey})) ||
+				(isset($post['id']) && !empty($post['id'])) ||
 				isset($this->entity->{$this->primaryKey}))
 			&& !$this->isNewRecord
 		) {

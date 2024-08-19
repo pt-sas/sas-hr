@@ -2048,3 +2048,61 @@ $("#form_employee, #form_outsourcing").on(
       else form.find("input[name=resigndate]").closest(".form-group").hide();
   }
 );
+
+$("#form_overtime").on("change", "input[name=isemployee]", function (e) {
+  const _this = $(this);
+  const target = $(e.target);
+  const form = target.closest("form");
+
+  const fields = _this
+    .attr("hide-field")
+    .split(",")
+    .map((element) => element.trim());
+
+  if (_this.is(":checked")) {
+    for (let i = 0; i < fields.length; i++) {
+      form
+        .find(
+          "input[name=" +
+            fields[i] +
+            "], textarea[name=" +
+            fields[i] +
+            "], select[name=" +
+            fields[i] +
+            "]"
+        )
+        .not(".line")
+        .closest(".form-group")
+        .val(null)
+        .hide();
+
+      if (form.find("select[name=" + fields[i] + "]").length)
+        form
+          .find("select[name=" + fields[i] + "]")
+          .val(null)
+          .change();
+    }
+  } else {
+    for (let i = 0; i < fields.length; i++) {
+      form
+        .find(
+          "input[name=" +
+            fields[i] +
+            "], textarea[name=" +
+            fields[i] +
+            "], select[name=" +
+            fields[i] +
+            "]"
+        )
+        .not(".line")
+        .closest(".form-group")
+        .show();
+
+      if (form.find("select[name=" + fields[i] + "]").length)
+        form
+          .find("select[name=" + fields[i] + "]")
+          .val(null)
+          .change();
+    }
+  }
+});

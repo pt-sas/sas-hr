@@ -130,7 +130,7 @@ $("#form_overtime").on("dp.change", "input[name=startdate]", function (e) {
 
 $("#form_overtime").on(
   "change",
-  "#md_branch_id, #md_division_id",
+  "#md_branch_id, #md_division_id, #md_supplier_id",
   function (evt) {
     const form = $(this).closest("form");
     const field = form.find("select");
@@ -156,7 +156,9 @@ $("#form_overtime").on(
     $.each(option, function (idx, elem) {
       if (elem.fieldName === attrName && setSave !== "add") {
         if (
-          (attrName === "md_branch_id" || attrName === "md_division_id") &&
+          (attrName === "md_branch_id" ||
+            attrName === "md_division_id" ||
+            attrName === "md_supplier_id") &&
           value !== "" &&
           elem.label !== "undefined" &&
           value != elem.label &&
@@ -310,15 +312,27 @@ function Generate() {
 
   const checkbox = _tableReport.rows().nodes().to$().find("input.check-alpa");
 
+  let row = [];
+
   $.each(checkbox, function (idx, item) {
     if ($(this).is(":checked")) {
-      formData.append("trx_attendance_id[]", item.value);
+      const tr = $(this).closest("tr");
+      let nik = tr.find("td:eq(1)").text();
+      let date = tr.find("td:eq(3)").text();
+
+      row.push({
+        id: item.value,
+        nik: nik,
+        date: date,
+      });
     }
   });
 
+  formData.append("employee", JSON.stringify(row));
+
   $.ajax({
     url: url,
-    type: "post",
+    type: "POST",
     data: formData,
     processData: false,
     contentType: false,
@@ -331,7 +345,15 @@ function Generate() {
           title: result[0].message,
         });
         reloadTable();
+      } else if (result[0].error) {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
       }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
     },
   });
 }
