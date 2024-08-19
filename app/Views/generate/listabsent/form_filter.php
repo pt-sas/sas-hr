@@ -7,8 +7,7 @@
                         <div class="col-md-3">
                             <div class="form-group">
                                 <div class="input-icon">
-                                    <input type="text" class="form-control daterange" name="date"
-                                        value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
+                                    <input type="text" class="form-control daterange" name="date" value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
                                     <span class="input-icon-addon">
                                         <i class="fas fa-calendar-alt"></i>
                                     </span>
@@ -19,8 +18,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <button type="button"
-                                    class="btn btn-primary btn-sm btn-round ml-auto btn_filter_realize" title="Filter">
+                                <button type="button" class="btn btn-primary btn-sm btn-round ml-auto btn_filter_realize" title="Filter">
                                     <i class="fas fa-search fa-fw"></i> Filter
                                 </button>
                             </div>

@@ -27,7 +27,7 @@ class ListAbsent extends BaseController
 
         $data = [
             'date_range'            => $start_date . ' - ' . $end_date,
-            'toolbarRealization'    => $this->template->buttonGenerate()
+            'toolbarListAbsent'     => $this->template->buttonGenerate()
         ];
 
         return $this->template->render('generate/listabsent/v_list_absent', $data);
