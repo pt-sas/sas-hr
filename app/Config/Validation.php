@@ -2102,6 +2102,13 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'totaldays'          => [
+            'label'             => 'total',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
         'submissiondate'        => [
             'label'             => 'tanggal pengajuan',
             'rules'             => 'required',
