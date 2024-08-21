@@ -571,6 +571,16 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('outsource/create', 'Backend\Outsourcing::create');
     $routes->get('outsource/show/(:any)', 'Backend\Outsourcing::show/$1');
     $routes->get('outsource/get-nik', 'Backend\Outsourcing::getNik');
+
+    $routes->add('memo-sdm', 'Backend\Memo::index');
+    $routes->match(['get', 'post'], 'memo-sdm/showAll', 'Backend\Memo::showAll');
+    $routes->post('memo-sdm/create', 'Backend\Memo::create');
+    $routes->get('memo-sdm/show/(:any)', 'Backend\Memo::show/$1');
+    $routes->get('memo-sdm/destroy/(:any)', 'Backend\Memo::destroy/$1');
+    $routes->get('memo-sdm/processIt', 'Backend\Memo::processIt');
+    $routes->add('list-memo', 'Backend\Memo::indexGenerate');
+    $routes->post('list-memo/showAll', 'Backend\Memo::showAllGenerate');
+    $routes->post('list-memo/generate', 'Backend\Memo::generateMemo');
 });
 
 /*

@@ -393,4 +393,23 @@ class Template
 
         return $btnExport;
     }
+
+    public function buttonGenerateMemo($id)
+    {
+        $uri = $this->request->uri->getSegment(2);
+        $allBtn = '';
+
+        $btnGenerate = '<div class="d-flex justify-content-between">
+                            <div>
+                                <a class="btn btn-sm btn-danger rounded ml-auto btn_generate_memo" id="' . $id . '" name="btn_generate_memo" data-toggle="tooltip" title="Generate Memo" data-original-title="Generate Memo"><i class="fas fa-cog"></i> Generate</a>
+                            </div>
+                        </div>';
+
+        $create = $this->access->checkCrud($uri, $this->isCreate);
+
+        if ($create === 'Y')
+            $allBtn = $btnGenerate;
+
+        return $allBtn;
+    }
 }
