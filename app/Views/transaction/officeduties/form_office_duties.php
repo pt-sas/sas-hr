@@ -5,7 +5,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList/$Access">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
+                        data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -21,7 +22,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -45,7 +47,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?>>
+                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                        value=<?= $today ?>>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
@@ -78,6 +81,23 @@
                         </span>
                     </div>
                     <small class="form-text text-danger" id="error_enddate"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check mt-4">
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input" name="isbranch" checked hide-id="branch_to">
+                        <span class="form-check-sign">Ke Cabang</span>
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="branch_to">Tujuan Cabang <span class="required">*</span></label>
+                    <select class="form-control select2" id="branch_to" name="branch_to">
+                        <option value="">Pilih Cabang</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_branch_to"></small>
                 </div>
             </div>
             <div class="col-md-6">

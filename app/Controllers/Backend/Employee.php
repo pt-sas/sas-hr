@@ -469,7 +469,7 @@ class Employee extends BaseController
                                 ->findAll();
                         }
                     } else {
-                        $list = $this->model->where(['isactive' => 'Y', 'md_supplier_id' => null])
+                        $list = $this->model->where(['isactive' => 'Y'])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                             ->like('value', $post['search'])
                             ->orderBy('value', 'ASC')
                             ->findAll();

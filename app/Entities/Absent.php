@@ -31,6 +31,8 @@ class Absent extends Entity
     protected $image2;
     protected $image3;
     protected $enddate_realization;
+    protected $isbranch;
+    protected $branch_to;
 
     protected $dates   = [
         'created_at',
@@ -312,5 +314,25 @@ class Absent extends Entity
     {
 
         $this->attributes['enddate_realization'] = $enddate_realization;
+    }
+
+    public function getBranchTo()
+    {
+        return $this->attributes['branch_to'];
+    }
+
+    public function setBranchTo($branch_to)
+    {
+        $this->attributes['branch_to'] = $branch_to;
+    }
+
+    public function getIsBranch()
+    {
+        return $this->attributes['isbranch'];
+    }
+
+    public function setIsBranch($isbranch)
+    {
+        return $this->attributes['isbranch'] = $isbranch;
     }
 }
