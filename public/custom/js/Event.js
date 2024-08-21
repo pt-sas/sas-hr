@@ -1618,7 +1618,7 @@ $(".btn_filter_realize").on("click", function (e) {
     reloadTable(),
     setTimeout(function () {
       checkAll.prop("checked", false);
-      // floatRight.addClass("d-none");
+      if (pageInner.find(".table_report").length) floatRight.addClass("d-none");
       pageInner.removeClass("is-loading");
     }, 700));
 });
@@ -2196,4 +2196,70 @@ $("#form_overtime").on("change", "input[name=isemployee]", function (e) {
           .change();
     }
   }
+});
+
+_tableReport.on("click", ".btn_generate_memo", function (e) {
+  const _this = $(this);
+  const tr = $(this).closest("tr");
+  let oriElement = _this.html();
+
+  let formData = new FormData();
+  let url = `${SITE_URL}/generate`;
+
+  let nik = tr.find("td:eq(0)").text();
+  let name = tr.find("td:eq(1)").text();
+  let branch = tr.find("td:eq(2)").text();
+  let division = tr.find("td:eq(3)").text();
+  let criteria = tr.find("td:eq(4)").text();
+  let period = tr.find("td:eq(5)").text();
+  let total = tr.find("td:eq(6)").text();
+
+  let row = [];
+
+  row.push({
+    md_employee_id: _this.prop("id"),
+    nik: nik,
+    name: name,
+    branch: branch,
+    division: division,
+    criteria: criteria,
+    period: period,
+    total: total,
+  });
+
+  formData.append("memos", JSON.stringify(row));
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(_this)
+        .html(
+          '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
+        )
+        .prop("disabled", true);
+    },
+    success: function (result) {
+      if (result[0].success) {
+        reloadTable();
+        Toast.fire({
+          type: "success",
+          title: result[0].message,
+        });
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
 });

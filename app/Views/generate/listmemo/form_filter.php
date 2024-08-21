@@ -2,12 +2,12 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-body card-filter">
-                <form class="form-horizontal" id="filter_list_absent">
+                <form class="form-horizontal" id="filter_list_memo">
                     <div class="row">
                         <div class="col-md-3">
                             <div class="form-group">
                                 <div class="input-icon">
-                                    <input type="text" class="form-control daterange" name="date" value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
+                                    <input type="text" class="form-control datepicker-year" name="periode" value=<?= $month ?> required></input>
                                     <span class="input-icon-addon">
                                         <i class="fas fa-calendar-alt"></i>
                                     </span>

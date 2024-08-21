@@ -574,6 +574,16 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('absent-manual', 'Backend\AbsentManual::index');
     $routes->post('absent-manual/create', 'Backend\AbsentManual::create');
+  
+    $routes->add('memo-sdm', 'Backend\Memo::index');
+    $routes->match(['get', 'post'], 'memo-sdm/showAll', 'Backend\Memo::showAll');
+    $routes->post('memo-sdm/create', 'Backend\Memo::create');
+    $routes->get('memo-sdm/show/(:any)', 'Backend\Memo::show/$1');
+    $routes->get('memo-sdm/destroy/(:any)', 'Backend\Memo::destroy/$1');
+    $routes->get('memo-sdm/processIt', 'Backend\Memo::processIt');
+    $routes->add('list-memo', 'Backend\Memo::indexGenerate');
+    $routes->post('list-memo/showAll', 'Backend\Memo::showAllGenerate');
+    $routes->post('list-memo/generate', 'Backend\Memo::generateMemo');
 });
 
 /*
