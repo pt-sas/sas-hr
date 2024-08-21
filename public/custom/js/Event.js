@@ -142,6 +142,10 @@ $(document).ready(function () {
     dataType: "JSON",
     tabDisabled: false,
   });
+
+  if ($(this).find("#form_absent_manual").is($("#form_absent_manual"))) {
+    initSelectData($(this).find("select.select-data"));
+  }
 });
 
 $(".form-absent").on("change", "#md_employee_id", function (e) {
@@ -279,6 +283,93 @@ function getOptionBranch(elem, branch) {
 
         $.each(result, function (idx, item) {
           if (id.length == 1 || md_branch_id == item.id) {
+            if (setSave === "detail")
+              field
+                .append(
+                  '<option value="' +
+                    item.id +
+                    '" selected>' +
+                    item.text +
+                    "</option>"
+                )
+                .prop("disabled", true);
+            else
+              field.append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              );
+          } else {
+            if (setSave === "detail")
+              field
+                .append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                )
+                .prop("disabled", true);
+            else
+              field
+                .append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                )
+                .removeAttr("disabled");
+          }
+        });
+
+        if (form.is($("#form_office_duties"))) {
+          getOptionBranchTo(elem);
+        }
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
+
+function getOptionBranchTo(elem) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  const field = form.find("select[name=branch_to]");
+  let branch_id = form.find("select[name=md_branch_id]").val();
+
+  let url = ADMIN_URL + "branch/getList";
+  formData.append("md_branch_id", branch_id);
+  formData.append("isbranch", "Y");
+
+  field.empty();
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+
+        let branch_to = 0;
+
+        if (option.length) {
+          $.each(option, function (i, item) {
+            if (item.fieldName == "branch_to") branch_to = item.label;
+          });
+        }
+
+        $.each(result, function (idx, item) {
+          if (branch_id.length == 1 || branch_to == item.id) {
             if (setSave === "detail")
               field
                 .append(

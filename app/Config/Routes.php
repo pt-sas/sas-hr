@@ -572,6 +572,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('outsource/show/(:any)', 'Backend\Outsourcing::show/$1');
     $routes->get('outsource/get-nik', 'Backend\Outsourcing::getNik');
 
+    $routes->add('absent-manual', 'Backend\AbsentManual::index');
+    $routes->post('absent-manual/create', 'Backend\AbsentManual::create');
+  
     $routes->add('memo-sdm', 'Backend\Memo::index');
     $routes->match(['get', 'post'], 'memo-sdm/showAll', 'Backend\Memo::showAll');
     $routes->post('memo-sdm/create', 'Backend\Memo::create');

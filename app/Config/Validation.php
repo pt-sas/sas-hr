@@ -2073,6 +2073,82 @@ class Validation
         ]
     ];
 
+    public $absentManual = [
+        'md_employee_id' => [
+            'label' => 'Karyawan',
+            'rules' => 'required',
+            'errors'    => [
+                'required' => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'date' => [
+            'label' => 'Tanggal',
+            'rules' => 'required',
+            'errors'    => [
+                'required' => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'time' => [
+            'label' => 'Jam',
+            'rules' => 'required',
+            'errors'    => [
+                'required' => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+    ];
+
+    public $tugasKantor = [
+        'md_employee_id'        => [
+            'label'             => 'karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'startdate'             => [
+            'label'             => 'tanggal mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'enddate'               => [
+            'label'             => 'tanggal selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                => [
+            'label'             => 'alasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'branch_to'          => [
+            'label'             => 'tujuan cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+    ];
+  
     public $memo = [
         'md_employee_id'        => [
             'label'             => 'karyawan',
@@ -2097,6 +2173,13 @@ class Validation
         ],
         'memocriteria'          => [
             'label'             => 'kriteria',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'totaldays'          => [
+            'label'             => 'total',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'

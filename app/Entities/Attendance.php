@@ -8,14 +8,10 @@ class Attendance extends Entity
 {
     protected $trx_attendance_id;
     protected $nik;
-    protected $md_employee_id;
-    protected $date;
-    protected $clock_in;
-    protected $clock_out;
-    protected $absent;
+    protected $checktime;
     protected $created_by;
     protected $updated_by;
-    protected $description;
+    protected $serialnumber;
 
     protected $dates   = [
         'created_at',
@@ -43,44 +39,14 @@ class Attendance extends Entity
         $this->attributes['nik'] = $nik;
     }
 
-    public function setEmployeeId($md_employee_id)
+    public function getCheckTime()
     {
-        $this->attributes['md_employee_id'] = $md_employee_id;
+        return $this->attributes['checktime'];
     }
 
-    public function getEmployeeId()
+    public function setCheckTime($checktime)
     {
-        return $this->attributes['md_employee_id'];
-    }
-
-    public function getDate()
-    {
-        return $this->attributes['date'];
-    }
-
-    public function setDate($date)
-    {
-        $this->attributes['date'] = $date;
-    }
-
-    public function getClockIn()
-    {
-        return $this->attributes['clock_in'];
-    }
-
-    public function setClockIn($clock_in)
-    {
-        $this->attributes['clock_in'] = $clock_in;
-    }
-
-    public function getClockOut()
-    {
-        return $this->attributes['clock_out'];
-    }
-
-    public function setClockOut($clock_out)
-    {
-        $this->attributes['clock_out'] = $clock_out;
+        $this->attributes['checktime'] = $checktime;
     }
 
     public function getCreatedAt()
@@ -111,15 +77,5 @@ class Attendance extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
-    }
-
-    public function getDescription()
-    {
-        return $this->attributes['description'];
-    }
-
-    public function setDescription($description)
-    {
-        $this->attributes['description'] = $description;
     }
 }
