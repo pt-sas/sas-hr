@@ -476,7 +476,7 @@ class M_Absent extends Model
                         "table"             => $this->table,
                         "submissiondate"    => $row->submissiondate,
                         "md_employee_id"    => $row->md_employee_id,
-                        "amount"            => abs($row->amount),
+                        "amount"            => abs($row->balance_amount),
                         "created_by"        => $rows['data']['updated_by'],
                         "updated_by"        => $rows['data']['updated_by']
                     ];
