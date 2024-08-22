@@ -578,6 +578,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('memo-sdm/show/(:any)', 'Backend\Memo::show/$1');
     $routes->get('memo-sdm/destroy/(:any)', 'Backend\Memo::destroy/$1');
     $routes->get('memo-sdm/processIt', 'Backend\Memo::processIt');
+    $routes->get('memo-sdm/print/(:any)', 'Backend\Memo::exportPDF/$1');
     $routes->add('list-memo', 'Backend\Memo::indexGenerate');
     $routes->post('list-memo/showAll', 'Backend\Memo::showAllGenerate');
     $routes->post('list-memo/generate', 'Backend\Memo::generateMemo');
