@@ -13,6 +13,7 @@ use App\Models\M_Position;
 use App\Models\M_ReferenceDetail;
 use Config\Services;
 use DateTime;
+use TCPDF;
 
 class Memo extends BaseController
 {
@@ -108,7 +109,7 @@ class Memo extends BaseController
                 $row[] = $value->memocontent;
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
-                $row[] = $this->template->tableButton($ID, $value->docstatus);
+                $row[] = $this->template->tableButton($ID, $value->docstatus, "Print");
                 $data[] = $row;
             endforeach;
 
@@ -398,5 +399,59 @@ class Memo extends BaseController
 
             return $this->response->setJSON($response);
         }
+    }
+
+    public function exportPDF($id)
+    {
+        $mEmployee = new M_Employee($this->request);
+        $list = $this->model->find($id);
+        $employee = $mEmployee->where($mEmployee->primaryKey, $list->created_by)->first();
+
+        $memosplit = preg_split('/(?=Pemotongan|Sebanyak|Total)/', $list->memocontent);
+
+
+        //bagian PF
+        $pdf = new TCPDF('P', PDF_UNIT, 'A4', true, 'UTF-8', false);
+
+        $pdf->setPrintHeader(false);
+        $pdf->AddPage();
+        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(50, 0, 'No Form : ' . $list->documentno, 0, 1, 'L', false, '', 0, false);
+        $pdf->setFont('helvetica', 'B', 20);
+        $pdf->Cell(0, 20, 'MEMO SDM', 0, 1, 'C');
+        $pdf->setFont('helvetica', '', 12);
+        //Ini untuk bagian field nama dan tanggal pengajuan
+        $pdf->Cell(40, 0, 'Tanggal Pembuatan', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . format_dmy($list->memodate, '-'), 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(5);
+        //Ini untuk bagian field divisi dan Tanggal diterima
+        $pdf->Cell(40, 0, 'Isi Memo :', 0, 1, 'L', false, '', 0, false);
+        // $pdf->Cell(3, 0, ':', 0, 1, 'L');
+        $pdf->Ln(1);
+        $pdf->Cell(0, 0, $memosplit[1], 0, 1, 'L', false, '', 0, false);
+        // $pdf->Ln(1);
+        $pdf->Cell(0, 0, $memosplit[2], 0, 1, 'L', false, '', 0, false);
+        // $pdf->Ln(1);
+        $pdf->Cell(0, 0, $memosplit[3], 0, 1, 'L', false, '', 0, false);
+        // $pdf->MultiCell(0, 20, $memosplit[1], 0, '', false, 1, null, null, false, 0, false, false, 20);
+        $pdf->Ln(5);
+        //Ini bagian tanggal ijin dan jam
+        $pdf->Cell(10, 0, 'Ket :', 0, 0, 'L', false, '', 0, false);
+        $pdf->MultiCell(0, 10, $list->description, 0, '', false, 1, null, null, false, 0, false, false, 20);
+        $pdf->Ln(10);
+        //Bagian ttd
+        $pdf->setFont('helvetica', '', 10);
+        $pdf->Cell(48, 0, 'Dibuat oleh,', 0, 0, 'C');
+        $pdf->Cell(48, 0, 'Disetujui oleh,', 0, 0, 'C');
+        $pdf->Cell(48, 0, 'Mgr. Ybs,', 0, 0, 'C');
+        $pdf->Cell(48, 0, 'Kary. Ybs,', 0, 0, 'C');
+        $pdf->Ln(25);
+        $pdf->Cell(48, 0, $employee->nickname, 0, 0, 'C');
+        $pdf->Cell(48, 0, '(                          )', 0, 0, 'C');
+        $pdf->Cell(48, 0, '(                          )', 0, 0, 'C');
+        $pdf->Cell(48, 0, '(                          )', 0, 1, 'C');
+
+        $this->response->setContentType('application/pdf');
+        $pdf->Output('detail-laporan,pdf', 'I');
     }
 }
