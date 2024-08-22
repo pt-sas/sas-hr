@@ -2207,4 +2207,45 @@ class Validation
             ]
         ],
     ];
+    public $employee_benefit = [
+        'line'                  => [
+            'label'             => 'benefit line',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.benefit_line'  => [
+            'label'             => 'benefit',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+                // 'is_unique'     => 'Data {field} ini sudah ada.'
+            ]
+        ],
+        'detail.table.*.status_line'  => [
+            'label'             => 'status',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $benefit_detail = [
+        'line'                  => [
+            'label'             => 'benefit detail line',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.benefit_detail_line'  => [
+            'label'             => 'benefit detail',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ]
+    ];
 }

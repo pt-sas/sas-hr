@@ -3,6 +3,7 @@
 <?= $this->section('content') ?>
 <?= $this->include('backend/modal/image_info'); ?>
 <?= $this->include('masterdata/employee/tab_employee'); ?>
+<?= $this->include('masterdata/employee/modal/form_benefit_detail'); ?>
 <div class="card-body card-main">
     <table class="table table-striped table-hover tb_display" style="width: 100%">
         <thead>
