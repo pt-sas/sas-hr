@@ -2148,6 +2148,65 @@ class Validation
             ]
         ],
     ];
+
+    public $memo = [
+        'md_employee_id'        => [
+            'label'             => 'karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'memocriteria'          => [
+            'label'             => 'kriteria',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'totaldays'          => [
+            'label'             => 'total',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'submissiondate'        => [
+            'label'             => 'tanggal pengajuan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'memodate'              => [
+            'label'             => 'tanggal',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'memocontent'           => [
+            'label'             => 'isi memo',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+    ];
     public $employee_benefit = [
         'line'                  => [
             'label'             => 'benefit line',

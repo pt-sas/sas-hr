@@ -3,10 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use App\Models\M_Attend;
 use App\Models\M_Attendance;
-use App\Models\M_EmpBranch;
-use App\Models\M_EmpDivision;
 use Config\Services;
 
 class Attendance extends BaseController
@@ -25,25 +22,26 @@ class Attendance extends BaseController
         $data = [
             'date_range' => $date . ' - ' . $date
         ];
+
         return $this->template->render('report/attendance/v_attendance', $data);
     }
 
     public function reportShowAll()
     {
         $post = $this->request->getVar();
-        $data = [];
 
         $recordTotal = 0;
         $recordsFiltered = 0;
+        $data = [];
 
         if ($this->request->getMethod(true) === 'POST') {
             if (isset($post['form']) && $post['clear'] === 'false') {
-                $table = $this->model->table;
+                $table = "v_attendance";
                 $select = $this->model->getSelect();
-                $order = $this->request->getPost('columns');
                 $join = $this->model->getJoin();
-                $sort = ['nik' => 'ASC', 'date' => 'ASC'];
+                $order = $this->request->getPost('columns');
                 $search = $this->request->getPost('search');
+                $sort = ['v_attendance.date' => 'ASC', 'v_attendance.nik' => 'ASC'];
                 $where = [];
 
                 $number = $this->request->getPost('start');
@@ -58,9 +56,8 @@ class Attendance extends BaseController
                     $row[] = $val->nik;
                     $row[] = $val->fullname;
                     $row[] = format_dmy($val->date, "-");
-                    $row[] = $val->clock_in ? format_time($val->clock_in) : '';
-                    $row[] = $val->clock_out ? format_time($val->clock_out) : '';
-                    $row[] = formatyesno($val->absent);
+                    $row[] = $val->clock_in ?? format_time($val->clock_in);
+                    $row[] = $val->clock_out ?? format_time($val->clock_out);
                     $data[] = $row;
                 endforeach;
 
@@ -81,21 +78,21 @@ class Attendance extends BaseController
 
     public function getClockInOut()
     {
-        $mAttend = new M_Attend($this->request);
-
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
 
             try {
-                $date = date('Y-m-d', strtotime($post['startdate']));
                 $data = '';
 
-                $attendance = $mAttend->getAttendance(['date' => $date, 'nik' => $post['nik']])->getRow();
+                $att = $this->model->getAttendance([
+                    'v_attendance.nik'        => $post['nik'],
+                    'v_attendance.date'       => date("Y-m-d", strtotime($post['startdate']))
+                ])->getRow();
 
-                if ($post['typeform'] == 100012 && $attendance) {
-                    $data = format_time($attendance->clock_in);
-                } else if ($post['typeform'] == 100013 && $attendance) {
-                    $data = format_time($attendance->clock_out);
+                if ($post['typeform'] == 100012 && $att) {
+                    $data = format_time($att->clock_in);
+                } else if ($post['typeform'] == 100013 && $att) {
+                    $data = format_time($att->clock_out);
                 }
 
                 $response['clock'] = $data;
