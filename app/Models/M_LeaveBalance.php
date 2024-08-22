@@ -10,11 +10,14 @@ class M_LeaveBalance extends Model
     protected $table                = 'trx_leavebalance';
     protected $primaryKey           = 'trx_leavebalance_id';
     protected $allowedFields        = [
-        'record_id',
-        'table',
         'md_employee_id',
+        'year',
+        'annual_allocation',
+        'balance_amount',
+        'carried_over_amount',
+        'carry_over_expiry_date',
         'submissiondate',
-        'amount',
+        'startdate',
         'description',
         'created_by',
         'updated_by',
@@ -42,7 +45,7 @@ class M_LeaveBalance extends Model
 
     public function getBalance($where)
     {
-        $this->builder->selectSum($this->table . '.amount');
+        $this->builder->selectSum($this->table . '.balance_amount');
         $this->builder->where($where);
         return $this->builder->get()->getRow();
     }
@@ -52,7 +55,6 @@ class M_LeaveBalance extends Model
         $sql = $this->table . '.*,
                 md_employee.value as employee,
                 md_employee.fullname as employee_fullname,
-                trx_absent.documentno,
                 md_branch.name as branch,
                 md_division.name as divisi';
 
@@ -67,7 +69,7 @@ class M_LeaveBalance extends Model
             $this->setDataJoin('md_branch', 'md_branch.md_branch_id = md_employee_branch.md_branch_id', 'left'),
             $this->setDataJoin('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left'),
             $this->setDataJoin('md_division', 'md_division.md_division_id = md_employee_division.md_division_id', 'left'),
-            $this->setDataJoin('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.record_id', 'left')
+            // $this->setDataJoin('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.record_id', 'left')
         ];
 
         return $sql;

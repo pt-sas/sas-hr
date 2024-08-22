@@ -140,10 +140,10 @@ class M_Datatable extends Model
                                 $datetime = urldecode($value['value']);
                                 $date = explode(" - ", $datetime);
 
-                                if (!is_array($date)) {
-                                    $this->builder->where($table . '.' . $value['name'] . '', $value['value']);
-                                } else {
+                                if (strpos($datetime, " - ") > 0) {
                                     $this->builder->where('DATE(' . $table . '.' . $value['name'] . ')' . ' >= "' . date("Y-m-d", strtotime($date[0])) . '" AND ' . 'DATE(' . $table . '.' . $value['name'] . ')' . ' <= "' . date("Y-m-d", strtotime($date[1])) . '"');
+                                } else {
+                                    $this->builder->where($table . '.' . $value['name'] . '', $value['value']);
                                 }
                             }
                         }
@@ -178,7 +178,7 @@ class M_Datatable extends Model
                                             $datetime = urldecode($value['value']);
                                             $date = explode(" - ", $datetime);
 
-                                            if (!is_array($date)) {
+                                            if (strpos($datetime, " - ") > 0) {
                                                 $this->builder->where($tableJoin . '.' . $value['name'] . '', $value['value']);
                                             } else {
                                                 $this->builder->where('DATE(' . $tableJoin . '.' . $value['name'] . ')' . ' >= "' . date("Y-m-d", strtotime($date[0])) . '" AND ' . 'DATE(' . $tableJoin . '.' . $value['name'] . ')' . ' <= "' . date("Y-m-d", strtotime($date[1])) . '"');
