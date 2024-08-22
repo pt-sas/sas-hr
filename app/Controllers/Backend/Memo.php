@@ -446,7 +446,7 @@ class Memo extends BaseController
         $pdf->Cell(48, 0, 'Mgr. Ybs,', 0, 0, 'C');
         $pdf->Cell(48, 0, 'Kary. Ybs,', 0, 0, 'C');
         $pdf->Ln(25);
-        $pdf->Cell(48, 0, $employee->nickname, 0, 0, 'C');
+        $pdf->Cell(48, 0, $employee->fullname, 0, 0, 'C');
         $pdf->Cell(48, 0, '(                          )', 0, 0, 'C');
         $pdf->Cell(48, 0, '(                          )', 0, 0, 'C');
         $pdf->Cell(48, 0, '(                          )', 0, 1, 'C');
