@@ -574,6 +574,17 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('absent-manual', 'Backend\AbsentManual::index');
     $routes->post('absent-manual/create', 'Backend\AbsentManual::create');
+
+    $routes->post('benefit/tableLine', 'Backend\EmpBenefit::tableLine');
+    $routes->post('benefit/create', 'Backend\EmpBenefit::create');
+    $routes->get('benefit/show', 'Backend\EmpBenefit::show');
+    $routes->get('benefit/show/(:any)', 'Backend\EmpBenefit::show/$1');
+    $routes->get('benefit/getDataBy/(:num)', 'Backend\EmpBenefit::getBy/$1');
+
+    $routes->post('benefit-detail/create', 'Backend\BenefitDetail::create');
+    $routes->get('benefit-detail/show', 'Backend\BenefitDetail::show');
+    $routes->get('benefit-detail/show/(:any)', 'Backend\BenefitDetail::show/$1');
+    $routes->post('benefit-detail/tableLine', 'Backend\BenefitDetail::tableLine');
 });
 
 /*
