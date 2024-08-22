@@ -547,120 +547,131 @@ $("#form_rule").on("change", "select[name=isdetail]", function (e) {
     });
 });
 
-$(".tb_displaytab").on("click", ".btn_isdetail", function (e) {
-  e.preventDefault();
-  const _this = $(this);
-  const target = $(e.target);
-  const parent = target.closest(".container");
-  const modalTab = target.closest(".modal-tab");
-  const modal = parent.find("#modal_rule_value");
+$(".tb_displaytab").on(
+  "click",
+  ".btn_isdetail, .btn_isdetailbenefit",
+  function (e) {
+    e.preventDefault();
+    const _this = $(this);
+    const target = $(e.target);
+    const parent = target.closest(".container");
+    const modalTab = target.closest(".modal-tab");
 
-  if (modal.length) {
-    let modalID = modalTab.attr("id");
-    const form = modal.find("form");
-    const tabPane = modal.find(".tab-pane.active");
-    const inputForeign = form.find("input.foreignkey");
-    const tableTab = form.find("table.tb_displaytab");
-    let href = tabPane.attr("id");
-    let tableID = tableTab.attr("id");
-    let id = _this.attr("id");
+    let modal;
 
-    ID = id;
+    if (_this.hasClass("btn_isdetailbenefit")) {
+      modal = parent.find("#modal_benefit_detail");
+    } else {
+      modal = parent.find("#modal_rule_value");
+    }
 
-    //TODO: Hide main modal
-    $(`#${modalID}`).modal("hide");
+    if (modal.length) {
+      let modalID = modalTab.attr("id");
+      const form = modal.find("form");
+      const tabPane = modal.find(".tab-pane.active");
+      const inputForeign = form.find("input.foreignkey");
+      const tableTab = form.find("table.tb_displaytab");
+      let href = tabPane.attr("id");
+      let tableID = tableTab.attr("id");
+      let id = _this.attr("id");
 
-    modalID = modal.attr("id");
+      ID = id;
 
-    $(`#${modalID}`).modal({
-      backdrop: "static",
-      keyboard: false,
-    });
+      //TODO: Hide main modal
+      $(`#${modalID}`).modal("hide");
 
-    if (tableTab.length > 1) tableID = $(tableTab[1]).attr("id");
+      modalID = modal.attr("id");
 
-    if (tableTab.length) {
-      _tableLine.destroy();
+      $(`#${modalID}`).modal({
+        backdrop: "static",
+        keyboard: false,
+      });
 
-      _tableLine = form.find(`#${tableID}`).DataTable({
-        columnDefs: [
-          {
-            targets: 0,
-            visible: false, //hide column
-          },
-        ],
-        lengthChange: false,
-        pageLength: 10,
-        searching: false,
-        ordering: false,
-        autoWidth: false,
+      if (tableTab.length > 1) tableID = $(tableTab[1]).attr("id");
+
+      if (tableTab.length) {
+        _tableLine.destroy();
+
+        _tableLine = form.find(`#${tableID}`).DataTable({
+          columnDefs: [
+            {
+              targets: 0,
+              visible: false, //hide column
+            },
+          ],
+          lengthChange: false,
+          pageLength: 10,
+          searching: false,
+          ordering: false,
+          autoWidth: false,
+        });
+      }
+
+      if (inputForeign.length) {
+        inputForeign.attr("set-id", id);
+
+        const SHOW = "/show";
+        url = `${ADMIN_URL}${href}${SHOW}`;
+
+        data = {
+          [inputForeign.attr("name")]: id,
+        };
+      }
+
+      if (_tableLine.context.length) _tableLine.clear().draw();
+
+      $.ajax({
+        url: url,
+        type: "GET",
+        data: data,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".save_form").prop("disabled", true);
+          $(".close_rule_value").prop("disabled", true);
+          loadingForm(form.prop("id"), "ios");
+        },
+        complete: function () {
+          $(".save_form").removeAttr("disabled");
+          $(".close_rule_value").removeAttr("disabled");
+          hideLoadingForm(form.prop("id"));
+        },
+        success: function (result) {
+          if (result[0].success) {
+            let arrMsg = result[0].message;
+
+            // Show datatable line
+            if (arrMsg.line) {
+              let arrLine = arrMsg.line;
+
+              if (_tableLine.context.length) {
+                tabPane.attr("set-save", "update");
+
+                let line = JSON.parse(arrLine);
+                _tableLine.rows.add(line).draw(false);
+              }
+            }
+
+            if (inputForeign.length) {
+              url = inputForeign.attr("data-url");
+              showForeignKey(url, id, inputForeign);
+            }
+          } else {
+            Toast.fire({
+              type: "error",
+              title: result[0].message,
+            });
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
       });
     }
-
-    if (inputForeign.length) {
-      inputForeign.attr("set-id", id);
-
-      const SHOW = "/show";
-      url = `${ADMIN_URL}${href}${SHOW}`;
-
-      data = {
-        [inputForeign.attr("name")]: id,
-      };
-    }
-
-    if (_tableLine.context.length) _tableLine.clear().draw();
-
-    $.ajax({
-      url: url,
-      type: "GET",
-      data: data,
-      cache: false,
-      dataType: "JSON",
-      beforeSend: function () {
-        $(".save_form").prop("disabled", true);
-        $(".close_rule_value").prop("disabled", true);
-        loadingForm(form.prop("id"), "ios");
-      },
-      complete: function () {
-        $(".save_form").removeAttr("disabled");
-        $(".close_rule_value").removeAttr("disabled");
-        hideLoadingForm(form.prop("id"));
-      },
-      success: function (result) {
-        if (result[0].success) {
-          let arrMsg = result[0].message;
-
-          // Show datatable line
-          if (arrMsg.line) {
-            let arrLine = arrMsg.line;
-
-            if (_tableLine.context.length) {
-              tabPane.attr("set-save", "update");
-
-              let line = JSON.parse(arrLine);
-              _tableLine.rows.add(line).draw(false);
-            }
-          }
-
-          if (inputForeign.length) {
-            url = inputForeign.attr("data-url");
-            showForeignKey(url, id, inputForeign);
-          }
-        } else {
-          Toast.fire({
-            type: "error",
-            title: result[0].message,
-          });
-        }
-      },
-      error: function (jqXHR, exception) {
-        showError(jqXHR, exception);
-      },
-    });
   }
-});
+);
 
-$(".close_rule_value").on("click", function (e) {
+$(".close_rule_value, .close_benefit_detail").on("click", function (e) {
   e.preventDefault();
   const _this = $(this);
   const target = $(e.target);
@@ -672,8 +683,8 @@ $(".close_rule_value").on("click", function (e) {
 
   if (modalTab.length) {
     let modalID = modalTab.attr("id");
-    const form = modalTab.find("form");
     const tabPane = modalTab.find(".tab-pane.active");
+    const form = tabPane.find("form");
     const inputForeign = form.find("input.foreignkey");
     const tableTab = form.find("table.tb_displaytab");
     let href = tabPane.attr("id");
@@ -686,8 +697,6 @@ $(".close_rule_value").on("click", function (e) {
       backdrop: "static",
       keyboard: false,
     });
-
-    if (tableTab.length > 1) tableID = $(tableTab[1]).attr("id");
 
     if (tableTab.length) {
       _tableLine.destroy();
