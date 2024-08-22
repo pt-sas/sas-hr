@@ -93,6 +93,7 @@ class M_AbsentDetail extends Model
         $mLeaveBalance = new M_LeaveBalance($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mHoliday = new M_Holiday($this->request);
 
         $amount = 0;
 
@@ -107,6 +108,43 @@ class M_AbsentDetail extends Model
 
         try {
             $ruleDetail = null;
+            if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti) {
+                $holidays = $mHoliday->getHolidayDate();
+
+                $workDay = $mEmpWork->where([
+                    'md_employee_id'    => $sql->md_employee_id,
+                    'validfrom <='      => $today
+                ])->orderBy('validfrom', 'ASC')->first();
+
+                //TODO : Get Work Detail
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
+                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $daysOff = getDaysOff($workDetail);
+
+                $endDate = date('Y-m-d', strtotime($sql->enddate));
+                $startDate = date("Y-m-d", strtotime($sql->startdate));
+
+                $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
+                $totalDays = count($dateRange);
+
+                $balance = $mLeaveBalance->where([
+                    'year'              => date("Y", strtotime($sql->startdate)),
+                    'md_employee_id'    => $sql->md_employee_id
+                ])->first();
+
+                $saldo = $balance->balance_amount;
+
+                $entityBal = new \App\Entities\LeaveBalance();
+                $entityBal->md_employee_id = $sql->md_employee_id;
+                $entityBal->balance_amount = $saldo - $totalDays;
+                $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+
+                $mLeaveBalance->save($entityBal);
+            }
+
             if ($sql->submissiontype == $mAbsent->Pengajuan_Sakit) {
                 $rule = $mRule->where([
                     'name'      => 'Sakit',
