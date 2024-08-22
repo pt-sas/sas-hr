@@ -12,7 +12,7 @@ use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
 use App\Models\M_Division;
-use App\Models\M_Attend;
+use App\Models\M_Attendance;
 use App\Models\M_RuleDetail;
 use TCPDF;
 use Config\Services;
@@ -147,7 +147,7 @@ class PermissionArrived extends BaseController
     {
         $mHoliday = new M_Holiday($this->request);
         $mRule = new M_Rule($this->request);
-        $mAttendance = new M_Attend($this->request);
+        $mAttendance = new M_Attendance($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
