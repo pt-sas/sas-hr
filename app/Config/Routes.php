@@ -477,9 +477,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'laporan-kehadiran/showAll', 'Backend\Attendance::reportShowAll');
     $routes->match(['get', 'post'], 'Kehadiran/getJamAbsen', 'Backend\Attendance::getClockInOut');
 
-    $routes->add('laporan-kehadiran-new', 'Backend\AttendanceNew::reportIndex');
-    $routes->match(['get', 'post'], 'laporan-kehadiran-new/showAll', 'Backend\AttendanceNew::reportShowAll');
-
     $routes->add('import-kehadiran', 'Backend\ImportAttendance::index');
     $routes->post('import-kehadiran/import', 'Backend\ImportAttendance::import');
 
@@ -574,7 +571,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('absent-manual', 'Backend\AbsentManual::index');
     $routes->post('absent-manual/create', 'Backend\AbsentManual::create');
-  
+
     $routes->add('memo-sdm', 'Backend\Memo::index');
     $routes->match(['get', 'post'], 'memo-sdm/showAll', 'Backend\Memo::showAll');
     $routes->post('memo-sdm/create', 'Backend\Memo::create');
@@ -584,6 +581,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('list-memo', 'Backend\Memo::indexGenerate');
     $routes->post('list-memo/showAll', 'Backend\Memo::showAllGenerate');
     $routes->post('list-memo/generate', 'Backend\Memo::generateMemo');
+
+    $routes->add('gen-saldo-cuti', 'Backend\Leave::indexGen');
+    $routes->match(['get', 'post'], 'gen-saldo-cuti/showAll', 'Backend\Leave::genShowAll');
 });
 
 /*

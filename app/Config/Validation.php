@@ -2146,9 +2146,9 @@ class Validation
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
-        ],
-    ];
-  
+        ],
+    ];
+
     public $memo = [
         'md_employee_id'        => [
             'label'             => 'karyawan',
