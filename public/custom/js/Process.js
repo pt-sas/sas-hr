@@ -2591,6 +2591,10 @@ $(".add_row").click(function (evt) {
         if (className.includes("foreignkey")) {
           formData.append(field[i].name, $(field[i]).attr("set-id"));
         }
+
+        if (className.includes("benefit")) {
+          formData.append(field[i].name, field[i].value);
+        }
       }
     }
 
