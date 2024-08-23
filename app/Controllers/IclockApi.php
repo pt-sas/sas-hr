@@ -4,8 +4,8 @@ namespace App\Controllers;
 
 use App\Models\M_Absent;
 use CodeIgniter\RESTful\ResourceController;
-use App\Models\M_Attend;
 use App\Models\M_AllowanceAtt;
+use App\Models\M_Attendance;
 use App\Models\M_Employee;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Rule;
@@ -22,7 +22,7 @@ class IclockApi extends ResourceController
     public function __construct()
     {
         $this->request = Services::request();
-        $this->model = new M_Attend($this->request);
+        $this->model = new M_Attendance($this->request);
     }
 
     public function handshake()
@@ -53,7 +53,6 @@ STR;
         $mEmployee = new M_Employee($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
-        $mAttend = new M_Attend($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
         $mRule = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
@@ -93,7 +92,7 @@ STR;
                     $jml++;
                 }
 
-                $result = $mAttend->builder->insertBatch($data);
+                $result = $this->model->builder->insertBatch($data);
 
                 if ($result > 0) {
                     foreach ($data as $val) {
@@ -106,9 +105,9 @@ STR;
                                 'validfrom <='      => $today
                             ])->orderBy('validfrom', 'ASC')->first();
 
-                            $attToday = $mAttend->getAttendance([
-                                'nik'        => $val['nik'],
-                                'date'       => date("Y-m-d", strtotime($val['checktime']))
+                            $attToday = $this->model->getAttendance([
+                                'v_attendance.nik'        => $val['nik'],
+                                'v_attendance.date'       => date("Y-m-d", strtotime($val['checktime']))
                             ])->getRow();
 
                             //TODO: Masukan data allowance hari sebelumnya jika tidak ada absen pulang 
@@ -192,7 +191,7 @@ STR;
                                                 'md_employee_id'    => $list->md_employee_id,
                                                 'submissiondate'    => $dateTime,
                                                 'submissiontype'    => $mAbsent->Pengajuan_Datang_Terlambat,
-                                                'table'             => $mAttend->table
+                                                'table'             => $this->model->table
                                             ])->first();
 
                                             if (is_null($allowIn)) {
@@ -213,7 +212,7 @@ STR;
                                                 'md_employee_id'    => $list->md_employee_id,
                                                 'submissiondate <'  => $dateTime,
                                                 'submissiontype'    => $mAbsent->Pengajuan_Datang_Terlambat,
-                                                'table'             => $mAttend->table
+                                                'table'             => $this->model->table
                                             ])->first();
 
                                             if (is_null($allowOut)) {
@@ -234,7 +233,7 @@ STR;
                                                 'md_employee_id'    => $list->md_employee_id,
                                                 'submissiondate <'  => $dateTime,
                                                 'submissiontype'    => $mAbsent->Pengajuan_Pulang_Cepat,
-                                                'table'             => $mAttend->table
+                                                'table'             => $this->model->table
                                             ])->first();
 
                                             if (is_null($allowOut)) {
@@ -247,7 +246,7 @@ STR;
                                     $allowSub = $mAllowance->where([
                                         'md_employee_id'    => $list->md_employee_id,
                                         'submissiondate'    => date("Y-m-d", strtotime($val['checktime'])),
-                                        'table'             => $mAttend->table
+                                        'table'             => $this->model->table
                                     ])->whereIn(
                                         'submissiontype',
                                         [$mAbsent->Pengajuan_Tugas_Khusus, $mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari]
@@ -256,13 +255,7 @@ STR;
                                     if ($amount != 0 && is_null($allowSub)) {
                                         $entity = new \App\Entities\AllowanceAtt();
 
-                                        $att = $mAttend->where([
-                                            'nik'           => $val['nik'],
-                                            'checktime'     => date("Y-m-d", strtotime($val['checktime'])) . " " . $checkTime
-                                        ])->first();
-
-                                        $entity->record_id = $att->trx_attend_id;
-                                        $entity->table = $mAttend->table;
+                                        $entity->table = $this->model->table;
                                         $entity->submissiontype = $formType;
                                         $entity->submissiondate = $val['checktime'];
                                         $entity->md_employee_id = $list->md_employee_id;
@@ -310,7 +303,7 @@ STR;
 
             $textResponse = "OK :" . $jml;
 
-            return $this->respond($amount, 200)
+            return $this->respond($textResponse, 200)
                 ->setHeader('Content-Type', 'text/plain');
         } catch (\Exception $e) {
             return $this->respond($e->getMessage(), 400);

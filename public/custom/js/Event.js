@@ -1846,6 +1846,13 @@ $(".datepicker-year").datepicker({
   clearBtn: true,
 });
 
+$(".yearpicker").datepicker({
+  format: "yyyy",
+  startView: "years",
+  minViewMode: "years",
+  autoclose: true,
+});
+
 $("#form_official_permission").on("change", "#md_employee_id", function (e) {
   let _this = $(this);
   const target = $(e.target);

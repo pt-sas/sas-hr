@@ -23,7 +23,6 @@ use PHPExcel_Style_Fill;
 use PHPExcel_Worksheet_PageSetup;
 use DateTime;
 use Config\Services;
-use App\Models\M_Attend;
 
 class AllowanceAtt extends BaseController
 {
@@ -169,7 +168,6 @@ class AllowanceAtt extends BaseController
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
-        $mAttend = new M_Attend($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
 
         $md_branch_id = null;
@@ -345,7 +343,7 @@ class AllowanceAtt extends BaseController
             $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
             $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $row->nik);
             $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $row->fullname);
-            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $level->name);
+            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $level ? $level->name : "");
 
             // Apply style row yang telah kita buat tadi ke masing-masing baris (isi tabel)
             $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
@@ -393,60 +391,75 @@ class AllowanceAtt extends BaseController
 
                         $allow = $this->model->getAllowance($parAllow)->getRow();
 
-                        // $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
-                        $attend = $mAttend->getAttendance([
-                            'nik'        => $row->nik,
-                            'date'       => $date
-                        ])->getRow();
+                        $whereClause = "v_attendance.nik = {$row->nik}";
+                        $whereClause .= " AND v_attendance.date = '{$date}'";
+                        $attend = $mAttendance->getAttendance($whereClause)->getRow();
 
-                        $parAbsent = [
-                            'DATE_FORMAT(trx_absent_detail.date, "%Y-%m-%d")' => $date,
-                            'trx_absent.docstatus' => 'CO',
-                            'trx_absent.md_employee_id' => $row->md_employee_id,
-                            'trx_absent_detail.isagree' => 'Y'
-                        ];
+                        $parAbsent = "DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'
+                        AND trx_absent.docstatus = 'CO'
+                        AND trx_absent.md_employee_id = {$row->md_employee_id}
+                        AND trx_absent_detail.isagree = 'Y'
+                        AND trx_absent.submissiontype NOT IN ({$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari})
+                        AND trx_absent.isbranch = 'N'";
 
                         $absent = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
 
+                        $parAbsent = "DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'
+                            AND trx_absent.docstatus = 'CO'
+                            AND trx_absent.md_employee_id = {$row->md_employee_id}
+                            AND trx_absent_detail.isagree = 'Y'
+                            AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari})
+                            AND trx_absent.isbranch = 'N'";
+
+                        $tugasNotKunjungan = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
+
+                        $qty = 1;
+
                         if ($attend) {
-                            // if ($attendance->absent === 'N' || is_null($attendance->clock_in) || is_null($attendance->clock_out)) {
-                            //     if (!$allow) {
-                            //         $qty = 0;
-                            //     }
-
-                            //     if ($allow && $allow->amount < 0) {
-                            //         $qty += $allow->amount;
-                            //     }
-
-                            //     if ($allow && $allow->amount > 0) {
-                            //         $qty = $allow->amount;
-                            //     }
-                            if (empty($attend->clock_in) || empty($attend->clock_out)) {
-                                if (!$allow) {
+                            if (
+                                empty($tugasNotKunjungan) && (!empty($attend->clock_in) && $attend->clock_in > "08:30")
+                                || (!empty($attend->clock_out) && $attend->clock_out < "17:00")
+                            ) {
+                                if ($absent && $allow && ($absent->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat
+                                    || $absent->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat)) {
+                                    $qty = $qty + $allow->amount;
+                                } else {
                                     $qty = 0;
                                 }
+                            }
 
-                                if ($allow && empty($absent)) {
+                            if (empty($tugasNotKunjungan) && empty($attend->clock_in) && $attend->clock_out >= "17:00") {
+                                if (
+                                    $absent
+                                    && $absent->enddate_realization !== "0000-00-00 00:00:00"
+                                    && date("H:i", strtotime($absent->enddate_realization)) > "08:30"
+                                    && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk
+                                ) {
+                                    $qty = $qty - 0.5;
+                                } else if (empty($absent)) {
                                     $qty = 0;
                                 }
+                            }
 
-                                if ($allow && $allow->amount < 0) {
-                                    $qty += $allow->amount;
+                            if (empty($tugasNotKunjungan) && empty($attend->clock_out) && $attend->clock_in <= "08:00") {
+                                if (
+                                    $absent
+                                    && $absent->enddate_realization !== "0000-00-00 00:00:00"
+                                    && date("H:i", strtotime($absent->enddate_realization)) < "17:30"
+                                    && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang
+                                ) {
+                                    $qty = $qty - 0.5;
+                                } else if (empty($absent)) {
+                                    $qty = 0;
                                 }
-
-                                if ($allow && $allow->amount > 0) {
-                                    $qty = $allow->amount;
-                                }
+                            }
+                        } else if (empty($attend)) {
+                            if ($absent && $allow && $allow->amount < 0) {
+                                $qty += $allow->amount;
+                            } else if ($absent && $allow && $allow->amount > 0) {
+                                $qty = $allow->amount;
                             } else {
-                                if ($allow && empty($absent)) {
-                                    $qty = 0;
-                                }
-
-                                if ($attend->clock_in > "08:30" && !$allow)
-                                    $qty = 0;
-
-                                if ($allow && $allow->amount < 0 && $absent)
-                                    $qty += $allow->amount;
+                                $qty = 0;
                             }
                         } else {
                             $qty = 0;
@@ -467,8 +480,6 @@ class AllowanceAtt extends BaseController
             }
 
             foreach ($dateRange as $date) {
-                $qty = 1;
-
                 $day = date('w', strtotime($date));
 
                 //TODO : Get work day employee
@@ -502,61 +513,75 @@ class AllowanceAtt extends BaseController
 
                         $allow = $this->model->getAllowance($parAllow)->getRow();
 
-                        $attendance = $mAttendance->getAttendance(['trx_attendance.nik' => $row->nik, 'trx_attendance.date' => $date])->getRow();
+                        $whereClause = "v_attendance.nik = {$row->nik}";
+                        $whereClause .= " AND v_attendance.date = '{$date}'";
+                        $attend = $mAttendance->getAttendance($whereClause)->getRow();
 
-                        $attend = $mAttend->getAttendance([
-                            'nik'        => $row->nik,
-                            'date'       => $date
-                        ])->getRow();
-
-                        $parAbsent = [
-                            'DATE_FORMAT(trx_absent_detail.date, "%Y-%m-%d")' => $date,
-                            'trx_absent.docstatus' => 'CO',
-                            'trx_absent.md_employee_id' => $row->md_employee_id,
-                            'trx_absent_detail.isagree' => 'Y'
-                        ];
+                        $parAbsent = "DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'
+                        AND trx_absent.docstatus = 'CO'
+                        AND trx_absent.md_employee_id = {$row->md_employee_id}
+                        AND trx_absent_detail.isagree = 'Y'
+                        AND trx_absent.submissiontype NOT IN ({$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari})
+                        AND trx_absent.isbranch = 'N'";
 
                         $absent = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
 
+                        $parAbsent = "DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'
+                            AND trx_absent.docstatus = 'CO'
+                            AND trx_absent.md_employee_id = {$row->md_employee_id}
+                            AND trx_absent_detail.isagree = 'Y'
+                            AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari})
+                            AND trx_absent.isbranch = 'N'";
+
+                        $tugasNotKunjungan = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
+
+                        $qty = 1;
+
                         if ($attend) {
-                            // if ($attendance->absent === 'N' || is_null($attendance->clock_in) || is_null($attendance->clock_out)) {
-                            //     if (!$allow) {
-                            //         $qty = 0;
-                            //     }
-
-                            //     if ($allow && $allow->amount < 0) {
-                            //         $qty += $allow->amount;
-                            //     }
-
-                            //     if ($allow && $allow->amount > 0) {
-                            //         $qty = $allow->amount;
-                            //     }
-                            if (empty($attend->clock_in) || empty($attend->clock_out)) {
-                                if (!$allow) {
+                            if (
+                                empty($tugasNotKunjungan) && (!empty($attend->clock_in) && $attend->clock_in > "08:30")
+                                || (!empty($attend->clock_out) && $attend->clock_out < "17:00")
+                            ) {
+                                if ($absent && $allow && ($absent->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat
+                                    || $absent->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat)) {
+                                    $qty = $qty + $allow->amount;
+                                } else {
                                     $qty = 0;
                                 }
+                            }
 
-                                if ($allow && empty($absent)) {
+                            if (empty($tugasNotKunjungan) && empty($attend->clock_in) && $attend->clock_out >= "17:00") {
+                                if (
+                                    $absent
+                                    && $absent->enddate_realization !== "0000-00-00 00:00:00"
+                                    && date("H:i", strtotime($absent->enddate_realization)) > "08:30"
+                                    && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk
+                                ) {
+                                    $qty = $qty - 0.5;
+                                } else if (empty($absent)) {
                                     $qty = 0;
                                 }
+                            }
 
-                                if ($allow && $allow->amount < 0) {
-                                    $qty += $allow->amount;
+                            if (empty($tugasNotKunjungan) && empty($attend->clock_out) && $attend->clock_in <= "08:00") {
+                                if (
+                                    $absent
+                                    && $absent->enddate_realization !== "0000-00-00 00:00:00"
+                                    && date("H:i", strtotime($absent->enddate_realization)) < "17:30"
+                                    && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang
+                                ) {
+                                    $qty = $qty - 0.5;
+                                } else if (empty($absent)) {
+                                    $qty = 0;
                                 }
-
-                                if ($allow && $allow->amount > 0) {
-                                    $qty = $allow->amount;
-                                }
+                            }
+                        } else if (empty($attend)) {
+                            if ($absent && $allow && $allow->amount < 0) {
+                                $qty += $allow->amount;
+                            } else if ($absent && $allow && $allow->amount > 0) {
+                                $qty = $allow->amount;
                             } else {
-                                if ($allow && empty($absent)) {
-                                    $qty = 0;
-                                }
-
-                                if ($attend->clock_in > "08:30" && !$allow)
-                                    $qty = 0;
-
-                                if ($allow && $allow->amount < 0 && $absent)
-                                    $qty += $allow->amount;
+                                $qty = 0;
                             }
                         } else {
                             $qty = 0;

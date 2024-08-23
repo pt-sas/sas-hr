@@ -13,7 +13,6 @@ use App\Models\M_RuleDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
-use App\Models\M_Attend;
 use App\Models\M_Employee;
 use Config\Services;
 
@@ -251,7 +250,7 @@ class Realization extends BaseController
     public function showAllAttendance()
     {
         $mAccess = new M_AccessMenu($this->request);
-        $mAttendance = new M_Attend($this->request);
+        $mAttendance = new M_Attendance($this->request);
         $mEmployee = new M_Employee($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
@@ -534,6 +533,7 @@ class Realization extends BaseController
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
+                throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
             }
 
             return $this->response->setJSON($response);
