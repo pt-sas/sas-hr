@@ -14,21 +14,23 @@ class M_DocumentType extends Model
         'description',
         'isactive',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'isrealization',
+        'isapprovedline'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\DocumentType';
     protected $column_order         = [
         '', // Hide column
         '', // Number column
-        'md_branch.name',
-        'md_branch.description',
-        'md_branch.isactive'
+        'md_doctype.name',
+        'md_doctype.description',
+        'md_doctype.isactive'
     ];
     protected $column_search        = [
-        'md_branch.name',
-        'md_branch.description',
-        'md_branch.isactive'
+        'md_doctype.name',
+        'md_doctype.description',
+        'md_doctype.isactive'
     ];
     protected $order                = ['name' => 'ASC'];
     protected $request;
