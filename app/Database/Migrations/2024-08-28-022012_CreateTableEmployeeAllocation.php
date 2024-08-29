@@ -28,7 +28,7 @@ class CreateTableEmployeeAllocation extends Migration
             'enddate'               => ['type' => 'timestamp', 'default' => '0000-00-00 00:00:00', 'null' => false],
             'description'           => ['type' => 'VARCHAR', 'constraint' => 255, 'null' => true],
             'docstatus'             => ['type' => 'CHAR', 'constraint' => 2, 'null' => false],
-            'isapprove'             => ['type' => 'CHAR', 'constraint' => 1, 'null' => false],
+            'isapproved'             => ['type' => 'CHAR', 'constraint' => 1, 'null' => false],
             'approveddate'          => ['type' => 'timestamp', 'null' => true],
             'sys_wfscenario_id'     => ['type' => 'INT', 'constraint' => 11, 'null' => true]
         ]);

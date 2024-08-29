@@ -24,7 +24,7 @@ class M_EmployeeAllocation extends Model
         'enddate',
         'description',
         'docstatus',
-        'isapprove',
+        'isapproved',
         'approveddate',
         'sys_wfscenario_id',
         'created_by',
