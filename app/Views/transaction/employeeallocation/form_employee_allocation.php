@@ -63,7 +63,7 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="branch_to">Cabang Tujuan <span class="required">*</span></label>
-                    <select class="form-control select2" id="branch_to" name="branch_to">
+                    <select class="form-control select-data" id="branch_to" name="branch_to" data-url="branch/getList">
                         <option value="">Pilih Cabang Tujuan</option>
                     </select>
                     <small class="form-text text-danger" id="error_branch_to"></small>

@@ -43,6 +43,7 @@ $routes->get('logout', 'Backend\Auth::logout');
 $routes->post('(:any)/accessmenu/getAccess', 'Backend\AccessMenu::getAccess');
 
 $routes->get('cron-not-approved', 'Backend\WActivity::doNotApproved');
+$routes->get('cron-update-employee', 'Backend\EmployeeAllocation::updateMasterEmployee');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
 
@@ -538,8 +539,8 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('laporan-saldo-cuti-summary', 'Backend\Rpt_LeaveBalance::indexSummary');
     $routes->match(['get', 'post'], 'laporan-saldo-cuti-summary/showAll', 'Backend\Rpt_LeaveBalance::showAllSummary');
 
-    $routes->add('laporan-lembur', 'Backend\Rpt_Overtime::index');
-    $routes->match(['get', 'post'], 'laporan-lembur/showAll', 'Backend\Rpt_Overtime::showAll');
+    $routes->add('laporan-lembur-harian', 'Backend\Rpt_Overtime::indexDaily');
+    $routes->match(['get', 'post'], 'laporan-lembur-harian/showAll', 'Backend\Rpt_Overtime::showAllDaily');
 
     $routes->add('laporan-lembur-mingguan', 'Backend\Rpt_Overtime::indexWeekly');
     $routes->match(['get', 'post'], 'laporan-lembur-mingguan/showAll', 'Backend\Rpt_Overtime::showAllWeekly');
@@ -596,6 +597,17 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('benefit-detail/show', 'Backend\BenefitDetail::show');
     $routes->get('benefit-detail/show/(:any)', 'Backend\BenefitDetail::show/$1');
     $routes->post('benefit-detail/tableLine', 'Backend\BenefitDetail::tableLine');
+
+    $routes->add('laporan-lembur', 'Backend\Rpt_Overtime::index');
+    $routes->match(['get', 'post'], 'laporan-lembur/showAll', 'Backend\Rpt_Overtime::showAll');
+
+    $routes->add('perbantuan', 'Backend\EmployeeAllocation::index');
+    $routes->match(['get', 'post'], 'perbantuan/showAll', 'Backend\EmployeeAllocation::showAll');
+    $routes->post('perbantuan/create', 'Backend\EmployeeAllocation::create');
+    $routes->get('perbantuan/show/(:any)', 'Backend\EmployeeAllocation::show/$1');
+    $routes->get('perbantuan/destroy/(:any)', 'Backend\EmployeeAllocation::destroy/$1');
+    $routes->get('perbantuan/processIt', 'Backend\EmployeeAllocation::processIt');
+    $routes->get('perbantuan/print/(:any)', 'Backend\EmployeeAllocation::exportPDF/$1');
 });
 
 /*
