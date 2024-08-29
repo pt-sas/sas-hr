@@ -9,6 +9,7 @@ class EmployeeAllocation extends Entity
     protected $md_employee_allocation_id;
     protected $md_employee_id;
     protected $documentno;
+    protected $nik;
     protected $submissiondate;
     protected $submissiontype;
     protected $md_branch_id;
