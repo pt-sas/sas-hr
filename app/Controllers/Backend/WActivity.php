@@ -266,48 +266,48 @@ class WActivity extends BaseController
                 $result = $modelAct->save($entityAct);
             }
 
-            // //TODO : Get data from field email 
-            // $email = array_column($dataUser, "email");
+            //TODO : Get data from field email 
+            $email = array_column($dataUser, "email");
 
-            // //TODO : Filter the data use array_unique remove duplicate value then array_filter and exclude null value 
-            // $filtered_email = array_unique(array_filter($email));
+            //TODO : Filter the data use array_unique remove duplicate value then array_filter and exclude null value 
+            $filtered_email = array_unique(array_filter($email));
 
-            // //TODO : Get data by value only
-            // $arr_email = array_values($filtered_email);
+            //TODO : Get data by value only
+            $arr_email = array_values($filtered_email);
 
-            // /**
-            //  * TODO: Send Email information
-            //  */
-            // if (isset($trx->documentno))
-            //     $subject = "[" . ucwords($menuName) . "_" . $trx->documentno . "]";
-            // else
-            //     $subject = "[" . ucwords($menuName) . "]";
+            /**
+             * TODO: Send Email information
+             */
+            if (isset($trx->documentno))
+                $subject = "[" . ucwords($menuName) . "_" . $trx->documentno . "]";
+            else
+                $subject = "[" . ucwords($menuName) . "]";
 
-            // $subject .= " - " . $dataNotif->getSubject();
-            // $message .= "-----" . " " . ucwords($menuName) . " " . $trx->documentno;
+            $subject .= " - " . $dataNotif->getSubject();
+            $message .= "-----" . " " . ucwords($menuName) . " " . $trx->documentno;
 
-            // $message = new Html2Text($message);
-            // $message = $message->getText();
+            $message = new Html2Text($message);
+            $message = $message->getText();
 
-            // foreach ($arr_email as $email) {
-            //     $cMail->sendEmail($email, $subject, $message, null, "SAS HR");
-            // }
+            foreach ($arr_email as $email) {
+                $cMail->sendEmail($email, $subject, $message, null, "SAS HR");
+            }
 
-            // $this->toForwardAlert('sys_wfresponsible', $sys_wfresponsible_id, $subject, $message);
+            $this->toForwardAlert('sys_wfresponsible', $sys_wfresponsible_id, $subject, $message);
 
-            // $options = array(
-            //     'cluster' => 'ap1',
-            //     'useTLS' => true
-            // );
-            // $pusher = new Pusher(
-            //     '8ae4540d78a7d493226a',
-            //     '808c4eb78d03842672ca',
-            //     '1490113',
-            //     $options
-            // );
+            $options = array(
+                'cluster' => 'ap1',
+                'useTLS' => true
+            );
+            $pusher = new Pusher(
+                '8ae4540d78a7d493226a',
+                '808c4eb78d03842672ca',
+                '1490113',
+                $options
+            );
 
-            // $data['message'] = 'hello world';
-            // $pusher->trigger('my-channel', 'my-event', $data);
+            $data['message'] = 'hello world';
+            $pusher->trigger('my-channel', 'my-event', $data);
 
             $this->model->db->transCommit();
         } catch (\Exception $e) {
