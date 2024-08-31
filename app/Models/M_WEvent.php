@@ -22,6 +22,8 @@ class M_WEvent extends Model
 		'isactive',
 		'created_by',
 		'updated_by',
+		'tableline',
+		'recordline_id'
 	];
 	protected $useTimestamps        = true;
 	protected $returnType           = 'App\Entities\WEvent';
@@ -37,7 +39,7 @@ class M_WEvent extends Model
 		$this->builder = $this->db->table($this->table);
 	}
 
-	public function setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $approved, $table, $record_id, $created_by, $nextResp = false)
+	public function setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $approved, $table, $record_id, $created_by, $nextResp = false, $tableLine = null, $recordLine_id = null)
 	{
 		$entity = new \App\Entities\WEvent();
 		$mUser = new M_User($this->request);
@@ -54,6 +56,8 @@ class M_WEvent extends Model
 		$entity->setState($state);
 		$entity->setTable($table);
 		$entity->setRecordId($record_id);
+		$entity->setTableLine($tableLine);
+		$entity->setRecordLineId($recordLine_id);
 
 		if ($row) {
 			$event = $this->find($row->getWfEventAuditId());

@@ -12,6 +12,7 @@ use App\Models\M_WScenarioDetail;
 use App\Models\M_Menu;
 use App\Models\M_Datatable;
 use App\Models\M_NotificationText;
+use App\Models\M_DocumentType;
 use Config\Services;
 use Pusher\Pusher;
 use Html2Text\Html2Text;
@@ -44,21 +45,30 @@ class WActivity extends BaseController
                     $record_id = $value->record_id;
                     $table = $value->table;
                     $menu = $value->menu;
+                    $tableLine = $value->tableline;
+                    $recordLine_id = $value->recordline_id;
 
-                    $menuName = $mMenu->getMenuBy($menu);
-                    $trx = $this->model->getDataTrx($table, $record_id);
+                    $menuName = ucwords($mMenu->getMenuBy($menu));
 
-                    $node = 'Approval ' . ucwords($menuName);
+                    if ($tableLine)
+                        $trx = $this->model->getDataTrx($table, $recordLine_id, $tableLine);
+                    else
+                        $trx = $this->model->getDataTrx($table, $record_id);
 
-                    if ($trx) {
-                        $summary = ucwords($menuName) . ' ' . $trx->documentno . ': ' . $trx->usercreated_by;
+                    $node = "Approval {$menuName}";
+
+                    if ($trx && is_null($tableLine)) {
+                        $summary = "{$menuName} {$trx->documentno} : {$trx->usercreated_by}";
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
-                            $summary = ucwords($menuName) . ' ' . $trx->documentno . ': ' . $trx->userupdated_by;
-                            $node = 'Request Anulir ' . ucwords($menuName);
+                            $summary = "{$menuName} {$trx->documentno} : {$trx->userupdated_by}";
+                            $node = "Request Anulir {$menuName}";
                         }
+                    } else if ($trx && $tableLine) {
+                        $date = format_dmy($trx->date, "-");
+                        $summary = "{$menuName} {$trx->documentno} [$trx->value / {$date}] : {$trx->usercreated_by}";
                     } else {
-                        $summary = ucwords($menuName) . ' ' . $record_id;
+                        $summary = "{$menuName} {$record_id}";
                     }
 
                     $row[] = $ID;
@@ -79,7 +89,7 @@ class WActivity extends BaseController
         }
     }
 
-    public function setActivity($sys_wfactivity_id, $sys_wfscenario_id, $sys_wfresponsible_id, $user_by, $state, $processed, $textmsg, $table, $record_id, $menu, $isanswer = null)
+    public function setActivity($sys_wfactivity_id, $sys_wfscenario_id, $sys_wfresponsible_id, $user_by, $state, $processed, $textmsg, $table, $record_id, $menu, $isanswer = null, $tableLine = null, $recordLine_id = null)
     {
         $mWResponsible = new M_Responsible($this->request);
         $mWEvent = new M_WEvent($this->request);
@@ -87,6 +97,7 @@ class WActivity extends BaseController
         $mMenu = new M_Menu($this->request);
         $mWfsD = new M_WScenarioDetail($this->request);
         $mNotifText = new M_NotificationText($this->request);
+        $mDocType = new M_DocumentType($this->request);
         $cMail = new Mail();
 
         $modelAct = new M_WActivity($this->request);
@@ -102,6 +113,8 @@ class WActivity extends BaseController
             $entityAct->setTable($table);
             $entityAct->setRecordId($record_id);
             $entityAct->setMenu($menu);
+            $entityAct->setTableLine($tableLine);
+            $entityAct->setRecordLineId($recordLine_id);
 
             $user_id = $mWResponsible->getUserByResponsible($sys_wfresponsible_id);
             $menuName = $mMenu->getMenuBy($menu);
@@ -122,11 +135,31 @@ class WActivity extends BaseController
             //TODO : Get data Notification Text Template
             $dataNotif = $mNotifText->find($dataScenLine->getNotifTextId());
 
-            //TODO : Initialize modeling data table 
-            $trxModel = $this->model->initDataTable($table);
+            if ($tableLine) {
+                $model = new M_Datatable($this->request);
 
-            //TODO : Call data transaction
-            $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
+                //TODO : Initialize modeling data table 
+                $trxModel = $model->initDataTable($table);
+                $trxModelLine = $this->model->initDataTable($tableLine);
+
+                //TODO : Call data transaction
+                $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
+                $trxLine = $trxModelLine->where($trxModelLine->primaryKey, $recordLine_id)->first();
+
+                $this->entity->{$this->model->primaryKey} = $recordLine_id;
+                $this->entity->{$trxModel->primaryKey} = $record_id;
+            } else {
+                //TODO : Initialize modeling data table 
+                $trxModel = $this->model->initDataTable($table);
+
+                //TODO : Call data transaction
+                $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
+
+                $this->entity->{$this->model->primaryKey} = $record_id;
+                $this->entity->approveddate = date("Y-m-d H:i:s");
+            }
+
+            $docType = $mDocType->find($trx->submissiontype);
 
             //* Get data text from notification text template 
             $message = $dataNotif->getText();
@@ -142,14 +175,14 @@ class WActivity extends BaseController
                 $result = $modelAct->save($entityAct);
 
                 $sys_wfactivity_id = $modelAct->getInsertID();
-                $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by);
+                $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
             } else {
                 if (!empty($this->getNextResponsible())) {
                     $newWfResponsibleId = $this->getNextResponsible();
                     $user_id = $mWResponsible->getUserByResponsible($newWfResponsibleId);
 
                     //TODO : Update event audit the previous data
-                    $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, true);
+                    $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, true, $tableLine, $recordLine_id);
 
                     //TODO : Set data sys_wfresponsible_id the next responsible
                     $sys_wfresponsible_id = $newWfResponsibleId;
@@ -170,11 +203,11 @@ class WActivity extends BaseController
                         $state = $this->DOCSTATUS_Suspended;
                         $processed = false;
 
-                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by);
+                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
                     }
                 } else {
                     if ($state === $this->DOCSTATUS_Aborted && $processed) {
-                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by);
+                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
                             $this->entity->docstatus = $this->DOCSTATUS_Completed;
@@ -182,6 +215,7 @@ class WActivity extends BaseController
                             $this->entity->docstatus = $this->DOCSTATUS_NotApproved;
                         }
 
+                        $this->entity->isagree = "N";
                         $this->entity->isapproved = "N";
 
                         //TODO : Get data Notification Not Approved Text Template
@@ -190,11 +224,13 @@ class WActivity extends BaseController
                         $state = $this->DOCSTATUS_Completed;
                         $processed = true;
 
-                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by);
+                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
 
                         //! SAS Form Realisasi 
-                        // $this->entity->docstatus = $state;
-                        // $this->entity->receiveddate = date("Y-m-d H:i:s");
+                        if ($docType->getIsRealization() === "N") {
+                            $this->entity->docstatus = $state;
+                            $this->entity->receiveddate = date("Y-m-d H:i:s");
+                        }
 
                         if ($isanswer === "W")
                             $this->entity->comment = $textmsg;
@@ -203,16 +239,16 @@ class WActivity extends BaseController
                             $this->entity->docstatus = $this->DOCSTATUS_Voided;
                         }
 
+                        $this->entity->isagree = "Y";
                         $this->entity->isapproved = "Y";
 
                         //TODO : Get data Notification Approved Text Template
                         $dataNotif = $mNotifText->find($this->Notif_Approved);
                     }
 
-                    $this->entity->approveddate = date("Y-m-d H:i:s");
+                    //TODO: Save data update 
                     $this->entity->updated_by = $user_by;
-                    $this->entity->{$this->model->primaryKey} = $record_id;
-                    $this->save();
+                    $result = $this->save();
 
                     //TODO : Get data user based on createdby
                     $dataUser = $mUser->where($mUser->primaryKey, $trx->created_by)->findAll();
@@ -307,9 +343,9 @@ class WActivity extends BaseController
 
                         $this->wfScenarioId = $activity->getWfScenarioId();
 
-                        $result = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Completed, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer);
+                        $result = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Completed, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
                     } else {
-                        $result = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Aborted, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu());
+                        $result = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Aborted, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
                     }
 
                     $response = message('success', true, $result);;

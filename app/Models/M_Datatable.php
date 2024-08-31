@@ -229,9 +229,18 @@ class M_Datatable extends Model
 
     public function afterUpdate(array $rows)
     {
-        if ($this->table === "trx_absent") {
-            $model = new M_Absent($this->request);
-            $model->createAllowance($rows);
+        try {
+            if ($this->table === "trx_absent") {
+                $model = new M_Absent($this->request);
+                $model->doAfterUpdate($rows);
+            }
+
+            if ($this->table === "trx_absent_detail") {
+                $model = new M_AbsentDetail($this->request);
+                $model->doAfterUpdate($rows);
+            }
+        } catch (\Exception $e) {
+            throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
     }
 }

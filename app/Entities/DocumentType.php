@@ -8,6 +8,8 @@ class DocumentType extends Entity
 {
     protected $md_doctype_id;
     protected $name;
+    protected $isrealization;
+    protected $isapprovedline;
     protected $description;
     protected $isactive;
     protected $created_by;
@@ -38,6 +40,26 @@ class DocumentType extends Entity
     public function setName($name)
     {
         $this->attributes['name'] = $name;
+    }
+
+    public function getIsRealization()
+    {
+        return $this->attributes['isrealization'];
+    }
+
+    public function setIsRealization($isrealization)
+    {
+        return $this->attributes['isrealization'] = $isrealization;
+    }
+
+    public function getIsApprovedLine()
+    {
+        return $this->attributes['isapprovedline'];
+    }
+
+    public function setIsApprovedLine($isapprovedline)
+    {
+        return $this->attributes['isapprovedline'] = $isapprovedline;
     }
 
     public function getDescription()

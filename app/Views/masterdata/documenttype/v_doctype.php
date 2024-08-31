@@ -10,6 +10,8 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>Nama</th>
+                <th>Realisasi</th>
+                <th>Approved Line</th>
                 <th>Keterangan</th>
                 <th>Aktif</th>
                 <th>Aksi</th>

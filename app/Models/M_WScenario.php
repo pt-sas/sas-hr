@@ -103,7 +103,7 @@ class M_WScenario extends Model
 		];
 	}
 
-	public function getScenario(string $menu, int $md_groupasset_id = null, int $md_status_id = null, int $md_branch_id = null, int $md_division_id = null, int $md_levelling_id = null, string $scenariotype = null)
+	public function getScenario(string $menu, int $md_groupasset_id = null, int $md_status_id = null, int $md_branch_id = null, int $md_division_id = null, int $md_levelling_id = null, string $scenariotype = null, int $grandtotal = null)
 	{
 		$this->builder->select('sys_wfscenario_id');
 		$this->builder->where([
@@ -147,10 +147,11 @@ class M_WScenario extends Model
 			$this->builder->where('(scenariotype IS NULL OR scenariotype = 0)');
 		}
 
-
-		// if (!empty($grandtotal)) {
-		// 	$this->builder->where('grandtotal >=', $grandtotal);
-		// }
+		if (!is_null($grandtotal)) {
+			$this->builder->where('grandtotal', $grandtotal);
+		} else {
+			$this->builder->where('(grandtotal IS NULL OR grandtotal = 0)');
+		}
 
 		$this->builder->orderBy('lineno', 'DESC');
 

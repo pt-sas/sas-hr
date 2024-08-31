@@ -79,4 +79,28 @@ class SASRules
 
         return true;
     }
+
+    /**
+     * Check the array data to see if the first data checkbox value.
+     * 
+     *
+     * @param [type] $str
+     * @param string|null $fields
+     * @param array $data
+     * @return boolean
+     */
+    public function checkboxes($str = null, ?string $fields = null, array $data): bool
+    {
+        [$field, $field2] = array_pad(explode(',', $fields), 2, null);
+
+        $isField = ($data[$field] ?? 'N') === 'Y';
+        $isField2 = ($data[$field2] ?? 'N') === 'Y';
+
+        // Validasi: tidak boleh keduanya dicentang
+        if ($isField && $isField2) {
+            return false; // Invalid
+        }
+
+        return true; // Valid
+    }
 }
