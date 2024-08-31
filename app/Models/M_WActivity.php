@@ -22,6 +22,8 @@ class M_WActivity extends Model
 		'isactive',
 		'created_by',
 		'updated_by',
+		'tableline',
+		'recordline_id'
 	];
 	protected $useTimestamps        = true;
 	protected $returnType           = 'App\Entities\WActivity';
@@ -84,24 +86,47 @@ class M_WActivity extends Model
 		return $sql;
 	}
 
-	public function getDataTrx(string $table, $id)
+	public function getDataTrx(string $table, $id, string $tableLine = null)
 	{
-		$fields = $this->db->getFieldData($table);
+		$_table = is_null($tableLine) ? $table : $tableLine;
 
-		$this->builder = $this->db->table($table);
+		$fields = $this->db->getFieldData($_table);
 
-		$this->builder->select($table . '.*,
+		$this->builder = $this->db->table($_table);
+
+		$query = $_table . '.*,
 						sys_user.name as usercreated_by,
-						usp.name as userupdated_by');
+						usp.name as userupdated_by';
 
-		$this->builder->join('sys_user', 'sys_user.sys_user_id = ' . $table . '.created_by');
-		$this->builder->join('sys_user usp', 'usp.sys_user_id = ' . $table . '.updated_by');
-		$this->builder->whereIn($table . ".docstatus", ["IP", "RE"]);
+		$this->builder->join('sys_user', 'sys_user.sys_user_id = ' . $_table . '.created_by', 'left');
+		$this->builder->join('sys_user usp', 'usp.sys_user_id = ' . $_table . '.updated_by', 'left');
+
+		if (is_null($tableLine)) {
+			$this->builder->whereIn($_table . ".docstatus", ["IP", "RE"]);
+		} else {
+			$fieldH = $this->db->getFieldData($table);
+
+			foreach ($fieldH as $field) {
+				if ($field->primary_key == 1) {
+					$this->builder->join($table, $table . '.' . $field->name . ' = ' . $_table . '.' . $field->name);
+					$this->builder->join('md_employee', 'md_employee.md_employee_id = ' . $table . '.md_employee_id', 'left');
+				}
+			}
+
+			$query .= ',';
+			$query .= $table . '.documentno,';
+			$query .= 'md_employee.fullname as employee,
+						md_employee.value,';
+
+			$this->builder->where($tableLine . ".isagree", "H");
+		}
+
+		$this->builder->select($query);
 
 		foreach ($fields as $field) {
 			if ($field->primary_key == 1) {
 				$this->builder->where([
-					$table . "." . $field->name => $id
+					$_table . "." . $field->name => $id
 				]);
 			}
 		}
