@@ -43,6 +43,8 @@ class DocumentType extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->name;
+                $row[] = active($value->isrealization);
+                $row[] = active($value->isapprovedline);
                 $row[] = $value->description;
                 $row[] = active($value->isactive);
                 $row[] = $this->template->tableButton($ID);
@@ -66,11 +68,11 @@ class DocumentType extends BaseController
             $post = $this->request->getVar();
 
             try {
-                $this->entity->fill($post);
-
                 if (!$this->validation->run($post, 'doctype')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $this->entity->fill($post);
+
                     $response = $this->save();
                 }
             } catch (\Exception $e) {

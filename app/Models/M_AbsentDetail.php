@@ -98,7 +98,7 @@ class M_AbsentDetail extends Model
         $amount = 0;
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-        $updated_by = $rows['data']['updated_by'];
+        $updated_by = $rows['data']['updated_by'] ?? session()->get('id');;
         $today = date('Y-m-d');
         $day = date('w');
         $entryTime = "08:00";
@@ -108,28 +108,7 @@ class M_AbsentDetail extends Model
 
         try {
             $ruleDetail = null;
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti) {
-                $holidays = $mHoliday->getHolidayDate();
-
-                $workDay = $mEmpWork->where([
-                    'md_employee_id'    => $sql->md_employee_id,
-                    'validfrom <='      => $today
-                ])->orderBy('validfrom', 'ASC')->first();
-
-                //TODO : Get Work Detail
-                $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
-                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-                $daysOff = getDaysOff($workDetail);
-
-                $endDate = date('Y-m-d', strtotime($sql->enddate));
-                $startDate = date("Y-m-d", strtotime($sql->startdate));
-
-                $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
-                $totalDays = count($dateRange);
-
+            if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti && $line->isagree === "Y") {
                 $balance = $mLeaveBalance->where([
                     'year'              => date("Y", strtotime($sql->startdate)),
                     'md_employee_id'    => $sql->md_employee_id
@@ -137,12 +116,20 @@ class M_AbsentDetail extends Model
 
                 $saldo = $balance->balance_amount;
 
-                $entityBal = new \App\Entities\LeaveBalance();
-                $entityBal->md_employee_id = $sql->md_employee_id;
-                $entityBal->balance_amount = $saldo - $totalDays;
-                $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+                if ($saldo != 0) {
+                    $entityBal = new \App\Entities\LeaveBalance();
+                    $entityBal->md_employee_id = $sql->md_employee_id;
+                    $entityBal->balance_amount = $saldo - 1;
+                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
-                $mLeaveBalance->save($entityBal);
+                    $mLeaveBalance->save($entityBal);
+                } else {
+                    $entity = new \App\Entities\AbsentDetail();
+                    $entity->isagree = "N";
+                    $entity->updated_by = $updated_by;
+                    $entity->{$this->primaryKey} = $ID;
+                    $this->save($entity);
+                }
             }
 
             if ($sql->submissiontype == $mAbsent->Pengajuan_Sakit) {
@@ -505,6 +492,38 @@ class M_AbsentDetail extends Model
 
                 $mAllowance->save($entity);
             }
+        } catch (\Exception $e) {
+            throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    public function doAfterUpdate(array $rows)
+    {
+        $mAbsent = new M_Absent($this->request);
+        $entity = new \App\Entities\Absent();
+
+        try {
+            $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
+
+            $line = $this->find($ID);
+            $list = $this->where([
+                'isagree'       => "H",
+                'trx_absent_id' => $line->{$mAbsent->primaryKey}
+            ])->first();
+
+            if (is_null($list)) {
+                $todayTime = date('Y-m-d H:i:s');
+                $updatedBy = $rows['data']['updated_by'];
+
+                $entity->setDocStatus("CO");
+                $entity->setReceivedDate($todayTime);
+                $entity->setAbsentId($line->{$mAbsent->primaryKey});
+                $entity->setUpdatedBy($updatedBy);
+                $mAbsent->save($entity);
+            }
+
+            if ($line->isagree === "Y")
+                $this->createAllowance($rows);
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

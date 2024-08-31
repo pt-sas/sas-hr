@@ -11,6 +11,7 @@ use App\Models\M_Responsible;
 use App\Models\M_Status;
 use App\Models\M_Branch;
 use App\Models\M_Division;
+use App\Models\M_DocumentType;
 use App\Models\M_Employee;
 use App\Models\M_Levelling;
 use Config\Services;
@@ -294,6 +295,8 @@ class WScenario extends BaseController
     {
         $mWfs = new M_WScenario($this->request);
         $cWfa = new WActivity();
+        $mDocType = new M_DocumentType($this->request);
+        $mEmployee = new M_Employee($this->request);
 
         $this->model = $model;
         $this->entity = $entity;
@@ -307,7 +310,7 @@ class WScenario extends BaseController
 
         if (!is_null($modelDetail)) {
             $this->modelDetail = $modelDetail;
-            $trxLine = $this->modelDetail->where($primaryKey, $trxID)->first();
+            $trxLine = $this->modelDetail->where($primaryKey, $trxID)->findAll();
         }
 
         if (!$trx && $docStatus === $this->DOCSTATUS_Completed) {
@@ -316,32 +319,33 @@ class WScenario extends BaseController
         } else if ($docStatus === $this->DOCSTATUS_Voided) {
             $this->entity->setDocStatus($this->DOCSTATUS_Voided);
         } else if ($trx && $docStatus === $this->DOCSTATUS_Completed) {
+            $employee = $mEmployee->find($trx->md_employee_id);
+
             if ($table === 'trx_absent') {
-                $mEmp = new M_Employee($this->request);
-                $employee = $mEmp->find($trx->md_employee_id);
+                $totalDays = 0;
 
-                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id);
+                if ($trx->submissiontype == $this->model->Pengajuan_Cuti) {
+                    $totalDays = count($trxLine);
 
-                if ($this->sys_wfscenario_id) {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
-                    $this->entity->setWfScenarioId($this->sys_wfscenario_id);
-                    $isWfscenario = true;
-                } else {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                    if ($totalDays <= 3)
+                        $totalDays = 3; //Set GT sesuai scenario
+                    else if ($totalDays > 3 && $totalDays <= 5)
+                        $totalDays = 5; //Set GT sesuai scenario
+                    else if ($totalDays > 5)
+                        $totalDays = 6; //Set GT sesuai scenario
                 }
+
+                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, $totalDays);
             } else if ($table === 'trx_overtime') {
-                $mEmp = new M_Employee($this->request);
-                $employee = $mEmp->find($trx->md_employee_id);
-
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
+            }
 
-                if ($this->sys_wfscenario_id) {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
-                    $this->entity->setWfScenarioId($this->sys_wfscenario_id);
-                    $isWfscenario = true;
-                } else {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                }
+            if ($this->sys_wfscenario_id) {
+                $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
+                $this->entity->setWfScenarioId($this->sys_wfscenario_id);
+                $isWfscenario = true;
+            } else {
+                $this->entity->setDocStatus($this->DOCSTATUS_Completed);
             }
         } else if ($trx && $docStatus === $this->DOCSTATUS_Requested) {
             if ($table === 'trx_absent') {
@@ -361,8 +365,22 @@ class WScenario extends BaseController
         $this->entity->{$primaryKey} = $trxID;
         $result = $this->save();
 
-        if ($result && $isWfscenario)
-            $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);
+        if ($result && $isWfscenario) {
+            $docType = $mDocType->find($trx->submissiontype);
+
+            if ($docType->getIsApprovedLine() === "Y" && !is_null($modelDetail) && $trxLine) {
+                $this->modelDetail = $modelDetail;
+
+                $tableLine = $this->modelDetail->table;
+                $primaryKey = $this->modelDetail->primaryKey;
+
+                foreach ($trxLine as $line) {
+                    $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu, null, $tableLine, $line->{$primaryKey});
+                }
+            } else {
+                $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);
+            }
+        }
 
         return $result;
     }

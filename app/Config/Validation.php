@@ -1811,6 +1811,20 @@ class Validation
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
+        ],
+        'enddate_att'        => [
+            'label'             => 'Tanggal Check Out',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => '{field} tidak ada'
+            ]
+        ],
+        'endtime_att'        => [
+            'label'             => 'Jam Check Out',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => '{field} tidak ada'
+            ]
         ]
     ];
 
@@ -1843,11 +1857,25 @@ class Validation
 
     public $doctype = [
         'name'                 => [
-            'label'            => 'Nama',
+            'label'            => 'nama',
             'rules'            => 'required|is_unique[md_doctype.name,md_doctype_id,{id}]',
             'errors'           => [
                 'is_unique'    => 'This {field} already exists.',
                 'required'     => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'isrealization'        => [
+            'label'            => 'realisasi',
+            'rules'            => 'checkboxes[isrealization,isapprovedline]',
+            'errors'           => [
+                'checkboxes'   => 'Mohon realisasi dan approved line tidak boleh dipilih bersamaan',
+            ]
+        ],
+        'isapprovedline'       => [
+            'label'            => 'approved line',
+            'rules'            => 'checkboxes[isrealization,isapprovedline]',
+            'errors'           => [
+                'checkboxes'   => 'Mohon realisasi dan approved line tidak boleh dipilih bersamaan',
             ]
         ]
     ];
@@ -1906,7 +1934,7 @@ class Validation
         ],
         'nik'                   => [
             'label'             => 'nik',
-            'rules'             => 'required|min_length[6]|max_length[6]|is_unique[md_employee.nik,md_employee_id,{id}]',
+            'rules'             => 'required|min_length[6]|max_length[10]|is_unique[md_employee.nik,md_employee_id,{id}]',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu',
                 'min_length'    => 'Minimal {field} harus {param} karakter',
@@ -2219,12 +2247,18 @@ class Validation
             'label'             => 'benefit',
             'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Mohon mengisi detail {field} dahulu',
-                // 'is_unique'     => 'Data {field} ini sudah ada.'
+                'required'      => 'Mohon mengisi detail {field} dahulu'
             ]
         ],
         'detail.table.*.status_line'  => [
             'label'             => 'status',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.isdetail_line'  => [
+            'label'             => 'detail',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi detail {field} dahulu'
@@ -2293,6 +2327,72 @@ class Validation
             ]
         ],
         'reason'                => [
+            'label'             => 'alasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $employee_allo = [
+        'md_employee_id'        => [
+            'label'             => 'karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'branch_to'          => [
+            'label'             => 'cabang tujuan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'division_to'        => [
+            'label'             => 'divisi tujuan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'submissiondate'        => [
+            'label'             => 'tanggal pengajuan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'startdate'             => [
+            'label'             => 'tanggal mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'enddate'               => [
+            'label'             => 'tanggal selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'description'                => [
             'label'             => 'alasan',
             'rules'             => 'required',
             'errors'            => [

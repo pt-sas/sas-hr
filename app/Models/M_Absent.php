@@ -43,7 +43,7 @@ class M_Absent extends Model
     protected $beforeInsert         = [];
     protected $afterInsert          = [];
     protected $beforeUpdate         = [];
-    protected $afterUpdate          = ['createDetail'];
+    protected $afterUpdate          = [];
     protected $beforeDelete         = [];
     protected $afterDelete          = [];
     protected $column_order         = [
@@ -257,45 +257,50 @@ class M_Absent extends Model
         return $prefix;
     }
 
-    public function createDetail(array $rows)
+    public function createAbsentDetail($rows, $header)
     {
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mAllowance = new M_AllowanceAtt($this->request);
 
-        $sql = $this->find($rows['id'][0]);
-        $line = $mAbsentDetail->where($this->primaryKey, $rows['id'][0])->first();
+        $result = 0;
 
-        if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP" && is_null($line)) {
+        try {
             $holiday = $mHoliday->getHolidayDate();
             $today = date('Y-m-d');
 
+            $submissionType = $header->submissiontype;
+            $md_employee_id = $header->md_employee_id;
+            $startDate = $header->startdate;
+            $endDate = $header->enddate;
+
             //TODO : Get work day employee
             $workDay = $mEmpWork->where([
-                'md_employee_id'    => $sql->md_employee_id,
+                'md_employee_id'    => $md_employee_id,
                 'validfrom <='      => $today
             ])->orderBy('validfrom', 'ASC')->first();
 
             if (is_null($workDay)) {
-                if ($sql->getSubmissionType() == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $sql->getSubmissionType() == $this->Pengajuan_Ijin_Keluar_Kantor) {
-                    $date_range = getDatesFromRange($sql->getEndDate(), $sql->getEndDate(), $holiday);
+                if ($submissionType == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $submissionType == $this->Pengajuan_Ijin_Keluar_Kantor) {
+                    $date_range = getDatesFromRange($endDate, $endDate, $holiday);
                 } else {
-                    $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday);
+                    $date_range = getDatesFromRange($startDate, $endDate, $holiday);
                 }
             } else {
                 //TODO : Get Work Detail
                 $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
+                $whereClause .= " AND md_employee_work.md_employee_id = $md_employee_id";
                 $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
                 $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
                 $daysOff = getDaysOff($workDetail);
 
-                if ($sql->getSubmissionType() == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $sql->getSubmissionType() == $this->Pengajuan_Ijin_Keluar_Kantor) {
-                    $date_range = getDatesFromRange($sql->getEndDate(), $sql->getEndDate(), $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
+                if ($submissionType == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $submissionType == $this->Pengajuan_Ijin_Keluar_Kantor) {
+                    $date_range = getDatesFromRange($endDate, $endDate, $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
                 } else {
-                    $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
+                    $date_range = getDatesFromRange($startDate, $endDate, $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
                 }
             }
 
@@ -304,102 +309,68 @@ class M_Absent extends Model
             foreach ($date_range as $date) :
                 $row = [];
 
-                $number++;
-
-                $row[$this->primaryKey] = $rows['id'][0];
+                $row[$this->primaryKey] = $rows['id'];
                 $row['date'] = $date;
                 $row['lineno'] = $number;
-                $row['isagree'] = 'H';
-                $row['created_by'] = $rows['data']['updated_by'];
-                $row['updated_by'] = $rows['data']['updated_by'];
+                $row['isagree'] = $rows['isagree'] ?? "H";
+                $row['created_by'] = $rows['created_by'];
+                $row['updated_by'] = $rows['updated_by'];
                 $data[] = $row;
             endforeach;
 
-            $mAbsentDetail->builder->insertBatch($data);
+            $result = $mAbsentDetail->builder->insertBatch($data);
+
+            $data = array_map(function ($item)
+            use ($submissionType, $md_employee_id) {
+                $item['submissiontype'] = $submissionType;
+                $item['md_employee_id'] = $md_employee_id;
+
+                return $item;
+            }, $data);
+
+            $mAllowance->createAllowance($data);
+        } catch (\Exception $e) {
+            throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
 
-        // if ($sql->docstatus === "RE" && !is_null($line)) {
-        //     $line = $mAbsentDetail->where($this->primaryKey, $rows['id'][0])->findAll();
-
-        //     $data = [];
-        //     foreach ($line as $val) :
-        //         $row = [];
-        //         $row[$mAbsentDetail->primaryKey] = $val->{$mAbsentDetail->primaryKey};
-        //         $row['isagree'] = 'H';
-        //         $row['updated_by'] = $rows['data']['updated_by'];
-        //         $data[] = $row;
-        //     endforeach;
-
-        //     $mAbsentDetail->builder->updateBatch($data, $mAbsentDetail->primaryKey);
-        // }
-
-        $this->createAllowance($rows);
+        return $result;
     }
 
-    public function createAllowance(array $rows)
+    public function doAfterUpdate(array $rows)
     {
         $mRule = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
-        $mHoliday = new M_Holiday($this->request);
         $mLeaveBalance = new M_LeaveBalance($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
-        $mHoliday = new M_Holiday($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
 
-        $amount = 0;
+        $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
 
-        $ID = $rows['id'][0];
         $sql = $this->find($ID);
         $line = $mAbsentDetail->where($this->primaryKey, $ID)->first();
 
-        if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP" && is_null($line)) {
-            $holiday = $mHoliday->getHolidayDate();
-            $today = date('Y-m-d');
+        $agree = 'Y';
+        $notAgree = 'N';
+        $holdAgree = 'H';
 
-            //TODO : Get work day employee
-            $workDay = $mEmpWork->where([
-                'md_employee_id'    => $sql->md_employee_id,
-                'validfrom <='      => $today
-            ])->orderBy('validfrom', 'ASC')->first();
+        $updatedBy = $rows['data']['updated_by'] ?? session()->get('id');
 
-            if (is_null($workDay)) {
-                $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday);
-            } else {
-                //TODO : Get Work Detail
-                $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
-                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+        if ($sql->getIsApproved() === 'Y' && ($sql->docstatus === "IP" || $sql->docstatus === "CO") && is_null($line)) {
+            if ($sql->docstatus === "CO")
+                $isAgree = $agree;
 
-                $daysOff = getDaysOff($workDetail);
+            if ($sql->docstatus === "IP")
+                $isAgree = $holdAgree;
 
-                if ($sql->getSubmissionType() == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $sql->getSubmissionType() == $this->Pengajuan_Ijin_Keluar_Kantor) {
-                    $date_range = getDatesFromRange($sql->getEndDate(), $sql->getEndDate(), $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
-                } else {
-                    $date_range = getDatesFromRange($sql->getStartDate(), $sql->getEndDate(), $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
-                }
-            }
+            $data = [
+                'id'         => $ID,
+                'created_by' => $updatedBy,
+                'updated_by' => $updatedBy,
+                'isagree'    => $isAgree
+            ];
 
-            $data = [];
-            $number = 0;
-            foreach ($date_range as $date) :
-                $row = [];
-
-                $number++;
-
-                $row[$this->primaryKey] = $ID;
-                $row['date'] = $date;
-                $row['lineno'] = $number;
-                $row['isagree'] = 'H';
-                $row['created_by'] = $rows['data']['updated_by'];
-                $row['updated_by'] = $rows['data']['updated_by'];
-                $data[] = $row;
-            endforeach;
-
-            $mAbsentDetail->builder->insertBatch($data);
+            $this->createAbsentDetail($data, $sql);
         }
 
         if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "VO" && !is_null($line)) {
@@ -409,8 +380,8 @@ class M_Absent extends Model
             foreach ($line as $val) :
                 $row = [];
                 $row[$mAbsentDetail->primaryKey] = $val->{$mAbsentDetail->primaryKey};
-                $row['isagree'] = 'N';
-                $row['updated_by'] = $rows['data']['updated_by'];
+                $row['isagree'] = $notAgree;
+                $row['updated_by'] = $updatedBy;
                 $data[] = $row;
 
                 $refDetail = $mAbsentDetail->where('trx_absent_detail_id', $val->ref_absent_detail_id)->first();
@@ -422,17 +393,17 @@ class M_Absent extends Model
                  */
                 $this->entity = new \App\Entities\AbsentDetail();
                 $this->entity->trx_absent_id = $refDetail->trx_absent_id;
-                $this->entity->isagree = "H";
+                $this->entity->isagree = $holdAgree;
                 $this->entity->lineno = $lineNo;
                 $this->entity->date = $refDetail->date;
-                $this->entity->created_by = $rows['data']['updated_by'];
-                $this->entity->updated_by = $rows['data']['updated_by'];
+                $this->entity->created_by = $updatedBy;
+                $this->entity->updated_by = $updatedBy;
                 $mAbsentDetail->save($this->entity);
 
                 $this->entity = new \App\Entities\Absent();
                 $this->entity->setDocStatus("IP");
                 $this->entity->setAbsentId($refDetail->trx_absent_id);
-                $this->entity->setUpdatedBy($rows['data']['updated_by']);
+                $this->entity->setUpdatedBy($updatedBy);
                 $this->save($this->entity);
             endforeach;
 
@@ -459,8 +430,8 @@ class M_Absent extends Model
                         "submissiondate"    => $row->submissiondate,
                         "md_employee_id"    => $row->md_employee_id,
                         "amount"            => - ($row->amount),
-                        "created_by"        => $rows['data']['updated_by'],
-                        "updated_by"        => $rows['data']['updated_by']
+                        "created_by"        => $updatedBy,
+                        "updated_by"        => $updatedBy
                     ];
                 }
 
@@ -477,8 +448,8 @@ class M_Absent extends Model
                         "submissiondate"    => $row->submissiondate,
                         "md_employee_id"    => $row->md_employee_id,
                         "amount"            => abs($row->balance_amount),
-                        "created_by"        => $rows['data']['updated_by'],
-                        "updated_by"        => $rows['data']['updated_by']
+                        "created_by"        => $updatedBy,
+                        "updated_by"        => $updatedBy
                     ];
                 }
 

@@ -428,7 +428,7 @@ class Memo extends BaseController
         $pdf->Cell(40, 0, 'Isi Memo :', 0, 1, 'L', false, '', 0, false);
         // $pdf->Cell(3, 0, ':', 0, 1, 'L');
         $pdf->Ln(1);
-        $pdf->Cell(0, 0, $memosplit[1], 0, 1, 'L', false, '', 0, false);
+        $pdf->MultiCell(0, 0, $memosplit[1], 0, '', false, 1, null, null, false, 0, false, false, 20);
         // $pdf->Ln(1);
         $pdf->Cell(0, 0, $memosplit[2], 0, 1, 'L', false, '', 0, false);
         // $pdf->Ln(1);
