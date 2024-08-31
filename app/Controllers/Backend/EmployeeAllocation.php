@@ -13,6 +13,9 @@ use App\Models\M_EmpWorkDay;
 use App\Models\M_Division;
 use App\Models\M_EmployeeAllocation;
 use App\Models\M_RuleDetail;
+use App\Models\M_Branch;
+use App\Models\M_EmpBranch;
+use App\Models\M_EmpDivision;
 use TCPDF;
 
 class EmployeeAllocation extends BaseController
@@ -140,7 +143,7 @@ class EmployeeAllocation extends BaseController
                 $row[] = $value->description;
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
-                $row[] = $this->template->tableButton($ID, $value->docstatus, $this->BTN_Print);
+                $row[] = $this->template->tableButton($ID, $value->docstatus);
                 $data[] = $row;
             endforeach;
 
@@ -228,7 +231,7 @@ class EmployeeAllocation extends BaseController
 
                         $whereClause = "trx_employee_allocation.nik = '{$nik}'";
                         $whereClause .= " AND DATE_FORMAT(trx_employee_allocation.startdate, '%Y-%m-%d') >= '{$dateStartClause}' AND DATE_FORMAT(trx_employee_allocation.enddate, '%Y-%m-%d') <= '{$endDate}'";
-                        $whereClause .= " AND trx_employee_allocation.docstatus = '{$this->DOCSTATUS_Completed}'";
+                        $whereClause .= " AND trx_employee_allocation.docstatus IN ('{$this->DOCSTATUS_Completed}','{$this->DOCSTATUS_Inprogress}')";
                         $trx = $this->model->where($whereClause)->first();
 
                         //* last index of array from variable addDays
@@ -271,19 +274,25 @@ class EmployeeAllocation extends BaseController
     public function show($id)
     {
         $mEmployee = new M_Employee($this->request);
+        $mBranch = new M_Branch($this->request);
+        $mDivision = new M_Division($this->request);
 
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
+                $rowBranchTo = $mBranch->where($mBranch->primaryKey, $list[0]->getBranchTo())->first();
+                $rowDivisionTo = $mDivision->where($mDivision->primaryKey, $list[0]->getDivisionTo())->first();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
+                $list = $this->field->setDataSelect($mBranch->table, $list, 'branch_to', $rowBranchTo->getBranchId(), $rowBranchTo->getName());
+                $list = $this->field->setDataSelect($mDivision->table, $list, 'division_to', $rowDivisionTo->getDivisionId(), $rowDivisionTo->getName());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
                 //* Need to set data into date field in form
-                // $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
-                // $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
+                $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
+                $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
@@ -357,34 +366,6 @@ class EmployeeAllocation extends BaseController
         }
     }
 
-    public function tableLine($set = null, $detail = [])
-    {
-        $table = [];
-
-        //? Update
-        if (!empty($set) && count($detail) > 0) {
-            foreach ($detail as $row) :
-                $docNoRef = "";
-                $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
-
-                if (!empty($row->ref_absent_detail_id)) {
-                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
-                    $docNoRef = $lineRef->documentno;
-                }
-
-                $table[] = [
-                    $row->lineno,
-                    format_dmy($row->date, '-'),
-                    $line->getDocumentNo(),
-                    $docNoRef,
-                    statusRealize($row->isagree)
-                ];
-            endforeach;
-        }
-
-        return json_encode($table);
-    }
-
     public function exportPDF($id)
     {
         $mEmployee = new M_Employee($this->request);
@@ -445,5 +426,121 @@ class EmployeeAllocation extends BaseController
         $this->response->setContentType('application/pdf');
         $pdf->IncludeJS("print();");
         $pdf->Output('pengajuan.pdf', 'I');
+    }
+
+    public function updateMasterEmployee()
+    {
+        $this->session->set([
+            'sys_user_id'       => 1,
+        ]);
+
+        $mEmployee = new M_Employee($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
+        $mEmpDivision = new M_EmpDivision($this->request);
+
+        $today = date('Y-m-d');
+        $tomorrow = date('Y-m-d', strtotime($today . ' +1 day'));
+
+        $where = '(startdate = CURDATE() + INTERVAL 1 DAY OR enddate = CURDATE())';
+        $where .= " AND trx_employee_allocation.docstatus = 'IP'";
+        $where .= " AND trx_employee_allocation.isapproved = 'Y'";
+        $list = $this->model->where($where)->findAll();
+
+        if ($list) {
+            foreach ($list as $value) {
+                $startdate = date('Y-m-d', strtotime($value->startdate));
+                $enddate = date('Y-m-d', strtotime($value->enddate));
+
+                if ($startdate === $tomorrow) {
+                    // For Current Branch
+                    $branch = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->md_branch_id])->first();
+                    $division = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->md_division_id])->first();
+
+                    // This is if Branch To Exists, doesn't need insert data
+                    $branchTo = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->branch_to])->first();
+                    $divisionTo = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->division_to])->first();
+
+                    if ($value->md_branch_id !== $value->branch_to) {
+                        if ($branch)
+                            $mEmpBranch->delete($branch->md_employee_branch_id);
+
+                        $data = [];
+
+                        if (!$branchTo) {
+                            $data = [
+                                'created_by' => session()->get('sys_user_id'),
+                                'updated_by' => session()->get('sys_user_id'),
+                                'md_employee_id' => $value->md_employee_id,
+                                'md_branch_id'   => $value->branch_to
+                            ];
+                            $mEmpBranch->insert($data);
+                        }
+                    }
+
+                    if ($division && ($value->md_division_id !== $value->division_to)) {
+                        if ($division)
+                            $mEmpDivision->delete($division->md_employee_division_id);
+                        $data = [];
+
+                        if (!$divisionTo) {
+                            $data = [
+                                'created_by' => session()->get('sys_user_id'),
+                                'updated_by' => session()->get('sys_user_id'),
+                                'md_employee_id' => $value->md_employee_id,
+                                'md_division_id' => $value->division_to
+                            ];
+                            $mEmpDivision->insert($data);
+                        }
+                    }
+                } else if ($enddate === $today) {
+                    $this->entity = new \App\Entities\EmployeeAllocation();
+
+                    $branch = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->branch_to])->first();
+                    $division = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->division_to])->first();
+
+                    $branchBef = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->md_branch_id])->first();
+                    $divisionBef = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->md_division_id])->first();
+
+                    if ($value->md_branch_id !== $value->branch_to) {
+                        if ($branch)
+                            $mEmpBranch->delete($branch->md_employee_branch_id);
+                        $data = [];
+
+                        if (!$branchBef) {
+                            $data = [
+                                'created_by' => session()->get('sys_user_id'),
+                                'updated_by' => session()->get('sys_user_id'),
+                                'md_employee_id' => $value->md_employee_id,
+                                'md_branch_id'   => $value->md_branch_id
+                            ];
+
+                            $mEmpBranch->insert($data);
+                        }
+                    }
+
+                    if ($value->md_division_id !== $value->division_to) {
+                        if ($division)
+                            $mEmpDivision->delete($division->md_employee_division_id);
+                        $data = [];
+
+                        if (!$divisionBef) {
+                            $data = [
+                                'created_by' => session()->get('sys_user_id'),
+                                'updated_by' => session()->get('sys_user_id'),
+                                'md_employee_id' => $value->md_employee_id,
+                                'md_division_id' => $value->md_division_id
+                            ];
+
+                            $mEmpDivision->insert($data);
+                        }
+                    }
+
+                    $this->entity->setEmployeeAllocationId($value->trx_employee_allocation_id);
+                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+
+                    $this->save();
+                }
+            }
+        }
     }
 }
