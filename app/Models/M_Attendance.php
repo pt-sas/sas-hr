@@ -87,4 +87,22 @@ class M_Attendance extends Model
 
         return $builder->get();
     }
+
+    public function getSelectDetail()
+    {
+        $sql = $this->table . '.*,
+                md_employee.md_employee_id,
+                md_employee.fullname';
+
+        return $sql;
+    }
+
+    public function getJoinDetail()
+    {
+        $sql = [
+            $this->setDataJoin('md_employee', "md_employee.nik = {$this->table}.nik", 'inner')
+        ];
+
+        return $sql;
+    }
 }

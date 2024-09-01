@@ -1,47 +1,36 @@
 <?= $this->extend('backend/_partials/overview') ?>
 
 <?= $this->section('content'); ?>
-<div class="card-main">
-    <form id="form_absent_manual" enctype="multipart/form-data">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                        <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
-                            data-url="employee/getList/$Access">
-                            <option value="">Select Karyawan</option>
-                        </select>
-                        <small class="form-text text-danger" id="error_md_employee_id"></small>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="date">Tanggal <span class="required">*</span></label>
-                        <div class="input-icon">
-                            <input type="text" class="form-control datepicker" name="date" placeholder="Tanggal"
-                                value=<?= $today ?> disabled>
-                            <span class="input-icon-addon">
-                                <i class="fa fa-calendar"></i>
-                            </span>
-                        </div>
-                        <small class="form-text text-danger" id="error_date"></small>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="time">Jam <span class="required">*</span></label>
-                        <div class="input-icon">
-                            <input type="text" class="form-control timepicker" name="time" placeholder="Jam">
-                            <div class="input-icon-addon">
-                                <i class="fa fa-clock"></i>
-                            </div>
-                        </div>
-                        <small class="form-text text-danger" id="error_time"></small>
-                    </div>
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="float-right">
+                    <span id="timestamp"></span>
                 </div>
             </div>
+            <div class="card-body" id="scan_preview">
+                <video id="preview" style="width:100%;"></video>
+            </div>
         </div>
-    </form>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <table class="table table-head-bg-primary table-bordered table-hover table_report">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>NIK</th>
+                            <th>Karyawan</th>
+                            <th>Tanggal</th>
+                            <th>Jam Absen</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+
+        </div>
+    </div>
 </div>
 <?= $this->endSection() ?>

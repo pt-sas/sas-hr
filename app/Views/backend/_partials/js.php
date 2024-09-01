@@ -58,3 +58,79 @@
 <script src="<?= base_url('custom/js/Event.js') ?>"></script>
 <!-- Custom Logic -->
 <script src="<?= base_url('custom/js/Logic.js') ?>"></script>
+<script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+<script type="text/javascript">
+    const preview = document.getElementById('preview');
+
+    let scanner = new Instascan.Scanner({
+        video: preview
+    });
+    scanner.addListener('scan', function(content) {
+        let formData = new FormData();
+        let date = new Date();
+        let datetime = moment(date).format('YYYY-MM-DD HH:mm:ss');
+        // alert('Barcode scanned: ' + content);
+        formData.append("nik", content);
+        formData.append("checktime", datetime);
+
+        let url = CURRENT_URL + CREATE;
+
+        $.ajax({
+            url: url,
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            cache: false,
+            dataType: "JSON",
+            beforeSend: function() {
+                loadingForm('scan_preview', "facebook");
+            },
+            complete: function() {
+                hideLoadingForm('scan_preview');
+            },
+            success: function(result) {
+                if (result[0].success) {
+                    reloadTable();
+                }
+            },
+        });
+    });
+    Instascan.Camera.getCameras().then(function(cameras) {
+        if (cameras.length) {
+            let selectedCamera = cameras[0];
+
+            cameras.forEach(function(camera) {
+                if (camera.name.toLowerCase().includes('back')) {
+                    selectedCamera = camera;
+                }
+            });
+
+            scanner.start(selectedCamera);
+        } else {
+            console.error('No cameras found.');
+        }
+    }).catch(function(e) {
+        console.error(e);
+    });
+
+    $(function() {
+        let serverTime = <?php if (!empty($timestamp)) {
+                                echo $timestamp;
+                            } ?>;
+        let counterTime = 0;
+        let date;
+
+        setInterval(function() {
+            date = new Date();
+
+            serverTime = serverTime + 1;
+
+            date.setTime(serverTime * 1000);
+            let dateOnly = moment(date).format('D-MMM-YYYY');
+            time = date.toLocaleTimeString('it-IT');
+
+            $("#timestamp").html(dateOnly + " " + time);
+        }, 1000);
+    });
+</script>
