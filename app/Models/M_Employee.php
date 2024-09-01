@@ -271,9 +271,13 @@ class M_Employee extends Model
 	{
 		$this->builder->join('md_employee_branch', 'md_employee_branch.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
 		$this->builder->join('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+		$this->builder->join('md_employee_benefit', 'md_employee_benefit.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+		$this->builder->join('md_employee_benefit_detail', 'md_employee_benefit_detail.md_employee_benefit_id = md_employee_benefit.md_employee_benefit_id', 'left');
 		$this->builder->select($this->table . '.*,' .
 			'md_employee_branch.md_branch_id,
-			md_employee_division.md_division_id');
+			md_employee_division.md_division_id,
+			md_employee_benefit.benefit,
+			md_employee_benefit.status');
 
 		if ($where)
 			$this->builder->where($where);

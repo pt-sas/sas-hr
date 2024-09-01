@@ -51,19 +51,11 @@
                 <input type="text" class="form-control" id="nickname" name="nickname">
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-6">
             <div class="form-check mt-4">
                 <label class="form-check-label">
                     <input type="checkbox" class="form-check-input active" name="isactive">
                     <span class="form-check-sign">Aktif</span>
-                </label>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-check mt-4">
-                <label class="form-check-label">
-                    <input type="checkbox" class="form-check-input" name="isovertime">
-                    <span class="form-check-sign">Lembur?</span>
                 </label>
             </div>
         </div>
@@ -109,10 +101,10 @@
             <div class="form-check">
                 <label>Jenis Kelamin <span class="required">*</span></label><br />
                 <?php foreach ($ref_list as $row) : ?>
-                <label class="form-radio-label">
-                    <input class="form-radio-input" type="radio" name="gender" value="<?= $row->value ?>">
-                    <span class="form-radio-sign"><?= $row->name ?></span>
-                </label>
+                    <label class="form-radio-label">
+                        <input class="form-radio-input" type="radio" name="gender" value="<?= $row->value ?>">
+                        <span class="form-radio-sign"><?= $row->name ?></span>
+                    </label>
                 <?php endforeach; ?>
                 <small class="form-text text-danger" id="error_gender"></small>
             </div>
@@ -184,7 +176,7 @@
                     <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id"
                         multiple="multiple" style="width: 100%;">
                         <?php foreach ($branch as $row) : ?>
-                        <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
+                            <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
                         <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_md_branch_id"></small>
@@ -198,7 +190,7 @@
                     <select class="form-control multiple-select" id="md_division_id" name="md_division_id"
                         multiple="multiple" style="width: 100%;">
                         <?php foreach ($division as $row) : ?>
-                        <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
+                            <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
                         <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_md_division_id"></small>
