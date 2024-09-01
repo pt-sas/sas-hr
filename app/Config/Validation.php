@@ -2400,4 +2400,70 @@ class Validation
             ]
         ]
     ];
+
+    public $resign = [
+        'md_employee_id'        => [
+            'label'             => 'karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_position_id'        => [
+            'label'             => 'posisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'submissiondate'        => [
+            'label'             => 'tanggal pengajuan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'date'             => [
+            'label'             => 'tanggal',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'departuretype'                => [
+            'label'             => 'tipe berhenti',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'departurerule'                => [
+            'label'             => 'keterangan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'description'                => [
+            'label'             => 'alasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
 }
