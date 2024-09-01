@@ -30,7 +30,7 @@
                     <div class="form-group row">
                         <label for="periode" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Tanggal </label>
                         <div class="col-lg-6 col-md-9 col-sm-8 select2-input select2-primary">
-                            <input type="text" class="form-control datepicker" name="date" value=<?= $date ?>
+                            <input type="text" class="form-control daterange" name="date" value="<?= $date_range ?>"
                                 id="week-picker" required></input>
                         </div>
                     </div>

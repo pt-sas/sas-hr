@@ -255,8 +255,8 @@ class Overtime extends BaseController
                 $response = message('error', false, $e->getMessage());
             }
 
-            // return $this->response->setJSON($response);
-            return json_encode($response);
+            return $this->response->setJSON($response);
+            // return json_encode($response);
         }
     }
 
@@ -428,7 +428,8 @@ class Overtime extends BaseController
             } else {
                 if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
                     $whereClause = "md_employee.isactive = 'Y'";
-                    $whereClause .= " AND md_employee.isovertime = 'Y'";
+                    $whereClause .= " AND md_employee_benefit.benefit = 'Lembur'";
+                    $whereClause .= " AND md_employee_benefit.status = 'Y'";
                     $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}";
                     $whereClause .= " AND md_employee_division.md_division_id = {$post['md_division_id']}";
                     $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
@@ -463,7 +464,8 @@ class Overtime extends BaseController
                 $header = $this->model->where('trx_overtime_id', $id)->first();
 
                 $whereClause = "md_employee.isactive = 'Y'";
-                $whereClause .= " AND md_employee.isovertime = 'Y'";
+                $whereClause .= " AND md_employee_benefit.benefit = 'Lembur'";
+                $whereClause .= " AND md_employee_benefit.status = 'Y'";
                 $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}";
                 $whereClause .= " AND md_employee_division.md_division_id = {$header->md_division_id}";
                 $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
