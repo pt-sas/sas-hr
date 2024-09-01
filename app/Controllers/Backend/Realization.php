@@ -13,6 +13,7 @@ use App\Models\M_RuleDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
+use App\Models\M_EmpBenefit;
 use App\Models\M_Employee;
 use Config\Services;
 
@@ -341,10 +342,10 @@ class Realization extends BaseController
 
                 if ($attendance && $value->submissiontype == $this->model->Pengajuan_Pulang_Cepat) {
                     $tanggal = format_dmy($attendance->date, '-');
-                    $clock = format_time($attendance->clock_in);
+                    $clock = format_time($attendance->clock_out);
                 } else if ($attendance && $value->submissiontype == $this->model->Pengajuan_Datang_Terlambat) {
                     $tanggal = format_dmy($attendance->date, '-');
-                    $clock = format_time($attendance->clock_out);
+                    $clock = format_time($attendance->clock_in);
                 }
 
                 $number++;
@@ -543,7 +544,7 @@ class Realization extends BaseController
 
     public function createOvertime()
     {
-        $mEmployee = new M_Employee($this->request);
+        $mEmpBenefit = new M_EmpBenefit($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -565,14 +566,14 @@ class Realization extends BaseController
 
                     $line = $this->model->find($post['id']);
 
-                    $isOvertime = $mEmployee->find($line->md_employee_id);
+                    $isOvertime = $mEmpBenefit->where(["md_employee_id" => $line->md_employee_id, "benefit" => "Lembur"])->first();
 
                     if ($isAgree === $agree) {
 
                         $startdate = date('Y-m-d', strtotime($line->startdate)) . " " . $post['starttime'];
                         $enddate = date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
 
-                        if ($isOvertime->isOvertime === 'Y') {
+                        if ($isOvertime && $isOvertime->status === 'Y') {
                             $ovt = $this->getHourOvertime($startdate, $enddate, $line->md_employee_id);
                         }
 

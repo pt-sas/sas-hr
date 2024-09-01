@@ -53,6 +53,7 @@
                                         <i class="fa fa-calendar"></i>
                                     </span>
                                 </div>
+                                <small class="form-text text-danger" id="error_enddate_att"></small>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -65,6 +66,7 @@
                                         <i class="fa fa-clock"></i>
                                     </span>
                                 </div>
+                                <small class="form-text text-danger" id="error_endtime_att"></small>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -78,7 +80,7 @@
                                         <i class="fa fa-calendar"></i>
                                     </span>
                                 </div>
-                                <small class="form-text text-danger" id="error_enddate_att"></small>
+                                <small class="form-text text-danger" id="error_enddate_realization"></small>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -91,7 +93,7 @@
                                         <i class="fa fa-clock"></i>
                                     </span>
                                 </div>
-                                <small class="form-text text-danger" id="error_endtime_att"></small>
+                                <small class="form-text text-danger" id="error_endtime_realization"></small>
                             </div>
                         </div>
                         <input type="hidden" name="startdate">
