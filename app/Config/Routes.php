@@ -571,6 +571,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('outsource/get-nik', 'Backend\Outsourcing::getNik');
 
     $routes->add('absent-manual', 'Backend\AbsentManual::index');
+    $routes->match(['get', 'post'], 'absent-manual/showAll', 'Backend\AbsentManual::showAll');
     $routes->post('absent-manual/create', 'Backend\AbsentManual::create');
 
     $routes->add('memo-sdm', 'Backend\Memo::index');
