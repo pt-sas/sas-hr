@@ -5,8 +5,7 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-body">
-                <form action="<?= site_url('sas/laporan-lembur-mingguan/showAll') ?>" method="POST"
-                    id="parameter_report">
+                <form action="<?= site_url('sas/laporan-lembur-harian/showAll') ?>" method="POST" id="parameter_report">
                     <div class="form-group row">
                         <label for="md_division_id" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Cabang
                         </label>
@@ -21,17 +20,17 @@
                             <select class="form-control multiple-select-division" name="md_division_id[]"></select>
                         </div>
                     </div>
-                    <!-- <div class="form-group row">
+                    <div class="form-group row">
                         <label for="md_employee_id" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Karyawan
                         </label>
                         <div class="col-lg-6 col-md-9 col-sm-8 select2-input select2-primary">
                             <select class="form-control multiple-select-employee" name="md_employee_id[]"></select>
                         </div>
-                    </div> -->
+                    </div>
                     <div class="form-group row">
                         <label for="periode" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Tanggal </label>
                         <div class="col-lg-6 col-md-9 col-sm-8 select2-input select2-primary">
-                            <input type="text" class="form-control week-picker" name="date" value="<?= $week ?>"
+                            <input type="text" class="form-control datepicker" name="date" value=<?= $date ?>
                                 id="week-picker" required></input>
                         </div>
                     </div>
