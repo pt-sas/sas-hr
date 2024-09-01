@@ -124,3 +124,12 @@ function convertMinutesToHour($minutes)
 {
     return floor($minutes / 60) . ':' . ($minutes -   floor($minutes / 60) * 60);
 }
+
+function monthsDifference($startDate, $endDate)
+{
+    $startDate = strtotime($startDate);
+    $endDate = strtotime($endDate);
+
+    $diff = ((date('Y', $endDate) - date('Y', $startDate)) * 12 + date('m', $endDate) - date('m', $startDate)) + 1;
+    return $diff;
+}

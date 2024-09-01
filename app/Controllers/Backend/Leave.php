@@ -7,13 +7,14 @@ use App\Models\M_Absent;
 use App\Models\M_AccessMenu;
 use App\Models\M_Employee;
 use App\Models\M_AbsentDetail;
+use App\Models\M_Configuration;
 use App\Models\M_Holiday;
-use App\Models\M_Attendance;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Rule;
 use App\Models\M_WorkDetail;
 use App\Models\M_LeaveBalance;
 use App\Models\M_MassLeave;
+use App\Models\M_Transaction;
 use Config\Services;
 
 class Leave extends BaseController
@@ -386,6 +387,13 @@ class Leave extends BaseController
                         if ($leaveBalance->balance_amount == 0 || $totalDays > $leaveBalance->balance_amount) {
                             $response = message('error', true, 'Saldo cuti tidak cukup');
                         } else {
+                            $data = [
+                                'id'        => $_ID,
+                                'created_by' => $this->access->getSessionUser(),
+                                'updated_by' => $this->access->getSessionUser()
+                            ];
+
+                            $this->model->createAbsentDetail($data, $row);
                             $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
                             $response = message('success', true, true);
                         }
@@ -419,16 +427,10 @@ class Leave extends BaseController
                 $docNoRef = "";
                 $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
 
-                if (!empty($row->ref_absent_detail_id)) {
-                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
-                    $docNoRef = $lineRef->documentno;
-                }
-
                 $table[] = [
                     $row->lineno,
                     format_dmy($row->date, '-'),
                     $line->getDocumentNo(),
-                    $docNoRef,
                     statusRealize($row->isagree)
                 ];
             endforeach;
@@ -546,48 +548,294 @@ class Leave extends BaseController
 
     public function processBalance($array, $year, $prevYear)
     {
+        $mConfig = new M_Configuration($this->request);
         $mRule = new M_Rule($this->request);
         $mLeaveBalance = new M_LeaveBalance($this->request);
+        $mTransaction = new M_Transaction($this->request);
         $mMassLeave = new M_MassLeave($this->request);
 
         if (empty($array))
             return false;
 
-        $rule = $mRule->where([
-            'name'      => 'Saldo Cuti Tahunan',
-            'isactive'  => 'Y'
-        ])->first();
+        try {
+            $rule = $mRule->where([
+                'name'      => 'Saldo Cuti Tahunan',
+                'isactive'  => 'Y'
+            ])->first();
 
-        $amount = 0;
+            $amount = 0;
+            $dayCutOff = $mConfig->where([
+                'isactive'  => 'Y',
+                'name'      => 'DAY_CUT_OFF_LEAVE'
+            ])->first();
+            $dayCutOff = $dayCutOff->value;
 
-        if ($rule)
-            $amount = $rule->condition ?: $rule->value;
+            $carryOver = $mConfig->where([
+                'isactive'  => 'Y',
+                'name'      => 'CARRY_OVER_AMOUNT_LEAVE_BALANCE'
+            ])->first();
+            $isCarryOver = $carryOver->value;
 
-        $massLeave = $mMassLeave->where([
-            'isactive'                      => 'Y',
-            'isaffect'                      => 'Y',
-            'date_format(startdate,"%Y")'   => $prevYear
-        ])->findAll();
+            $carryExpBy = $mConfig->where([
+                'isactive'  => 'Y',
+                'name'      => 'CARRY_OVER_EXPIRED_BY'
+            ])->first();
+            $isCarryExpBy = $carryExpBy->value;
 
-        $totalMass = count($massLeave);
-        log_message("info", $prevYear);
-        $amount = abs($amount);
+            if ($rule)
+                $amount = $rule->condition ?: $rule->value;
 
-        $data = [];
-        foreach ($array as $row) {
-            if ($row->getStatusId() == $this->Status_PERMANENT) {
-                $data[] = [
-                    "md_employee_id"    => $row->md_employee_id,
-                    "submissiondate"    => date('Y-m-d'),
-                    "annual_allocation" => $amount,
-                    "balance_amount"    => $amount - $totalMass,
-                    "year"              => $year,
-                    "created_by"        => $this->session->get('sys_user_id'),
-                    "updated_by"        => $this->session->get('sys_user_id')
+            $amount = abs($amount);
+
+            $totalMassLeave = $mMassLeave->where([
+                'isactive'                      => 'Y',
+                'isaffect'                      => 'Y',
+                'date_format(startdate,"%Y")'   => $prevYear
+            ])->orderBy('startdate', 'ASC')
+                ->findAll();
+
+            $totalMassCount = count($totalMassLeave);
+
+            $dataInsert = [];
+            $dataUpdate = [];
+            $dataLeaveUsage = [];
+
+            foreach ($array as $row) {
+                $carryBalance = 0;
+                $startDate = null;
+                $endDate = null;
+                $carryExpDate = null;
+
+                $registerDate = $row->registerdate;
+                $startDateOfYear = date('Y-m-d', strtotime("first day of january {$year}"));
+
+                //* Konversi tanggal ke timestamp 
+                $startDateTimestamp = strtotime($registerDate);
+                $endDateTimestamp = strtotime($startDateOfYear);
+
+                //* Hari dalam bulan dari registerDate
+                $dayOfMonth = date('j', $startDateTimestamp);
+
+                //* Tanggal terakhir tahun dari startDateOfYear 
+                $lastDayOfYear = date('Y-12-31', $endDateTimestamp);
+
+                //* Tanggal terakhir tahun dari registerDate 
+                $lastDayOfRegister = date('Y-12-31', $startDateTimestamp);
+
+                //* Startdate <= 5 Januari 
+                $yearOfStartDate = date('Y', $startDateTimestamp);
+                $isBeforeOrEqualJanuary5 = $startDateTimestamp <= strtotime("January {$dayCutOff}, {$yearOfStartDate}");
+
+                //* Tentukan tanggal 5 Januari tahun berikutnya 
+                $nextYearCutOff = strtotime('+1 year', strtotime("January {$dayCutOff}, {$yearOfStartDate}"));
+
+                $monthsDifference = monthsDifference($registerDate, $lastDayOfRegister);
+
+                $registerMassLeave = $mMassLeave->where([
+                    'isactive'                      => 'Y',
+                    'isaffect'                      => 'Y',
+                    'date_format(startdate,"%Y")'   => $prevYear,
+                    'startdate >='                  => $registerDate
+                ])->orderBy('startdate', 'ASC')
+                    ->findAll();
+
+                $registerMassCount = count($registerMassLeave);
+
+                //TODO: Periksa apakah sudah 1 tahun atau lebih 
+                if ($endDateTimestamp >= $nextYearCutOff || $isBeforeOrEqualJanuary5) {
+                    $balance = $amount - $totalMassCount;
+
+                    $dataLeaveUsage[] = [
+                        "transactiondate"   => $startDateOfYear,
+                        "transactiontype"   => 'C+',
+                        "year"              => $year,
+                        "amount"            => $amount,
+                        "isprocessed"       => "Y",
+                        "created_by"        => $this->session->get('sys_user_id'),
+                        "updated_by"        => $this->session->get('sys_user_id')
+                    ];
+
+                    if ($totalMassLeave)
+                        foreach ($totalMassLeave as $item) {
+                            $leaveUsage = -1;
+
+                            $dataLeaveUsage[] = [
+                                "transactiondate"   => $startDateOfYear,
+                                "transactiontype"   => 'C-',
+                                "year"              => date('Y', strtotime($item->startdate)),
+                                "amount"            => $leaveUsage,
+                                "isprocessed"       => "Y",
+                                "created_by"        => $this->session->get('sys_user_id'),
+                                "updated_by"        => $this->session->get('sys_user_id')
+                            ];
+                        }
+                } else if ($dayOfMonth <= $dayCutOff) {
+                    $balance = $monthsDifference - $registerMassCount;
+
+                    $dataLeaveUsage[] = [
+                        "transactiondate"   => $startDateOfYear,
+                        "transactiontype"   => 'C+',
+                        "year"              => $year,
+                        "amount"            => $monthsDifference,
+                        "isprocessed"       => "Y",
+                        "created_by"        => $this->session->get('sys_user_id'),
+                        "updated_by"        => $this->session->get('sys_user_id')
+                    ];
+
+                    if ($registerMassLeave)
+                        foreach ($registerMassLeave as $item) {
+                            $leaveUsage = -1;
+
+                            $dataLeaveUsage[] = [
+                                "transactiondate"   => $startDateOfYear,
+                                "transactiontype"   => 'C-',
+                                "year"              => date('Y', strtotime($item->startdate)),
+                                "amount"            => $leaveUsage,
+                                "isprocessed"       => "Y",
+                                "created_by"        => $this->session->get('sys_user_id'),
+                                "updated_by"        => $this->session->get('sys_user_id')
+                            ];
+                        }
+                } else if ($dayOfMonth > $dayCutOff) {
+                    $monthsDifference -= 1;
+                    $balance = $monthsDifference - $registerMassCount;
+
+                    $dataLeaveUsage[] = [
+                        "transactiondate"   => $startDateOfYear,
+                        "transactiontype"   => 'C+',
+                        "year"              => $year,
+                        "amount"            => $monthsDifference,
+                        "isprocessed"       => "Y",
+                        "created_by"        => $this->session->get('sys_user_id'),
+                        "updated_by"        => $this->session->get('sys_user_id')
+                    ];
+
+                    if ($registerMassLeave)
+                        foreach ($registerMassLeave as $item) {
+                            $leaveUsage = -1;
+
+                            $dataLeaveUsage[] = [
+                                "transactiondate"   => $startDateOfYear,
+                                "transactiontype"   => 'C-',
+                                "year"              => date('Y', strtotime($item->startdate)),
+                                "amount"            => $leaveUsage,
+                                "isprocessed"       => "Y",
+                                "created_by"        => $this->session->get('sys_user_id'),
+                                "updated_by"        => $this->session->get('sys_user_id')
+                            ];
+                        }
+                }
+
+                if ($row->getStatusId() == $this->Status_PERMANENT) {
+                    $startDate = $startDateOfYear;
+                    $endDate = $lastDayOfYear;
+                }
+
+                //* Tanggal terakhir tahun dari PrevYear 
+                $lastDayOfPrevYear = "{$prevYear}-12-31";
+
+                if ($balance < 0) {
+                    $annual = 0;
+
+                    $dataInsert[] = [
+                        "md_employee_id"    => $row->md_employee_id,
+                        "submissiondate"    => $startDateOfYear,
+                        "annual_allocation" => $annual,
+                        "balance_amount"    => $balance,
+                        "year"              => $prevYear,
+                        "startdate"         => $lastDayOfPrevYear,
+                        "enddate"           => $lastDayOfPrevYear,
+                        "created_by"        => $this->session->get('sys_user_id'),
+                        "updated_by"        => $this->session->get('sys_user_id')
+                    ];
+
+                    $dataLeaveUsage[] = [
+                        "transactiondate"   => $startDateOfYear,
+                        "transactiontype"   => 'C-',
+                        "year"              => $prevYear,
+                        "amount"            => $balance,
+                        "isprocessed"       => "Y",
+                        "created_by"        => $this->session->get('sys_user_id'),
+                        "updated_by"        => $this->session->get('sys_user_id')
+                    ];
+
+                    $balance = 0;
+                }
+
+                $prevBalance = $mLeaveBalance->where([
+                    'year'              => $prevYear,
+                    'md_employee_id'    => $row->md_employee_id
+                ])->first();
+
+                $prevLeaveBalance = $prevBalance->balance_amount ?? 0;
+
+                if ($isCarryOver === "Y" && $prevLeaveBalance != 0) {
+                    if ($isCarryExpBy === 'D') {
+                        $carryExpBy = $mConfig->where([
+                            'isactive'  => 'Y',
+                            'name'      => 'CARRY_OVER_EXPIRED_BY_DAYS'
+                        ])->first();
+
+                        $carryExpDate = date('Y-m-d', strtotime("+ {$carryExpBy->value} days", $endDateTimestamp));
+                    }
+
+                    if ($isCarryExpBy === 'M') {
+                        $carryExpBy = $mConfig->where([
+                            'isactive'  => 'Y',
+                            'name'      => 'CARRY_OVER_EXPIRED_BY_MONTH'
+                        ])->first();
+
+                        $carryExpDate = date('Y-m-d', strtotime("+ {$carryExpBy->value} month", $endDateTimestamp));
+                    }
+
+                    $carryBalance = $prevLeaveBalance;
+                    $balanceAmt = 0;
+
+                    $dataUpdate[] = [
+                        "md_employee_id"        => $row->md_employee_id,
+                        "year"                  => $prevYear,
+                        "balance_amount"        => $balanceAmt,
+                        "updated_by"            => $this->session->get('sys_user_id'),
+                        "trx_leavebalance_id"   => $prevBalance->trx_leavebalance_id,
+                    ];
+
+                    $dataLeaveUsage[] = [
+                        "transactiondate"   => $startDateOfYear,
+                        "transactiontype"   => 'C-',
+                        "year"              => $prevYear,
+                        "amount"            => - ($carryBalance),
+                        "isprocessed"       => "N",
+                        "created_by"        => $this->session->get('sys_user_id'),
+                        "updated_by"        => $this->session->get('sys_user_id')
+                    ];
+                }
+
+                $dataInsert[] = [
+                    "md_employee_id"            => $row->md_employee_id,
+                    "submissiondate"            => $startDateOfYear,
+                    "annual_allocation"         => $amount,
+                    "balance_amount"            => $balance,
+                    "year"                      => $year,
+                    "startdate"                 => $startDate,
+                    "enddate"                   => $endDate,
+                    "carried_over_amount"       => $carryBalance,
+                    "carry_over_expiry_date"    => $carryExpDate,
+                    "created_by"                => $this->session->get('sys_user_id'),
+                    "updated_by"                => $this->session->get('sys_user_id')
                 ];
             }
-        }
 
-        return $mLeaveBalance->builder->insertBatch($data);
+            if ($dataUpdate)
+                $mLeaveBalance->builder->updateBatch($dataUpdate, $mLeaveBalance->primaryKey);
+
+            if ($dataLeaveUsage)
+                $mTransaction->builder->insertBatch($dataLeaveUsage);
+
+            return $mLeaveBalance->builder->insertBatch($dataInsert);
+
+            // log_message("info", json_encode($dataLeaveUsage));
+        } catch (\Exception $e) {
+            throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
+        }
     }
 }
