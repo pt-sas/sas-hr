@@ -175,6 +175,13 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
         .val(null)
         .change()
         .prop("disabled", true);
+
+    if (form.find("select[name=md_position_id]").length)
+      form
+        .find("select[name=md_position_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
   }
 
   if (value !== "")
@@ -206,6 +213,9 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
 
           if (form.find("select[name=md_division_id]").length)
             getOptionDivision(_this, result[0].md_division_id);
+
+          if (form.find("select[name=md_position_id]").length)
+            getPosition(_this, result[0].md_position_id);
 
           if (form.find(".datepicker-start").length) {
             form.find(".datepicker-start").data("DateTimePicker").destroy();
@@ -2279,3 +2289,62 @@ _tableReport.on("click", ".btn_generate_memo", function (e) {
     },
   });
 });
+
+function getPosition(elem, position) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  const field = form.find("select[name=md_position_id]");
+  const id = position;
+
+  let url = ADMIN_URL + "position/getList";
+  formData.append("md_position_id", id);
+
+  field.empty();
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+
+        $.each(result, function (idx, item) {
+          if (setSave === "detail")
+            field
+              .append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              )
+              .prop("disabled", true);
+          else
+            field.append(
+              '<option value="' +
+                item.id +
+                '" selected>' +
+                item.text +
+                "</option>"
+            );
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
