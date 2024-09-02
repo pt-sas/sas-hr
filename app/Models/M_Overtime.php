@@ -186,6 +186,7 @@ class M_Overtime extends Model
         if ($where)
             $this->builder->where($where);
 
+        $this->builder->orderBy('trx_overtime.md_branch_id', 'ASC');
         $this->builder->orderBy('trx_overtime.md_division_id', 'ASC');
         $this->builder->orderBy('md_employee.fullname', 'ASC');
         $this->builder->orderBy('trx_overtime_detail.startdate', 'ASC');

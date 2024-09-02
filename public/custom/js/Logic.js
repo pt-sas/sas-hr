@@ -454,6 +454,7 @@ function textToTime(time) {
 
 $(".week-picker")
   .datepicker({
+    format: "dd-M-Y",
     clearBtn: true,
     weekStart: 1,
     calendarWeeks: true,
@@ -535,4 +536,58 @@ $("#form_office_duties").on("change", "input[name=isbranch]", function (e) {
 $("#form_office_duties").on("change", "#md_branch_id", function (e) {
   let _this = $(this);
   getOptionBranchTo(_this);
+});
+
+$("#form_resign").on("change", "#departuretype", function (e) {
+  if ($(this).val() !== "") {
+    const form = $(this).closest("form");
+    let formData = new FormData();
+    const field = form.find("select[name=departurerule]");
+
+    let url = ADMIN_URL + "reference/getList";
+    if (setSave === "detail") {
+      url = ADMIN_URL + "resign/getRefDetail";
+    }
+
+    formData.append("criteria", form.find($("#departuretype")).val());
+    formData.append("documentno", form.find($("#documentno")).val());
+
+    field.empty();
+
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".x_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+      },
+      complete: function () {
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+      },
+      success: function (result) {
+        if (result.length) {
+          field.append('<option value=""></option>');
+
+          $.each(result, function (idx, item) {
+            field.append(
+              '<option value="' +
+                item.id +
+                '" selected>' +
+                item.text +
+                "</option>"
+            );
+          });
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+  }
 });

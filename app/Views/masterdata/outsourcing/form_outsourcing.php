@@ -31,19 +31,11 @@
                 <input type="text" class="form-control" id="nickname" name="nickname">
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-6">
             <div class="form-check mt-4">
                 <label class="form-check-label">
                     <input type="checkbox" class="form-check-input active" name="isactive">
                     <span class="form-check-sign">Aktif</span>
-                </label>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-check mt-4">
-                <label class="form-check-label">
-                    <input type="checkbox" class="form-check-input" name="isovertime">
-                    <span class="form-check-sign">Lembur?</span>
                 </label>
             </div>
         </div>
@@ -84,7 +76,8 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="nationality">Kewarganegaraan <span class="required">*</span></label>
-                <select class="form-control select-data" id="nationality" name="nationality" data-url="reference/getList/$Nationality">
+                <select class="form-control select-data" id="nationality" name="nationality"
+                    data-url="reference/getList/$Nationality">
                     <option value="">Select Kewarganegaraan</option>
                 </select>
                 <small class="form-text text-danger" id="error_nationality"></small>
@@ -107,7 +100,8 @@
             <div class="form-group">
                 <label for="md_branch_id">Cabang <span class="required">*</span></label>
                 <div class="select2-input select2-primary">
-                    <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id" multiple="multiple" style="width: 100%;">
+                    <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id"
+                        multiple="multiple" style="width: 100%;">
                         <?php foreach ($branch as $row) : ?>
                             <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
                         <?php endforeach; ?>
@@ -120,7 +114,8 @@
             <div class="form-group">
                 <label for="md_division_id">Divisi <span class="required">*</span></label>
                 <div class="select2-input select2-primary">
-                    <select class="form-control multiple-select" id="md_division_id" name="md_division_id" multiple="multiple" style="width: 100%;">
+                    <select class="form-control multiple-select" id="md_division_id" name="md_division_id"
+                        multiple="multiple" style="width: 100%;">
                         <?php foreach ($division as $row) : ?>
                             <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
                         <?php endforeach; ?>
@@ -132,7 +127,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="superior_id">Superior</label>
-                <select class="form-control select-data" id="superior_id" name="superior_id" data-url="karyawan/superior">
+                <select class="form-control select-data" id="superior_id" name="superior_id"
+                    data-url="karyawan/superior">
                     <option value="">Select Superior</option>
                 </select>
                 <small class="form-text text-danger" id="error_superior_id"></small>
@@ -141,7 +137,8 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="md_position_id">Jabatan <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_position_id" name="md_position_id" data-url="position/getList">
+                <select class="form-control select-data" id="md_position_id" name="md_position_id"
+                    data-url="position/getList">
                     <option value="">Select Jabatan</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_position_id"></small>
@@ -150,7 +147,8 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="md_levelling_id">Level <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id" data-url="levelling/getList">
+                <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id"
+                    data-url="levelling/getList">
                     <option value="">Select Level</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_levelling_id"></small>
@@ -172,7 +170,8 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="md_status_id">Status Karyawan <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_status_id" name="md_status_id" hide-field="resigndate" data-url="status/getList/$OUTSOURCING">
+                <select class="form-control select-data" id="md_status_id" name="md_status_id" hide-field="resigndate"
+                    data-url="status/getList/$OUTSOURCING">
                     <option value="">Select Status</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_status_id"></small>
@@ -196,7 +195,8 @@
             <div class="form-group">
                 <label for="md_supplier_id">Vendor <span class="required">*</span></label>
                 <div class="select2-input select2-primary">
-                    <select class="form-control select-data" id="md_supplier_id" name="md_supplier_id" data-url="supplier/getList">
+                    <select class="form-control select-data" id="md_supplier_id" name="md_supplier_id"
+                        data-url="supplier/getList">
                     </select>
                     <small class="form-text text-danger" id="error_md_supplier_id"></small>
                 </div>
@@ -216,7 +216,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_country_id">Negara <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_country_dom_id" name="md_country_dom_id" data-url="country/getList">
+                <select class="form-control select-data" id="md_country_dom_id" name="md_country_dom_id"
+                    data-url="country/getList">
                     <option value="">Select Negara</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_country_dom_id"></small>
@@ -268,7 +269,8 @@
         <div class="col-md-6">
             <div class="form-check">
                 <label class="form-check-label">
-                    <input type="checkbox" class="form-check-input" id="issameaddress" name="issameaddress" checked hide-field="address,md_country_id,md_province_id,md_city_id,md_district_id,md_subdistrict_id,postalcode">
+                    <input type="checkbox" class="form-check-input" id="issameaddress" name="issameaddress" checked
+                        hide-field="address,md_country_id,md_province_id,md_city_id,md_district_id,md_subdistrict_id,postalcode">
                     <span class=" form-check-sign">Sama dengan alamat domisili</span>
                 </label>
             </div>
@@ -282,7 +284,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_country_id">Negara <span class="required">*</span></label>
-                <select class="form-control select-data" id="md_country_id" name="md_country_id" data-url="country/getList">
+                <select class="form-control select-data" id="md_country_id" name="md_country_id"
+                    data-url="country/getList">
                     <option value="">Select Negara</option>
                 </select>
             </div>

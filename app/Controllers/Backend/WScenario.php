@@ -336,7 +336,7 @@ class WScenario extends BaseController
                 }
 
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, $totalDays);
-            } else if ($table === 'trx_overtime') {
+            } else {
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
             }
 
@@ -345,7 +345,11 @@ class WScenario extends BaseController
                 $this->entity->setWfScenarioId($this->sys_wfscenario_id);
                 $isWfscenario = true;
             } else {
-                $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                if ($table === 'trx_employee_allocation') {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
+                } else {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                }
             }
         } else if ($trx && $docStatus === $this->DOCSTATUS_Requested) {
             if ($table === 'trx_absent') {

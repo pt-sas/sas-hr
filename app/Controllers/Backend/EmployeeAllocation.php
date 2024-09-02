@@ -58,7 +58,7 @@ class EmployeeAllocation extends BaseController
                 'trx_employee_allocation.submissiondate',
                 'trx_employee_allocation.startdate',
                 'trx_employee_allocation.description',
-                'trx_absent.docstatus',
+                'trx_employee_allocation.docstatus',
                 'sys_user.name'
             ];
             $search = [
@@ -73,7 +73,7 @@ class EmployeeAllocation extends BaseController
                 'trx_employee_allocation.startdate',
                 'trx_employee_allocation.enddate',
                 'trx_employee_allocation.description',
-                'trx_absent.docstatus',
+                'trx_employee_allocation.docstatus',
                 'sys_user.name'
             ];
             $sort = ['trx_employee_allocation.documentno' => 'ASC'];

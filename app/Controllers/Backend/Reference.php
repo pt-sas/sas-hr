@@ -243,6 +243,15 @@ class Reference extends BaseController
                         $this->model->primaryKey => $first->getReferenceId()
                     ])->orderBy('name', 'ASC')
                         ->findAll();
+                } else if (!empty($post['criteria'])) {
+                    $first = $this->model->where('isactive', 'Y')
+                        ->like('description', $post['criteria'])->first();
+
+                    $list = $this->modelDetail->where([
+                        'isactive'  => 'Y',
+                        $this->model->primaryKey => $first->getReferenceId()
+                    ])->orderBy('name', 'ASC')
+                        ->findAll();
                 } else {
                     $list = $this->modelDetail->where('isactive', 'Y')
                         ->orderBy('name', 'ASC')

@@ -239,6 +239,11 @@ class M_Datatable extends Model
                 $model = new M_AbsentDetail($this->request);
                 $model->doAfterUpdate($rows);
             }
+
+            if ($this->table === "trx_employee_departure") {
+                $model = new M_EmployeeDeparture($this->request);
+                $model->doAfterUpdate($rows);
+            }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

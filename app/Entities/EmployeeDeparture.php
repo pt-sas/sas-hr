@@ -4,9 +4,9 @@ namespace App\Entities;
 
 use CodeIgniter\Entity\Entity;
 
-class EmployeeAllocation extends Entity
+class EmployeeDeparture extends Entity
 {
-    protected $md_employee_allocation_id;
+    protected $md_employee_departure_id;
     protected $md_employee_id;
     protected $documentno;
     protected $nik;
@@ -14,10 +14,10 @@ class EmployeeAllocation extends Entity
     protected $submissiontype;
     protected $md_branch_id;
     protected $md_division_id;
-    protected $branch_to;
-    protected $division_to;
-    protected $startdate;
-    protected $enddate;
+    protected $md_position_id;
+    protected $date;
+    protected $departuretype;
+    protected $departurerule;
     protected $description;
     protected $docstatus;
     protected $isapprove;
@@ -32,14 +32,14 @@ class EmployeeAllocation extends Entity
         'deleted_at',
     ];
 
-    public function getEmployeeAllocationId()
+    public function getEmployeeDepartureId()
     {
-        return $this->attributes['trx_employee_allocation_id'];
+        return $this->attributes['trx_employee_departure_id'];
     }
 
-    public function setEmployeeAllocationId($trx_employee_allocation_id)
+    public function setEmployeeDepartureId($trx_employee_departure_id)
     {
-        $this->attributes['trx_employee_allocation_id'] = $trx_employee_allocation_id;
+        $this->attributes['trx_employee_departure_id'] = $trx_employee_departure_id;
     }
 
     public function getDocumentNo()
@@ -92,50 +92,27 @@ class EmployeeAllocation extends Entity
         $this->attributes['md_division_id'] = $md_division_id;
     }
 
-    public function getBranchTo()
+    public function getPositionId()
     {
-        return $this->attributes['branch_to'];
+        return $this->attributes['md_position_id'];
     }
 
-    public function setBranchTo($branch_to)
+    public function setPositionId($md_position_id)
     {
-        $this->attributes['branch_to'] = $branch_to;
+        $this->attributes['md_position_id'] = $md_position_id;
     }
 
-    public function getDivisionTo()
-    {
-        return $this->attributes['division_to'];
-    }
-
-    public function setDivisionTo($division_to)
-    {
-        $this->attributes['division_to'] = $division_to;
-    }
-
-    public function getStartDate()
+    public function getDate()
     {
         // if (!empty($this->attributes['startdate']))
         // return format_dmy($this->attributes['startdate'], "-");
 
-        return $this->attributes['startdate'];
+        return $this->attributes['date'];
     }
 
-    public function setStartDate($startdate)
+    public function setDate($date)
     {
-        $this->attributes['startdate'] = $startdate;
-    }
-
-    public function getEndDate()
-    {
-        // if (!empty($this->attributes['enddate']))
-        //     return format_dmy($this->attributes['enddate'], "-");
-
-        return $this->attributes['enddate'];
-    }
-
-    public function setEndDate($enddate)
-    {
-        $this->attributes['enddate'] = $enddate;
+        $this->attributes['date'] = $date;
     }
 
     public function getSubmissionDate()
@@ -166,6 +143,26 @@ class EmployeeAllocation extends Entity
     public function setDescription($description)
     {
         $this->attributes['description'] = $description;
+    }
+
+    public function getDepartureType()
+    {
+        return $this->attributes['departuretype'];
+    }
+
+    public function setDepartureType($departuretype)
+    {
+        $this->attributes['departuretype'] = $departuretype;
+    }
+
+    public function getDepartureRule()
+    {
+        return $this->attributes['departurerule'];
+    }
+
+    public function setDepartureRule($departurerule)
+    {
+        $this->attributes['departurerule'] = $departurerule;
     }
 
     public function getDocStatus()
