@@ -609,6 +609,15 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('perbantuan/destroy/(:any)', 'Backend\EmployeeAllocation::destroy/$1');
     $routes->get('perbantuan/processIt', 'Backend\EmployeeAllocation::processIt');
     $routes->get('perbantuan/print/(:any)', 'Backend\EmployeeAllocation::exportPDF/$1');
+
+    $routes->add('resign', 'Backend\Resign::index');
+    $routes->match(['get', 'post'], 'resign/showAll', 'Backend\Resign::showAll');
+    $routes->post('resign/create', 'Backend\Resign::create');
+    $routes->get('resign/show/(:any)', 'Backend\Resign::show/$1');
+    $routes->get('resign/destroy/(:any)', 'Backend\Resign::destroy/$1');
+    $routes->get('resign/processIt', 'Backend\Resign::processIt');
+    $routes->get('resign/print/(:any)', 'Backend\Resign::exportPDF/$1');
+    $routes->match(['get', 'post'], 'resign/getRefDetail', 'Backend\Resign::getRefDetail');
 });
 
 /*
