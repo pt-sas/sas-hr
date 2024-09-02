@@ -552,8 +552,11 @@ class Leave extends BaseController
 
                     $row[] = $val->employee;
                     $row[] = $val->employee_fullname;
-                    $row[] = $val->balance_amount;
-                    $row[] = $val->year;
+                    $row[] = intval($val->balance_amount);
+                    $row[] = $val->startdate ? format_dmy($val->startdate, "-") : "";
+                    $row[] = $val->enddate ? format_dmy($val->enddate, "-") : "";
+                    $row[] = intval($val->carried_over_amount);
+                    $row[] = $val->carry_over_expiry_date ? format_dmy($val->carry_over_expiry_date, "-") : "";
                     $data[] = $row;
                 endforeach;
 
