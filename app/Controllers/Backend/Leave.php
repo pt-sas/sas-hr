@@ -250,10 +250,7 @@ class Leave extends BaseController
                         $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
                         $totalDays = count($dateRange);
 
-                        $leaveBalance = $mLeaveBalance->where([
-                            'year'              => date("Y", strtotime($startDate)),
-                            'md_employee_id'    => $employeeId
-                        ])->first();
+                        $leaveBalance = $mLeaveBalance->getSumBalanceAmount($employeeId, date("Y", strtotime($startDate)));
 
                         if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
@@ -261,8 +258,8 @@ class Leave extends BaseController
                             $response = message('success', false, 'Tidak bisa mengajukan pada tanggal ' . format_dmy($startDate, "-") . ', karena tidak sesuai dengan batas pengajuan');
                         } else if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
-                        } else if ($leaveBalance->balance_amount == 0 || $totalDays > $leaveBalance->balance_amount) {
-                            $response = message('success', false, 'Saldo cuti tidak cukup');
+                        } else if (is_null($leaveBalance)) {
+                            $response = message('success', false, 'Saldo cuti tidak tersedia');
                         } else {
                             $this->entity->fill($post);
 
@@ -272,7 +269,23 @@ class Leave extends BaseController
                                 $this->entity->setDocumentNo($docNo);
                             }
 
-                            $response = $this->save();
+                            // Cek apakah saldo carry over ada dan belum expired
+                            $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+
+                            // Cek apakah saldo cuti utama ada dan belum expired
+                            $mainLeaveValid = ($leaveBalance->enddate && $endDate <= date('Y-m-d', strtotime($leaveBalance->enddate)));
+
+                            if ($carryOverValid && ($leaveBalance->balance_carried <= 0 || $totalDays > $leaveBalance->balance_carried)) {
+                                $response = message('success', false, 'Saldo carry over tidak cukup atau sudah expired');
+                            } else {
+                                if (!$mainLeaveValid) {
+                                    $response = message('success', false, 'Belum bisa mengajukan sudah expired');
+                                } else if ($leaveBalance->balance <= 0 || $totalDays > $leaveBalance->balance) {
+                                    $response = message('success', false, 'Saldo utama tidak cukup atau sudah expired');
+                                } else {
+                                    $response = $this->save();
+                                }
+                            }
                         }
                     }
                 }
@@ -379,23 +392,36 @@ class Leave extends BaseController
                         $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
                         $totalDays = count($dateRange);
 
-                        $leaveBalance = $mLeaveBalance->where([
-                            'year'              => date("Y", strtotime($startDate)),
-                            'md_employee_id'    => $row->md_employee_id
-                        ])->first();
+                        $leaveBalance = $mLeaveBalance->getSumBalanceAmount($row->md_employee_id, date("Y", strtotime($startDate)));
 
-                        if ($leaveBalance->balance_amount == 0 || $totalDays > $leaveBalance->balance_amount) {
-                            $response = message('error', true, 'Saldo cuti tidak cukup');
+                        if (is_null($leaveBalance)) {
+                            $response = message('error', true, 'Saldo cuti tidak tersedia');
                         } else {
-                            $data = [
-                                'id'        => $_ID,
-                                'created_by' => $this->access->getSessionUser(),
-                                'updated_by' => $this->access->getSessionUser()
-                            ];
+                            // Cek apakah saldo carry over ada dan belum expired
+                            $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
 
-                            $this->model->createAbsentDetail($data, $row);
-                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                            $response = message('success', true, true);
+                            // Cek apakah saldo cuti utama ada dan belum expired
+                            $mainLeaveValid = ($leaveBalance->enddate && $endDate <= date('Y-m-d', strtotime($leaveBalance->enddate)));
+
+                            if ($carryOverValid && ($leaveBalance->balance_carried <= 0 || $totalDays > $leaveBalance->balance_carried)) {
+                                $response = message('error', true, 'Saldo carry over tidak cukup atau sudah expired');
+                            } else {
+                                if (!$mainLeaveValid) {
+                                    $response = message('error', true, 'Belum bisa mengajukan sudah expired');
+                                } else if ($leaveBalance->balance <= 0 || $totalDays > $leaveBalance->balance) {
+                                    $response = message('error', true, 'Saldo utama tidak cukup atau sudah expired');
+                                } else {
+                                    $data = [
+                                        'id'        => $_ID,
+                                        'created_by' => $this->access->getSessionUser(),
+                                        'updated_by' => $this->access->getSessionUser()
+                                    ];
+
+                                    $this->model->createAbsentDetail($data, $row);
+                                    $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                                    $response = message('success', true, true);
+                                }
+                            }
                         }
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
