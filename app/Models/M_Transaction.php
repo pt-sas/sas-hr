@@ -16,6 +16,7 @@ class M_Transaction extends Model
         'record_id',
         'table',
         'amount',
+        'md_employee_id',
         'isprocessed',
         'description',
         'created_by',
