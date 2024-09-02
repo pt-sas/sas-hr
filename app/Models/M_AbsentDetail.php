@@ -135,6 +135,7 @@ class M_AbsentDetail extends Model
                         "transactiontype"   => 'C-',
                         "year"              => $year,
                         "amount"            => -1,
+                        "md_employee_id"    => $sql->md_employee_id,
                         "isprocessed"       => "N",
                         "created_by"        => $updated_by,
                         "updated_by"        => $updated_by
@@ -152,6 +153,7 @@ class M_AbsentDetail extends Model
                         "transactiontype"   => 'C-',
                         "year"              => $year,
                         "amount"            => -1,
+                        "md_employee_id"    => $sql->md_employee_id,
                         "isprocessed"       => "N",
                         "created_by"        => $updated_by,
                         "updated_by"        => $updated_by
