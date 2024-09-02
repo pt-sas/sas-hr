@@ -676,6 +676,7 @@ class Leave extends BaseController
                         "transactiontype"   => 'C+',
                         "year"              => $year,
                         "amount"            => $amount,
+                        "md_employee_id"    => $row->md_employee_id,
                         "isprocessed"       => "Y",
                         "created_by"        => $this->session->get('sys_user_id'),
                         "updated_by"        => $this->session->get('sys_user_id')
@@ -686,10 +687,11 @@ class Leave extends BaseController
                             $leaveUsage = -1;
 
                             $dataLeaveUsage[] = [
-                                "transactiondate"   => $startDateOfYear,
+                                "transactiondate"   => $item->startdate,
                                 "transactiontype"   => 'C-',
-                                "year"              => date('Y', strtotime($item->startdate)),
+                                "year"              => $year,
                                 "amount"            => $leaveUsage,
+                                "md_employee_id"    => $row->md_employee_id,
                                 "isprocessed"       => "Y",
                                 "created_by"        => $this->session->get('sys_user_id'),
                                 "updated_by"        => $this->session->get('sys_user_id')
@@ -703,6 +705,7 @@ class Leave extends BaseController
                         "transactiontype"   => 'C+',
                         "year"              => $year,
                         "amount"            => $monthsDifference,
+                        "md_employee_id"    => $row->md_employee_id,
                         "isprocessed"       => "Y",
                         "created_by"        => $this->session->get('sys_user_id'),
                         "updated_by"        => $this->session->get('sys_user_id')
@@ -713,10 +716,11 @@ class Leave extends BaseController
                             $leaveUsage = -1;
 
                             $dataLeaveUsage[] = [
-                                "transactiondate"   => $startDateOfYear,
+                                "transactiondate"   => $item->startdate,
                                 "transactiontype"   => 'C-',
-                                "year"              => date('Y', strtotime($item->startdate)),
+                                "year"              => $year,
                                 "amount"            => $leaveUsage,
+                                "md_employee_id"    => $row->md_employee_id,
                                 "isprocessed"       => "Y",
                                 "created_by"        => $this->session->get('sys_user_id'),
                                 "updated_by"        => $this->session->get('sys_user_id')
@@ -731,6 +735,7 @@ class Leave extends BaseController
                         "transactiontype"   => 'C+',
                         "year"              => $year,
                         "amount"            => $monthsDifference,
+                        "md_employee_id"    => $row->md_employee_id,
                         "isprocessed"       => "Y",
                         "created_by"        => $this->session->get('sys_user_id'),
                         "updated_by"        => $this->session->get('sys_user_id')
@@ -741,10 +746,11 @@ class Leave extends BaseController
                             $leaveUsage = -1;
 
                             $dataLeaveUsage[] = [
-                                "transactiondate"   => $startDateOfYear,
+                                "transactiondate"   => $item->startdate,
                                 "transactiontype"   => 'C-',
-                                "year"              => date('Y', strtotime($item->startdate)),
+                                "year"              => $year,
                                 "amount"            => $leaveUsage,
+                                "md_employee_id"    => $row->md_employee_id,
                                 "isprocessed"       => "Y",
                                 "created_by"        => $this->session->get('sys_user_id'),
                                 "updated_by"        => $this->session->get('sys_user_id')
@@ -780,6 +786,7 @@ class Leave extends BaseController
                         "transactiontype"   => 'C-',
                         "year"              => $prevYear,
                         "amount"            => $balance,
+                        "md_employee_id"    => $row->md_employee_id,
                         "isprocessed"       => "Y",
                         "created_by"        => $this->session->get('sys_user_id'),
                         "updated_by"        => $this->session->get('sys_user_id')
@@ -830,6 +837,7 @@ class Leave extends BaseController
                         "transactiontype"   => 'C-',
                         "year"              => $prevYear,
                         "amount"            => - ($carryBalance),
+                        "md_employee_id"    => $row->md_employee_id,
                         "isprocessed"       => "N",
                         "created_by"        => $this->session->get('sys_user_id'),
                         "updated_by"        => $this->session->get('sys_user_id')
@@ -858,8 +866,6 @@ class Leave extends BaseController
                 $mTransaction->builder->insertBatch($dataLeaveUsage);
 
             return $mLeaveBalance->builder->insertBatch($dataInsert);
-
-            // log_message("info", json_encode($dataLeaveUsage));
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
