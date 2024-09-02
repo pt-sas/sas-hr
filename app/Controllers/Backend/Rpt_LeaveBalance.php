@@ -88,6 +88,8 @@ class Rpt_LeaveBalance extends BaseController
 
     public function showAllSummary()
     {
+        $mLeaveBalance = new M_LeaveBalance($this->request);
+
         $post = $this->request->getVar();
         $data = [];
 
@@ -103,6 +105,16 @@ class Rpt_LeaveBalance extends BaseController
                 $sort = ['md_employee.fullname' => 'ASC'];
                 $search = $this->request->getPost('search');
 
+                foreach ($post['form'] as $value) {
+                    if (!empty($value['value'])) {
+                        if ($value['name'] === "year") {
+                            $year = $value['value'];
+                        }
+                    }
+                }
+
+                $prevYear = $year - 1;
+
                 $number = $this->request->getPost('start');
                 $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
 
@@ -111,11 +123,16 @@ class Rpt_LeaveBalance extends BaseController
 
                     $number++;
 
+                    $balance = $mLeaveBalance->where([
+                        'year'              => $prevYear,
+                        'md_employee_id'    => $value->md_employee_id
+                    ])->first();
+
                     $row[] = $number;
                     $row[] = $value->employee_fullname;
                     $row[] = $value->branch;
                     $row[] = $value->divisi;
-                    $row[] = 0;
+                    $row[] = intval($balance->balance_amount) ?? 0;
                     $row[] = $value->amount;
 
                     //* Januari 
