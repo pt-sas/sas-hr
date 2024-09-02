@@ -83,4 +83,28 @@ class M_LeaveBalance extends Model
             "typeJoin" => $typeJoin
         ];
     }
+
+    public function getSumBalanceAmount($id, $year)
+    {
+        $sql = "SELECT 
+                tl.*,
+                tl.balance_amount - coalesce(xt.totalline, 0) as balance,
+                tl.carried_over_amount - coalesce(xt.totalline, 0) as balance_carried
+                from trx_leavebalance tl 
+                LEFT JOIN (select
+                            ta.md_employee_id,
+                            date_format(tad.date, '%Y') as year,
+                            count(tad.trx_absent_detail_id) AS totalline
+                        FROM trx_absent_detail tad
+                            JOIN trx_absent ta ON tad.trx_absent_id = ta.trx_absent_id
+                        WHERE ta.docstatus = 'IP'
+                        and tad.isagree = 'H' 
+                        and ta.submissiontype = 100003
+                        GROUP BY ta.md_employee_id, year) xt ON xt.md_employee_id = tl.md_employee_id and xt.year = tl.`year`
+                WHERE 1=1
+                AND tl.md_employee_id = ?
+                AND tl.year = ?";
+
+        return $this->db->query($sql, [$id, $year])->getRow();
+    }
 }

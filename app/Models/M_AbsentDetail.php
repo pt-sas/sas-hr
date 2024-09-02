@@ -94,6 +94,7 @@ class M_AbsentDetail extends Model
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mTransaction = new M_Transaction($this->request);
 
         $amount = 0;
 
@@ -115,14 +116,48 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 $saldo = $balance->balance_amount;
+                $carriedOverAmt = $balance->carried_over_amount;
+                $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
+                $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
+                $year = date('Y', strtotime($line->date));
 
-                if ($saldo != 0) {
+                $dataLeaveUsage = [];
+                if ($carryOverValid && $carriedOverAmt != 0) {
+                    $entityBal = new \App\Entities\LeaveBalance();
+                    $entityBal->md_employee_id = $sql->md_employee_id;
+                    $entityBal->carried_over_amount = $carriedOverAmt - 1;
+                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+
+                    $mLeaveBalance->save($entityBal);
+
+                    $dataLeaveUsage[] = [
+                        "transactiondate"   => $line->date,
+                        "transactiontype"   => 'C-',
+                        "year"              => $year,
+                        "amount"            => -1,
+                        "md_employee_id"    => $sql->md_employee_id,
+                        "isprocessed"       => "N",
+                        "created_by"        => $updated_by,
+                        "updated_by"        => $updated_by
+                    ];
+                } else if ($mainLeaveValid && $saldo != 0) {
                     $entityBal = new \App\Entities\LeaveBalance();
                     $entityBal->md_employee_id = $sql->md_employee_id;
                     $entityBal->balance_amount = $saldo - 1;
                     $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
                     $mLeaveBalance->save($entityBal);
+
+                    $dataLeaveUsage[] = [
+                        "transactiondate"   => $line->date,
+                        "transactiontype"   => 'C-',
+                        "year"              => $year,
+                        "amount"            => -1,
+                        "md_employee_id"    => $sql->md_employee_id,
+                        "isprocessed"       => "N",
+                        "created_by"        => $updated_by,
+                        "updated_by"        => $updated_by
+                    ];
                 } else {
                     $entity = new \App\Entities\AbsentDetail();
                     $entity->isagree = "N";
@@ -130,6 +165,9 @@ class M_AbsentDetail extends Model
                     $entity->{$this->primaryKey} = $ID;
                     $this->save($entity);
                 }
+
+                if ($dataLeaveUsage)
+                    $mTransaction->builder->insertBatch($dataLeaveUsage);
             }
 
             if ($sql->submissiontype == $mAbsent->Pengajuan_Sakit) {
