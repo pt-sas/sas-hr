@@ -115,8 +115,18 @@ class M_AbsentDetail extends Model
                 ])->first();
 
                 $saldo = $balance->balance_amount;
+                $carriedOverAmt = $balance->carried_over_amount;
+                $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
+                $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
 
-                if ($saldo != 0) {
+                if ($carryOverValid && $carriedOverAmt != 0) {
+                    $entityBal = new \App\Entities\LeaveBalance();
+                    $entityBal->md_employee_id = $sql->md_employee_id;
+                    $entityBal->carried_over_amount = $carriedOverAmt - 1;
+                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+
+                    $mLeaveBalance->save($entityBal);
+                } else if ($mainLeaveValid && $saldo != 0) {
                     $entityBal = new \App\Entities\LeaveBalance();
                     $entityBal->md_employee_id = $sql->md_employee_id;
                     $entityBal->balance_amount = $saldo - 1;

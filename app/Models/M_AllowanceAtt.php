@@ -107,7 +107,8 @@ class M_AllowanceAtt extends Model
                 }
             }
 
-            $this->builder->insertBatch($array);
+            if ($array)
+                $this->builder->insertBatch($array);
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

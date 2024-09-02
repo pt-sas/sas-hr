@@ -309,6 +309,8 @@ class M_Absent extends Model
             foreach ($date_range as $date) :
                 $row = [];
 
+                $number++;
+
                 $row[$this->primaryKey] = $rows['id'];
                 $row['date'] = $date;
                 $row['lineno'] = $number;
