@@ -69,7 +69,6 @@
         let formData = new FormData();
         let date = new Date();
         let datetime = moment(date).format('YYYY-MM-DD HH:mm:ss');
-        // alert('Barcode scanned: ' + content);
         formData.append("nik", content);
         formData.append("checktime", datetime);
 
@@ -91,7 +90,14 @@
             },
             success: function(result) {
                 if (result[0].success) {
+                    speak("Terima kasih data berhasil tersimpan");
                     reloadTable();
+                } else {
+                    speak(result[0].message);
+                    Toast.fire({
+                        type: "error",
+                        title: result[0].message,
+                    });
                 }
             },
         });
@@ -133,4 +139,14 @@
             $("#timestamp").html(dateOnly + " " + time);
         }, 1000);
     });
+
+    function speak(text) {
+        var speech = new SpeechSynthesisUtterance();
+        speech.lang = "id-ID"; // Set the language
+        speech.text = text; // Set the text to be spoken
+        speech.volume = 1; // Volume level from 0 to 1
+        speech.rate = 1; // Rate of speech (1 is normal speed)
+        speech.pitch = 1; // Pitch level (1 is normal pitch)
+        window.speechSynthesis.speak(speech);
+    }
 </script>
