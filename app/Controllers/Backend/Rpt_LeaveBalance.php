@@ -4,6 +4,7 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_LeaveBalance;
+use App\Models\M_Transaction;
 use Config\Services;
 
 class Rpt_LeaveBalance extends BaseController
@@ -11,7 +12,7 @@ class Rpt_LeaveBalance extends BaseController
     public function __construct()
     {
         $this->request = Services::request();
-        $this->model = new M_LeaveBalance($this->request);
+        $this->model = new M_Transaction($this->request);
     }
 
     public function index()
@@ -78,10 +79,8 @@ class Rpt_LeaveBalance extends BaseController
 
     public function indexSummary()
     {
-        $date = format_dmy(date('Y-m-d'), "-");
-
         $data = [
-            'date_range' => $date . ' - ' . $date
+            'year'          => date('Y')
         ];
 
         return $this->template->render('report/leavebalancesummary/v_leavebalancesummary', $data);
@@ -97,16 +96,15 @@ class Rpt_LeaveBalance extends BaseController
 
         if ($this->request->getMethod(true) === 'POST') {
             if (isset($post['form']) && $post['clear'] === 'false') {
-                $table = $this->model->table;
+                $table = 'v_summary_leavebalance';
                 $select = $this->model->getSelect();
                 $join = $this->model->getJoin();
                 $order = $this->request->getPost('columns');
                 $sort = ['md_employee.fullname' => 'ASC'];
                 $search = $this->request->getPost('search');
-                $where = ['trx_leavebalance.description' => 'saldo awal'];
 
                 $number = $this->request->getPost('start');
-                $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+                $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
 
                 foreach ($list as $value) :
                     $row = [];
@@ -117,162 +115,162 @@ class Rpt_LeaveBalance extends BaseController
                     $row[] = $value->employee_fullname;
                     $row[] = $value->branch;
                     $row[] = $value->divisi;
-                    $row[] = "";
+                    $row[] = 0;
                     $row[] = $value->amount;
 
                     //* Januari 
                     $jan = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 1,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'             => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'     => 1,
+                        'md_transaction.isprocessed'                => "N"
                     ]);
                     $useJan = 0;
 
                     //* Februari 
                     $feb = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 2,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 2,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useFeb = 0;
 
                     //* Maret 
                     $mar = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 3,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 3,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useMar = 0;
 
                     //* April 
                     $apr = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 4,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 4,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useApr = 0;
 
                     //* Mei 
                     $mei = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 5,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 5,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useMei = 0;
 
                     //* Jun 
                     $jun = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 6,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 6,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useJun = 0;
 
                     //* Jul
                     $jul = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 7,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 7,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useJul = 0;
 
                     //* Ags
                     $ags = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 8,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 8,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useAgs = 0;
 
                     //* Sep
                     $sep = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 9,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 9,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useSep = 0;
 
                     //* Okt
                     $okt = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 10,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 10,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useOkt = 0;
 
                     //* Nov
                     $nov = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 11,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 11,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useNov = 0;
 
                     //* Des
                     $des = $this->model->getBalance([
-                        'trx_leavebalance.md_employee_id'           => $value->md_employee_id,
-                        'MONTH(trx_leavebalance.submissiondate)'    => 12,
-                        'trx_leavebalance.description'              => null
+                        'md_transaction.md_employee_id'           => $value->md_employee_id,
+                        'MONTH(md_transaction.transactiondate)'   => 12,
+                        'md_transaction.isprocessed'              => "N"
                     ]);
                     $useDes = 0;
 
                     if (!is_null($jan->amount))
-                        $useJan = $jan->amount;
+                        $useJan = intval($jan->amount);
 
                     $row[] = $useJan;
 
                     if (!is_null($feb->amount))
-                        $useFeb = $feb->amount;
+                        $useFeb = intval($feb->amount);
 
                     $row[] = $useFeb;
 
                     if (!is_null($mar->amount))
-                        $useMar = $mar->amount;
+                        $useMar = intval($mar->amount);
 
                     $row[] = $useMar;
 
                     if (!is_null($apr->amount))
-                        $useApr = $apr->amount;
+                        $useApr = intval($apr->amount);
 
                     $row[] = $useApr;
 
                     if (!is_null($mei->amount))
-                        $useMei = $mei->amount;
+                        $useMei = intval($mei->amount);
 
                     $row[] = $useMei;
 
                     if (!is_null($jun->amount))
-                        $useJun = $jun->amount;
+                        $useJun = intval($jun->amount);
 
                     $row[] = $useJun;
 
                     if (!is_null($jul->amount))
-                        $useJul = $jul->amount;
+                        $useJul = intval($jul->amount);
 
                     $row[] = $useJul;
 
                     if (!is_null($ags->amount))
-                        $useAgs = $ags->amount;
+                        $useAgs = intval($ags->amount);
 
                     $row[] = $useAgs;
 
                     if (!is_null($sep->amount))
-                        $useSep = $sep->amount;
+                        $useSep = intval($sep->amount);
 
                     $row[] = $useSep;
 
                     if (!is_null($okt->amount))
-                        $useOkt = $okt->amount;
+                        $useOkt = intval($okt->amount);
 
                     $row[] = $useOkt;
 
                     if (!is_null($nov->amount))
-                        $useNov = $nov->amount;
+                        $useNov = intval($nov->amount);
 
                     $row[] = $useNov;
 
                     if (!is_null($des->amount))
-                        $useDes = $des->amount;
+                        $useDes = intval($des->amount);
 
                     $row[] = $useDes;
 
@@ -282,8 +280,8 @@ class Rpt_LeaveBalance extends BaseController
 
                 endforeach;
 
-                $recordTotal = $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where);
-                $recordsFiltered = $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where);
+                $recordTotal = $this->datatable->countAll($table, $select, $order, $sort, $search, $join);
+                $recordsFiltered = $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join);
             }
 
             $result = [
