@@ -706,7 +706,7 @@ _tableApproval = $(".table_approval")
     processing: true,
     columnDefs: [
       {
-        targets: "_all",
+        targets: 6,
         orderable: false,
       },
       {
@@ -725,9 +725,6 @@ _tableApproval = $(".table_approval")
     searching: false,
     paging: false,
     autoWidth: false,
-    // 'scrollX': true,
-    // 'scrollY': '70vh',
-    // 'scrollCollapse': true
   })
   .columns.adjust();
 
