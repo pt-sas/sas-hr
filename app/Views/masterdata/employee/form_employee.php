@@ -250,7 +250,7 @@
             <div class="form-group">
                 <label for="md_status_id">Status Karyawan <span class="required">*</span></label>
                 <select class="form-control select-data" id="md_status_id" name="md_status_id"
-                    data-url="status/getList">
+                    data-url="status/getList/$EMPLOYEE">
                     <option value="">Select Status</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_status_id"></small>
