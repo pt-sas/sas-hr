@@ -13,6 +13,7 @@ use App\Models\M_Rule;
 use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Division;
+use App\Models\M_RuleDetail;
 use TCPDF;
 
 class OfficeDuties extends BaseController
@@ -157,6 +158,7 @@ class OfficeDuties extends BaseController
     {
         $mHoliday = new M_Holiday($this->request);
         $mRule = new M_Rule($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
 
@@ -184,6 +186,14 @@ class OfficeDuties extends BaseController
                         'name'      => 'Tugas Kantor 1 Hari',
                         'isactive'  => 'Y'
                     ])->first();
+
+                    $ruleMaxTk = $rule && $rule->md_rule_id
+                        ? $mRuleDetail->where([
+                            'md_rule_id'    => $rule->md_rule_id,
+                            'isactive'      => 'Y',
+                            'name'          => 'MaxTK'
+                        ])->first()
+                        : null;
 
                     $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
                     $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
@@ -222,12 +232,18 @@ class OfficeDuties extends BaseController
                         $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
+                        //* Working hour from start date until enddate 
+                        $rangeWorkDays = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d H:i:s', 'all', $daysOff);
+                        $countRange = count($rangeWorkDays);
+
                         if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                         } else if ($lastDate < $subDate) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
                         } else if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                        } else if (!empty($ruleMaxTk) && !getOperationResult($countRange, $ruleMaxTk->condition, $ruleMaxTk->operation)) {
+                            $response = message('success', false, "Rentang tanggal sudah melewati tanggal ketentuan, maksimal : {$ruleMaxTk->condition} hari kerja");
                         } else {
                             $this->entity->fill($post);
 
