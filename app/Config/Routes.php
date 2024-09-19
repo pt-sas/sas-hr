@@ -619,6 +619,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('resign/processIt', 'Backend\Resign::processIt');
     $routes->get('resign/print/(:any)', 'Backend\Resign::exportPDF/$1');
     $routes->match(['get', 'post'], 'resign/getRefDetail', 'Backend\Resign::getRefDetail');
+    $routes->match(['get', 'post'], 'resign/getDetail', 'Backend\Resign::getDetailResign');
 
     $routes->add('pembatalan-cuti', 'Backend\LeaveCancel::index');
     $routes->match(['get', 'post'], 'pembatalan-cuti/showAll', 'Backend\LeaveCancel::showAll');
