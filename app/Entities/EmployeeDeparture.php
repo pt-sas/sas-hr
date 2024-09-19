@@ -6,7 +6,7 @@ use CodeIgniter\Entity\Entity;
 
 class EmployeeDeparture extends Entity
 {
-    protected $md_employee_departure_id;
+    protected $trx_employee_departure_id;
     protected $md_employee_id;
     protected $documentno;
     protected $nik;
@@ -22,6 +22,7 @@ class EmployeeDeparture extends Entity
     protected $docstatus;
     protected $isapprove;
     protected $approveddate;
+    protected $letterdate;
     protected $sys_wfscenario_id;
     protected $created_by;
     protected $updated_by;
@@ -199,6 +200,16 @@ class EmployeeDeparture extends Entity
             return null;
 
         $this->attributes['approveddate'] = $approveddate;
+    }
+
+    public function getLetterDate()
+    {
+        return $this->attributes['letterdate'];
+    }
+
+    public function setLetterDate($letterdate)
+    {
+        $this->attributes['letterdate'] = $letterdate;
     }
 
     public function getWfScenarioId()

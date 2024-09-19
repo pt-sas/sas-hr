@@ -12,6 +12,7 @@ use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Division;
 use App\Models\M_RuleDetail;
+use App\Models\M_Position;
 use App\Models\M_Branch;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
@@ -190,10 +191,11 @@ class Resign extends BaseController
                 if (!$this->validation->run($post, 'resign')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $date = date('Y-m-d', strtotime($post['date']));
+                    $letterdate = date('Y-m-d', strtotime($post['letterdate']));
                     $submissionDate = $post['submissiondate'];
                     $subDate = date('Y-m-d', strtotime($submissionDate));
-                    $dateResign = date('Y-m-d', strtotime($submissionDate));
+                    $dateResign = date('Y-m-d', strtotime($post['letterdate']));
+                    $dateOff = date('Y-m-d', strtotime($post['date']));
 
                     $rule = $mRule->where([
                         'name'      => "Resign",
@@ -208,22 +210,18 @@ class Resign extends BaseController
                         ])->first();
 
                         if ($ruleDetail->format_condition === "Bulan")
-                            $dateResign = date('Y-m-d', strtotime($subDate . "+ {$ruleDetail->condition} month"));
+                            $dateResign = date('Y-m-d', strtotime($letterdate . "+ {$ruleDetail->condition} month"));
                     }
 
-
+                    /**This for checking backdate */
+                    $dateRange = getDatesFromRange($letterdate, $subDate, [], 'Y-m-d', 'all');
+                    $dateInterval = count($dateRange);
 
                     $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
 
-                    $nextDate = lastWorkingDays($date, [], $minDays, false);
-
-                    //* last index of array from variable nextDate
-                    $lastDate = end($nextDate);
-
-                    if ($date < $subDate) {
-                        $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
-                    } else if ($date !== $dateResign) {
+                    if ($dateInterval > $minDays) {
+                        $response = message('success', false, 'Tidak bisa mengajukan, karena tanggal surat sudah melewati tanggal ketentuan');
+                    } else if ($dateOff !== $dateResign) {
                         $response = message('success', false, "Tanggal resign tidak sesuai ketentuan, tanggal resign harus " . format_dmy($dateResign, '-'));
                     } else {
                         $this->entity->fill($post);
@@ -242,7 +240,6 @@ class Resign extends BaseController
                 $response = message('error', false, $e->getMessage());
             }
 
-            // return $this->response->setJSON([$date, $dateResign, $lastDate]);
             return $this->response->setJSON($response);
         }
     }
@@ -418,6 +415,26 @@ class Resign extends BaseController
                     $response[$key]['id'] = $row->getValue();
                     $response[$key]['text'] = $row->getName();
                 endforeach;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    public function getDetailResign()
+    {
+        if ($this->request->isAJAX()) {
+            $post = $this->request->getVar();
+            $response = [];
+
+            try {
+
+                $id = $post["reference_id"];
+                $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+
+                $response = $list;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

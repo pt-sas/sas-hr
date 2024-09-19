@@ -46,7 +46,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
+                    <label for="submissiondate">Tanggal Diterima HRD <span class="required">*</span></label>
                     <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
                         value=<?= $today ?>>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
@@ -97,6 +97,18 @@
                     <label for="description">Alasan Berhenti <span class="required">*</span></label>
                     <textarea type="text" class="form-control" name="description" rows="4"></textarea>
                     <small class="form-text text-danger" id="error_description"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="letterdate">Tanggal Surat <span class="required">*</span></label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control datepicker" id="letterdate" name="letterdate">
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                    <small class="form-text text-danger" id="error_letterdate"></small>
                 </div>
             </div>
             <div class="col-md-3">

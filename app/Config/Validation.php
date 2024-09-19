@@ -2357,6 +2357,13 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'md_position_id'        => [
+            'label'             => 'posisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
         'branch_to'          => [
             'label'             => 'cabang tujuan',
             'rules'             => 'required',
@@ -2371,6 +2378,13 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'position_to'        => [
+            'label'             => 'posisi tujuan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
         'submissiondate'        => [
             'label'             => 'tanggal pengajuan',
             'rules'             => 'required',
@@ -2378,15 +2392,8 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'startdate'             => [
-            'label'             => 'tanggal mulai',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
-            ]
-        ],
-        'enddate'               => [
-            'label'             => 'tanggal selesai',
+        'date'             => [
+            'label'             => 'tanggal',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
@@ -2444,6 +2451,13 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'letterdate'             => [
+            'label'             => 'tanggal surat',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
         'departuretype'                => [
             'label'             => 'tipe berhenti',
             'rules'             => 'required',
@@ -2463,6 +2477,111 @@ class Validation
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $pembatalan_cuti = [
+        'md_employee_id'        => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'Divisi',
+            'rules'             => 'is_exist[md_division.name,md_division_id,{id},md_division_id,{md_division_id}]',
+            'errors'            => [
+                'is_exist'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'reference_id'        => [
+            'label'             => 'referensi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'reason'           => [
+            'label'             => 'Alasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu'
+            ]
+        ],
+        'line'                  => [
+            'label'             => 'Detail',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+    ];
+
+    public $list_pertanyaan = [
+        'value'                  => [
+            'label'             => 'value',
+            'rules'             => 'required|is_unique[md_question_group.value,md_question_group_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'name'                  => [
+            'label'             => 'name',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'menu_url'                  => [
+            'label'             => 'menu',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'sequence'                  => [
+            'label'             => 'sequence',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'line'                  => [
+            'label'             => 'list pertanyaan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'detail.table.*.no_line'  => [
+            'label'             => 'no',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ],
+        'detail.table.*.question_line'  => [
+            'label'             => 'pertanyaan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
+        ],
+        'detail.table.*.answertype_line'  => [
+            'label'             => 'tipe jawaban',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
             ]
         ]
     ];

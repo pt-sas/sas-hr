@@ -591,3 +591,226 @@ $("#form_resign").on("change", "#departuretype", function (e) {
     });
   }
 });
+
+let prev;
+
+$(document).ready(function (evt) {
+  $("#form_leave_cancel #reference_id")
+    .on("focus", function (e) {
+      prev = this.value;
+    })
+    .change(function (evt) {
+      console.log(prev);
+      const form = $(this).closest("form");
+      const attrName = $(this).attr("name");
+
+      let leave_id = this.value;
+
+      // create data
+      if (leave_id !== "" && setSave === "add") {
+        _tableLine.clear().draw(false);
+        setLeaveDetail(form, leave_id);
+      }
+
+      // update data
+      $.each(option, function (idx, elem) {
+        if (elem.fieldName === attrName && setSave !== "add") {
+          if (
+            leave_id !== "" &&
+            leave_id != elem.option_ID &&
+            _tableLine.data().any()
+          ) {
+            Swal.fire({
+              title: "Delete?",
+              text: "Are you sure you want to change all data ? ",
+              type: "warning",
+              showCancelButton: true,
+              confirmButtonColor: "#d33",
+              confirmButtonText: "Okay",
+              cancelButtonText: "Close",
+              reverseButtons: true,
+            }).then((data) => {
+              if (data.value) {
+                _tableLine.clear().draw(false);
+                setLeaveDetail(form, leave_id, ID);
+              } else {
+                form
+                  .find("select[name=" + attrName + "]")
+                  .val(elem.option_ID)
+                  .change();
+              }
+            });
+          }
+
+          if (
+            leave_id !== "" &&
+            leave_id != elem.option_ID &&
+            !_tableLine.data().any()
+          ) {
+            setLeaveDetail(form, leave_id);
+          }
+
+          if (
+            typeof prev !== "undefined" &&
+            prev !== "" &&
+            leave_id !== "" &&
+            prev != leave_id &&
+            prev != elem.option_ID
+          ) {
+            _tableLine.clear().draw(false);
+            setLeaveDetail(form, leave_id);
+          }
+        }
+      });
+
+      prev = this.value;
+    });
+});
+
+function setLeaveDetail(form, id, cancel_id = 0) {
+  let url = ADMIN_URL + "pembatalan-cuti/getLeaveDetail";
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: {
+      id: id,
+      cancel_id: cancel_id,
+      setSave: setSave,
+    },
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      console.log(result);
+      if (result[0].success) {
+        let arrMsg = result[0].message;
+
+        if (arrMsg.line) {
+          if (form.find("table.tb_displayline").length > 0) {
+            let line = JSON.parse(arrMsg.line);
+
+            $.each(line, function (idx, elem) {
+              _tableLine.row.add(elem).draw(false);
+            });
+
+            const field = _tableLine.rows().nodes().to$().find("input, select");
+
+            $.each(field, function (index, item) {
+              const tr = $(this).closest("tr");
+
+              if (item.type !== "text") {
+                tr.find(
+                  "input:checkbox[name=" +
+                    item.name +
+                    "], select[name=" +
+                    item.name +
+                    "], input:radio[name=" +
+                    item.name +
+                    "]"
+                ).prop("disabled", true);
+              } else {
+                tr.find(
+                  "input:text[name=" +
+                    item.name +
+                    "], textarea[name=" +
+                    item.name +
+                    "]"
+                ).prop("readonly", true);
+              }
+            });
+          }
+        }
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
+
+let previousValue;
+
+$(document).ready(function (evt) {
+  $("#form_leave_cancel #md_employee_id")
+    .on("focus", function (e) {
+      previousValue = this.value;
+    })
+    .change(function (evt) {
+      if (previousValue) {
+        const form = $(this).closest("form");
+        let formData = new FormData();
+        const field = form.find("select[name=reference_id]");
+
+        let url = ADMIN_URL + "cuti/getList";
+        formData.append("md_employee_id", $(this).val());
+
+        _tableLine.clear().draw(false);
+
+        field.empty();
+
+        $.ajax({
+          url: url,
+          type: "POST",
+          data: formData,
+          processData: false,
+          contentType: false,
+          cache: false,
+          dataType: "JSON",
+          beforeSend: function () {
+            $(".x_form").prop("disabled", true);
+            $(".close_form").prop("disabled", true);
+          },
+          complete: function () {
+            $(".x_form").removeAttr("disabled");
+            $(".close_form").removeAttr("disabled");
+          },
+          success: function (result) {
+            console.log(result);
+            if (result.length) {
+              field.append('<option value=""></option>');
+
+              $.each(result, function (idx, item) {
+                if (setSave === "detail")
+                  field
+                    .append(
+                      '<option value="' +
+                        item.id +
+                        '" selected>' +
+                        item.text +
+                        "</option>"
+                    )
+                    .prop("disabled", true);
+                else
+                  field.append(
+                    '<option value="' +
+                      item.id +
+                      '" selected>' +
+                      item.text +
+                      "</option>"
+                  );
+              });
+            }
+          },
+          error: function (jqXHR, exception) {
+            showError(jqXHR, exception);
+          },
+        });
+      }
+      previousValue = this.value;
+    });
+});

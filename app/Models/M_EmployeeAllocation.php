@@ -18,10 +18,11 @@ class M_EmployeeAllocation extends Model
         'submissiontype',
         'md_branch_id',
         'md_division_id',
+        'md_position_id',
         'branch_to',
         'division_to',
-        'startdate',
-        'enddate',
+        'position_to',
+        'date',
         'description',
         'docstatus',
         'isapproved',
@@ -43,8 +44,8 @@ class M_EmployeeAllocation extends Model
     protected $db;
     protected $builder;
 
-    /** Pengajuan Perbantuan */
-    protected $Pengajuan_Perbantuan = 100016;
+    /** Pengajuan Mutasi */
+    protected $Pengajuan_Mutasi = 100016;
 
     public function __construct(RequestInterface $request)
     {
@@ -61,8 +62,10 @@ class M_EmployeeAllocation extends Model
                 md_employee.fullname as employee_fullname,
                 md_branch.name as branch,
                 md_division.name as division,
+                md_position.name as position,
                 bto.name as branch_to,
                 dto.name as division_to,
+                pto.name as position_to,
                 sys_user.name as createdby';
 
         return $sql;
@@ -76,6 +79,8 @@ class M_EmployeeAllocation extends Model
             $this->setDataJoin('md_branch bto', 'bto.md_branch_id = ' . $this->table . '.branch_to', 'left'),
             $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
             $this->setDataJoin('md_division dto', 'dto.md_division_id = ' . $this->table . '.division_to', 'left'),
+            $this->setDataJoin('md_position', 'md_position.md_position_id = ' . $this->table . '.md_position_id', 'left'),
+            $this->setDataJoin('md_position pto', 'pto.md_position_id = ' . $this->table . '.position_to', 'left'),
             $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left')
         ];
 

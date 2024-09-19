@@ -36,6 +36,7 @@ class M_Absent extends Model
         'enddate_realization',
         'isbranch',
         'branch_to',
+        'reference_id',
         'availableleavedays'
     ];
     protected $useTimestamps        = true;
@@ -95,6 +96,8 @@ class M_Absent extends Model
     protected $Pengajuan_Datang_Terlambat = 100012;
     /** Pengajuan Ijin Pulang Cepat */
     protected $Pengajuan_Pulang_Cepat = 100013;
+    /** Pengajuan Pembatalan Cuti */
+    protected $Pengajuan_Pembatalan_Cuti = 100018;
 
     public function __construct(RequestInterface $request)
     {
@@ -113,7 +116,8 @@ class M_Absent extends Model
                 md_division.name as division,
                 sys_ref_detail.name as necessarytype,
                 sys_user.name as createdby,
-                md_leavetype.name as leavetype';
+                md_leavetype.name as leavetype,
+                ref.documentno as reference_doc';
 
         return $sql;
     }
@@ -127,7 +131,8 @@ class M_Absent extends Model
             $this->setDataJoin('sys_reference', 'sys_reference.name = "NecessaryType"', 'left'),
             $this->setDataJoin('sys_ref_detail', 'sys_ref_detail.value = ' . $this->table . '.necessary AND sys_reference.sys_reference_id = sys_ref_detail.sys_reference_id', 'left'),
             $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left'),
-            $this->setDataJoin('md_leavetype', 'md_leavetype.md_leavetype_id = ' . $this->table . '.md_leavetype_id', 'left')
+            $this->setDataJoin('md_leavetype', 'md_leavetype.md_leavetype_id = ' . $this->table . '.md_leavetype_id', 'left'),
+            $this->setDataJoin('trx_absent ref', 'ref.trx_absent_id = ' . $this->table . '.reference_id', 'left')
         ];
 
         return $sql;
