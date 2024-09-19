@@ -5,8 +5,10 @@
                 <ul class="nav nav-tabs nav-line nav-color-primary w-100 border-bottom-0" role="tablist">
                     <li class="nav-item"> <a class="nav-link active show" data-toggle="tab" href="#karyawan" role="tab"
                             aria-selected="true">Data Diri</a> </li>
-                    <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#user" role="tab"
-                            aria-selected="true" disabled>Pengguna</a> </li>
+                    <?php if ($role_emp_adm) : ?>
+                        <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#user" role="tab"
+                                aria-selected="true" disabled>Pengguna</a> </li>
+                    <?php endif; ?>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button"
                             aria-haspopup="true" aria-expanded="false">Keluarga</a>

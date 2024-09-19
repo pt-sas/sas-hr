@@ -102,6 +102,14 @@ class BaseController extends Controller
 	protected $Status_OUTSOURCING = 100003;
 	/** Status RESIGN */
 	protected $Status_RESIGN = 100004;
+	/** Status PENSIUN */
+	protected $Status_PENSIUN = 100005;
+	/** Status FREELANCE */
+	protected $Status_FREELANCE = 100006;
+	/** Status MAGANG */
+	protected $Status_MAGANG = 100007;
+	/** Status KONTRAK */
+	protected $Status_KONTRAK = 100008;
 
 	/**
 	 * The column used for primaryKey int

@@ -56,15 +56,19 @@ class WActivity extends BaseController
                         $trx = $this->model->getDataTrx($table, $record_id);
 
                     $node = "Approval {$menuName}";
+                    $created_at = "";
 
                     if ($trx && is_null($tableLine)) {
+                        $created_at = format_dmytime($trx->created_at, "-");
                         $summary = "{$menuName} {$trx->documentno} : {$trx->usercreated_by}";
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
-                            $summary = "{$menuName} {$trx->documentno} : {$trx->userupdated_by}";
                             $node = "Request Anulir {$menuName}";
+                            $created_at = format_dmytime($trx->created_at, "-");
+                            $summary = "{$menuName} {$trx->documentno} : {$trx->userupdated_by}";
                         }
                     } else if ($trx && $tableLine) {
+                        $created_at = format_dmytime($trx->created_at, "-");
                         $date = format_dmy($trx->date, "-");
                         $summary = "{$menuName} {$trx->documentno} [$trx->value / {$date}] : {$trx->usercreated_by}";
                     } else {
@@ -76,6 +80,7 @@ class WActivity extends BaseController
                     $row[] = $table;
                     $row[] = $menu;
                     $row[] = $node;
+                    $row[] = $created_at;
                     $row[] = $summary;
                     $data[] = $row;
                 endforeach;

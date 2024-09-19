@@ -19,6 +19,7 @@
                                         <th>#Table</th>
                                         <th>#Menu</th>
                                         <th>Node</th>
+                                        <th>Created</th>
                                         <th>Summary</th>
                                     </tr>
                                 </thead>

@@ -452,6 +452,20 @@ class Realization extends BaseController
                             $this->entity->setSubmissionType($submissionType);
                         }
 
+                        if ($post['submissiontype'] === 'lupa absen masuk') {
+                            $necessary = 'LM';
+                            $submissionType = $this->model->Pengajuan_Lupa_Absen_Masuk;
+                            $this->entity->setNecessary($necessary);
+                            $this->entity->setSubmissionType($submissionType);
+                        }
+
+                        if ($post['submissiontype'] === 'datang terlambat') {
+                            $necessary = 'DT';
+                            $submissionType = $this->model->Pengajuan_Datang_Terlambat;
+                            $this->entity->setNecessary($necessary);
+                            $this->entity->setSubmissionType($submissionType);
+                        }
+
                         $this->entity->setEmployeeId($row->getEmployeeId());
                         $this->entity->setNik($row->getNik());
                         $this->entity->setBranchId($row->getBranchId());
@@ -689,27 +703,36 @@ class Realization extends BaseController
             $response = [];
 
             try {
-                // if (isset($post['search'])) {
-                //     $list = $this->model->where('isactive', 'Y')
-                //         ->like('name', $post['search'])
-                //         ->orderBy('name', 'ASC')
-                //         ->findAll();
-                // } else {
-                //     $list = $this->model->where('isactive', 'Y')
-                //         ->orderBy('name', 'ASC')
-                //         ->findAll();
-                // }
-
-                $list = [
-                    [
-                        'id'    => 'alpa',
-                        'name'  => 'alpa'
-                    ],
-                    [
-                        'id'    => 'ijin',
-                        'name'  => 'ijin'
-                    ],
-                ];
+                if (!empty($post['name']) && $post['name'] === "Tugas Kantor") {
+                    $list = [
+                        [
+                            'id'    => 'lupa absen masuk',
+                            'name'  => 'Lupa Absen Masuk'
+                        ],
+                        [
+                            'id'    => 'datang terlambat',
+                            'name'  => 'Datang Terlambat'
+                        ],
+                    ];
+                } else if (!empty($post['name']) && $post['name'] === "Ijin") {
+                    $list = [
+                        [
+                            'id'    => 'alpa',
+                            'name'  => 'Alpa'
+                        ],
+                    ];
+                } else {
+                    $list = [
+                        [
+                            'id'    => 'alpa',
+                            'name'  => 'Alpa'
+                        ],
+                        [
+                            'id'    => 'ijin',
+                            'name'  => 'Ijin'
+                        ],
+                    ];
+                }
 
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row['id'];
