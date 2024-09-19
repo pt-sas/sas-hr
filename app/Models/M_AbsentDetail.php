@@ -530,6 +530,77 @@ class M_AbsentDetail extends Model
 
                 $mAllowance->save($entity);
             }
+
+            if ($sql->submissiontype == $mAbsent->Pengajuan_Pembatalan_Cuti && $line->isagree === "Y") {
+                $balance = $mLeaveBalance->where([
+                    'year'              => date("Y", strtotime($sql->startdate)),
+                    'md_employee_id'    => $sql->md_employee_id
+                ])->first();
+
+                $refLeave = $this->where([$mAbsent->primaryKey => $sql->reference_id, 'date' => $line->date, 'isagree' => 'Y'])->first();
+
+                $saldo = $balance->balance_amount;
+                $carriedOverAmt = $balance->carried_over_amount;
+                $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
+                $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
+                $year = date('Y', strtotime($line->date));
+
+                $dataLeaveUsage = [];
+                if ($carryOverValid) {
+                    $entityBal = new \App\Entities\LeaveBalance();
+                    $entityBal->md_employee_id = $sql->md_employee_id;
+                    $entityBal->carried_over_amount = $carriedOverAmt + 1;
+                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+
+                    $mLeaveBalance->save($entityBal);
+
+                    $dataLeaveUsage[] = [
+                        "record_id"         => $ID,
+                        "table"             => $this->table,
+                        "transactiondate"   => $line->date,
+                        "transactiontype"   => 'C+',
+                        "year"              => $year,
+                        "amount"            => 1,
+                        "md_employee_id"    => $sql->md_employee_id,
+                        "isprocessed"       => "N",
+                        "created_by"        => $updated_by,
+                        "updated_by"        => $updated_by
+                    ];
+                } else if ($mainLeaveValid) {
+                    $entityBal = new \App\Entities\LeaveBalance();
+                    $entityBal->md_employee_id = $sql->md_employee_id;
+                    $entityBal->balance_amount = $saldo + 1;
+                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+
+                    $mLeaveBalance->save($entityBal);
+
+                    $dataLeaveUsage[] = [
+                        "record_id"         => $ID,
+                        "table"             => $this->table,
+                        "transactiondate"   => $line->date,
+                        "transactiontype"   => 'C+',
+                        "year"              => $year,
+                        "amount"            => 1,
+                        "md_employee_id"    => $sql->md_employee_id,
+                        "isprocessed"       => "N",
+                        "created_by"        => $updated_by,
+                        "updated_by"        => $updated_by
+                    ];
+                }
+
+                if ($refLeave) {
+                    // Insert Reference LeaveCancel for Leave
+                    $entity = new \App\Entities\AbsentDetail();
+                    $entity->updated_by = $updated_by;
+                    $entity->{$this->primaryKey} = $refLeave->trx_absent_detail_id;
+                    $entity->isagree = "C";
+                    $entity->ref_absent_detail_id = $ID;
+                    $this->save($entity);
+                }
+
+                if ($dataLeaveUsage)
+                    $mTransaction->builder->insertBatch($dataLeaveUsage);
+            }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
@@ -565,5 +636,27 @@ class M_AbsentDetail extends Model
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    /**
+     * Change value of field data
+     *
+     * @param $data Data
+     * @return array
+     */
+    public function doChangeValueField($data, $id, $dataHeader): array
+    {
+        $result = [];
+        if ($dataHeader->submissiontype === 100018) {
+            $number = 1;
+
+            foreach ($data as $row) :
+                $row->lineno = $number;
+                $result[] = $row;
+                $number++;
+            endforeach;
+        }
+
+        return $result;
     }
 }
