@@ -453,10 +453,16 @@ class Leave extends BaseController
                 $docNoRef = "";
                 $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
 
+                if (!empty($row->ref_absent_detail_id)) {
+                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    $docNoRef = $lineRef->documentno;
+                }
+
                 $table[] = [
                     $row->lineno,
                     format_dmy($row->date, '-'),
                     $line->getDocumentNo(),
+                    $docNoRef,
                     statusRealize($row->isagree)
                 ];
             endforeach;
@@ -871,6 +877,34 @@ class Leave extends BaseController
             return $mLeaveBalance->builder->insertBatch($dataInsert);
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    public function getList()
+    {
+        if ($this->request->isAjax()) {
+            $post = $this->request->getVar();
+
+            $response = [];
+
+            $list = [];
+
+            try {
+                if (isset($post['md_employee_id'])) {
+                    $list = $this->model->where(['md_employee_id' => $post['md_employee_id'], 'docstatus' => 'CO', 'submissiontype' => $this->model->Pengajuan_Cuti])
+                        ->orderBy('documentno', 'ASC')
+                        ->findAll();
+                }
+
+                if (!empty($list))
+                    foreach ($list as $key => $row) :
+                        $response[$key]['id'] = $row->getAbsentId();
+                        $response[$key]['text'] = $row->getDocumentNo();
+                    endforeach;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+            return $this->response->setJSON($response);
         }
     }
 }

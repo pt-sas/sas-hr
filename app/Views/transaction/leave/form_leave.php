@@ -5,7 +5,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList/$Access">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
+                        data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -21,7 +22,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -46,7 +48,8 @@
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?>>
+                        <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                            value=<?= $today ?>>
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -58,7 +61,8 @@
                 <div class="form-group">
                     <label for="receiveddate">Tanggal Diterima</label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepicker" id="receiveddate" name="receiveddate" readonly>
+                        <input type="text" class="form-control datepicker" id="receiveddate" name="receiveddate"
+                            readonly>
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -107,6 +111,7 @@
                                 <th>Line</th>
                                 <th>Tanggal Tidak Masuk</th>
                                 <th>Doc No</th>
+                                <th>Doc Referensi</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
