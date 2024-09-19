@@ -26,6 +26,35 @@
                         readonly>
                 </div>
             </div>
+
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
+                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                        value=<?= $today ?>>
+                    <small class="form-text text-danger" id="error_submissiondate"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="approveddate">Tanggal Disetujui</label>
+                    <input type="text" class="form-control datepicker" id="approveddate" name="approveddate" readonly>
+                    <small class="form-text text-danger" id="error_approveddate"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="date">Tanggal Mutasi <span class="required">*</span></label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control datepicker" name="date">
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                    <small class="form-text text-danger" id="error_date"></small>
+                </div>
+            </div>
+            <div class="col-md-3"></div>
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_branch_id">Cabang <span class="required">*</span></label>
@@ -42,22 +71,6 @@
                         <option value="">Select Divisi</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_division_id"></small>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
-                        value=<?= $today ?>>
-                    <small class="form-text text-danger" id="error_submissiondate"></small>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="approveddate">Tanggal Disetujui</label>
-                    <input type="text" class="form-control datepicker" id="approveddate" name="approveddate" readonly>
-                    <small class="form-text text-danger" id="error_approveddate"></small>
                 </div>
             </div>
             <div class="col-md-3">
@@ -79,28 +92,23 @@
                     <small class="form-text text-danger" id="error_division_to"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <div class="form-group">
-                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
-                    <div class="input-icon">
-                        <input type="text" class="form-control datepicker-start" name="startdate">
-                        <span class="input-icon-addon">
-                            <i class="fa fa-calendar"></i>
-                        </span>
-                    </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
+                    <label for="md_position_id">Jabatan <span class="required">*</span></label>
+                    <select class="form-control select2" id="md_position_id" name="md_position_id" disabled>
+                        <option value="">Pilih Jabatan</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_md_position_id"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <div class="form-group">
-                    <label for="date">Tanggal Selesai <span class="required">*</span></label>
-                    <div class="input-icon">
-                        <input type="text" class="form-control datepicker-end" name="enddate">
-                        <span class="input-icon-addon">
-                            <i class="fa fa-calendar"></i>
-                        </span>
-                    </div>
-                    <small class="form-text text-danger" id="error_enddate"></small>
+                    <label for="position_to">Jabatan Tujuan <span class="required">*</span></label>
+                    <select class="form-control select-data" id="position_to" name="position_to"
+                        data-url="position/getList">
+                        <option value="">Pilih Jabatan Tujuan</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_position_to"></small>
                 </div>
             </div>
             <div class="col-md-6">

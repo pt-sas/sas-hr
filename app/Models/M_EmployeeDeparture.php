@@ -26,6 +26,7 @@ class M_EmployeeDeparture extends Model
         'docstatus',
         'isapproved',
         'approveddate',
+        'letterdate',
         'sys_wfscenario_id',
         'created_by',
         'updated_by'
@@ -149,5 +150,22 @@ class M_EmployeeDeparture extends Model
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    public function findBy($where = null, $field = null, $orderBy = [])
+    {
+        //* Check arg where if not null value
+        if (!empty($where))
+            $this->builder->where($where);
+
+        if (!is_array($field) && !is_array($where) && !empty($field) && !empty($where))
+            $this->builder->where($field, $where);
+
+        // $this->builder->join('sys_ref_detail', 'sys_ref_detail.sys_reference_id = ' . $this->table . '.' . $this->primaryKey);
+
+        if (is_array($orderBy) && !empty($orderBy))
+            $this->builder->orderBy($orderBy['field'], $orderBy['option']);
+
+        return $this->builder->get();
     }
 }

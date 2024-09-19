@@ -14,10 +14,12 @@
                 <th>NIK</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
+                <th>Jabatan</th>
                 <th>Cabang Tujuan</th>
                 <th>Divisi Tujuan</th>
+                <th>Jabatan Tujuan</th>
                 <th>Tanggal Pengajuan</th>
-                <th>Tanggal Perbantuan</th>
+                <th>Tanggal Mutasi</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>
                 <th>Dibuat Oleh</th>

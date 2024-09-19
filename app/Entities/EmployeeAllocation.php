@@ -14,10 +14,11 @@ class EmployeeAllocation extends Entity
     protected $submissiontype;
     protected $md_branch_id;
     protected $md_division_id;
+    protected $md_position_id;
     protected $branch_to;
     protected $division_to;
-    protected $startdate;
-    protected $enddate;
+    protected $position_to;
+    protected $date;
     protected $description;
     protected $docstatus;
     protected $isapprove;
@@ -92,6 +93,16 @@ class EmployeeAllocation extends Entity
         $this->attributes['md_division_id'] = $md_division_id;
     }
 
+    public function getPositionId()
+    {
+        return $this->attributes['md_position_id'];
+    }
+
+    public function setPositionId($md_position_id)
+    {
+        $this->attributes['md_position_id'] = $md_position_id;
+    }
+
     public function getBranchTo()
     {
         return $this->attributes['branch_to'];
@@ -112,30 +123,27 @@ class EmployeeAllocation extends Entity
         $this->attributes['division_to'] = $division_to;
     }
 
-    public function getStartDate()
+    public function getPositionTo()
+    {
+        return $this->attributes['position_to'];
+    }
+
+    public function setPositionTo($position_to)
+    {
+        $this->attributes['position_to'] = $position_to;
+    }
+
+    public function getDate()
     {
         // if (!empty($this->attributes['startdate']))
         // return format_dmy($this->attributes['startdate'], "-");
 
-        return $this->attributes['startdate'];
+        return $this->attributes['date'];
     }
 
-    public function setStartDate($startdate)
+    public function setDate($date)
     {
-        $this->attributes['startdate'] = $startdate;
-    }
-
-    public function getEndDate()
-    {
-        // if (!empty($this->attributes['enddate']))
-        //     return format_dmy($this->attributes['enddate'], "-");
-
-        return $this->attributes['enddate'];
-    }
-
-    public function setEndDate($enddate)
-    {
-        $this->attributes['enddate'] = $enddate;
+        $this->attributes['date'] = $date;
     }
 
     public function getSubmissionDate()
