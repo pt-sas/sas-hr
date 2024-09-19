@@ -747,9 +747,7 @@ let previousValue;
 
 $(document).ready(function (evt) {
   $("#form_leave_cancel #md_employee_id")
-    .on("focus", function (e) {
-      previousValue = this.value;
-    })
+    .on("focus", function (e) {})
     .change(function (evt) {
       if (previousValue) {
         const form = $(this).closest("form");
