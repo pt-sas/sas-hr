@@ -69,7 +69,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="reason">Alasan <span class="required">*</span></label>
-                    <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
+                    <textarea type="text" class="form-control" name="reason" rows="6"></textarea>
                     <small class="form-text text-danger" id="error_reason"></small>
                 </div>
             </div>
@@ -83,6 +83,10 @@
                         </span>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
+                </div>
+                <div class="form-group">
+                    <label for="availableleavedays">Sisa Cuti </label>
+                    <input type="text" class="form-control" id="availableleavedays" name="availableleavedays" readonly>
                 </div>
             </div>
             <div class="col-md-3">

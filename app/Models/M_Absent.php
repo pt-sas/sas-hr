@@ -35,7 +35,8 @@ class M_Absent extends Model
         'comment',
         'enddate_realization',
         'isbranch',
-        'branch_to'
+        'branch_to',
+        'availableleavedays'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';

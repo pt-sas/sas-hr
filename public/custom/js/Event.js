@@ -2348,3 +2348,52 @@ function getPosition(elem, position) {
     },
   });
 }
+
+$("#form_leave").on(
+  "change dp.change",
+  "#md_employee_id, #startdate, #enddate",
+  function (e) {
+    let _this = $(this);
+    const target = $(e.target);
+    const form = _this.closest("form");
+    let value = this.value;
+
+    let employeeID = form
+      .find("select[name=md_employee_id] option:selected")
+      .val();
+    let startDate = form.find("input[name=startdate]").val();
+    let endDate = form.find("input[name=enddate]").val();
+
+    let url = `${SITE_URL}/available-days`;
+
+    if (employeeID && startDate && endDate) {
+      let data = {};
+
+      if (employeeID && form.find("select[name=md_employee_id]"))
+        data["md_employee_id"] = employeeID;
+
+      if (startDate && form.find("input[name=startdate]"))
+        data["startdate"] = moment(startDate).format("YYYY-MM-DD HH:mm:ss");
+
+      if (endDate && form.find("input[name=enddate]"))
+        data["enddate"] = moment(endDate).format("YYYY-MM-DD HH:mm:ss");
+
+      $.ajax({
+        url: url,
+        type: "GET",
+        data: data,
+        dataType: "JSON",
+        success: function (result) {
+          console.log(result);
+          if (result[0].success) {
+            let balance = result[0].message;
+            form.find("input[name=availableleavedays]").val(balance);
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
+  }
+);
