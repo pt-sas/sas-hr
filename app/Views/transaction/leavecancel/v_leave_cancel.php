@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 
-<?= $this->include('transaction/employeeallocation/form_employee_allocation'); ?>
+<?= $this->include('transaction/leavecancel/form_leave_cancel'); ?>
 <div class="card-body card-main">
     <table class="table table-striped table-hover tb_display" style="width: 100%">
         <thead>
@@ -14,16 +14,13 @@
                 <th>NIK</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
-                <th>Jabatan</th>
-                <th>Cabang Tujuan</th>
-                <th>Divisi Tujuan</th>
-                <th>Jabatan Tujuan</th>
+                <th>Ref Cuti</th>
                 <th>Tanggal Pengajuan</th>
-                <th>Tanggal Mutasi</th>
+                <th>Tanggal Diterima</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>
-                <th>Dibuat Oleh</th>
-                <th>Aksi</th>
+                <th>Createdby</th>
+                <th>Actions</th>
             </tr>
         </thead>
     </table>

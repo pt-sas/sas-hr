@@ -33,6 +33,7 @@ class Absent extends Entity
     protected $enddate_realization;
     protected $isbranch;
     protected $branch_to;
+    protected $reference_id;
 
     protected $dates   = [
         'created_at',
@@ -334,5 +335,15 @@ class Absent extends Entity
     public function setIsBranch($isbranch)
     {
         return $this->attributes['isbranch'] = $isbranch;
+    }
+
+    public function getReferenceId()
+    {
+        return $this->attributes['reference_id'];
+    }
+
+    public function setReferenceId($reference_id)
+    {
+        $this->attributes['reference_id'] = $reference_id;
     }
 }

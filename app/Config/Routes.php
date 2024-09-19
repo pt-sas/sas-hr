@@ -205,6 +205,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('cuti/show/(:any)', 'Backend\Leave::show/$1');
     $routes->get('cuti/destroy/(:any)', 'Backend\Leave::destroy/$1');
     $routes->get('cuti/processIt', 'Backend\Leave::processIt');
+    $routes->match(['get', 'post'], 'cuti/getList', 'Backend\Leave::getList');
 
     $routes->add('ijin-resmi', 'Backend\OfficialPermission::index');
     $routes->match(['get', 'post'], 'ijin-resmi/showAll', 'Backend\OfficialPermission::showAll');
@@ -602,13 +603,13 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('laporan-lembur', 'Backend\Rpt_Overtime::index');
     $routes->match(['get', 'post'], 'laporan-lembur/showAll', 'Backend\Rpt_Overtime::showAll');
 
-    $routes->add('perbantuan', 'Backend\EmployeeAllocation::index');
-    $routes->match(['get', 'post'], 'perbantuan/showAll', 'Backend\EmployeeAllocation::showAll');
-    $routes->post('perbantuan/create', 'Backend\EmployeeAllocation::create');
-    $routes->get('perbantuan/show/(:any)', 'Backend\EmployeeAllocation::show/$1');
-    $routes->get('perbantuan/destroy/(:any)', 'Backend\EmployeeAllocation::destroy/$1');
-    $routes->get('perbantuan/processIt', 'Backend\EmployeeAllocation::processIt');
-    $routes->get('perbantuan/print/(:any)', 'Backend\EmployeeAllocation::exportPDF/$1');
+    $routes->add('mutasi', 'Backend\EmployeeAllocation::index');
+    $routes->match(['get', 'post'], 'mutasi/showAll', 'Backend\EmployeeAllocation::showAll');
+    $routes->post('mutasi/create', 'Backend\EmployeeAllocation::create');
+    $routes->get('mutasi/show/(:any)', 'Backend\EmployeeAllocation::show/$1');
+    $routes->get('mutasi/destroy/(:any)', 'Backend\EmployeeAllocation::destroy/$1');
+    $routes->get('mutasi/processIt', 'Backend\EmployeeAllocation::processIt');
+    $routes->get('mutasi/print/(:any)', 'Backend\EmployeeAllocation::exportPDF/$1');
 
     $routes->add('resign', 'Backend\Resign::index');
     $routes->match(['get', 'post'], 'resign/showAll', 'Backend\Resign::showAll');
@@ -618,6 +619,15 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('resign/processIt', 'Backend\Resign::processIt');
     $routes->get('resign/print/(:any)', 'Backend\Resign::exportPDF/$1');
     $routes->match(['get', 'post'], 'resign/getRefDetail', 'Backend\Resign::getRefDetail');
+    $routes->match(['get', 'post'], 'resign/getDetail', 'Backend\Resign::getDetailResign');
+
+    $routes->add('pembatalan-cuti', 'Backend\LeaveCancel::index');
+    $routes->match(['get', 'post'], 'pembatalan-cuti/showAll', 'Backend\LeaveCancel::showAll');
+    $routes->post('pembatalan-cuti/create', 'Backend\LeaveCancel::create');
+    $routes->get('pembatalan-cuti/show/(:any)', 'Backend\LeaveCancel::show/$1');
+    $routes->get('pembatalan-cuti/destroy/(:any)', 'Backend\LeaveCancel::destroy/$1');
+    $routes->get('pembatalan-cuti/processIt', 'Backend\LeaveCancel::processIt');
+    $routes->match(['get', 'post'], 'pembatalan-cuti/getLeaveDetail', 'Backend\LeaveCancel::getLeaveDetail');
 });
 
 /*

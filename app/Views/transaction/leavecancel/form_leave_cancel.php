@@ -1,5 +1,5 @@
 <div class="card-body card-form">
-    <form class="form-horizontal form-absent" id="form_leave">
+    <form class="form-horizontal form-absent" id="form_leave_cancel">
         <?= csrf_field(); ?>
         <div class="row">
             <div class="col-md-3">
@@ -19,7 +19,16 @@
                     <small class="form-text text-danger" id="error_nik"></small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="reference_id">Reference <span class="required">*</span></label>
+                    <select class="form-control select2" id="reference_id" name="reference_id">
+                        <option value="">Pilih Tipe Berhenti</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_reference_id"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
                     <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
@@ -77,30 +86,6 @@
                     <small class="form-text text-danger" id="error_reason"></small>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
-                    <div class="input-icon">
-                        <input type="text" class="form-control datepicker-start" id="startdate" name="startdate">
-                        <span class="input-icon-addon">
-                            <i class="fa fa-calendar"></i>
-                        </span>
-                    </div>
-                    <small class="form-text text-danger" id="error_startdate"></small>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="date">Tanggal Selesai <span class="required">*</span></label>
-                    <div class="input-icon">
-                        <input type="text" class="form-control datepicker-end" id="enddate" name="enddate">
-                        <span class="input-icon-addon">
-                            <i class="fa fa-calendar"></i>
-                        </span>
-                    </div>
-                    <small class="form-text text-danger" id="error_enddate"></small>
-                </div>
-            </div>
         </div>
         <div class="row">
             <div class="col-md-12">
@@ -109,10 +94,9 @@
                         <thead>
                             <tr>
                                 <th>Line</th>
-                                <th>Tanggal Tidak Masuk</th>
-                                <th>Doc No</th>
-                                <th>Doc Referensi</th>
-                                <th>Status</th>
+                                <th>Tanggal Cuti Batal</th>
+                                <th>status</th>
+                                <th>aksi</th>
                             </tr>
                         </thead>
                     </table>
