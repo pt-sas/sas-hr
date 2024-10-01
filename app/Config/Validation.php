@@ -884,9 +884,11 @@ class Validation
         ],
         'card_id'               => [
             'label'             => 'no ktp',
-            'rules'             => 'required',
+            'rules'             => 'required|min_length[16]|is_unique[md_employee.card_id,md_employee_id,{id}]',
             'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'min_length'    => 'Minimal {field} harus {param} karakter',
+                'is_unique'     => 'Data {field} ini sudah ada'
             ]
         ],
     ];
