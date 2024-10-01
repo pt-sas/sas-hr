@@ -6,16 +6,9 @@ use App\Controllers\BaseController;
 use Config\Services;
 use App\Models\M_Employee;
 use App\Models\M_AccessMenu;
-use App\Models\M_Holiday;
 use App\Models\M_Rule;
-use App\Models\M_WorkDetail;
-use App\Models\M_EmpWorkDay;
 use App\Models\M_Division;
 use App\Models\M_RuleDetail;
-use App\Models\M_Position;
-use App\Models\M_Branch;
-use App\Models\M_EmpBranch;
-use App\Models\M_EmpDivision;
 use App\Models\M_EmployeeDeparture;
 use App\Models\M_Reference;
 use App\Models\M_ReferenceDetail;
@@ -45,14 +38,6 @@ class Resign extends BaseController
                 'field'     => 'sys_ref_detail.name',
                 'option'    => 'ASC'
             ])->getResult(),
-            'ref_detail' => $mReference->findBy(
-                "sys_reference.name IN ('ResignType', 'FiredType') AND sys_reference.isactive = 'Y' AND sys_ref_detail.isactive = 'Y'",
-                null,
-                [
-                    'field'     => 'sys_ref_detail.name',
-                    'option'    => 'ASC'
-                ]
-            )->getResult()
         ];
 
         return $this->template->render('transaction/resign/v_resign', $data);
@@ -194,24 +179,11 @@ class Resign extends BaseController
                     $letterdate = date('Y-m-d', strtotime($post['letterdate']));
                     $submissionDate = $post['submissiondate'];
                     $subDate = date('Y-m-d', strtotime($submissionDate));
-                    $dateResign = date('Y-m-d', strtotime($post['letterdate']));
-                    $dateOff = date('Y-m-d', strtotime($post['date']));
 
                     $rule = $mRule->where([
                         'name'      => "Resign",
                         'isactive'  => 'Y'
                     ])->first();
-
-                    if ($post['departuretype'] === "Atas kemauan sendiri") {
-                        $ruleDetail = $mRuleDetail->where([
-                            'name' =>
-                            $post['departurerule'],
-                            'isactive' => 'Y'
-                        ])->first();
-
-                        if ($ruleDetail->format_condition === "Bulan")
-                            $dateResign = date('Y-m-d', strtotime($letterdate . "+ {$ruleDetail->condition} month"));
-                    }
 
                     /**This for checking backdate */
                     $dateRange = getDatesFromRange($letterdate, $subDate, [], 'Y-m-d', 'all');
@@ -221,8 +193,6 @@ class Resign extends BaseController
 
                     if ($dateInterval > $minDays) {
                         $response = message('success', false, 'Tidak bisa mengajukan, karena tanggal surat sudah melewati tanggal ketentuan');
-                    } else if ($dateOff !== $dateResign) {
-                        $response = message('success', false, "Tanggal resign tidak sesuai ketentuan, tanggal resign harus " . format_dmy($dateResign, '-'));
                     } else {
                         $this->entity->fill($post);
 
@@ -395,32 +365,6 @@ class Resign extends BaseController
         $this->response->setContentType('application/pdf');
         $pdf->IncludeJS("print();");
         $pdf->Output('pengajuan.pdf', 'I');
-    }
-
-    public function getRefDetail()
-    {
-        if ($this->request->isAjax()) {
-            $post = $this->request->getVar();
-            $mRefDetail = new M_ReferenceDetail($this->request);
-
-            $rowDep = $this->model->where('documentno', $post['documentno'])->first();
-            $response = [];
-
-            try {
-                $list = $mRefDetail->where(['name' => $rowDep->departurerule, 'isactive' => 'Y'])
-                    ->orderBy('name', 'ASC')
-                    ->findAll();
-
-                foreach ($list as $key => $row) :
-                    $response[$key]['id'] = $row->getValue();
-                    $response[$key]['text'] = $row->getName();
-                endforeach;
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
-
-            return $this->response->setJSON($response);
-        }
     }
 
     public function getDetailResign()

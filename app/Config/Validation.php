@@ -2465,13 +2465,6 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'departurerule'                => [
-            'label'             => 'keterangan',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
-            ]
-        ],
         'description'                => [
             'label'             => 'alasan',
             'rules'             => 'required',

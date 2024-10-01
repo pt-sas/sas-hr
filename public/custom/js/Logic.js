@@ -539,21 +539,23 @@ $("#form_office_duties").on("change", "#md_branch_id", function (e) {
 });
 
 $("#form_resign").on("change", "#departuretype", function (e) {
-  if ($(this).val() !== "") {
-    const form = $(this).closest("form");
-    let formData = new FormData();
-    const field = form.find("select[name=departurerule]");
+  let _this = $(this);
+  let value = this.value;
+  let formData = new FormData();
+  const form = _this.closest("form");
 
-    let url = ADMIN_URL + "reference/getList";
-    if (setSave === "detail") {
-      url = ADMIN_URL + "resign/getRefDetail";
-    }
+  let url = `${ADMIN_URL}reference/getList`;
 
-    formData.append("criteria", form.find($("#departuretype")).val());
-    formData.append("documentno", form.find($("#documentno")).val());
+  formData.append("criteria", value);
 
-    field.empty();
+  if (value === "") {
+    if (form.find("select[name=departurerule]").length)
+      form.find("select[name=departurerule]").val(null).change();
+  }
 
+  form.find("select[name=departurerule]").empty();
+
+  if (value !== "") {
     $.ajax({
       url: url,
       type: "POST",
@@ -565,23 +567,45 @@ $("#form_resign").on("change", "#departuretype", function (e) {
       beforeSend: function () {
         $(".x_form").prop("disabled", true);
         $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "facebook");
       },
       complete: function () {
         $(".x_form").removeAttr("disabled");
         $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
         if (result.length) {
-          field.append('<option value=""></option>');
+          form
+            .find("select[name=departurerule]")
+            .append('<option value=""></option>');
+
+          let departurerule = "";
+
+          if (option.length) {
+            $.each(option, function (i, item) {
+              if (item.fieldName == "departurerule") departurerule = item.label;
+            });
+          }
 
           $.each(result, function (idx, item) {
-            field.append(
-              '<option value="' +
-                item.id +
-                '" selected>' +
-                item.text +
-                "</option>"
-            );
+            if (departurerule == item.id) {
+              form
+                .find("select[name=departurerule]")
+                .append(
+                  '<option value="' +
+                    item.id +
+                    '" selected>' +
+                    item.text +
+                    "</option>"
+                );
+            } else {
+              form
+                .find("select[name=departurerule]")
+                .append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                );
+            }
           });
         }
       },

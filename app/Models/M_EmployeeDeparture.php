@@ -29,7 +29,8 @@ class M_EmployeeDeparture extends Model
         'letterdate',
         'sys_wfscenario_id',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'fullname'
     ];
     protected $useTimestamps    = true;
     protected $returnType       = 'App\Entities\EmployeeDeparture';

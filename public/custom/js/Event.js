@@ -162,6 +162,9 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
     if (form.find("input[name=nik]").length)
       form.find("input[name=nik]").val(null);
 
+    if (form.find("input[name=fullname]").length)
+      form.find("input[name=fullname]").val(null);
+
     if (form.find("select[name=md_branch_id]").length)
       form
         .find("select[name=md_branch_id]")
@@ -207,6 +210,9 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
         if (result.length) {
           if (form.find("input[name=nik]").length)
             form.find("input[name=nik]").val(result[0].nik);
+
+          if (form.find("input[name=fullname]").length)
+            form.find("input[name=fullname]").val(result[0].fullname);
 
           if (form.find("select[name=md_branch_id]").length)
             getOptionBranch(_this, result[0].md_branch_id);
