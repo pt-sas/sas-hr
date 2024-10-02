@@ -1865,20 +1865,6 @@ class Validation
                 'is_unique'    => 'This {field} already exists.',
                 'required'     => 'Mohon mengisi {field} dahulu'
             ]
-        ],
-        'isrealization'        => [
-            'label'            => 'realisasi',
-            'rules'            => 'checkboxes[isrealization,isapprovedline]',
-            'errors'           => [
-                'checkboxes'   => 'Mohon realisasi dan approved line tidak boleh dipilih bersamaan',
-            ]
-        ],
-        'isapprovedline'       => [
-            'label'            => 'approved line',
-            'rules'            => 'checkboxes[isrealization,isapprovedline]',
-            'errors'           => [
-                'checkboxes'   => 'Mohon realisasi dan approved line tidak boleh dipilih bersamaan',
-            ]
         ]
     ];
 

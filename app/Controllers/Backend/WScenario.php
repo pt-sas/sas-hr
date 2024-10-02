@@ -335,6 +335,18 @@ class WScenario extends BaseController
                         $totalDays = 6; //Set GT sesuai scenario
                 }
 
+                if ($trx->submissiontype == $this->model->Pengajuan_Pembatalan_Cuti) {
+                    $trxRefLine = $this->modelDetail->where($primaryKey, $trx->reference_id)->findAll();
+                    $totalDays = count($trxRefLine);
+
+                    if ($totalDays <= 3)
+                        $totalDays = 3; //Set GT sesuai scenario
+                    else if ($totalDays > 3 && $totalDays <= 5)
+                        $totalDays = 5; //Set GT sesuai scenario
+                    else if ($totalDays > 5)
+                        $totalDays = 6; //Set GT sesuai scenario
+                }
+
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, $totalDays);
             } else {
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);

@@ -616,15 +616,14 @@ $("#form_resign").on("change", "#departuretype", function (e) {
   }
 });
 
-let prev;
+let prevData;
 
 $(document).ready(function (evt) {
   $("#form_leave_cancel #reference_id")
     .on("focus", function (e) {
-      prev = this.value;
+      prevData = this.value;
     })
     .change(function (evt) {
-      console.log(prev);
       const form = $(this).closest("form");
       const attrName = $(this).attr("name");
 
@@ -679,7 +678,8 @@ $(document).ready(function (evt) {
             prev !== "" &&
             leave_id !== "" &&
             prev != leave_id &&
-            prev != elem.option_ID
+            prev != elem.option_ID &&
+            !_tableLine.data().any()
           ) {
             _tableLine.clear().draw(false);
             setLeaveDetail(form, leave_id);
@@ -687,7 +687,7 @@ $(document).ready(function (evt) {
         }
       });
 
-      prev = this.value;
+      prevData = this.value;
     });
 });
 
@@ -700,7 +700,6 @@ function setLeaveDetail(form, id, cancel_id = 0) {
     data: {
       id: id,
       cancel_id: cancel_id,
-      setSave: setSave,
     },
     cache: false,
     dataType: "JSON",
@@ -715,17 +714,14 @@ function setLeaveDetail(form, id, cancel_id = 0) {
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         let arrMsg = result[0].message;
 
         if (arrMsg.line) {
-          if (form.find("table.tb_displayline").length > 0) {
+          if (_tableLine.context.length) {
             let line = JSON.parse(arrMsg.line);
 
-            $.each(line, function (idx, elem) {
-              _tableLine.row.add(elem).draw(false);
-            });
+            _tableLine.rows.add(line).draw(false);
 
             const field = _tableLine.rows().nodes().to$().find("input, select");
 
@@ -767,74 +763,70 @@ function setLeaveDetail(form, id, cancel_id = 0) {
   });
 }
 
-let previousValue;
+$("#form_leave_cancel").on("change", "#md_employee_id", function (e) {
+  let _this = $(this);
+  let value = this.value;
+  let formData = new FormData();
+  const form = _this.closest("form");
+  const field = form.find("select[name=reference_id]");
 
-$(document).ready(function (evt) {
-  $("#form_leave_cancel #md_employee_id")
-    .on("focus", function (e) {
-      previousValue = this.value;
-    })
-    .change(function (evt) {
-      if (previousValue) {
-        const form = $(this).closest("form");
-        let formData = new FormData();
-        const field = form.find("select[name=reference_id]");
+  let url = `${ADMIN_URL}cuti/get-list`;
 
-        let url = ADMIN_URL + "cuti/getList";
-        formData.append("md_employee_id", $(this).val());
+  formData.append("md_employee_id", value);
+  formData.append("id", ID);
 
-        _tableLine.clear().draw(false);
+  field.empty();
 
-        field.empty();
+  if (value !== "") {
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".x_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+      },
+      complete: function () {
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+      },
+      success: function (result) {
+        if (result.length) {
+          field.append('<option value=""></option>');
 
-        $.ajax({
-          url: url,
-          type: "POST",
-          data: formData,
-          processData: false,
-          contentType: false,
-          cache: false,
-          dataType: "JSON",
-          beforeSend: function () {
-            $(".x_form").prop("disabled", true);
-            $(".close_form").prop("disabled", true);
-          },
-          complete: function () {
-            $(".x_form").removeAttr("disabled");
-            $(".close_form").removeAttr("disabled");
-          },
-          success: function (result) {
-            console.log(result);
-            if (result.length) {
-              field.append('<option value=""></option>');
+          let reference_id = 0;
 
-              $.each(result, function (idx, item) {
-                if (setSave === "detail")
-                  field
-                    .append(
-                      '<option value="' +
-                        item.id +
-                        '" selected>' +
-                        item.text +
-                        "</option>"
-                    )
-                    .prop("disabled", true);
-                else
-                  field.append(
-                    '<option value="' +
-                      item.id +
-                      '" selected>' +
-                      item.text +
-                      "</option>"
-                  );
-              });
-            }
-          },
-          error: function (jqXHR, exception) {
-            showError(jqXHR, exception);
-          },
-        });
-      }
-      previousValue = this.value;
+          if (option.length) {
+            $.each(option, function (i, item) {
+              if (item.fieldName == "reference_id") reference_id = item.label;
+            });
+          }
+
+          $.each(result, function (idx, item) {
+            if (setSave === "detail" && reference_id == item.id)
+              field
+                .append(
+                  '<option value="' +
+                    item.id +
+                    '" selected>' +
+                    item.text +
+                    "</option>"
+                )
+                .prop("disabled", true);
+            else
+              field.append(
+                '<option value="' + item.id + '">' + item.text + "</option>"
+              );
+          });
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
     });
+  }
 });

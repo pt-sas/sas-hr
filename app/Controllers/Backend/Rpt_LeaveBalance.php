@@ -132,7 +132,7 @@ class Rpt_LeaveBalance extends BaseController
                     $row[] = $value->employee_fullname;
                     $row[] = $value->branch;
                     $row[] = $value->divisi;
-                    $row[] = intval($balance->balance_amount) ?? 0;
+                    $row[] = $balance ? intval($balance->balance_amount) : 0;
                     $row[] = $value->amount;
 
                     //* Januari 

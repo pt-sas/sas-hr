@@ -93,6 +93,7 @@ class Realization extends BaseController
 
             $where = [
                 "trx_absent.docstatus = '{$this->DOCSTATUS_Inprogress}' 
+                AND trx_absent.isapproved = 'Y' 
                 AND trx_absent_detail.isagree = 'H' 
                 AND trx_absent.submissiontype NOT IN (" . implode(",", $formType) . ")"
             ];

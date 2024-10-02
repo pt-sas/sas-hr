@@ -109,6 +109,8 @@ class M_AbsentDetail extends Model
 
         try {
             $ruleDetail = null;
+            $year = date('Y', strtotime($line->date));
+
             if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti && $line->isagree === "Y") {
                 $balance = $mLeaveBalance->where([
                     'year'              => date("Y", strtotime($sql->startdate)),
@@ -119,7 +121,6 @@ class M_AbsentDetail extends Model
                 $carriedOverAmt = $balance->carried_over_amount;
                 $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
                 $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
-                $year = date('Y', strtotime($line->date));
 
                 $dataLeaveUsage = [];
                 if ($carryOverValid && $carriedOverAmt != 0) {
@@ -199,6 +200,7 @@ class M_AbsentDetail extends Model
                         ])->first();
                         $saldo = $balance->balance_amount;
 
+                        $dataLeaveUsage = [];
                         foreach ($ruleDetail as $detail) {
                             if ($saldo != 0) {
                                 if ($detail->name === "Sanksi Alpa Cuti") {
@@ -216,6 +218,17 @@ class M_AbsentDetail extends Model
                                             $mLeaveBalance->save($entityBal);
 
                                             $amount = 0;
+
+                                            $dataLeaveUsage[] = [
+                                                "transactiondate"   => $line->date,
+                                                "transactiontype"   => 'C-',
+                                                "year"              => $year,
+                                                "amount"            => $tkh,
+                                                "md_employee_id"    => $sql->md_employee_id,
+                                                "isprocessed"       => "N",
+                                                "created_by"        => $updated_by,
+                                                "updated_by"        => $updated_by
+                                            ];
                                         } else if ($saldo != 0) {
                                             $entityBal->md_employee_id = $sql->md_employee_id;
                                             $entityBal->balance_amount = $saldo - $saldo;
@@ -226,6 +239,17 @@ class M_AbsentDetail extends Model
                                             //? Cek perbandingan dari calculate variable 
                                             if ($calculate == 0)
                                                 $amount = 0;
+
+                                            $dataLeaveUsage[] = [
+                                                "transactiondate"   => $line->date,
+                                                "transactiontype"   => 'C-',
+                                                "year"              => $year,
+                                                "amount"            => - ($saldo),
+                                                "md_employee_id"    => $sql->md_employee_id,
+                                                "isprocessed"       => "N",
+                                                "created_by"        => $updated_by,
+                                                "updated_by"        => $updated_by
+                                            ];
                                         }
 
                                         if ($calculate < 0) {
@@ -276,6 +300,9 @@ class M_AbsentDetail extends Model
                                 }
                             }
                         }
+
+                        if ($dataLeaveUsage)
+                            $mTransaction->builder->insertBatch($dataLeaveUsage);
                     }
                 }
             }
@@ -292,9 +319,13 @@ class M_AbsentDetail extends Model
                     $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
                     if ($ruleDetail) {
-                        $balance = $mLeaveBalance->getBalance(['trx_leavebalance.md_employee_id' => $sql->md_employee_id]);
+                        $balance = $mLeaveBalance->where([
+                            'year'              => date("Y", strtotime($sql->startdate)),
+                            'md_employee_id'    => $sql->md_employee_id
+                        ])->first();
                         $saldo = $balance->balance_amount;
 
+                        $dataLeaveUsage = [];
                         foreach ($ruleDetail as $detail) {
                             if ($saldo != 0) {
                                 if ($detail->name === "Sanksi Ijin Cuti") {
@@ -312,6 +343,17 @@ class M_AbsentDetail extends Model
                                             $mLeaveBalance->save($entityBal);
 
                                             $amount = 0;
+
+                                            $dataLeaveUsage[] = [
+                                                "transactiondate"   => $line->date,
+                                                "transactiontype"   => 'C-',
+                                                "year"              => $year,
+                                                "amount"            => $tkh,
+                                                "md_employee_id"    => $sql->md_employee_id,
+                                                "isprocessed"       => "N",
+                                                "created_by"        => $updated_by,
+                                                "updated_by"        => $updated_by
+                                            ];
                                         } else if ($saldo != 0) {
                                             $entityBal->md_employee_id = $sql->md_employee_id;
                                             $entityBal->balance_amount = $saldo - $saldo;
@@ -322,6 +364,17 @@ class M_AbsentDetail extends Model
                                             //? Cek perbandingan dari calculate variable 
                                             if ($calculate == 0)
                                                 $amount = 0;
+
+                                            $dataLeaveUsage[] = [
+                                                "transactiondate"   => $line->date,
+                                                "transactiontype"   => 'C-',
+                                                "year"              => $year,
+                                                "amount"            => - ($saldo),
+                                                "md_employee_id"    => $sql->md_employee_id,
+                                                "isprocessed"       => "N",
+                                                "created_by"        => $updated_by,
+                                                "updated_by"        => $updated_by
+                                            ];
                                         }
 
                                         if ($calculate < 0) {
@@ -368,6 +421,9 @@ class M_AbsentDetail extends Model
                                 }
                             }
                         }
+
+                        if ($dataLeaveUsage)
+                            $mTransaction->builder->insertBatch($dataLeaveUsage);
                     }
                 }
             }
@@ -647,15 +703,19 @@ class M_AbsentDetail extends Model
     public function doChangeValueField($data, $id, $dataHeader): array
     {
         $result = [];
-        if ($dataHeader->submissiontype === 100018) {
-            $number = 1;
 
-            foreach ($data as $row) :
+        $number = 1;
+
+        foreach ($data as $row) :
+            if (property_exists($row, "lineno"))
                 $row->lineno = $number;
-                $result[] = $row;
-                $number++;
-            endforeach;
-        }
+
+            if (!property_exists($row, "isagree"))
+                $row->isagree = "H";
+
+            $result[] = $row;
+            $number++;
+        endforeach;
 
         return $result;
     }

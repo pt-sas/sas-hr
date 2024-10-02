@@ -205,7 +205,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('cuti/show/(:any)', 'Backend\Leave::show/$1');
     $routes->get('cuti/destroy/(:any)', 'Backend\Leave::destroy/$1');
     $routes->get('cuti/processIt', 'Backend\Leave::processIt');
-    $routes->match(['get', 'post'], 'cuti/getList', 'Backend\Leave::getList');
+    $routes->match(['get', 'post'], 'cuti/get-list', 'Backend\Leave::getList');
     $routes->get('cuti/available-days', 'Backend\Leave::getAvailableDays');
 
     $routes->add('ijin-resmi', 'Backend\OfficialPermission::index');
