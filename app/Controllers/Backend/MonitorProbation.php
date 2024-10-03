@@ -36,7 +36,7 @@ class MonitorProbation extends BaseController
                 'sys_reference.name'              => 'CategoryProbation',
                 'sys_reference.isactive'          => 'Y',
                 'sys_ref_detail.isactive'         => 'Y',
-                'sys_ref_detail.value <>'         => 'penilaian',
+                'sys_ref_detail.value <>'         => 'evaluasi',
             ], null, [
                 'field'     => 'sys_ref_detail.name',
                 'option'    => 'DESC'
@@ -177,6 +177,7 @@ class MonitorProbation extends BaseController
                 if (!$this->validation->run($post, 'monitor_probation')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $submissiondate = date('Y-m-d', strtotime($post['submissiondate']));
                     // For checking if there exist monitoring probation same as this form
                     $refDoc1 = $this->model->where(["category" => $post['category'], 'md_employee_id' => $post['md_employee_id']])
                         ->whereIn("docstatus", ["CO", "IP"])
@@ -187,11 +188,19 @@ class MonitorProbation extends BaseController
                         ->whereIn("docstatus", ["CO", "IP"])
                         ->first();
 
+                    if ($post["category"] === "monitor 1") {
+                        $dateMonitor = date('Y-m-d', strtotime($post["registerdate"] . "+ 1 month"));
+                    } else {
+                        $dateMonitor = date('Y-m-d', strtotime($post["registerdate"] . "+ 2 month"));
+                    }
+
                     // For checking if employee status is probation
                     $employee = $mEmployee->where([$mEmployee->primaryKey => $post['md_employee_id'], 'isactive' => 'Y'])->first();
 
-                    if ($employee->md_status_id !== 100002) {
+                    if ($employee->md_status_id != 100002) {
                         $response = message('success', false, 'karyawan saat ini tidak berstatus probation');
+                    } else if ($submissiondate < $dateMonitor) {
+                        $response = message('success', false, 'Tidak bisa mengajukan, Tanggal monitoring baru bisa dibuat pada tanggal ' . format_dmy($dateMonitor, '-'));
                     } else if ($refDoc1) {
                         $response = message('success', false, 'Tidak bisa mengajukan, karena sudah ada pengajuan lain');
                     } else if ($post['category'] === 'monitor 2' && !($refDoc2)) {
