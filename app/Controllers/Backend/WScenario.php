@@ -357,11 +357,7 @@ class WScenario extends BaseController
                 $this->entity->setWfScenarioId($this->sys_wfscenario_id);
                 $isWfscenario = true;
             } else {
-                if ($table === 'trx_employee_allocation') {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
-                } else {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                }
+                $this->entity->setDocStatus($this->DOCSTATUS_Completed);
             }
         } else if ($trx && $docStatus === $this->DOCSTATUS_Requested) {
             if ($table === 'trx_absent') {

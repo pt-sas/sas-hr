@@ -156,6 +156,13 @@ class Levelling extends BaseController
                         ->like('name', $post['search'])
                         ->orderBy('name', 'ASC')
                         ->findAll();
+                } else if (isset($post[$this->model->primaryKey])) {
+                    $id = explode(",", $post[$this->model->primaryKey]);
+
+                    $list = $this->model->where('isactive', 'Y')
+                        ->whereIn($this->model->primaryKey, $id)
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
                 } else {
                     $list = $this->model->where('isactive', 'Y')
                         ->orderBy('name', 'ASC')

@@ -14,9 +14,11 @@ class EmployeeAllocation extends Entity
     protected $submissiontype;
     protected $md_branch_id;
     protected $md_division_id;
+    protected $md_levelling_id;
     protected $md_position_id;
     protected $branch_to;
     protected $division_to;
+    protected $levelling_to;
     protected $position_to;
     protected $date;
     protected $description;
@@ -93,6 +95,16 @@ class EmployeeAllocation extends Entity
         $this->attributes['md_division_id'] = $md_division_id;
     }
 
+    public function getLevellingId()
+    {
+        return $this->attributes['md_levelling_id'];
+    }
+
+    public function seLevellingId($md_levelling_id)
+    {
+        $this->attributes['md_levelling_id'] = $md_levelling_id;
+    }
+
     public function getPositionId()
     {
         return $this->attributes['md_position_id'];
@@ -121,6 +133,16 @@ class EmployeeAllocation extends Entity
     public function setDivisionTo($division_to)
     {
         $this->attributes['division_to'] = $division_to;
+    }
+
+    public function getLevellingTo()
+    {
+        return $this->attributes['levelling_to'];
+    }
+
+    public function setLevellingTo($levelling_to)
+    {
+        $this->attributes['levelling_to'] = $levelling_to;
     }
 
     public function getPositionTo()
