@@ -177,6 +177,7 @@ class EvaluationProbation extends BaseController
                 if (!$this->validation->run($post, 'evaluasi_probation')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $enddate = date('Y-m-d', strtotime($post['probation_enddate']));
                     // For checking if there exist monitoring probation same as this form
                     $refDoc1 = $this->model->where(["category" => $post['category'], 'md_employee_id' => $post['md_employee_id']])
                         ->whereIn("docstatus", ["CO", "IP"])
@@ -187,11 +188,15 @@ class EvaluationProbation extends BaseController
                         ->whereIn("docstatus", ["CO", "IP"])
                         ->first();
 
+                    $dateEvaluasi = date('Y-m-d', strtotime($post["registerdate"] . "+ 3 month"));
+
                     // For checking if employee status is probation
                     $employee = $mEmployee->where([$mEmployee->primaryKey => $post['md_employee_id'], 'isactive' => 'Y'])->first();
 
                     if ($employee->md_status_id != 100002) {
                         $response = message('success', false, 'karyawan saat ini tidak berstatus probation');
+                    } else if ($enddate < $dateEvaluasi) {
+                        $response = message('success', false, 'Tidak bisa mengajukan, Tanggal probation selesai seharusnya pada tanggal ' . format_dmy($dateEvaluasi, '-'));
                     } else if ($refDoc1) {
                         $response = message('success', false, 'Tidak bisa mengajukan, karena sudah ada pengajuan lain');
                     } else if (!($refDoc2)) {
