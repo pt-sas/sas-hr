@@ -2637,4 +2637,129 @@ class Validation
             ]
         ]
     ];
+
+    public $monitor_probation = [
+        'category'                  => [
+            'label'             => 'Bulan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_employee_id'                  => [
+            'label'             => 'karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'nik'                  => [
+            'label'             => 'nik',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_branch_id'                  => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_division_id'                  => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_position_id'                  => [
+            'label'             => 'jabatan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'registerdate'                  => [
+            'label'             => 'Tanggal Bergabung',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
+
+    public $evaluasi_probation = [
+        'md_employee_id'                  => [
+            'label'             => 'karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'nik'                  => [
+            'label'             => 'nik',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_branch_id'                  => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_division_id'                  => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_position_id'                  => [
+            'label'             => 'jabatan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'registerdate'                  => [
+            'label'             => 'Tanggal Bergabung',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'probation_enddate'     => [
+            'label'             => 'Tanggal Selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'feedback'     => [
+            'label'             => 'Feedback',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'notes'     => [
+            'label'             => 'Catatan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'passed'     => [
+            'label'             => 'passed',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
 }

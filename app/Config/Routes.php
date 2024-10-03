@@ -646,6 +646,25 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('interview-keluar/processIt', 'Backend\ExitInterview::processIt');
     $routes->get('interview-keluar/getDataBy/(:num)', 'Backend\ExitInterview::getBy/$1');
     $routes->match(['get', 'post'], 'interview-keluar/getList', 'Backend\ExitInterview::getList');
+
+
+    $routes->add('monitor-percobaan', 'Backend\MonitorProbation::index');
+    $routes->match(['get', 'post'], 'monitor-percobaan/showAll', 'Backend\MonitorProbation::showAll');
+    $routes->post('monitor-percobaan/create', 'Backend\MonitorProbation::create');
+    $routes->get('monitor-percobaan/show/(:any)', 'Backend\MonitorProbation::show/$1');
+    $routes->get('monitor-percobaan/destroy/(:any)', 'Backend\MonitorProbation::destroy/$1');
+    $routes->get('monitor-percobaan/processIt', 'Backend\MonitorProbation::processIt');
+    $routes->get('monitor-percobaan/getDataBy/(:num)', 'Backend\MonitorProbation::getBy/$1');
+    $routes->match(['get', 'post'], 'monitor-percobaan/getList', 'Backend\MonitorProbation::getList');
+
+    $routes->add('evaluasi-percobaan', 'Backend\EvaluationProbation::index');
+    $routes->match(['get', 'post'], 'evaluasi-percobaan/showAll', 'Backend\EvaluationProbation::showAll');
+    $routes->post('evaluasi-percobaan/create', 'Backend\EvaluationProbation::create');
+    $routes->get('evaluasi-percobaan/show/(:any)', 'Backend\EvaluationProbation::show/$1');
+    $routes->get('evaluasi-percobaan/destroy/(:any)', 'Backend\EvaluationProbation::destroy/$1');
+    $routes->get('evaluasi-percobaan/processIt', 'Backend\EvaluationProbation::processIt');
+    $routes->get('evaluasi-percobaan/getDataBy/(:num)', 'Backend\EvaluationProbation::getBy/$1');
+    $routes->match(['get', 'post'], 'evaluasi-percobaan/getList', 'Backend\EvaluationProbation::getList');
 });
 
 /*
