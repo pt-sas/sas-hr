@@ -20,7 +20,8 @@ let _table,
   formReport,
   _tableReport,
   _tableApproval,
-  _tableRealization;
+  _tableRealization,
+  _tableQuestion;
 
 //* Field ID for collect data id
 let ID = 0;
@@ -1109,6 +1110,87 @@ $(".save_form").click(function (evt) {
       formData.append("roles", JSON.stringify(arrRole));
     }
 
+    if (form.find(".card-section").length) {
+      let cardSection = form.find(".card-section");
+      let question = [];
+
+      // Loop untuk setiap card-section
+      $.each(cardSection, function (index, section) {
+        let _tableQuestion = $(section).find(".tb_question");
+
+        if (_tableQuestion.length) {
+          const rows = _tableQuestion.find("tbody tr");
+
+          // Proses setiap baris pada tabel
+          $.each(rows, function (i) {
+            const tag = $(this).find("input, select, button, span, textarea");
+            const tr = $(this).closest("tr");
+            const td = tr.find("td");
+
+            if (tag.length) {
+              let row = {};
+
+              $.each(tag, function () {
+                let className = this.className.split(/\s+/);
+                let name = $(this).attr("name");
+                let value = this.value;
+                let id = $(this).attr("id");
+                const foreignkey = form.find("input.foreignkey");
+
+                if (className.includes("rupiah")) value = replaceRupiah(value);
+
+                if (this.type === "text" || this.type === "select-one") {
+                  if (className.includes("datepicker")) {
+                    let date = value;
+                    row[name] = date;
+
+                    if (date !== "") {
+                      let dateTime = moment(date).format("YYYY-MM-DD HH:mm:ss");
+                      row[name] = dateTime;
+                    }
+                  } else {
+                    row[name] = value;
+                  }
+                } else if (this.type === "checkbox") {
+                  row[name] = $(this).is(":checked") ? "Y" : "N";
+                } else if (this.type === "radio") {
+                  name = "answer";
+                  if ($(this).is(":checked")) {
+                    row[name] = value;
+                  }
+                } else if (typeof name !== "undefined") {
+                  if (id !== "") row[name] = id;
+                  else row[name] = "";
+
+                  if (className.includes("reference-key")) row[name] = value;
+                }
+
+                if (foreignkey.length)
+                  row[foreignkey.attr("name")] = foreignkey.attr("set-id");
+              });
+
+              $.each(td, function (i, item) {
+                let txtValue = $(item).attr("data-type");
+
+                if ($(item).hasClass("question-group-id")) {
+                  row["md_question_group_id"] = txtValue;
+                } else if ($(item).hasClass("no")) {
+                  row["no"] = txtValue;
+                } else if ($(item).hasClass("question")) {
+                  row["md_question_id"] = txtValue;
+                } else if ($(item).hasClass("answer")) {
+                  row["answertype"] = txtValue;
+                }
+              });
+              question.push(row);
+            }
+          });
+        }
+      });
+
+      formData.append("table", JSON.stringify(question));
+    }
+
     //? Check in form exists Table Line
     if (_tableLine.context.length) {
       const rows = _tableLine.rows().nodes().to$();
@@ -1221,6 +1303,7 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
+        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
@@ -1558,6 +1641,7 @@ function Edit(id, status, last_url) {
             hideLoadingForm(form.prop("id"));
           },
           success: function (result) {
+            console.log(result);
             if (result[0].success) {
               let arrMsg = result[0].message;
 
@@ -1630,6 +1714,56 @@ function Edit(id, status, last_url) {
 
                     btnAction.css("display", "block");
                   }
+                } else if (
+                  form.find(".card-section").length &&
+                  arrLine.length
+                ) {
+                  let cardSection = form.find(".card-section");
+
+                  $.each(cardSection, function (index, section) {
+                    let _tableQuestion = $(section).find(".tb_question");
+
+                    const rows = _tableQuestion.find("tbody tr");
+                    $.each(rows, function (i) {
+                      var questId = $(this).find("td.question");
+                      var questionId = arrLine.find(function (item) {
+                        return (
+                          item.md_question_id === questId.attr("data-type")
+                        );
+                      });
+
+                      const tag = $(this).find("input, select, textarea, text");
+
+                      if (questionId) {
+                        $.each(tag, function (i, elem) {
+                          if ($(elem).attr("id") == "primarykey") {
+                            $(elem).val(questionId.primarykey);
+                          } else {
+                            if ($(elem).attr("type") === "checkbox") {
+                              if (questionId.answer === "Y") {
+                                $(elem).prop("checked", true);
+                              } else {
+                                $(elem).prop("checked", false);
+                              }
+                            } else if ($(elem).attr("type") === "radio") {
+                              if ($(elem).attr("value") == questionId.answer) {
+                                $(elem).prop("checked", true);
+                              }
+                            } else {
+                              $(elem).val(questionId.answer);
+                            }
+                          }
+
+                          if (setSave === "detail")
+                            if ($(elem).attr("type") !== "text") {
+                              $(elem).prop("disabled", true);
+                            } else {
+                              $(elem).prop("readonly", true);
+                            }
+                        });
+                      }
+                    });
+                  });
                 }
               }
 
@@ -1940,6 +2074,7 @@ function docProcess(id, status) {
             CURRENT_URL + "/processIt?id=" + id + "&docaction=" + docAction;
 
           $.getJSON(url, function (result) {
+            console.log(result);
             if (result[0].success) {
               if (result[0].message == true) {
                 Swal.fire({
@@ -5928,7 +6063,6 @@ $(".import_file").click(function (evt) {
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",

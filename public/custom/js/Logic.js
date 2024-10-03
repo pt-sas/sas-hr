@@ -812,3 +812,272 @@ $(document).ready(function (evt) {
       previousValue = this.value;
     });
 });
+
+$("#form_exit_interview").on("change", "#reference_id", function (e) {
+  let _this = $(this);
+  const form = _this.closest("form");
+  let value = this.value;
+  let formData = new FormData();
+
+  formData.append("reference_id", value);
+
+  let url = ADMIN_URL + "resign/getDetail";
+
+  if (value === "") {
+    if (form.find("input[name=nik]").length)
+      form.find("input[name=nik]").val(null);
+
+    if (form.find("select[name=md_employee_id]").length)
+      form
+        .find("select[name=md_employee_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+
+    if (form.find("select[name=md_branch_id]").length)
+      form
+        .find("select[name=md_branch_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+
+    if (form.find("select[name=md_division_id]").length)
+      form
+        .find("select[name=md_division_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+
+    if (form.find("select[name=md_position_id]").length)
+      form
+        .find("select[name=md_position_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+  }
+
+  if (value !== "")
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".x_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "facebook");
+      },
+      complete: function () {
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        // console.log(result);
+        if (result.length) {
+          if (form.find("input[name=nik]").length)
+            form.find("input[name=nik]").val(result[0].nik);
+
+          if (form.find("input[name=terminatedate]").length)
+            form
+              .find("input[name=terminatedate]")
+              .val(moment(result[0].date).format("DD-MMM-YYYY"));
+
+          if (form.find("select[name=md_branch_id]").length)
+            getBranch(_this, result[0].md_branch_id);
+
+          if (form.find("select[name=md_division_id]").length)
+            getDivision(_this, result[0].md_division_id);
+
+          if (form.find("select[name=md_position_id]").length)
+            getPosition(_this, result[0].md_position_id);
+
+          if (form.find("select[name=md_employee_id]").length)
+            getEmployee(_this, result[0].md_employee_id);
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+});
+
+function getBranch(elem, branch) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  const field = form.find("select[name=md_branch_id]");
+  const id = branch;
+
+  let url = ADMIN_URL + "branch/getList";
+  formData.append("md_branch_id", id);
+
+  field.empty();
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+
+        $.each(result, function (idx, item) {
+          if (setSave === "detail")
+            field
+              .append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              )
+              .prop("disabled", true);
+          else
+            field.append(
+              '<option value="' +
+                item.id +
+                '" selected>' +
+                item.text +
+                "</option>"
+            );
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
+
+function getDivision(elem, division) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  const field = form.find("select[name=md_division_id]");
+  const id = division;
+
+  let url = ADMIN_URL + "division/getList";
+  formData.append("md_division_id", id);
+
+  field.empty();
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+
+        $.each(result, function (idx, item) {
+          if (setSave === "detail")
+            field
+              .append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              )
+              .prop("disabled", true);
+          else
+            field.append(
+              '<option value="' +
+                item.id +
+                '" selected>' +
+                item.text +
+                "</option>"
+            );
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
+
+function getEmployee(elem, employee) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  const field = form.find("select[name=md_employee_id]");
+  const id = employee;
+
+  let url = ADMIN_URL + "karyawan/getList";
+  formData.append("md_employee_id", id);
+
+  field.empty();
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+
+        $.each(result, function (idx, item) {
+          if (setSave === "detail")
+            field
+              .append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              )
+              .prop("disabled", true);
+          else
+            field.append(
+              '<option value="' +
+                item.id +
+                '" selected>' +
+                item.text +
+                "</option>"
+            );
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
