@@ -312,6 +312,7 @@ class Leave extends BaseController
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
                 //Need to set data into date field in form
+                $list[0]->availableleavedays = intval($list[0]->availableleavedays);
                 $list[0]->startdate = format_dmy($list[0]->startdate, "-");
                 $list[0]->enddate = format_dmy($list[0]->enddate, "-");
 
@@ -880,6 +881,77 @@ class Leave extends BaseController
         }
     }
 
+    public function getAvailableDays()
+    {
+        $mLeaveBalance = new M_LeaveBalance($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $mConfig = new M_Configuration($this->request);
+
+        if ($this->request->isAJAX()) {
+            $get = $this->request->getGet();
+
+            $md_employee_id = $get['md_employee_id'];
+            $startDate = $get['startdate'];
+            $endDate = $get['enddate'];
+
+            $startOfYear = date('Y', strtotime($startDate));
+            $endOfYear = date('Y', strtotime($endDate));
+
+            try {
+                $balanceStartYear = $mLeaveBalance->where([
+                    'year'              => $startOfYear,
+                    'md_employee_id'    => $md_employee_id
+                ])->first();
+
+                $balanceEndYear = $mLeaveBalance->where([
+                    'year'              => $endOfYear,
+                    'md_employee_id'    => $md_employee_id
+                ])->first();
+
+                $dayCutOff = $mConfig->where([
+                    'isactive'  => 'Y',
+                    'name'      => 'DAY_CUT_OFF_LEAVE'
+                ])->first();
+                $dayCutOff = $dayCutOff->value;
+
+                $balance = 0;
+
+                if (!empty($balanceStartYear) && !empty($balanceEndYear) && $startOfYear !== $endOfYear) {
+                    $balance = $balanceStartYear->balance_amount + $balanceEndYear->balance_amount;
+                } else if (!empty($balanceStartYear) && $startOfYear === $endOfYear) {
+                    $balance = $balanceStartYear->balance_amount;
+                    // } else if (empty($balanceStartYear)) {
+                    //     $rowEmp = $mEmployee->where([
+                    //         'isactive'          => 'Y',
+                    //     ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                    //         ->where('md_employee_id', $md_employee_id)
+                    //         ->first();
+
+                    //     $registerDate = $rowEmp->registerdate;
+
+                    //     //* Konversi tanggal ke timestamp 
+                    //     $startDateTimestamp = strtotime($registerDate);
+
+                    //     //* Hari dalam bulan dari registerDate
+                    //     $dayOfMonth = date('j', $startDateTimestamp);
+
+                    //     if ($dayOfMonth <= $dayCutOff) {
+                    //     } else if ($dayOfMonth > $dayCutOff) {
+                    //     }
+                    //     $balance = $balanceStartYear->balance_amount;
+                }
+
+                $response = message('success', true, intval($balance));
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+
+            // return json_encode($response);
+        }
+    }
+
     public function getList()
     {
         if ($this->request->isAjax()) {
@@ -887,23 +959,55 @@ class Leave extends BaseController
 
             $response = [];
 
-            $list = [];
-
             try {
                 if (isset($post['md_employee_id'])) {
-                    $list = $this->model->where(['md_employee_id' => $post['md_employee_id'], 'docstatus' => 'CO', 'submissiontype' => $this->model->Pengajuan_Cuti])
+                    if (isset($post['id']) && !empty($post['id'])) {
+                        $id = $post['id'];
+                        $subQuery = "(
+                                    trx_absent.trx_absent_id = $id
+                                    OR NOT EXISTS (
+                                        SELECT 1 
+                                        FROM trx_absent tab
+                                        WHERE tab.reference_id = trx_absent.trx_absent_id
+                                        AND tab.docstatus IN ('CO', 'DR', 'IP')
+                                    )
+                                )";
+                    } else {
+                        $subQuery = "NOT EXISTS (
+                                SELECT 1 
+                                FROM trx_absent tab
+                                WHERE tab.reference_id = trx_absent.trx_absent_id
+                                AND tab.docstatus IN ('CO', 'DR', 'IP')
+                            )";
+                    }
+
+                    $subLine = "EXISTS (SELECT 1 FROM trx_absent_detail tad 
+                                        WHERE trx_absent.trx_absent_id = tad.trx_absent_id
+                                        AND tad.isagree = 'Y')";
+
+                    $list = $this->model->where([
+                        'md_employee_id'    => $post['md_employee_id'],
+                        'docstatus'         => $this->DOCSTATUS_Completed,
+                        'submissiontype'    => $this->model->Pengajuan_Cuti
+                    ])->where($subQuery, null, true)->where($subLine, null, true)
                         ->orderBy('documentno', 'ASC')
+                        ->findAll();
+                } else {
+                    $list = $this->model->where([
+                        'docstatus'         => $this->DOCSTATUS_Completed,
+                        'submissiontype'    => $this->model->Pengajuan_Cuti
+                    ])->orderBy('documentno', 'ASC')
                         ->findAll();
                 }
 
-                if (!empty($list))
-                    foreach ($list as $key => $row) :
-                        $response[$key]['id'] = $row->getAbsentId();
-                        $response[$key]['text'] = $row->getDocumentNo();
-                    endforeach;
+                foreach ($list as $key => $row) :
+                    $response[$key]['id'] = $row->getAbsentId();
+                    $response[$key]['text'] = $row->getDocumentNo();
+                endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
+
             return $this->response->setJSON($response);
         }
     }

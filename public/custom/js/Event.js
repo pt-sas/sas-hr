@@ -162,6 +162,9 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
     if (form.find("input[name=nik]").length)
       form.find("input[name=nik]").val(null);
 
+    if (form.find("input[name=fullname]").length)
+      form.find("input[name=fullname]").val(null);
+
     if (form.find("select[name=md_branch_id]").length)
       form
         .find("select[name=md_branch_id]")
@@ -207,6 +210,9 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
         if (result.length) {
           if (form.find("input[name=nik]").length)
             form.find("input[name=nik]").val(result[0].nik);
+
+          if (form.find("input[name=fullname]").length)
+            form.find("input[name=fullname]").val(result[0].fullname);
 
           if (form.find("select[name=md_branch_id]").length)
             getOptionBranch(_this, result[0].md_branch_id);
@@ -2353,3 +2359,52 @@ function getPosition(elem, position) {
     },
   });
 }
+
+$("#form_leave").on(
+  "change dp.change",
+  "#md_employee_id, #startdate, #enddate",
+  function (e) {
+    let _this = $(this);
+    const target = $(e.target);
+    const form = _this.closest("form");
+    let value = this.value;
+
+    let employeeID = form
+      .find("select[name=md_employee_id] option:selected")
+      .val();
+    let startDate = form.find("input[name=startdate]").val();
+    let endDate = form.find("input[name=enddate]").val();
+
+    let url = `${SITE_URL}/available-days`;
+
+    if (employeeID && startDate && endDate) {
+      let data = {};
+
+      if (employeeID && form.find("select[name=md_employee_id]"))
+        data["md_employee_id"] = employeeID;
+
+      if (startDate && form.find("input[name=startdate]"))
+        data["startdate"] = moment(startDate).format("YYYY-MM-DD HH:mm:ss");
+
+      if (endDate && form.find("input[name=enddate]"))
+        data["enddate"] = moment(endDate).format("YYYY-MM-DD HH:mm:ss");
+
+      $.ajax({
+        url: url,
+        type: "GET",
+        data: data,
+        dataType: "JSON",
+        success: function (result) {
+          console.log(result);
+          if (result[0].success) {
+            let balance = result[0].message;
+            form.find("input[name=availableleavedays]").val(balance);
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
+  }
+);

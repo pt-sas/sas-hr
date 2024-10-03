@@ -884,9 +884,11 @@ class Validation
         ],
         'card_id'               => [
             'label'             => 'no ktp',
-            'rules'             => 'required',
+            'rules'             => 'required|min_length[16]|is_unique[md_employee.card_id,md_employee_id,{id}]',
             'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'min_length'    => 'Minimal {field} harus {param} karakter',
+                'is_unique'     => 'Data {field} ini sudah ada'
             ]
         ],
     ];
@@ -1863,20 +1865,6 @@ class Validation
                 'is_unique'    => 'This {field} already exists.',
                 'required'     => 'Mohon mengisi {field} dahulu'
             ]
-        ],
-        'isrealization'        => [
-            'label'            => 'realisasi',
-            'rules'            => 'checkboxes[isrealization,isapprovedline]',
-            'errors'           => [
-                'checkboxes'   => 'Mohon realisasi dan approved line tidak boleh dipilih bersamaan',
-            ]
-        ],
-        'isapprovedline'       => [
-            'label'            => 'approved line',
-            'rules'            => 'checkboxes[isrealization,isapprovedline]',
-            'errors'           => [
-                'checkboxes'   => 'Mohon realisasi dan approved line tidak boleh dipilih bersamaan',
-            ]
         ]
     ];
 
@@ -2465,13 +2453,6 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'departurerule'                => [
-            'label'             => 'keterangan',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
-            ]
-        ],
         'description'                => [
             'label'             => 'alasan',
             'rules'             => 'required',
@@ -2585,7 +2566,7 @@ class Validation
             ]
         ]
     ];
-
+  
     public $exit_interview = [
         'reference_id'                  => [
             'label'             => 'doc referensi',
@@ -2759,6 +2740,93 @@ class Validation
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ]
+    ];
+  
+    public $benefit = [
+        'name'                  => [
+            'label'             => 'name',
+            'rules'             => 'required|is_unique[md_benefit.name,md_benefit_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_levelling_id'       => [
+            'label'             => 'level',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+        'md_position_id'        => [
+            'label'             => 'jabatan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+            ]
+        ],
+    ];
+
+    public $benefit_line = [
+        'line'                  => [
+            'label'             => 'benefit line',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.benefit_line'  => [
+            'label'             => 'benefit',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.status_line'  => [
+            'label'             => 'status',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.isdetail_line'  => [
+            'label'             => 'detail',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $benefit_value = [
+        'line'                  => [
+            'label'             => 'benefit line',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.benefit_detail_line'  => [
+            'label'             => 'benefit detail',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
             ]
         ]
     ];

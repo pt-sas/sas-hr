@@ -19,7 +19,13 @@
                     <small class="form-text text-danger" id="error_nik"></small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="fullname">Nama Lengkap</label>
+                    <input type="text" class="form-control" id="fullname" name="fullname" readonly>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
                     <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
@@ -70,11 +76,11 @@
             </div>
             <div class="col-md-3">
                 <div class="form-check">
-                    <label>Tipe Berhenti <span class="required">*</span></label><br />
+                    <label>Tipe Berhenti <span class="required">*</span></label>
                     <select class="form-control select2" id="departuretype" name="departuretype">
                         <option value="">Pilih Tipe Berhenti</option>
                         <?php foreach ($ref_list as $row) : ?>
-                        <option value="<?= $row->value ?>"><?= $row->name ?> </option>
+                            <option value="<?= $row->value ?>"><?= $row->name ?> </option>
                         <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_departuretype"></small>
@@ -82,14 +88,10 @@
             </div>
             <div class="col-md-3">
                 <div class="form-check">
-                    <label>Keterangan <span class="required">*</span></label><br />
+                    <label>Kategori Berhenti </label>
                     <select class="form-control select2" id="departurerule" name="departurerule">
-                        <option value="">Pilih Keterangan</option>
-                        <?php foreach ($ref_detail as $row) : ?>
-                        <option value="<?= $row->value ?>"><?= $row->name ?> </option>
-                        <?php endforeach; ?>
+                        <option value="">Pilih Kategori Berhenti</option>
                     </select>
-                    <small class="form-text text-danger" id="error_departurerule"></small>
                 </div>
             </div>
             <div class="col-md-6">

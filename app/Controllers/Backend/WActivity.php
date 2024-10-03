@@ -56,15 +56,19 @@ class WActivity extends BaseController
                         $trx = $this->model->getDataTrx($table, $record_id);
 
                     $node = "Approval {$menuName}";
+                    $created_at = "";
 
                     if ($trx && is_null($tableLine)) {
+                        $created_at = format_dmytime($trx->created_at, "-");
                         $summary = "{$menuName} {$trx->documentno} : {$trx->usercreated_by}";
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
-                            $summary = "{$menuName} {$trx->documentno} : {$trx->userupdated_by}";
                             $node = "Request Anulir {$menuName}";
+                            $created_at = format_dmytime($trx->created_at, "-");
+                            $summary = "{$menuName} {$trx->documentno} : {$trx->userupdated_by}";
                         }
                     } else if ($trx && $tableLine) {
+                        $created_at = format_dmytime($trx->created_at, "-");
                         $date = format_dmy($trx->date, "-");
                         $summary = "{$menuName} {$trx->documentno} [$trx->value / {$date}] : {$trx->usercreated_by}";
                     } else {
@@ -76,6 +80,7 @@ class WActivity extends BaseController
                     $row[] = $table;
                     $row[] = $menu;
                     $row[] = $node;
+                    $row[] = $created_at;
                     $row[] = $summary;
                     $data[] = $row;
                 endforeach;
@@ -140,14 +145,29 @@ class WActivity extends BaseController
 
                 //TODO : Initialize modeling data table 
                 $trxModel = $model->initDataTable($table);
-                $trxModelLine = $this->model->initDataTable($tableLine);
 
                 //TODO : Call data transaction
                 $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
-                $trxLine = $trxModelLine->where($trxModelLine->primaryKey, $recordLine_id)->first();
 
-                $this->entity->{$this->model->primaryKey} = $recordLine_id;
-                $this->entity->{$trxModel->primaryKey} = $record_id;
+                $docType = $mDocType->find($trx->submissiontype);
+
+                if ($docType->getIsRealization() === "Y") {
+                    //TODO : Initialize modeling data table 
+                    $trxModel = $this->model->initDataTable($table);
+
+                    //TODO : Call data transaction
+                    $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
+
+                    $this->entity->{$this->model->primaryKey} = $record_id;
+                    $this->entity->approveddate = date("Y-m-d H:i:s");
+                } else {
+                    $trxModelLine = $this->model->initDataTable($tableLine);
+
+                    $trxLine = $trxModelLine->where($trxModelLine->primaryKey, $recordLine_id)->first();
+
+                    $this->entity->{$this->model->primaryKey} = $recordLine_id;
+                    $this->entity->{$trxModel->primaryKey} = $record_id;
+                }
             } else {
                 //TODO : Initialize modeling data table 
                 $trxModel = $this->model->initDataTable($table);
@@ -155,11 +175,11 @@ class WActivity extends BaseController
                 //TODO : Call data transaction
                 $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
 
+                $docType = $mDocType->find($trx->submissiontype);
+
                 $this->entity->{$this->model->primaryKey} = $record_id;
                 $this->entity->approveddate = date("Y-m-d H:i:s");
             }
-
-            $docType = $mDocType->find($trx->submissiontype);
 
             //* Get data text from notification text template 
             $message = $dataNotif->getText();
@@ -227,20 +247,20 @@ class WActivity extends BaseController
                         $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
 
                         //! SAS Form Realisasi 
-                        if ($docType->getIsRealization() === "N") {
+                        if ($docType->getIsRealization() === "Y") {
+                            $this->entity->isapproved = "Y";
+
+                            if ($isanswer === "W")
+                                $this->entity->comment = $textmsg;
+                        } else {
                             $this->entity->docstatus = $state;
                             $this->entity->receiveddate = date("Y-m-d H:i:s");
+                            $this->entity->isagree = "Y";
                         }
-
-                        if ($isanswer === "W")
-                            $this->entity->comment = $textmsg;
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
                             $this->entity->docstatus = $this->DOCSTATUS_Voided;
                         }
-
-                        $this->entity->isagree = "Y";
-                        $this->entity->isapproved = "Y";
 
                         //TODO : Get data Notification Approved Text Template
                         $dataNotif = $mNotifText->find($this->Notif_Approved);

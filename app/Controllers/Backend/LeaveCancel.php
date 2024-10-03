@@ -190,7 +190,6 @@ class LeaveCancel extends BaseController
                     $nik = $post['nik'];
                     $submissionDate = $post['submissiondate'];
                     $subDate = date('Y-m-d', strtotime($submissionDate));
-                    $newTable;
 
                     $rule = $mRule->where([
                         'name'      => 'Pembatalan Cuti',
@@ -269,7 +268,6 @@ class LeaveCancel extends BaseController
                             $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                             $whereClause .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Pembatalan_Cuti}";
                             $trxLeaveCancel = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
-
 
                             //TODO : Get attendance employee
                             $whereClause = "v_attendance.nik = '{$nik}'";
@@ -455,7 +453,6 @@ class LeaveCancel extends BaseController
 
     public function tableLine($set = null, $detail = [])
     {
-
         $post = $this->request->getPost();
 
         $table = [];
@@ -525,12 +522,13 @@ class LeaveCancel extends BaseController
             $post = $this->request->getVar();
 
             try {
-
-                $list = $this->modelDetail->getAbsentDetail(["trx_absent.trx_absent_id" => $post['id'], "trx_absent.docstatus" => $this->DOCSTATUS_Completed, 'trx_absent_detail.isagree' => 'Y'])
-                    ->getResult();
+                $detail = $this->modelDetail->where([
+                    $this->model->primaryKey    => $post['id'],
+                    'isagree'                   => 'Y'
+                ])->findAll();
 
                 $result = [
-                    'line'      => $this->tableLine(null, $list)
+                    'line'      => $this->tableLine(null, $detail)
                 ];
 
                 $response = message('success', true, $result);

@@ -38,6 +38,15 @@ class Employee extends BaseController
         $mBranch = new M_Branch($this->request);
         $mDiv = new M_Division($this->request);
 
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
+        $readOnly = "";
+        $disabled = "";
+
+        if (is_null($roleEmpAdm)) {
+            $readOnly = "readonly";
+            $disabled = "disabled";
+        }
+
         $data = [
             'ref_list' => $mReference->findBy([
                 'sys_reference.name'              => 'Gender',
@@ -56,7 +65,10 @@ class Employee extends BaseController
                 ->findAll(),
             'division'    => $mDiv->where('isactive', 'Y')
                 ->orderBy('name', 'ASC')
-                ->findAll()
+                ->findAll(),
+            'role_emp_adm'  => $roleEmpAdm,
+            'readonly'  => $readOnly,
+            'disabled'  => $disabled,
         ];
 
         return $this->template->render('masterdata/employee/v_employee', $data);

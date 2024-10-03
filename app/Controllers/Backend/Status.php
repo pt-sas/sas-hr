@@ -156,15 +156,15 @@ class Status extends BaseController
                         if ($post['name'] === "OUTSOURCING") {
                             $list = $this->model->where([
                                 'isactive'  => 'Y'
-                            ])->whereIn('name', [$post['name'], "RESIGN"])
+                            ])->whereIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN, $this->Status_MAGANG, $this->Status_FREELANCE])
                                 ->like('name', $post['search'])
                                 ->orderBy('name', 'ASC')
                                 ->findAll();
                         } else if ($post['name'] === "EMPLOYEE") {
                             $list = $this->model->where([
-                                'isactive'  => 'Y',
-                                'name <>'   => "OUTSOURCING"
-                            ])->like('name', $post['search'])
+                                'isactive'  => 'Y'
+                            ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_MAGANG, $this->Status_FREELANCE])
+                                ->like('name', $post['search'])
                                 ->orderBy('name', 'ASC')
                                 ->findAll();
                         } else {
@@ -185,14 +185,14 @@ class Status extends BaseController
                     if ($post['name'] === "OUTSOURCING") {
                         $list = $this->model->where([
                             'isactive'  => 'Y'
-                        ])->whereIn('name', [$post['name'], "RESIGN"])
+                        ])->whereIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN, $this->Status_MAGANG, $this->Status_FREELANCE])
                             ->orderBy('name', 'ASC')
                             ->findAll();
                     } else if ($post['name'] === "EMPLOYEE") {
                         $list = $this->model->where([
-                            'isactive'  => 'Y',
-                            'name <>'   => "OUTSOURCING"
-                        ])->orderBy('name', 'ASC')
+                            'isactive'  => 'Y'
+                        ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_MAGANG, $this->Status_FREELANCE])
+                            ->orderBy('name', 'ASC')
                             ->findAll();
                     } else {
                         $list = $this->model->where([

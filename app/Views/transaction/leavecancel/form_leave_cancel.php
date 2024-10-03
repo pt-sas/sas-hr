@@ -19,18 +19,9 @@
                     <small class="form-text text-danger" id="error_nik"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <div class="form-group">
-                    <label for="reference_id">Reference <span class="required">*</span></label>
-                    <select class="form-control select2" id="reference_id" name="reference_id">
-                        <option value="">Pilih Tipe Berhenti</option>
-                    </select>
-                    <small class="form-text text-danger" id="error_reference_id"></small>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="documentno">No Form</label>
+                    <label for="documentno">No Form </label>
                     <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
                         readonly>
                 </div>
@@ -84,6 +75,15 @@
                     <label for="reason">Alasan <span class="required">*</span></label>
                     <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
                     <small class="form-text text-danger" id="error_reason"></small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="reference_id">Pengajuan Cuti <span class="required">*</span></label>
+                    <select class="form-control select2" id="reference_id" name="reference_id">
+                        <option value="">Pilih Pengajuan Cuti</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_reference_id"></small>
                 </div>
             </div>
         </div>
