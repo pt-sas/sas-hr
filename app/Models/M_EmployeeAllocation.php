@@ -49,11 +49,11 @@ class M_EmployeeAllocation extends Model
     /** Pengajuan Mutasi */
     protected $Pengajuan_Mutasi = 100016;
     /** Pengajuan Rotasi */
-    protected $Pengajuan_Rotasi = 100019;
+    protected $Pengajuan_Rotasi = 100022;
     /** Pengajuan Promosi */
-    protected $Pengajuan_Promosi = 100020;
+    protected $Pengajuan_Promosi = 100023;
     /** Pengajuan Demosi */
-    protected $Pengajuan_Demosi = 100021;
+    protected $Pengajuan_Demosi = 100024;
 
     public function __construct(RequestInterface $request)
     {
