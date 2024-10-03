@@ -637,6 +637,15 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('list-pertanyaan/getSeqCode', 'Backend\QuestionGroup::getSeqCode');
     $routes->post('list-pertanyaan/tableLine', 'Backend\QuestionGroup::tableLine');
     $routes->match(['get', 'post'], 'list-pertanyaan/getList', 'Backend\QuestionGroup::getList');
+
+    $routes->add('interview-keluar', 'Backend\ExitInterview::index');
+    $routes->match(['get', 'post'], 'interview-keluar/showAll', 'Backend\ExitInterview::showAll');
+    $routes->post('interview-keluar/create', 'Backend\ExitInterview::create');
+    $routes->get('interview-keluar/show/(:any)', 'Backend\ExitInterview::show/$1');
+    $routes->get('interview-keluar/destroy/(:any)', 'Backend\ExitInterview::destroy/$1');
+    $routes->get('interview-keluar/processIt', 'Backend\ExitInterview::processIt');
+    $routes->get('interview-keluar/getDataBy/(:num)', 'Backend\ExitInterview::getBy/$1');
+    $routes->match(['get', 'post'], 'interview-keluar/getList', 'Backend\ExitInterview::getList');
 });
 
 /*
