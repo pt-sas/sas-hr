@@ -2566,7 +2566,7 @@ class Validation
             ]
         ]
     ];
-  
+
     public $exit_interview = [
         'reference_id'                  => [
             'label'             => 'doc referensi',
@@ -2741,9 +2741,9 @@ class Validation
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu',
             ]
-        ]
-    ];
-  
+        ],
+    ];
+
     public $benefit = [
         'name'                  => [
             'label'             => 'name',
