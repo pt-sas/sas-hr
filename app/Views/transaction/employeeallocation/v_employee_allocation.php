@@ -14,10 +14,13 @@
                 <th>NIK</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
+                <th>Level</th>
                 <th>Jabatan</th>
                 <th>Cabang Tujuan</th>
                 <th>Divisi Tujuan</th>
+                <th>Level Tujuan</th>
                 <th>Jabatan Tujuan</th>
+                <th>Tipe Form</th>
                 <th>Tanggal Pengajuan</th>
                 <th>Tanggal Mutasi</th>
                 <th>Alasan</th>

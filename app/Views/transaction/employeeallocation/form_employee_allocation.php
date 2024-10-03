@@ -4,6 +4,25 @@
         <div class="row">
             <div class="col-md-3">
                 <div class="form-group">
+                    <label for="documentno">No Form</label>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="submissiontype">Tipe Form <span class="required">*</span></label>
+                    <select class="form-control select2" id="submissiontype" name="submissiontype">
+                        <option value="">Select Tipe Form</option>
+                        <?php foreach ($type as $row) : ?>
+                            <option value="<?= $row->md_doctype_id ?>"><?= $row->name ?> </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-text text-danger" id="error_submissiontype"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
                     <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
                         data-url="employee/getList/$Access">
@@ -19,14 +38,6 @@
                     <small class="form-text text-danger" id="error_nik"></small>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
-                        readonly>
-                </div>
-            </div>
-
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
@@ -92,7 +103,16 @@
                     <small class="form-text text-danger" id="error_division_to"></small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="md_levelling_id">Level <span class="required">*</span></label>
+                    <select class="form-control select2" id="md_levelling_id" name="md_levelling_id" disabled>
+                        <option value="">Pilih Level</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_md_levelling_id"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_position_id">Jabatan <span class="required">*</span></label>
                     <select class="form-control select2" id="md_position_id" name="md_position_id" disabled>
@@ -101,7 +121,16 @@
                     <small class="form-text text-danger" id="error_md_position_id"></small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="levelling_to">Level Tujuan <span class="required">*</span></label>
+                    <select class="form-control select-data" id="levelling_to" name="levelling_to" data-url="levelling/getList">
+                        <option value="">Pilih Level Tujuan</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_levelling_to"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="form-group">
                     <label for="position_to">Jabatan Tujuan <span class="required">*</span></label>
                     <select class="form-control select-data" id="position_to" name="position_to"

@@ -18,9 +18,11 @@ class M_EmployeeAllocation extends Model
         'submissiontype',
         'md_branch_id',
         'md_division_id',
+        'md_levelling_id',
         'md_position_id',
         'branch_to',
         'division_to',
+        'levelling_to',
         'position_to',
         'date',
         'description',
@@ -46,6 +48,12 @@ class M_EmployeeAllocation extends Model
 
     /** Pengajuan Mutasi */
     protected $Pengajuan_Mutasi = 100016;
+    /** Pengajuan Rotasi */
+    protected $Pengajuan_Rotasi = 100019;
+    /** Pengajuan Promosi */
+    protected $Pengajuan_Promosi = 100020;
+    /** Pengajuan Demosi */
+    protected $Pengajuan_Demosi = 100021;
 
     public function __construct(RequestInterface $request)
     {
@@ -62,11 +70,14 @@ class M_EmployeeAllocation extends Model
                 md_employee.fullname as employee_fullname,
                 md_branch.name as branch,
                 md_division.name as division,
+                md_levelling.name as level,
                 md_position.name as position,
                 bto.name as branch_to,
                 dto.name as division_to,
+                lto.name as level_to,
                 pto.name as position_to,
-                sys_user.name as createdby';
+                sys_user.name as createdby,
+                md_doctype.name as formtype';
 
         return $sql;
     }
@@ -79,9 +90,12 @@ class M_EmployeeAllocation extends Model
             $this->setDataJoin('md_branch bto', 'bto.md_branch_id = ' . $this->table . '.branch_to', 'left'),
             $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
             $this->setDataJoin('md_division dto', 'dto.md_division_id = ' . $this->table . '.division_to', 'left'),
+            $this->setDataJoin('md_levelling', 'md_levelling.md_levelling_id = ' . $this->table . '.md_levelling_id', 'left'),
+            $this->setDataJoin('md_levelling lto', 'lto.md_levelling_id = ' . $this->table . '.levelling_to', 'left'),
             $this->setDataJoin('md_position', 'md_position.md_position_id = ' . $this->table . '.md_position_id', 'left'),
             $this->setDataJoin('md_position pto', 'pto.md_position_id = ' . $this->table . '.position_to', 'left'),
-            $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left')
+            $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left'),
+            $this->setDataJoin('md_doctype', 'md_doctype.md_doctype_id = ' . $this->table . '.submissiontype', 'left')
         ];
 
         return $sql;
@@ -120,5 +134,50 @@ class M_EmployeeAllocation extends Model
         $prefix = $first . "/" . $year . "/" . $month . "/" . $code;
 
         return $prefix;
+    }
+
+    public function doAfterUpdate(array $rows)
+    {
+        $mEmployee = new M_Employee($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
+        $mEmpDivision = new M_EmpDivision($this->request);
+        $emEntity = new \App\Entities\Employee();
+        $emBranch = new \App\Entities\EmpBranch();
+        $emDivision = new \App\Entities\EmpDivision();
+
+        try {
+            $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
+
+            $row = $this->find($ID);
+
+            if ($row->docstatus === "CO") {
+                $emEntity->md_levelling_id = $row->levelling_to;
+                $emEntity->md_position_id = $row->position_to;
+                $emEntity->md_employee_id = $row->md_employee_id;
+                $mEmployee->save($emEntity);
+
+                //TODO: Update branch to 
+                $rowBranch = $mEmpBranch->where([
+                    'md_employee_id'    => $row->md_employee_id,
+                    'md_branch_id'      => $row->md_branch_id
+                ])->first();
+
+                $emBranch->md_branch_id = $row->branch_to;
+                $emBranch->{$mEmpBranch->primaryKey} = $rowBranch->{$mEmpBranch->primaryKey};
+                $mEmpBranch->save($emBranch);
+
+                //TODO: Update division to
+                $rowDivision = $mEmpDivision->where([
+                    'md_employee_id'    => $row->md_employee_id,
+                    'md_division_id'    => $row->md_division_id
+                ])->first();
+
+                $emDivision->md_division_id = $row->division_to;
+                $emDivision->{$mEmpDivision->primaryKey} = $rowDivision->{$mEmpDivision->primaryKey};
+                $mEmpDivision->save($emDivision);
+            }
+        } catch (\Exception $e) {
+            throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
+        }
     }
 }

@@ -14,8 +14,11 @@ use App\Models\M_Division;
 use App\Models\M_EmployeeAllocation;
 use App\Models\M_RuleDetail;
 use App\Models\M_Branch;
+use App\Models\M_DocumentType;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
+use App\Models\M_Levelling;
+use App\Models\M_Position;
 use TCPDF;
 
 class EmployeeAllocation extends BaseController
@@ -29,8 +32,14 @@ class EmployeeAllocation extends BaseController
 
     public function index()
     {
+        $mDocType = new M_DocumentType($this->request);
+
         $data = [
-            'today'     => date('d-M-Y')
+            'today'     => date('d-M-Y'),
+            'type'      => $mDocType->where('isactive', 'Y')
+                ->whereIn('md_doctype_id', [100016, 100019, 100020, 100021])
+                ->orderBy('name', 'ASC')
+                ->findAll()
         ];
 
         return $this->template->render('transaction/employeeallocation/v_employee_allocation', $data);
@@ -53,8 +62,13 @@ class EmployeeAllocation extends BaseController
                 'trx_employee_allocation.nik',
                 'md_branch.name',
                 'md_division.name',
+                'md_levelling.name',
+                'md_position.name',
                 'bto.name',
                 'dto.name',
+                'lto.name',
+                'pto.name',
+                'md_doctype.name',
                 'trx_employee_allocation.submissiondate',
                 'trx_employee_allocation.date',
                 'trx_employee_allocation.description',
@@ -67,8 +81,13 @@ class EmployeeAllocation extends BaseController
                 'trx_employee_allocation.nik',
                 'md_branch.name',
                 'md_division.name',
+                'md_levelling.name',
+                'md_position.name',
                 'bto.name',
                 'dto.name',
+                'lto.name',
+                'pto.name',
+                'md_doctype.name',
                 'trx_employee_allocation.submissiondate',
                 'trx_employee_allocation.date',
                 'trx_employee_allocation.description',
@@ -135,10 +154,13 @@ class EmployeeAllocation extends BaseController
                 $row[] = $value->nik;
                 $row[] = $value->branch;
                 $row[] = $value->division;
+                $row[] = $value->level;
                 $row[] = $value->position;
                 $row[] = $value->branch_to;
                 $row[] = $value->division_to;
+                $row[] = $value->level_to;
                 $row[] = $value->position_to;
+                $row[] = $value->formtype;
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = format_dmy($value->date, '-');
                 $row[] = $value->description;
@@ -169,8 +191,16 @@ class EmployeeAllocation extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->model->Pengajuan_Mutasi;
-            $post["necessary"] = 'MT';
+            if ($post["submissiontype"] == $this->model->Pengajuan_Mutasi) {
+                $post["necessary"] = 'MT';
+            } else if ($post["submissiontype"] == $this->model->Pengajuan_Rotasi) {
+                $post["necessary"] = 'MT';
+            } else if ($post["submissiontype"] == $this->model->Pengajuan_Promosi) {
+                $post["necessary"] = 'PR';
+            } else if ($post["submissiontype"] == $this->model->Pengajuan_Demosi) {
+                $post["necessary"] = 'DM';
+            }
+
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
 
@@ -240,6 +270,8 @@ class EmployeeAllocation extends BaseController
         $mEmployee = new M_Employee($this->request);
         $mBranch = new M_Branch($this->request);
         $mDivision = new M_Division($this->request);
+        $mLevelling = new M_Levelling($this->request);
+        $mPosition = new M_Position($this->request);
 
         if ($this->request->isAJAX()) {
             try {
@@ -247,10 +279,14 @@ class EmployeeAllocation extends BaseController
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
                 $rowBranchTo = $mBranch->where($mBranch->primaryKey, $list[0]->getBranchTo())->first();
                 $rowDivisionTo = $mDivision->where($mDivision->primaryKey, $list[0]->getDivisionTo())->first();
+                $rowLevellingTo = $mLevelling->where($mLevelling->primaryKey, $list[0]->getLevellingTo())->first();
+                $rowPositionTo = $mPosition->where($mPosition->primaryKey, $list[0]->getPositionTo())->first();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
                 $list = $this->field->setDataSelect($mBranch->table, $list, 'branch_to', $rowBranchTo->getBranchId(), $rowBranchTo->getName());
                 $list = $this->field->setDataSelect($mDivision->table, $list, 'division_to', $rowDivisionTo->getDivisionId(), $rowDivisionTo->getName());
+                $list = $this->field->setDataSelect($mLevelling->table, $list, 'levelling_to', $rowLevellingTo->getLevellingId(), $rowLevellingTo->getName());
+                $list = $this->field->setDataSelect($mPosition->table, $list, 'position_to', $rowPositionTo->getPositionId(), $rowPositionTo->getName());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 

@@ -179,6 +179,13 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
         .change()
         .prop("disabled", true);
 
+    if (form.find("select[name=md_levelling_id]").length)
+      form
+        .find("select[name=md_levelling_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+
     if (form.find("select[name=md_position_id]").length)
       form
         .find("select[name=md_position_id]")
@@ -207,6 +214,7 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
+        console.log(result);
         if (result.length) {
           if (form.find("input[name=nik]").length)
             form.find("input[name=nik]").val(result[0].nik);
@@ -219,6 +227,9 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
 
           if (form.find("select[name=md_division_id]").length)
             getOptionDivision(_this, result[0].md_division_id);
+
+          if (form.find("select[name=md_levelling_id]").length)
+            getOptionLevelling(_this, result[0].md_levelling_id);
 
           if (form.find("select[name=md_position_id]").length)
             getPosition(_this, result[0].md_position_id);
@@ -507,6 +518,65 @@ function getOptionDivision(elem, division) {
                 )
                 .removeAttr("disabled");
           }
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
+
+function getOptionLevelling(elem, level) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  const field = form.find("select[name=md_levelling_id]");
+  const id = level;
+
+  let url = ADMIN_URL + "levelling/getList";
+  formData.append("md_levelling_id", id);
+
+  field.empty();
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+
+        $.each(result, function (idx, item) {
+          if (setSave === "detail")
+            field
+              .append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              )
+              .prop("disabled", true);
+          else
+            field.append(
+              '<option value="' +
+                item.id +
+                '" selected>' +
+                item.text +
+                "</option>"
+            );
         });
       }
     },
