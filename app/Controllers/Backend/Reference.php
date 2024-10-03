@@ -230,10 +230,32 @@ class Reference extends BaseController
 
             try {
                 if (isset($post['search'])) {
-                    $list = $this->modelDetail->where('isactive', 'Y')
-                        ->like('name', $post['search'])
-                        ->orderBy('name', 'ASC')
-                        ->findAll();
+                    if (!empty($post['name'])) {
+                        $first = $this->model->where('isactive', 'Y')
+                            ->like('name', $post['name'])->first();
+
+                        $list = $this->modelDetail->where([
+                            'isactive'  => 'Y',
+                            $this->model->primaryKey => $first->getReferenceId()
+                        ])->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else if (!empty($post['criteria'])) {
+                        $first = $this->model->where('isactive', 'Y')
+                            ->like('description', $post['criteria'])->first();
+
+                        $list = $this->modelDetail->where([
+                            'isactive'  => 'Y',
+                            $this->model->primaryKey => $first->getReferenceId()
+                        ])->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->modelDetail->where('isactive', 'Y')
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
                 } else if (!empty($post['name'])) {
                     $first = $this->model->where('isactive', 'Y')
                         ->like('name', $post['name'])->first();

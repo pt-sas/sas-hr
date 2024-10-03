@@ -880,8 +880,8 @@ class Leave extends BaseController
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
     }
-  
-  public function getAvailableDays()
+
+    public function getAvailableDays()
     {
         $mLeaveBalance = new M_LeaveBalance($this->request);
         $mEmployee = new M_Employee($this->request);
@@ -951,7 +951,7 @@ class Leave extends BaseController
             // return json_encode($response);
         }
     }
-  
+
     public function getList()
     {
         if ($this->request->isAjax()) {
@@ -959,23 +959,55 @@ class Leave extends BaseController
 
             $response = [];
 
-            $list = [];
-
             try {
                 if (isset($post['md_employee_id'])) {
-                    $list = $this->model->where(['md_employee_id' => $post['md_employee_id'], 'docstatus' => 'CO', 'submissiontype' => $this->model->Pengajuan_Cuti])
+                    if (isset($post['id']) && !empty($post['id'])) {
+                        $id = $post['id'];
+                        $subQuery = "(
+                                    trx_absent.trx_absent_id = $id
+                                    OR NOT EXISTS (
+                                        SELECT 1 
+                                        FROM trx_absent tab
+                                        WHERE tab.reference_id = trx_absent.trx_absent_id
+                                        AND tab.docstatus IN ('CO', 'DR', 'IP')
+                                    )
+                                )";
+                    } else {
+                        $subQuery = "NOT EXISTS (
+                                SELECT 1 
+                                FROM trx_absent tab
+                                WHERE tab.reference_id = trx_absent.trx_absent_id
+                                AND tab.docstatus IN ('CO', 'DR', 'IP')
+                            )";
+                    }
+
+                    $subLine = "EXISTS (SELECT 1 FROM trx_absent_detail tad 
+                                        WHERE trx_absent.trx_absent_id = tad.trx_absent_id
+                                        AND tad.isagree = 'Y')";
+
+                    $list = $this->model->where([
+                        'md_employee_id'    => $post['md_employee_id'],
+                        'docstatus'         => $this->DOCSTATUS_Completed,
+                        'submissiontype'    => $this->model->Pengajuan_Cuti
+                    ])->where($subQuery, null, true)->where($subLine, null, true)
                         ->orderBy('documentno', 'ASC')
+                        ->findAll();
+                } else {
+                    $list = $this->model->where([
+                        'docstatus'         => $this->DOCSTATUS_Completed,
+                        'submissiontype'    => $this->model->Pengajuan_Cuti
+                    ])->orderBy('documentno', 'ASC')
                         ->findAll();
                 }
 
-                if (!empty($list))
-                    foreach ($list as $key => $row) :
-                        $response[$key]['id'] = $row->getAbsentId();
-                        $response[$key]['text'] = $row->getDocumentNo();
-                    endforeach;
+                foreach ($list as $key => $row) :
+                    $response[$key]['id'] = $row->getAbsentId();
+                    $response[$key]['text'] = $row->getDocumentNo();
+                endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
+
             return $this->response->setJSON($response);
         }
     }

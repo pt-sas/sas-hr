@@ -205,7 +205,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('cuti/show/(:any)', 'Backend\Leave::show/$1');
     $routes->get('cuti/destroy/(:any)', 'Backend\Leave::destroy/$1');
     $routes->get('cuti/processIt', 'Backend\Leave::processIt');
-    $routes->match(['get', 'post'], 'cuti/getList', 'Backend\Leave::getList');
+    $routes->match(['get', 'post'], 'cuti/get-list', 'Backend\Leave::getList');
     $routes->get('cuti/available-days', 'Backend\Leave::getAvailableDays');
 
     $routes->add('ijin-resmi', 'Backend\OfficialPermission::index');
@@ -629,6 +629,24 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('pembatalan-cuti/destroy/(:any)', 'Backend\LeaveCancel::destroy/$1');
     $routes->get('pembatalan-cuti/processIt', 'Backend\LeaveCancel::processIt');
     $routes->match(['get', 'post'], 'pembatalan-cuti/getLeaveDetail', 'Backend\LeaveCancel::getLeaveDetail');
+
+    $routes->add('benefit-inti', 'Backend\Benefit::index');
+    $routes->match(['get', 'post'], 'benefit-inti/showAll', 'Backend\Benefit::showAll');
+    $routes->post('benefit-inti/create', 'Backend\Benefit::create');
+    $routes->get('benefit-inti/show/(:any)', 'Backend\Benefit::show/$1');
+    $routes->get('benefit-inti/destroy/(:any)', 'Backend\Benefit::destroy/$1');
+    $routes->get('benefit-inti/getDataBy/(:num)', 'Backend\Benefit::getBy/$1');
+
+    $routes->post('benefit-line/create', 'Backend\BenefitLine::create');
+    $routes->get('benefit-line/show', 'Backend\BenefitLine::show');
+    $routes->get('benefit-line/show/(:any)', 'Backend\BenefitLine::show/$1');
+    $routes->post('benefit-line/tableLine', 'Backend\BenefitLine::tableLine');
+    $routes->get('benefit-line/getDataBy/(:num)', 'Backend\BenefitLine::getBy/$1');
+
+    $routes->post('benefit-value/create', 'Backend\BenefitValue::create');
+    $routes->get('benefit-value/show', 'Backend\BenefitValue::show');
+    $routes->get('benefit-value/show/(:any)', 'Backend\BenefitValue::show/$1');
+    $routes->post('benefit-value/tableLine', 'Backend\BenefitValue::tableLine');
 });
 
 /*

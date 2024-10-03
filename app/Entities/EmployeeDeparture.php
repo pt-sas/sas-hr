@@ -26,6 +26,7 @@ class EmployeeDeparture extends Entity
     protected $sys_wfscenario_id;
     protected $created_by;
     protected $updated_by;
+    protected $fullname;
 
     protected $dates   = [
         'created_at',
@@ -260,5 +261,15 @@ class EmployeeDeparture extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
+    }
+
+    public function getFullName()
+    {
+        return $this->attributes['fullname'];
+    }
+
+    public function setFullName($fullname)
+    {
+        $this->attributes['fullname'] = $fullname;
     }
 }
