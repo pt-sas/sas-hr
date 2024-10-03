@@ -628,6 +628,15 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('pembatalan-cuti/destroy/(:any)', 'Backend\LeaveCancel::destroy/$1');
     $routes->get('pembatalan-cuti/processIt', 'Backend\LeaveCancel::processIt');
     $routes->match(['get', 'post'], 'pembatalan-cuti/getLeaveDetail', 'Backend\LeaveCancel::getLeaveDetail');
+
+    $routes->add('list-pertanyaan', 'Backend\QuestionGroup::index');
+    $routes->match(['get', 'post'], 'list-pertanyaan/showAll', 'Backend\QuestionGroup::showAll');
+    $routes->post('list-pertanyaan/create', 'Backend\QuestionGroup::create');
+    $routes->get('list-pertanyaan/show/(:any)', 'Backend\QuestionGroup::show/$1');
+    $routes->get('list-pertanyaan/destroy/(:any)', 'Backend\QuestionGroup::destroy/$1');
+    $routes->get('list-pertanyaan/getSeqCode', 'Backend\QuestionGroup::getSeqCode');
+    $routes->post('list-pertanyaan/tableLine', 'Backend\QuestionGroup::tableLine');
+    $routes->match(['get', 'post'], 'list-pertanyaan/getList', 'Backend\QuestionGroup::getList');
 });
 
 /*
