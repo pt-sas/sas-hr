@@ -223,6 +223,11 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
           if (form.find("select[name=md_position_id]").length)
             getPosition(_this, result[0].md_position_id);
 
+          if (form.find("input[name=registerdate]").length)
+            form
+              .find("input[name=registerdate]")
+              .val(moment(result[0].registerdate).format("DD-MMM-Y"));
+
           if (form.find(".datepicker-start").length) {
             form.find(".datepicker-start").data("DateTimePicker").destroy();
 

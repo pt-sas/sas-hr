@@ -539,6 +539,11 @@ class Employee extends BaseController
                             ->orderBy('value', 'ASC')
                             ->findAll();
                     }
+                } else if (isset($post['md_employee_id'])) {
+                    $list = $this->model->where([
+                        'md_employee_id' => $post['md_employee_id']
+                    ])->orderBy('value', 'ASC')
+                        ->findAll();
                 } else {
                     $list = $this->model->where([
                         'isactive'          => 'Y'

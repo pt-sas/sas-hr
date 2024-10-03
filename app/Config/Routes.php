@@ -630,6 +630,42 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('pembatalan-cuti/processIt', 'Backend\LeaveCancel::processIt');
     $routes->match(['get', 'post'], 'pembatalan-cuti/getLeaveDetail', 'Backend\LeaveCancel::getLeaveDetail');
 
+    $routes->add('list-pertanyaan', 'Backend\QuestionGroup::index');
+    $routes->match(['get', 'post'], 'list-pertanyaan/showAll', 'Backend\QuestionGroup::showAll');
+    $routes->post('list-pertanyaan/create', 'Backend\QuestionGroup::create');
+    $routes->get('list-pertanyaan/show/(:any)', 'Backend\QuestionGroup::show/$1');
+    $routes->get('list-pertanyaan/destroy/(:any)', 'Backend\QuestionGroup::destroy/$1');
+    $routes->get('list-pertanyaan/getSeqCode', 'Backend\QuestionGroup::getSeqCode');
+    $routes->post('list-pertanyaan/tableLine', 'Backend\QuestionGroup::tableLine');
+    $routes->match(['get', 'post'], 'list-pertanyaan/getList', 'Backend\QuestionGroup::getList');
+
+    $routes->add('interview-keluar', 'Backend\ExitInterview::index');
+    $routes->match(['get', 'post'], 'interview-keluar/showAll', 'Backend\ExitInterview::showAll');
+    $routes->post('interview-keluar/create', 'Backend\ExitInterview::create');
+    $routes->get('interview-keluar/show/(:any)', 'Backend\ExitInterview::show/$1');
+    $routes->get('interview-keluar/destroy/(:any)', 'Backend\ExitInterview::destroy/$1');
+    $routes->get('interview-keluar/processIt', 'Backend\ExitInterview::processIt');
+    $routes->get('interview-keluar/getDataBy/(:num)', 'Backend\ExitInterview::getBy/$1');
+    $routes->match(['get', 'post'], 'interview-keluar/getList', 'Backend\ExitInterview::getList');
+
+    $routes->add('monitor-percobaan', 'Backend\MonitorProbation::index');
+    $routes->match(['get', 'post'], 'monitor-percobaan/showAll', 'Backend\MonitorProbation::showAll');
+    $routes->post('monitor-percobaan/create', 'Backend\MonitorProbation::create');
+    $routes->get('monitor-percobaan/show/(:any)', 'Backend\MonitorProbation::show/$1');
+    $routes->get('monitor-percobaan/destroy/(:any)', 'Backend\MonitorProbation::destroy/$1');
+    $routes->get('monitor-percobaan/processIt', 'Backend\MonitorProbation::processIt');
+    $routes->get('monitor-percobaan/getDataBy/(:num)', 'Backend\MonitorProbation::getBy/$1');
+    $routes->match(['get', 'post'], 'monitor-percobaan/getList', 'Backend\MonitorProbation::getList');
+
+    $routes->add('evaluasi-percobaan', 'Backend\EvaluationProbation::index');
+    $routes->match(['get', 'post'], 'evaluasi-percobaan/showAll', 'Backend\EvaluationProbation::showAll');
+    $routes->post('evaluasi-percobaan/create', 'Backend\EvaluationProbation::create');
+    $routes->get('evaluasi-percobaan/show/(:any)', 'Backend\EvaluationProbation::show/$1');
+    $routes->get('evaluasi-percobaan/destroy/(:any)', 'Backend\EvaluationProbation::destroy/$1');
+    $routes->get('evaluasi-percobaan/processIt', 'Backend\EvaluationProbation::processIt');
+    $routes->get('evaluasi-percobaan/getDataBy/(:num)', 'Backend\EvaluationProbation::getBy/$1');
+    $routes->match(['get', 'post'], 'evaluasi-percobaan/getList', 'Backend\EvaluationProbation::getList');
+  
     $routes->add('benefit-inti', 'Backend\Benefit::index');
     $routes->match(['get', 'post'], 'benefit-inti/showAll', 'Backend\Benefit::showAll');
     $routes->post('benefit-inti/create', 'Backend\Benefit::create');
