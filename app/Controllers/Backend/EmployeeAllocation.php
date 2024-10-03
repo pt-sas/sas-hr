@@ -37,7 +37,7 @@ class EmployeeAllocation extends BaseController
         $data = [
             'today'     => date('d-M-Y'),
             'type'      => $mDocType->where('isactive', 'Y')
-                ->whereIn('md_doctype_id', [100016, 100019, 100020, 100021])
+                ->whereIn('md_doctype_id', [100016, 100022, 100023, 100024])
                 ->orderBy('name', 'ASC')
                 ->findAll()
         ];
