@@ -11,8 +11,9 @@ class AddColumnBirthDateTableFamilyAndFamilyCore extends Migration
         $field = [
             'birthdate' => [
                 'type'     => 'TIMESTAMP',
-                'null'     => true
-            ]
+                'null'     => true,
+            ],
+            'phone' => ['type'  => 'VARCHAR', 'constraint' => 30, 'null' => true]
         ];
 
         $this->forge->addColumn('md_employee_family_core', $field);
