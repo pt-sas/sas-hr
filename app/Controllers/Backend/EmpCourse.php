@@ -154,6 +154,12 @@ class EmpCourse extends BaseController
 
         $fieldStatus->setList($statusList);
 
+        $fieldCertificate = new \App\Entities\Table();
+        $fieldCertificate->setName("certificate");
+        $fieldCertificate->setType("checkbox");
+        $fieldCertificate->setClass("active");
+        $fieldCertificate->setIsChecked(true);
+
         $btnDelete = new \App\Entities\Table();
         $btnDelete->setName($this->modelDetail->primaryKey);
         $btnDelete->setType("button");
@@ -169,6 +175,7 @@ class EmpCourse extends BaseController
                 $this->field->fieldTable($fieldStartDate),
                 $this->field->fieldTable($fieldEndDate),
                 $this->field->fieldTable($fieldStatus),
+                $this->field->fieldTable($fieldCertificate),
                 $this->field->fieldTable($btnDelete)
             ];
         }
@@ -186,7 +193,14 @@ class EmpCourse extends BaseController
                 $fieldStartDate->setValue($startDate);
                 $fieldEndDate->setValue($endDate);
                 $fieldStatus->setValue($row->getStatus());
+                $fieldCertificate->setValue($row->getCertificate());
                 $btnDelete->setValue($id);
+
+                if ($row->getCertificate() === "N") {
+                    $fieldCertificate->setIsChecked(false);
+                } else {
+                    $fieldCertificate->setIsChecked(true);
+                }
 
                 $table[] = [
                     $id,
@@ -196,6 +210,7 @@ class EmpCourse extends BaseController
                     $this->field->fieldTable($fieldStartDate),
                     $this->field->fieldTable($fieldEndDate),
                     $this->field->fieldTable($fieldStatus),
+                    $this->field->fieldTable($fieldCertificate),
                     $this->field->fieldTable($btnDelete)
                 ];
             endforeach;
