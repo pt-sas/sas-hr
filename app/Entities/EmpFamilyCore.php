@@ -16,6 +16,8 @@ class EmpFamilyCore extends Entity
     protected $job;
     protected $status;
     protected $dateofdeath;
+    protected $birthdate;
+    protected $phone;
     protected $isactive;
     protected $created_by;
     protected $updated_by;
@@ -124,6 +126,26 @@ class EmpFamilyCore extends Entity
     public function setDateOfDeath($dateofdeath)
     {
         $this->attributes['dateofdeath'] = $dateofdeath;
+    }
+
+    public function getBirthDate()
+    {
+        return $this->attributes['birthdate'];
+    }
+
+    public function setBirthDate($birthdate)
+    {
+        $this->attributes['birthdate'] = $birthdate;
+    }
+
+    public function getPhone()
+    {
+        return $this->attributes['phone'];
+    }
+
+    public function setPhone($phone)
+    {
+        $this->attributes['phone'] = $phone;
     }
 
     public function getIsActive()
