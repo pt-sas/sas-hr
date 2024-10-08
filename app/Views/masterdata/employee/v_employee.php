@@ -17,6 +17,7 @@
                 <th>Tanggal Lahir</th>
                 <th>Jenis Kelamin</th>
                 <th>Agama</th>
+                <th>Status Karyawan</th>
                 <th>Aktif</th>
                 <th>Aksi</th>
             </tr>

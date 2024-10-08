@@ -102,11 +102,7 @@ class Employee extends BaseController
                     $where['md_employee.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
                     $where['md_employee.md_employee_id'] = [
                         'value'     => $arrEmpBased
                     ];
@@ -146,6 +142,7 @@ class Employee extends BaseController
                 $row[] = format_dmy($value->birthday, "-");
                 $row[] = $value->gender_name;
                 $row[] = $value->religion_name;
+                $row[] = $value->status_karyawan;
                 $row[] = active($value->isactive);
                 $row[] = $this->template->tableButton($ID);
                 $data[] = $row;
