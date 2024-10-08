@@ -19,6 +19,8 @@ class M_EmpFamily extends Model
 		'job',
 		'status',
 		'dateofdeath',
+		'birthdate',
+		'phone',
 		'isactive',
 		'created_by',
 		'updated_by',

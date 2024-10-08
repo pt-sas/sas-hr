@@ -214,6 +214,19 @@ class EmpFamily extends BaseController
         $fieldDateOfDeath->setClass("datepicker");
         $fieldDateOfDeath->setLength(150);
 
+        $fieldBirthDate = new \App\Entities\Table();
+        $fieldBirthDate->setName("birthdate");
+        $fieldBirthDate->setType("text");
+        $fieldBirthDate->setClass("datepicker");
+        $fieldBirthDate->setIsRequired(true);
+        $fieldBirthDate->setLength(150);
+
+        $fieldPhone = new \App\Entities\Table();
+        $fieldPhone->setName("phone");
+        $fieldPhone->setType("text");
+        $fieldPhone->setClass("number");
+        $fieldPhone->setLength(150);
+
         $btnDelete = new \App\Entities\Table();
         $btnDelete->setName($this->modelDetail->primaryKey);
         $btnDelete->setType("button");
@@ -229,9 +242,11 @@ class EmpFamily extends BaseController
                 $this->field->fieldTable($fieldMember),
                 $this->field->fieldTable($fieldName),
                 $this->field->fieldTable($fieldGender),
+                $this->field->fieldTable($fieldBirthDate),
                 $this->field->fieldTable($fieldAge),
                 $this->field->fieldTable($fieldEducation),
                 $this->field->fieldTable($fieldJob),
+                $this->field->fieldTable($fieldPhone),
                 $this->field->fieldTable($fieldStatus),
                 $this->field->fieldTable($fieldDateOfDeath),
                 $this->field->fieldTable($btnDelete)
@@ -243,6 +258,7 @@ class EmpFamily extends BaseController
             foreach ($detail as $row) :
                 $id = $row->getEmpFamilyId();
                 $dateOfDeath = $row->getDateOfDeath() ? format_dmy($row->getDateOfDeath(), "-") : null;
+                $dateOfBirth = $row->getBirthDate() ? format_dmy($row->getBirthDate(), "-") : null;
 
                 $fieldMember->setValue($row->getMember());
                 $fieldName->setValue($row->getName());
@@ -252,6 +268,8 @@ class EmpFamily extends BaseController
                 $fieldJob->setValue($row->getJob());
                 $fieldStatus->setValue($row->getStatus());
                 $fieldDateOfDeath->setValue($dateOfDeath);
+                $fieldBirthDate->setValue($dateOfBirth);
+                $fieldPhone->setValue($row->getPhone());
 
                 if ($row->getStatus() === $this->Status_Hidup)
                     $fieldDateOfDeath->setIsReadonly(true);
@@ -265,9 +283,11 @@ class EmpFamily extends BaseController
                     $this->field->fieldTable($fieldMember),
                     $this->field->fieldTable($fieldName),
                     $this->field->fieldTable($fieldGender),
+                    $this->field->fieldTable($fieldBirthDate),
                     $this->field->fieldTable($fieldAge),
                     $this->field->fieldTable($fieldEducation),
                     $this->field->fieldTable($fieldJob),
+                    $this->field->fieldTable($fieldPhone),
                     $this->field->fieldTable($fieldStatus),
                     $this->field->fieldTable($fieldDateOfDeath),
                     $this->field->fieldTable($btnDelete)

@@ -28,9 +28,11 @@
                             <th class="text-center">Keluarga</th>
                             <th class="text-center">Nama</th>
                             <th class="text-center">Jenis Kelamin</th>
+                            <th class="text-center">Tanggal Lahir</th>
                             <th class="text-center">Umur</th>
                             <th class="text-center">Pendidikan</th>
                             <th class="text-center">Pekerjaan</th>
+                            <th class="text-center">No Telp</th>
                             <th class="text-center">Status</th>
                             <th class="text-center">Tanggal Meninggal</th>
                             <th class="text-center">Aksi</th>
