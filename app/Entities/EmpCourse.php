@@ -11,6 +11,7 @@ class EmpCourse extends Entity
     protected $course;
     protected $intitution;
     protected $level;
+    protected $certificate;
     protected $startdate;
     protected $enddate;
     protected $status;
@@ -105,6 +106,16 @@ class EmpCourse extends Entity
     public function setStatus($status)
     {
         $this->attributes['status'] = $status;
+    }
+
+    public function getCertificate()
+    {
+        return $this->attributes['certificate'];
+    }
+
+    public function setCertificate($certificate)
+    {
+        $this->attributes['certificate'] = $certificate;
     }
 
     public function getIsActive()

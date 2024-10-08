@@ -20,6 +20,7 @@ class M_EmpCourse extends Model
 		'isactive',
 		'created_by',
 		'updated_by',
+		'certificate'
 	];
 	protected $useTimestamps        = true;
 	protected $returnType 			= 'App\Entities\EmpCourse';
