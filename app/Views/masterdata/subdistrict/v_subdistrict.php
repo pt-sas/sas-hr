@@ -12,7 +12,7 @@
                 <th>Kode Kelurahan</th>
                 <th>Nama</th>
                 <th>Deskripsi</th>
-                <th>Kelurahan</th>
+                <th>Kecamatan</th>
                 <th>Aktif</th>
                 <th>Aksi</th>
             </tr>

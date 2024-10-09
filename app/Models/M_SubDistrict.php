@@ -55,7 +55,8 @@ class M_SubDistrict extends Model
     public function getSelect()
     {
         $sql = $this->table . '.*,
-        md_district.name as district';
+        md_district.name as district,
+        md_city.name as city';
 
         return $sql;
     }
@@ -63,7 +64,8 @@ class M_SubDistrict extends Model
     public function getJoin()
     {
         $sql = [
-            $this->setDataJoin('md_district', 'md_district.md_district_id =' . $this->table . '.md_district_id', 'left')
+            $this->setDataJoin('md_district', 'md_district.md_district_id =' . $this->table . '.md_district_id', 'left'),
+            $this->setDataJoin('md_city', 'md_city.md_city_id = md_district.md_city_id', 'left')
         ];
 
         return $sql;

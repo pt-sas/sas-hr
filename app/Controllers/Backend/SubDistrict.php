@@ -48,7 +48,7 @@ class SubDistrict extends BaseController
                 $row[] = $value->value;
                 $row[] = $value->name;
                 $row[] = $value->description;
-                $row[] = $value->district;
+                $row[] = $value->district . "_" . $value->city;
                 $row[] = active($value->isactive);
                 $row[] = $this->template->tableButton($ID);
                 $data[] = $row;
