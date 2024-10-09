@@ -88,6 +88,7 @@ class M_Employee extends Model
 		'md_employee.birthday',
 		'sys_ref_detail.name',
 		'md_religion.name',
+		'md_status.name',
 		'md_employee.isactive'
 	];
 	protected $column_search = [
@@ -97,6 +98,7 @@ class M_Employee extends Model
 		'md_employee.birthday',
 		'sys_ref_detail.name',
 		'md_religion.name',
+		'md_status.name',
 		'md_employee.isactive'
 	];
 	protected $order = ['fullname' => 'ASC'];
@@ -116,7 +118,8 @@ class M_Employee extends Model
 	{
 		$sql = $this->table . '.*,
 				md_religion.name as religion_name,
-				sys_ref_detail.name as gender_name';
+				sys_ref_detail.name as gender_name,
+				md_status.name as status_karyawan';
 
 		return $sql;
 	}
@@ -127,6 +130,7 @@ class M_Employee extends Model
 			$this->setDataJoin('md_religion', 'md_religion.md_religion_id = ' . $this->table . '.md_religion_id', 'left'),
 			$this->setDataJoin('sys_reference', 'sys_reference.name = "Gender"', 'left'),
 			$this->setDataJoin('sys_ref_detail', 'sys_ref_detail.value = ' . $this->table . '.gender AND sys_reference.sys_reference_id = sys_ref_detail.sys_reference_id', 'left'),
+			$this->setDataJoin('md_status', 'md_status.md_status_id = ' . $this->table . '.md_status_id', 'left'),
 		];
 
 		return $sql;
@@ -221,22 +225,24 @@ class M_Employee extends Model
 			$sql = "SELECT e.md_employee_id
 					FROM md_employee e
 					LEFT JOIN md_employee_division ed ON ed.md_employee_id = e.md_employee_id
-					LEFT JOIN md_division d ON d.md_division_id = ed.md_division_id
-					WHERE e.isactive = 'Y'
-					AND e.md_status_id NOT IN (100004)";
+					LEFT JOIN md_employee_branch eb ON eb.md_employee_id = e.md_employee_id
+					WHERE e.isactive = 'Y'";
 
 			if ($row->getLevellingId() == 100004) {
 				$sql .= "AND (e.superior_id = " . $id . "
 					OR e.md_employee_id = " . $id . ")";
 			} else {
-				$sql .= "AND (d.md_division_id IN (SELECT v.md_division_id 
-							FROM md_employee em
-							LEFT JOIN md_employee_division v ON v.md_employee_id = em.md_employee_id
-							WHERE em.superior_id = " . $id . ")
-						OR e.md_employee_id = " . $id . ")";
+				$sql .= "AND ed.md_division_id IN (SELECT v.md_division_id 
+								FROM md_employee em
+								LEFT JOIN md_employee_division v ON v.md_employee_id = em.md_employee_id
+								WHERE em.superior_id = $id)";
+				$sql .= "AND (eb.md_branch_id IN (SELECT x.md_branch_id 
+								FROM md_employee em
+								LEFT JOIN md_employee_branch x ON x.md_employee_id = em.md_employee_id
+								WHERE em.md_employee_id = $id)
+						OR e.md_employee_id = $id)";
 			}
 
-			$sql .= "ORDER BY d.name, e.fullname ASC";
 			$result = $this->db->query($sql)->getResult();
 
 			foreach ($result as $row) {
