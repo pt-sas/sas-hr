@@ -291,7 +291,7 @@ class Employee extends Entity
 
 	public function setAddress($address)
 	{
-		$this->attributes['address'] = $address;
+		$this->attributes['address'] = strtoupper($address);
 	}
 
 	public function getCountryId()
@@ -361,7 +361,7 @@ class Employee extends Entity
 
 	public function setAddressDom($address_dom)
 	{
-		$this->attributes['address_dom'] = $address_dom;
+		$this->attributes['address_dom'] = strtoupper($address_dom);
 	}
 
 	public function getCountryDomId()

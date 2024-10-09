@@ -1300,7 +1300,6 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
-        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
@@ -1433,6 +1432,7 @@ $(".save_form").click(function (evt) {
     // logic after insert / update data to set attribute based on field isactive condition
     for (let i = 0; i < field.length; i++) {
       let fieldActive = form.find("input.active");
+
       // Check element name is not null and any field checkbox active
       if (field[i].name !== "" && fieldActive.length) {
         let className = field[i].className.split(/\s+/);
@@ -1473,7 +1473,7 @@ $(".save_form").click(function (evt) {
               .prop("disabled", true);
           }
         }
-      } else {
+      } else if (field[i].name !== "") {
         //? Set attribute disabled based on default field or exist attribute edit-disabled
         if (
           fieldReadOnly.includes(field[i].name) ||
@@ -1638,7 +1638,6 @@ function Edit(id, status, last_url) {
             hideLoadingForm(form.prop("id"));
           },
           success: function (result) {
-            console.log(result);
             if (result[0].success) {
               let arrMsg = result[0].message;
 
@@ -1896,62 +1895,59 @@ function Edit(id, status, last_url) {
  * Button delete data
  */
 function Destroy(id) {
-  let url = CURRENT_URL + DELETE + id;
+  const url = `${CURRENT_URL}${DELETE}${id}`;
+  const action = "delete";
+  const checkAccess = isAccess(action, LAST_URL);
 
-  let action = "delete";
-
-  let checkAccess = isAccess(action, LAST_URL);
-
-  if (checkAccess[0].success && checkAccess[0].message == "Y") {
-    Swal.fire({
-      title: "Delete ?",
-      text: "Are you sure you wish to delete the selected data ? ",
-      type: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      confirmButtonText: "Ok",
-      cancelButtonText: "Close",
-      reverseButtons: true,
-    }).then((data) => {
-      if (data.value)
-        //value is true
-
-        $.getJSON(url, function (result) {
-          if (result[0].success) {
-            Swal.fire({
-              title: "Deleted!",
-              text: "Your data has been deleted.",
-              type: "success",
-              showConfirmButton: false,
-              timer: 1000,
+  if (checkAccess[0].success) {
+    if (checkAccess[0].message === "Y") {
+      Swal.fire({
+        title: "Delete?",
+        text: "Are you sure you wish to delete the selected data?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        confirmButtonText: "Ok",
+        cancelButtonText: "Close",
+        reverseButtons: true,
+      }).then((result) => {
+        if (result.value) {
+          $.getJSON(url)
+            .done((result) => {
+              if (result[0].success) {
+                Swal.fire({
+                  title: "Deleted!",
+                  text: "Your data has been deleted.",
+                  icon: "success",
+                  timer: 1000,
+                  showConfirmButton: false,
+                });
+                reloadTable();
+              } else {
+                Swal.fire({
+                  title: "Error!",
+                  text: result[0].message,
+                  icon: "error",
+                  confirmButtonText: "Ok",
+                });
+                reloadTable();
+              }
+            })
+            .fail((jqXHR, textStatus, errorThrown) => {
+              console.error(errorThrown);
+              reloadTable();
             });
-
-            reloadTable();
-          } else if (!result[0].error) {
-            Swal.fire({
-              title: "Error!",
-              text: result[0].message,
-              type: "error",
-              showConfirmButton: true,
-            });
-
-            reloadTable();
-          } else {
-            console.info(result);
-          }
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-          console.info(errorThrown);
-          reloadTable();
-        });
-    });
-  } else if (checkAccess[0].success && checkAccess[0].message == "N") {
-    Toast.fire({
-      type: "error",
-      title: "You are role don't have permission, please reload !!",
-    });
+        }
+      });
+    } else {
+      Toast.fire({
+        icon: "error",
+        title: "You do not have permission, please reload!",
+      });
+    }
   } else {
     Toast.fire({
-      type: "error",
+      icon: "error",
       title: checkAccess[0].message,
     });
   }
@@ -1959,41 +1955,48 @@ function Destroy(id) {
 
 $(".tb_displayline, .tb_displaytab").on("click", ".btn_delete", function (evt) {
   evt.preventDefault();
-  const _this = $(this);
-  const tr = _this.closest("tr");
-  const row = _tableLine.row(tr);
-  let id = this.id;
 
-  let oriElement = _this.html();
+  const $this = $(this);
+  const $tr = $this.closest("tr");
+  const row = _tableLine.row($tr);
+  const id = this.id;
+  const oriElement = $this.html();
 
-  $(_this)
+  // Show loading spinner
+  $this
     .html(
       '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
     )
     .prop("disabled", true);
 
   if (id === "") {
-    setTimeout(function () {
+    setTimeout(() => {
       row.remove().draw(false);
-      $(_this).html(oriElement).prop("disabled", false);
+      resetButton($this, oriElement);
     }, 100);
   } else {
     Swal.fire({
       title: "Delete?",
-      text: "Are you sure to delete the selected data line ? ",
-      type: "warning",
+      text: "Are you sure to delete the selected data line?",
+      icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       confirmButtonText: "Ok",
       cancelButtonText: "Close",
       reverseButtons: true,
-    }).then((data) => {
-      if (data.value) row.remove().draw(false);
+    }).then((result) => {
+      if (result.value) {
+        row.remove().draw(false);
+      }
+      resetButton($this, oriElement);
     });
-
-    $(_this).html(oriElement).prop("disabled", false);
   }
 });
+
+// Function to reset button state
+function resetButton($button, originalHtml) {
+  $button.html(originalHtml).prop("disabled", false);
+}
 
 /**
  * Get data document action access
@@ -2071,7 +2074,6 @@ function docProcess(id, status) {
             CURRENT_URL + "/processIt?id=" + id + "&docaction=" + docAction;
 
           $.getJSON(url, function (result) {
-            console.log(result);
             if (result[0].success) {
               if (result[0].message == true) {
                 Swal.fire({
@@ -2133,97 +2135,69 @@ $(document).on("click", ".x_form, .close_form, .reset_form", function (evt) {
   const container = target.closest(".container");
   const card = container.find(".card");
   const actionMenu = card.attr("data-action-menu");
-  const div = card.find("div");
   const modalTab = target.closest(".modal-tab");
-
-  let oriTitle = container.find(".page-title").text();
+  const oriTitle = container.find(".page-title").text();
 
   setSave = null;
 
   if (actionMenu !== "F") {
     if (target.attr("data-dismiss") !== "modal") {
-      const parent = target.closest(".container");
-      const cardBody = parent.find(".card-body");
+      const cardBody = container.find(".card-body");
 
-      $.each(cardBody, function (idx, elem) {
-        let className = elem.className.split(/\s+/);
+      cardBody.each(function () {
+        const isMainCard = $(this).hasClass("card-main");
+        const isFormCard = $(this).hasClass("card-form");
 
-        if (className.includes("card-main")) {
-          $(this).css("display", "block");
+        $(this).css("display", isMainCard ? "block" : "none");
 
+        if (isMainCard) {
           // Remove breadcrumb list
-          let li = ul.find("li");
-          $.each(li, function (idx, elem) {
-            if (idx > 2) elem.remove();
-          });
+          const li = container.find("ul li");
+          li.slice(3).remove(); // Remove all but the first 3 items
 
-          if (parent.find("div.filter_page").length > 0) {
-            parent.find("div.filter_page").css("display", "block");
+          const filterPage = container.find("div.filter_page");
+          if (filterPage.length) {
+            filterPage.css("display", "block");
           }
-        }
-
-        if (className.includes("card-form")) {
-          $(this).css("display", "none");
         }
       });
 
-      cardBtn.css("display", "none");
-
-      const cardHeader = parent.find(".card-header");
-      cardHeader.find("button").show();
+      container.find(".card-header button").show();
     }
 
-    cardTitle.html(oriTitle);
+    container.find(".card-title").html(oriTitle);
 
     //TODO: Call reloadTable();
     $(".btn_requery").click();
 
-    $("html, body").animate(
-      {
-        scrollTop: $(".main-panel").offset().top,
-      },
-      500
-    );
+    $("html, body").animate({ scrollTop: $(".main-panel").offset().top }, 500);
   }
 
+  // Handle modal tab functionality
   if (modalTab.length) {
-    const tabPaneAll = modalTab.find(".tab-pane");
-    const navLink = modalTab.find("li.nav-item a");
+    modalTab
+      .find("li.nav-item a")
+      .removeClass("active")
+      .first()
+      .addClass("show active");
+    const tabPanes = modalTab.find(".tab-pane");
 
-    $.each(navLink, function (i) {
-      if (i == 0) {
-        $(this).addClass("show active");
-      } else {
-        $(this).removeClass("active");
-      }
-    });
-
-    $.each(tabPaneAll, function (i) {
+    tabPanes.each(function (i) {
       const form = $(this).find("form");
       form.find("input.foreignkey").removeAttr("set-id");
-      $(this).removeAttr("set-save");
-      $(this).removeAttr("set-id");
-
-      if (i == 0) {
-        $(this).addClass("show active");
-      } else {
-        $(this).removeClass("show active");
-      }
+      $(this)
+        .removeAttr("set-save set-id")
+        .toggleClass("show active", i === 0);
     });
   }
 
   ID = 0;
-
   clearForm(evt);
 
-  //TODO: Hide content there is attribute show-after-save
-  $.each(div, function () {
-    if ($(this).attr("show-after-save")) {
-      $(this).addClass("d-none");
-    }
-  });
+  // Hide elements with attribute show-after-save
+  container.find("div[show-after-save]").addClass("d-none");
 
-  //! Clear button attribute disable
+  // Enable buttons
   $(this).removeAttr("disabled");
   $(".save_form").removeAttr("disabled");
 });
@@ -3760,256 +3734,107 @@ function clearForm(evt) {
   const navTab = parent.find("ul.nav-tabs");
   let form = cardForm.length ? cardForm.find("form") : parent.find("form");
 
+  // Handle tab forms if they exist
   if (navTab.length) {
-    const cardTab = parent.find("div.card-tab");
-    const tabPaneAll = cardTab.find(".tab-pane");
-    const tabPane = cardTab.find(".tab-pane.active");
-    const tableTab = form.find("table.tb_displaytab");
-
-    form = tabPane.find("form");
-
-    if (setSave === null) {
-      form = tabPaneAll.find("form");
-
-      $.each(form, function () {
-        this.reset();
-      });
-    }
+    const tabPaneAll = parent.find("div.card-tab .tab-pane");
+    const activeTab = tabPaneAll.filter(".active");
+    form = tabPaneAll.find("form");
   }
 
+  // Handle modal forms if they exist
   if (target.closest(".modal").length) {
     const modal = target.closest(".modal");
     form = modal.find("form");
   }
 
-  //TODO: Clear field data on the form
+  // Clear the form
   form[0].reset();
-
-  const field = form.find("input, textarea, select, button");
-  const errorText = form.find("small");
+  const fields = form.find("input, textarea, select, button");
+  const errorTexts = form.find("small");
 
   let defaultLogic = [];
 
-  //TODO: Remove value duplicate array
+  // Remove duplicates in read-only fields
   fieldReadOnly = [...new Set(fieldReadOnly)];
 
-  //TODO: Clear data, remove attribute readonly, disabled and remove class invalid on the field
-  for (let i = 0; i < field.length; i++) {
-    if (field[i].name !== "") {
-      if (fieldReadOnly.length == 0) {
-        form
-          .find(
-            "input[name=" +
-              field[i].name +
-              "], textarea[name=" +
-              field[i].name +
-              "]"
-          )
-          .removeAttr("readonly")
-          .closest(".form-group")
-          .removeClass("has-error");
-      } else if (fieldReadOnly.length > 0) {
-        //? field is not readonly by default
-        if (!fieldReadOnly.includes(field[i].name)) {
-          form
-            .find(
-              "input[name=" +
-                field[i].name +
-                "], textarea[name=" +
-                field[i].name +
-                "]"
-            )
-            .removeAttr("readonly")
-            .closest(".form-group")
-            .removeClass("has-error");
-        } else {
-          form
-            .find(
-              "input[name=" +
-                field[i].name +
-                "], textarea[name=" +
-                field[i].name +
-                "]"
-            )
-            .closest(".form-group")
-            .removeClass("has-error");
-        }
+  // Function to clear field attributes and classes
+  const clearFieldAttributes = (field) => {
+    const name = field.name;
+    if (name) {
+      const isReadOnly = fieldReadOnly.includes(name);
+      const fieldSelector = `input[name="${name}"], textarea[name="${name}"]`;
+
+      if (!isReadOnly) {
+        form.find(fieldSelector).removeAttr("readonly");
+      }
+      form.find(fieldSelector).closest(".form-group").removeClass("has-error");
+
+      if (!isReadOnly && field.type === "checkbox") {
+        form.find(`input:checkbox[name="${name}"]`).removeAttr("disabled");
       }
 
-      if (
-        !fieldReadOnly.includes(field[i].name) &&
-        field[i].type === "checkbox"
-      )
-        form
-          .find("input:checkbox[name=" + field[i].name + "]")
-          .removeAttr("disabled");
-
-      //TODO: Remove value duplicate array
-      fieldReadOnly = [...new Set(fieldReadOnly)];
-
-      //TODO: Clear data dropdown if not selected from the beginning
+      // Handle dropdowns based on default logic
       if (
         defaultLogic.length > 0 &&
-        field[i].name === defaultLogic[0].field &&
+        name === defaultLogic[0].field &&
         defaultLogic[0].condition
       ) {
-        if (fieldReadOnly.length == 0) {
-          form
-            .find("select[name=" + field[i].name + "]")
-            .val(defaultLogic[0].id)
-            .change()
-            .removeAttr("disabled")
-            .closest(".form-group")
-            .removeClass("has-error");
-        } else if (fieldReadOnly.length > 0) {
-          // field is not readonly by default
-          if (!fieldReadOnly.includes(field[i].name)) {
-            form
-              .find("select[name=" + field[i].name + "]")
-              .val(defaultLogic[0].id)
-              .change()
-              .removeAttr("disabled")
-              .closest(".form-group")
-              .removeClass("has-error");
-          } else {
-            form
-              .find("select[name=" + field[i].name + "]")
-              .val(defaultLogic[0].id)
-              .change()
-              .closest(".form-group")
-              .removeClass("has-error");
-          }
-        }
+        form
+          .find(`select[name="${name}"]`)
+          .val(defaultLogic[0].id)
+          .change()
+          .removeAttr("disabled")
+          .closest(".form-group")
+          .removeClass("has-error");
       } else {
-        if (fieldReadOnly.length == 0) {
-          form
-            .find("select[name=" + field[i].name + "]")
-            .val(null)
-            .change()
-            .removeAttr("disabled")
-            .closest(".form-group")
-            .removeClass("has-error");
-        } else if (fieldReadOnly.length > 0) {
-          //? field is not readonly by default
-          if (!fieldReadOnly.includes(field[i].name)) {
-            form
-              .find("select[name=" + field[i].name + "]")
-              .val(null)
-              .change()
-              .removeAttr("disabled")
-              .closest(".form-group")
-              .removeClass("has-error");
-          } else {
-            if (form.find("select[name=" + field[i].name + "]").length) {
-              let value = form.find("select[name=" + field[i].name + "]").val();
-              if (value === "")
-                form
-                  .find("select[name=" + field[i].name + "]")
-                  .val(null)
-                  .change()
-                  .closest(".form-group")
-                  .removeClass("has-error");
-            }
-            if (form.find(".datepicker[name=" + field[i].name + "]").length) {
-              let value = form
-                .find(".datepicker[name=" + field[i].name + "]")
-                .val();
-
-              if (value === "")
-                form
-                  .find(".datepicker[name=" + field[i].name + "]")
-                  .data("DateTimePicker")
-                  .clear();
-            }
-          }
-        }
-      }
-
-      //? Type input file
-      if (field[i].type == "file") $(".close-img").click();
-
-      //? Textarea class summernote
-      if (form.find("textarea.summernote[name=" + field[i].name + "]").length) {
-        $("[name =" + field[i].name + "]").summernote("reset");
-        $("[name =" + field[i].name + "]").summernote("destroy");
-      }
-
-      //? Exist table display line
-      if (_tableLine.context.length) {
-        _tableLine.clear().draw();
-
-        const btnAction = _tableLine.rows().to$().find("button");
-
-        //TODO: Show Button Add Row or Create Line
-        $(".add_row, .create_line").css("display", "block");
-
-        //TODO: Show Button Action
-        btnAction.css("display", "block");
-      }
-
-      //? Check and Remove attribute disabled from field
-      if ($(field[i]).attr("edit-disabled"))
         form
-          .find(
-            "input:checkbox[name=" +
-              field[i].name +
-              "], select[name=" +
-              field[i].name +
-              "], input:radio[name=" +
-              field[i].name +
-              "]"
-          )
-          .removeAttr("disabled");
+          .find(`select[name="${name}"]`)
+          .val(null)
+          .change()
+          .removeAttr("disabled")
+          .closest(".form-group")
+          .removeClass("has-error");
+      }
 
-      //? Check and Remove attribute disabled from field
-      if ($(field[i]).attr("edit-readonly"))
-        form
-          .find("input:text[name=" + field[i].name + "]")
-          .removeAttr("readonly");
-
-      form
-        .find(
-          "input:radio[name=" +
-            field[i].name +
-            "], button[name=" +
-            field[i].name +
-            "]"
-        )
-        .removeAttr("disabled");
+      // Additional clearances for file inputs and summernote
+      if (field.type === "file") $(".close-img").click();
+      if (form.find(`textarea.summernote[name="${name}"]`).length) {
+        $(`[name="${name}"]`).summernote("reset").summernote("destroy");
+      }
     }
-  }
+  };
 
-  //TODO: clear text error element small
-  for (let l = 0; l < errorText.length; l++) {
-    if (errorText[l].id !== "")
-      form.find("small[id=" + errorText[l].id + "]").html("");
-  }
+  // Clear fields
+  fields.each((_, field) => clearFieldAttributes(field));
 
-  if (form.find(".datepicker-start").length)
-    form.find(".datepicker-start").data("DateTimePicker").clear();
+  // Clear error texts
+  errorTexts.each((_, error) => {
+    if (error.id !== "") {
+      form.find(`small[id="${error.id}"]`).html("");
+    }
+  });
 
-  if (form.find(".datetimepicker-start").length)
-    form.find(".datetimepicker-start").data("DateTimePicker").clear();
+  // Clear DateTimePicker elements
+  const clearDateTimePickers = (selector) => {
+    form.find(selector).each((_, element) => {
+      $(element).data("DateTimePicker").clear();
+    });
+  };
 
-  if (form.find(".datepicker-lembur").length)
-    form.find(".datepicker-lembur").data("DateTimePicker").clear();
+  const datePickers = [
+    ".datepicker-start",
+    ".datetimepicker-start",
+    ".datepicker-lembur",
+    ".datepicker-end",
+    ".datetimepicker-end",
+    ".datetimepicker",
+    ".datepick-start",
+    ".datepick-end",
+  ];
 
-  if (form.find(".datepicker-end").length)
-    form.find(".datepicker-end").data("DateTimePicker").clear();
+  datePickers.forEach((selector) => clearDateTimePickers(selector));
 
-  if (form.find(".datetimepicker-end").length)
-    form.find(".datetimepicker-end").data("DateTimePicker").clear();
-
-  if (form.find(".datetimepicker").length)
-    form.find(".datetimepicker").data("DateTimePicker").clear();
-
-  if (form.find(".datepick-start").length)
-    form.find(".datepick-start").data("DateTimePicker").clear();
-
-  if (form.find(".datepick-end").length)
-    form.find(".datepick-end").data("DateTimePicker").clear();
-
-  //TODO: Set to empty array option
+  // Reset option arrays
   option = [];
   arrMultiSelect = [];
 }
