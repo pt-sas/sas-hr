@@ -936,20 +936,20 @@ class Validation
                 'required'      => 'Mohon mengisi detail {field} dahulu'
             ]
         ],
-        'detail.table.*.age_line'  => [
-            'label'             => 'umur',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi detail {field} dahulu'
-            ]
-        ],
-        'detail.table.*.education_line'  => [
-            'label'             => 'pendidikan',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi detail {field} dahulu'
-            ]
-        ],
+        // 'detail.table.*.age_line'  => [
+        //     'label'             => 'umur',
+        //     'rules'             => 'required',
+        //     'errors'            => [
+        //         'required'      => 'Mohon mengisi detail {field} dahulu'
+        //     ]
+        // ],
+        // 'detail.table.*.education_line'  => [
+        //     'label'             => 'pendidikan',
+        //     'rules'             => 'required',
+        //     'errors'            => [
+        //         'required'      => 'Mohon mengisi detail {field} dahulu'
+        //     ]
+        // ],
         'detail.table.*.status_line'  => [
             'label'             => 'status',
             'rules'             => 'required',
@@ -988,20 +988,20 @@ class Validation
                 'required'      => 'Mohon mengisi detail {field} dahulu'
             ]
         ],
-        'detail.table.*.age_line'  => [
-            'label'             => 'umur',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi detail {field} dahulu'
-            ]
-        ],
-        'detail.table.*.education_line'  => [
-            'label'             => 'pendidikan',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi detail {field} dahulu'
-            ]
-        ],
+        // 'detail.table.*.age_line'  => [
+        //     'label'             => 'umur',
+        //     'rules'             => 'required',
+        //     'errors'            => [
+        //         'required'      => 'Mohon mengisi detail {field} dahulu'
+        //     ]
+        // ],
+        // 'detail.table.*.education_line'  => [
+        //     'label'             => 'pendidikan',
+        //     'rules'             => 'required',
+        //     'errors'            => [
+        //         'required'      => 'Mohon mengisi detail {field} dahulu'
+        //     ]
+        // ],
         'detail.table.*.status_line'  => [
             'label'             => 'status',
             'rules'             => 'required',

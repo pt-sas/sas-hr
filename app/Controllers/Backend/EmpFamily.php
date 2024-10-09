@@ -163,7 +163,7 @@ class EmpFamily extends BaseController
         $fieldEducation->setName("education");
         $fieldEducation->setType("select");
         $fieldEducation->setClass("select2");
-        $fieldEducation->setIsRequired(true);
+        // $fieldEducation->setIsRequired(true);
         $fieldEducation->setLength(140);
         $fieldEducation->setField([
             "id"    => "value",

@@ -174,7 +174,7 @@
                 <label for="md_branch_id">Cabang <span class="required">*</span></label>
                 <div class="select2-input select2-primary">
                     <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id"
-                        multiple="multiple" style="width: 100%;" <?= $disabled ?>>
+                        multiple="multiple" style="width: 100%;" disabled>
                         <?php foreach ($branch as $row) : ?>
                             <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
                         <?php endforeach; ?>
@@ -188,7 +188,7 @@
                 <label for="md_division_id">Divisi <span class="required">*</span></label>
                 <div class="select2-input select2-primary">
                     <select class="form-control multiple-select" id="md_division_id" name="md_division_id"
-                        multiple="multiple" style="width: 100%;" <?= $disabled ?>>
+                        multiple="multiple" style="width: 100%;" disabled>
                         <?php foreach ($division as $row) : ?>
                             <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
                         <?php endforeach; ?>
@@ -201,7 +201,7 @@
             <div class="form-group">
                 <label for="superior_id">Superior</label>
                 <select class="form-control select-data" id="superior_id" name="superior_id"
-                    data-url="karyawan/superior" <?= $disabled ?>>
+                    data-url="karyawan/superior" disabled>
                     <option value="">Select Superior</option>
                 </select>
                 <small class="form-text text-danger" id="error_superior_id"></small>
@@ -211,7 +211,7 @@
             <div class="form-group">
                 <label for="md_position_id">Jabatan <span class="required">*</span></label>
                 <select class="form-control select-data" id="md_position_id" name="md_position_id"
-                    data-url="position/getList" <?= $disabled ?>>
+                    data-url="position/getList" disabled>
                     <option value="">Select Jabatan</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_position_id"></small>
@@ -221,7 +221,7 @@
             <div class="form-group">
                 <label for="md_levelling_id">Level <span class="required">*</span></label>
                 <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id"
-                    data-url="levelling/getList" <?= $disabled ?>>
+                    data-url="levelling/getList" disabled>
                     <option value="">Select Level</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_levelling_id"></small>
@@ -237,7 +237,7 @@
             <div class="form-group">
                 <label for="registerdate">Tanggal Bergabung </label>
                 <div class="input-group">
-                    <input type="text" class="form-control datepicker" id="registerdate" name="registerdate" <?= $readonly ?>>
+                    <input type="text" class="form-control datepicker" id="registerdate" name="registerdate" readonly>
                     <div class="input-group-append">
                         <span class="input-group-text">
                             <i class="fa fa-calendar"></i>
@@ -262,7 +262,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="address_dom">Alamat Domisili <span class="required">*</span></label>
-                <textarea type="text" class="form-control" id="address_dom" name="address_dom" rows="2" <?= $readonly ?>></textarea>
+                <textarea type="text" class="form-control text-uppercase" id="address_dom" name="address_dom" rows="2" <?= $readonly ?>></textarea>
                 <small class="form-text text-danger" id="error_address_dom"></small>
             </div>
         </div>
@@ -330,7 +330,7 @@
             </div>
             <div class="form-group">
                 <label for="address">Alamat KTP <span class="required">*</span></label>
-                <textarea type="text" class="form-control" id="address" name="address" rows="2" <?= $readonly ?>></textarea>
+                <textarea type="text" class="form-control text-uppercase" id="address" name="address" rows="2" <?= $readonly ?>></textarea>
                 <small class="form-text text-danger" id="error_address"></small>
             </div>
         </div>
@@ -388,7 +388,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="card_id">No KTP <span class="required">*</span></label>
-                <input type="text" class="form-control number" id="card_id" name="card_id" <?= $disabled ?>>
+                <input type="text" class="form-control number" id="card_id" name="card_id" readonly>
                 <small class="form-text text-danger" id="error_card_id"></small>
             </div>
         </div>
@@ -396,13 +396,13 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="npwp_id">No NPWP </label>
-                <input type="text" class="form-control npwp" id="npwp_id" name="npwp_id" <?= $readonly ?>>
+                <input type="text" class="form-control npwp" id="npwp_id" name="npwp_id" readonly>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="ptkp_status">Status PTKP </label>
-                <select class="form-control select2" id="ptkp_status" name="ptkp_status" <?= $disabled ?>>
+                <select class="form-control select2" id="ptkp_status" name="ptkp_status" disabled>
                     <option value="">Select Status PTKP</option>
                     <option value="tk0">TK/0</option>
                     <option value="tk1">TK/1</option>
@@ -422,14 +422,14 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_kes_no">BPJS Kesehatan </label>
-                <input type="text" class="form-control number" id="bpjs_kes_no" name="bpjs_kes_no" <?= $readonly ?>>
+                <input type="text" class="form-control number" id="bpjs_kes_no" name="bpjs_kes_no" readonly>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_kes_periode">Periode </label>
                 <div class="input-group">
-                    <input type="text" class="form-control datepicker" id="bpjs_kes_period" name="bpjs_kes_period" <?= $readonly ?>>
+                    <input type="text" class="form-control datepicker" id="bpjs_kes_period" name="bpjs_kes_period" readonly>
                     <div class="input-group-append">
                         <span class="input-group-text">
                             <i class="fa fa-calendar"></i>
@@ -441,7 +441,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_tenaga_no">BPJS Tenaga Kerja </label>
-                <input type="text" class="form-control number" id="bpjs_tenaga_no" name="bpjs_tenaga_no" <?= $readonly ?>>
+                <input type="text" class="form-control number" id="bpjs_tenaga_no" name="bpjs_tenaga_no" readonly>
             </div>
         </div>
         <div class="col-md-6">
@@ -449,7 +449,7 @@
                 <label for="bpjs_tenaga_periode">Periode </label>
                 <div class="input-group">
                     <input type="text" class="form-control datepicker" id="bpjs_tenaga_period"
-                        name="bpjs_tenaga_period" <?= $readonly ?>>
+                        name="bpjs_tenaga_period" readonly>
                     <div class="input-group-append">
                         <span class="input-group-text">
                             <i class="fa fa-calendar"></i>
