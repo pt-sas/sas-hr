@@ -957,6 +957,13 @@ class Validation
                 'required'      => 'Mohon mengisi detail {field} dahulu'
             ]
         ],
+        'detail.table.*.birthdate_line'  => [
+            'label'             => 'Tanggal Lahir',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
     ];
 
     public $employee_family = [
@@ -1004,6 +1011,13 @@ class Validation
         ],
         'detail.table.*.status_line'  => [
             'label'             => 'status',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.birthdate_line'  => [
+            'label'             => 'Tanggal Lahir',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi detail {field} dahulu'
