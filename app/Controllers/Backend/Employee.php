@@ -67,6 +67,15 @@ class Employee extends BaseController
                 ->orderBy('name', 'ASC')
                 ->findAll(),
             'role_emp_adm'  => $roleEmpAdm,
+            'ptkp_list' => $mReference->findBy([
+                'sys_reference.name'              => 'PTKPType',
+                'sys_reference.isactive'          => 'Y',
+                'sys_ref_detail.isactive'         => 'Y',
+                'sys_ref_detail.value <>'         => 'A',
+            ], null, [
+                'field'     => 'sys_ref_detail.name',
+                'option'    => 'DESC'
+            ])->getResult(),
             'readonly'  => $readOnly,
             'disabled'  => $disabled,
         ];

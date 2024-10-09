@@ -13,7 +13,8 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="nik">NIK <span class="required">*</span></label>
-                        <input type="text" class="form-control number" id="nik" name="nik" edit-readonly="nik" <?= $readonly ?>>
+                        <input type="text" class="form-control number" id="nik" name="nik" edit-readonly="nik"
+                            <?= $readonly ?>>
                         <small class="form-text text-danger" id="error_nik"></small>
                     </div>
                 </div>
@@ -92,7 +93,8 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="rhesus">Rhesus </label>
-                <select class="form-control select-data" id="rhesus" name="rhesus" data-url="reference/getList/$Rhesus" <?= $disabled ?>>
+                <select class="form-control select-data" id="rhesus" name="rhesus" data-url="reference/getList/$Rhesus"
+                    <?= $disabled ?>>
                     <option value="">Select Rhesus</option>
                 </select>
             </div>
@@ -101,10 +103,11 @@
             <div class="form-check">
                 <label>Jenis Kelamin <span class="required">*</span></label><br />
                 <?php foreach ($ref_list as $row) : ?>
-                    <label class="form-radio-label">
-                        <input class="form-radio-input" type="radio" name="gender" value="<?= $row->value ?>" <?= $disabled ?>>
-                        <span class="form-radio-sign"><?= $row->name ?></span>
-                    </label>
+                <label class="form-radio-label">
+                    <input class="form-radio-input" type="radio" name="gender" value="<?= $row->value ?>"
+                        <?= $disabled ?>>
+                    <span class="form-radio-sign"><?= $row->name ?></span>
+                </label>
                 <?php endforeach; ?>
                 <small class="form-text text-danger" id="error_gender"></small>
             </div>
@@ -176,7 +179,7 @@
                     <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id"
                         multiple="multiple" style="width: 100%;" <?= $disabled ?>>
                         <?php foreach ($branch as $row) : ?>
-                            <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
+                        <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
                         <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_md_branch_id"></small>
@@ -190,7 +193,7 @@
                     <select class="form-control multiple-select" id="md_division_id" name="md_division_id"
                         multiple="multiple" style="width: 100%;" <?= $disabled ?>>
                         <?php foreach ($division as $row) : ?>
-                            <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
+                        <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
                         <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_md_division_id"></small>
@@ -237,7 +240,8 @@
             <div class="form-group">
                 <label for="registerdate">Tanggal Bergabung </label>
                 <div class="input-group">
-                    <input type="text" class="form-control datepicker" id="registerdate" name="registerdate" <?= $readonly ?>>
+                    <input type="text" class="form-control datepicker" id="registerdate" name="registerdate"
+                        <?= $readonly ?>>
                     <div class="input-group-append">
                         <span class="input-group-text">
                             <i class="fa fa-calendar"></i>
@@ -262,7 +266,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="address_dom">Alamat Domisili <span class="required">*</span></label>
-                <textarea type="text" class="form-control" id="address_dom" name="address_dom" rows="2" <?= $readonly ?>></textarea>
+                <textarea type="text" class="form-control" id="address_dom" name="address_dom" rows="2"
+                    <?= $readonly ?>></textarea>
                 <small class="form-text text-danger" id="error_address_dom"></small>
             </div>
         </div>
@@ -307,7 +312,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="md_subdistrict_dom_id">Kelurahan <span class="required">*</span></label>
-                <select class="form-control select2" id="md_subdistrict_dom_id" name="md_subdistrict_dom_id" <?= $disabled ?>>
+                <select class="form-control select2" id="md_subdistrict_dom_id" name="md_subdistrict_dom_id"
+                    <?= $disabled ?>>
                     <option value="">Select Kelurahan</option>
                 </select>
                 <small class="form-text text-danger" id="error_md_subdistrict_dom_id"></small>
@@ -324,13 +330,15 @@
             <div class="form-check">
                 <label class="form-check-label">
                     <input type="checkbox" class="form-check-input" id="issameaddress" name="issameaddress" checked
-                        hide-field="address,md_country_id,md_province_id,md_city_id,md_district_id,md_subdistrict_id,postalcode" <?= $readonly ?>>
+                        hide-field="address,md_country_id,md_province_id,md_city_id,md_district_id,md_subdistrict_id,postalcode"
+                        <?= $readonly ?>>
                     <span class=" form-check-sign">Sama dengan alamat domisili</span>
                 </label>
             </div>
             <div class="form-group">
                 <label for="address">Alamat KTP <span class="required">*</span></label>
-                <textarea type="text" class="form-control" id="address" name="address" rows="2" <?= $readonly ?>></textarea>
+                <textarea type="text" class="form-control" id="address" name="address" rows="2"
+                    <?= $readonly ?>></textarea>
                 <small class="form-text text-danger" id="error_address"></small>
             </div>
         </div>
@@ -403,19 +411,9 @@
             <div class="form-group">
                 <label for="ptkp_status">Status PTKP </label>
                 <select class="form-control select2" id="ptkp_status" name="ptkp_status" <?= $disabled ?>>
-                    <option value="">Select Status PTKP</option>
-                    <option value="tk0">TK/0</option>
-                    <option value="tk1">TK/1</option>
-                    <option value="tk1">TK/2</option>
-                    <option value="tk3">TK/3</option>
-                    <option value="tk1">K/0</option>
-                    <option value="tk1">K/1</option>
-                    <option value="tk1">K/2</option>
-                    <option value="tk3">K/3</option>
-                    <option value="tk1">K/I/0</option>
-                    <option value="tk1">K/I/1</option>
-                    <option value="tk1">K/I/2</option>
-                    <option value="tk3">K/I/3</option>
+                    <?php foreach ($ptkp_list as $row) : ?>
+                    <option value="<?= $row->value ?>"><?= $row->name ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
         </div>
@@ -429,7 +427,8 @@
             <div class="form-group">
                 <label for="bpjs_kes_periode">Periode </label>
                 <div class="input-group">
-                    <input type="text" class="form-control datepicker" id="bpjs_kes_period" name="bpjs_kes_period" <?= $readonly ?>>
+                    <input type="text" class="form-control datepicker" id="bpjs_kes_period" name="bpjs_kes_period"
+                        <?= $readonly ?>>
                     <div class="input-group-append">
                         <span class="input-group-text">
                             <i class="fa fa-calendar"></i>
@@ -441,15 +440,16 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_tenaga_no">BPJS Tenaga Kerja </label>
-                <input type="text" class="form-control number" id="bpjs_tenaga_no" name="bpjs_tenaga_no" <?= $readonly ?>>
+                <input type="text" class="form-control number" id="bpjs_tenaga_no" name="bpjs_tenaga_no"
+                    <?= $readonly ?>>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_tenaga_periode">Periode </label>
                 <div class="input-group">
-                    <input type="text" class="form-control datepicker" id="bpjs_tenaga_period"
-                        name="bpjs_tenaga_period" <?= $readonly ?>>
+                    <input type="text" class="form-control datepicker" id="bpjs_tenaga_period" name="bpjs_tenaga_period"
+                        <?= $readonly ?>>
                     <div class="input-group-append">
                         <span class="input-group-text">
                             <i class="fa fa-calendar"></i>
