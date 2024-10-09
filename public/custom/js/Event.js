@@ -214,7 +214,6 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
-        console.log(result);
         if (result.length) {
           if (form.find("input[name=nik]").length)
             form.find("input[name=nik]").val(result[0].nik);
@@ -591,9 +590,9 @@ $(".tb_displaytab").on("change", "select[name=status]", function (e) {
   let value = this.value;
 
   if (value === "MENINGGAL") {
-    tr.find("input[name=dateofdeath]").removeAttr("disabled");
+    tr.find("input[name=dateofdeath]").val(null).removeAttr("disabled");
   } else {
-    tr.find("input[name=dateofdeath]").attr("disabled", true);
+    tr.find("input[name=dateofdeath]").val(null).attr("disabled", true);
   }
 });
 
@@ -2465,7 +2464,6 @@ $("#form_leave").on(
         data: data,
         dataType: "JSON",
         success: function (result) {
-          console.log(result);
           if (result[0].success) {
             let balance = result[0].message;
             form.find("input[name=availableleavedays]").val(balance);
