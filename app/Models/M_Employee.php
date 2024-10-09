@@ -232,14 +232,14 @@ class M_Employee extends Model
 				$sql .= "AND (e.superior_id = " . $id . "
 					OR e.md_employee_id = " . $id . ")";
 			} else {
-				$sql .= "AND ed.md_division_id IN (SELECT v.md_division_id 
-								FROM md_employee em
-								LEFT JOIN md_employee_division v ON v.md_employee_id = em.md_employee_id
-								WHERE em.superior_id = $id)";
-				$sql .= "AND (eb.md_branch_id IN (SELECT x.md_branch_id 
+				$sql .= "AND eb.md_branch_id IN (SELECT x.md_branch_id 
 								FROM md_employee em
 								LEFT JOIN md_employee_branch x ON x.md_employee_id = em.md_employee_id
-								WHERE em.md_employee_id = $id)
+								WHERE em.md_employee_id = $id)";
+				$sql .= "AND (ed.md_division_id IN (SELECT v.md_division_id 
+								FROM md_employee em
+								LEFT JOIN md_employee_division v ON v.md_employee_id = em.md_employee_id
+								WHERE em.superior_id = $id)
 						OR e.md_employee_id = $id)";
 			}
 
