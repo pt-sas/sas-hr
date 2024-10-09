@@ -157,6 +157,8 @@ class District extends BaseController
 
     public function getList()
     {
+        $mCity = new M_City($this->request);
+
         if ($this->request->isAjax()) {
             $post = $this->request->getVar();
 
@@ -190,8 +192,10 @@ class District extends BaseController
                 }
 
                 foreach ($list as $key => $row) :
+                    $rowCity = $mCity->find($row->getCityId());
+
                     $response[$key]['id'] = $row->getDistrictId();
-                    $response[$key]['text'] = $row->getName();
+                    $response[$key]['text'] = "{$row->getName()}_{$rowCity->getName()}";
                 endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
