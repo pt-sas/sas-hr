@@ -332,6 +332,11 @@ class Employee extends BaseController
                     $list = $this->field->setDataSelect($mBlood->table, $list, $mBlood->primaryKey, $rowBlood->getBloodTypeId(), $rowBlood->getName());
                 }
 
+                if (!empty($list[0]->getPtkpStatus())) {
+                    $rowPTKP = $mRefDetail->where("value", $list[0]->getPtkpStatus())->first();
+                    $list = $this->field->setDataSelect($mRefDetail->table, $list, "ptkp_status", $rowPTKP->getValue(), $rowPTKP->getName());
+                }
+
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($list[0]->getFullName());
                 $fieldHeader->setTable($this->model->table);
