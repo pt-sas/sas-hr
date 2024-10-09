@@ -1156,6 +1156,37 @@ class Validation
         ]
     ];
 
+    public $employee_language = [
+        'line'                  => [
+            'label'             => 'Penguasaan Bahasa',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.name_line'  => [
+            'label'             => 'Bahasa',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.written_ability_line'  => [
+            'label'             => 'Kemampuan Tertulis',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ],
+        'detail.table.*.verbal_ability_line'  => [
+            'label'             => 'kemampuan Lisan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu'
+            ]
+        ]
+    ];
+
     public $employee_course = [
         'line'                  => [
             'label'             => 'kursus',
