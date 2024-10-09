@@ -155,9 +155,8 @@ class EmpFamily extends BaseController
         $fieldAge = new \App\Entities\Table();
         $fieldAge->setName("age");
         $fieldAge->setType("text");
-        $fieldAge->setClass("number");
         $fieldAge->setIsReadonly(true);
-        $fieldAge->setLength(70);
+        $fieldAge->setLength(200);
 
         $fieldEducation = new \App\Entities\Table();
         $fieldEducation->setName("education");
@@ -260,10 +259,16 @@ class EmpFamily extends BaseController
                 $dateOfDeath = $row->getDateOfDeath() ? format_dmy($row->getDateOfDeath(), "-") : null;
                 $dateOfBirth = $row->getBirthDate() ? format_dmy($row->getBirthDate(), "-") : null;
 
+                if ($row->getStatus() === 'MENINGGAL') {
+                    $age = calculateAge($row->getBirthDate(), $row->getDateOfDeath());
+                } else {
+                    $age = calculateAge($row->getBirthDate());
+                }
+
                 $fieldMember->setValue($row->getMember());
                 $fieldName->setValue($row->getName());
                 $fieldGender->setValue($row->getGender());
-                $fieldAge->setValue($row->getAge());
+                $fieldAge->setValue($age);
                 $fieldEducation->setValue($row->getEducation());
                 $fieldJob->setValue($row->getJob());
                 $fieldStatus->setValue($row->getStatus());

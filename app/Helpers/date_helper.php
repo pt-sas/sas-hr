@@ -133,3 +133,14 @@ function monthsDifference($startDate, $endDate)
     $diff = ((date('Y', $endDate) - date('Y', $startDate)) * 12 + date('m', $endDate) - date('m', $startDate)) + 1;
     return $diff;
 }
+
+function calculateAge($birthdate, $date = null)
+{
+    $birthDate = new DateTime($birthdate);
+
+    $lastdate = $date ? new DateTime($date) : new DateTime('today');
+
+    $diff = $lastdate->diff($birthDate);
+
+    return $diff->y . " Tahun " . $diff->m . " Bulan " . $diff->d . " Hari";
+}
