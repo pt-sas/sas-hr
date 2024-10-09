@@ -403,19 +403,9 @@
             <div class="form-group">
                 <label for="ptkp_status">Status PTKP </label>
                 <select class="form-control select2" id="ptkp_status" name="ptkp_status" disabled>
-                    <option value="">Select Status PTKP</option>
-                    <option value="tk0">TK/0</option>
-                    <option value="tk1">TK/1</option>
-                    <option value="tk1">TK/2</option>
-                    <option value="tk3">TK/3</option>
-                    <option value="tk1">K/0</option>
-                    <option value="tk1">K/1</option>
-                    <option value="tk1">K/2</option>
-                    <option value="tk3">K/3</option>
-                    <option value="tk1">K/I/0</option>
-                    <option value="tk1">K/I/1</option>
-                    <option value="tk1">K/I/2</option>
-                    <option value="tk3">K/I/3</option>
+                    <?php foreach ($ptkp_list as $row) : ?>
+                    <option value="<?= $row->value ?>"><?= $row->name ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
         </div>

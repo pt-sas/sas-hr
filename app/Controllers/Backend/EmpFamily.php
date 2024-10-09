@@ -156,7 +156,7 @@ class EmpFamily extends BaseController
         $fieldAge->setName("age");
         $fieldAge->setType("text");
         $fieldAge->setClass("number");
-        $fieldAge->setIsRequired(true);
+        $fieldAge->setIsReadonly(true);
         $fieldAge->setLength(70);
 
         $fieldEducation = new \App\Entities\Table();
