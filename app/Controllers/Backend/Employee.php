@@ -182,7 +182,7 @@ class Employee extends BaseController
                     $post['gender'] = "";
 
                 if ($file && $file->isValid()) {
-                    $img_name = $file->getName();
+                    $img_name = $post['nik'] . "." . $file->getExtension();
                     $post['image'] = $img_name;
                 }
 
@@ -196,13 +196,11 @@ class Employee extends BaseController
                     } else {
                         $row = $this->model->find($this->getID());
 
-                        if ($post['image'] !== $row->getImage()) {
-                            if (file_exists($path . $row->getImage()))
-                                unlink($path . $row->getImage());
+                        if (!empty($row->getImage()) && $post['image'] !== $row->getImage() && file_exists($path . $row->getImage()))
+                            unlink($path . $row->getImage());
 
-                            if ($file && $file->isValid())
-                                uploadFile($file, $path, $img_name);
-                        }
+                        if ($post['image'] !== $row->getImage() && $file && $file->isValid())
+                            uploadFile($file, $path, $img_name);
                     }
 
                     $this->entity->fill($post);
