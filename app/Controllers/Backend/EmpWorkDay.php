@@ -72,16 +72,14 @@ class EmpWorkDay extends BaseController
                     $detail = $this->modelDetail->where($this->model->primaryKey, $get["md_employee_id"])->findAll();
                 }
 
-                if ($detail) {
-                    $fieldHeader = new \App\Entities\Table();
-                    $fieldHeader->setTable($this->model->table);
-                    $fieldHeader->setList($list);
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
 
-                    $result = [
-                        'header'    => $this->field->store($fieldHeader),
-                        'line'      => $this->tableLine('edit', $detail)
-                    ];
-                }
+                $result = [
+                    'header'    => $this->field->store($fieldHeader),
+                    'line'      => $this->tableLine('edit', $detail)
+                ];
 
                 $response = message('success', true, $result);
             } catch (\Exception $e) {
