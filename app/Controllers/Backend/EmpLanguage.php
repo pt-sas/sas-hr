@@ -44,7 +44,11 @@ class EmpLanguage extends BaseController
                         if (!isset($post["id"]))
                             $response = message('success', true, notification("insert"));
 
-                        $detail = $this->modelDetail->where($this->model->primaryKey, $post["md_employee_id"])->findAll();
+                        $detail = $this->modelDetail->where([
+                            $this->model->primaryKey    => $post["md_employee_id"],
+                            "skilltype"                 => "B"
+                        ])->findAll();
+
                         $response[0]["line"] = $this->tableLine('edit', $detail);
                     }
                 }
