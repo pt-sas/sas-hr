@@ -821,7 +821,7 @@ class BaseController extends Controller
 		$result = [];
 		$id = [];
 
-		foreach ($data as $value) :
+		foreach ($data as $value) {
 			if (empty($value[$primaryKey])) {
 				unset($value[$primaryKey]);
 
@@ -830,22 +830,28 @@ class BaseController extends Controller
 				$result['update'][] = $value;
 				$id[] = $value[$primaryKey];
 			}
-		endforeach;
+		}
 
 		if (!empty($this->getID())) {
 			$foreignKey = $this->primaryKey;
 
-			if ($id)
-				$list = $this->modelDetail->where($foreignKey, $this->getID())
-					->whereNotIn($primaryKey, $id)
-					->findAll();
-			else
-				$list = $this->modelDetail->where($foreignKey, $this->getID())->findAll();
+			//? Check function is exists 
+			if (method_exists($this->modelDetail, 'doCheckExistData')) {
+				$list = $this->modelDetail->doCheckExistData($data, $id, $this->getID());
+			} else {
+				$listQuery = $this->modelDetail->where($foreignKey, $this->getID());
 
-			foreach ($list as $row) :
+				if ($id) {
+					$listQuery->whereNotIn($primaryKey, $id);
+				}
+				$list = $listQuery->findAll();
+			}
+
+			// Proses data yang akan dihapus
+			foreach ($list as $row) {
 				$result['delete']['id'][] = $row->{$primaryKey};
 				$result['delete']['data'][] = $row;
-			endforeach;
+			}
 		}
 
 		return $result;
