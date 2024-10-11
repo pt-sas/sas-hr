@@ -41,4 +41,30 @@ class M_EmpSkill extends Model
 		$this->request = $request;
 		$this->builder = $this->db->table($this->table);
 	}
+
+	/**
+	 * Check if data exists for a specific employee and skill type
+	 *
+	 * This function retrieves a list of employee records based on the provided 
+	 * foreign key (employee ID) and skill type. If an array of IDs is provided, 
+	 * those IDs will be excluded from the result using a "NOT IN" clause.
+	 *
+	 * @param array $data Array containing data with at least a 'skilltype' field.
+	 * @param mixed $foreignKey Employee ID or foreign key to filter by.
+	 * @param array|int|null $id Optional. Array of IDs or a single ID to exclude from the result.
+	 * @return array List of records that match the criteria.
+	 */
+	public function doCheckExistData($data, $primaryKey, $foreignKey): array
+	{
+		$list = $this->where('md_employee_id', $foreignKey)
+			->where('skilltype', $data[0]['skilltype']);
+
+		if ($primaryKey) {
+			$list->whereNotIn($this->primaryKey, $primaryKey);
+		}
+
+		$list = $list->findAll();
+
+		return $list;
+	}
 }
