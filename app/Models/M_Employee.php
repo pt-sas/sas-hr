@@ -292,4 +292,24 @@ class M_Employee extends Model
 
 		return $result;
 	}
+
+	public function getDataReport($where = null)
+	{
+		$builder = $this->db->table('v_rpt_employee');
+
+		if ($where)
+			$builder->where($where);
+
+		return $builder->get();
+	}
+
+	public function getEmployeeValue($where)
+	{
+		$this->builder->select('md_employee_id, value');
+
+		if ($where)
+			$this->builder->where($where);
+
+		return $this->builder->get();
+	}
 }

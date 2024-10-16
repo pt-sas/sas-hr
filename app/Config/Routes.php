@@ -665,7 +665,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('evaluasi-percobaan/processIt', 'Backend\EvaluationProbation::processIt');
     $routes->get('evaluasi-percobaan/getDataBy/(:num)', 'Backend\EvaluationProbation::getBy/$1');
     $routes->match(['get', 'post'], 'evaluasi-percobaan/getList', 'Backend\EvaluationProbation::getList');
-  
+
     $routes->add('benefit-inti', 'Backend\Benefit::index');
     $routes->match(['get', 'post'], 'benefit-inti/showAll', 'Backend\Benefit::showAll');
     $routes->post('benefit-inti/create', 'Backend\Benefit::create');
@@ -683,6 +683,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('benefit-value/show', 'Backend\BenefitValue::show');
     $routes->get('benefit-value/show/(:any)', 'Backend\BenefitValue::show/$1');
     $routes->post('benefit-value/tableLine', 'Backend\BenefitValue::tableLine');
+
+    $routes->add('laporan-master-karyawan', 'Backend\Rpt_Employee::index');
+    $routes->match(['get', 'post'], 'laporan-master-karyawan/showAll', 'Backend\Rpt_Employee::showAll');
 });
 
 /*
