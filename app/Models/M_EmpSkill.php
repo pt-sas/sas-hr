@@ -67,4 +67,24 @@ class M_EmpSkill extends Model
 
 		return $list;
 	}
+
+	public function getDataReport($where = null)
+	{
+		$builder = $this->db->table('v_rpt_employee_skills');
+
+		if ($where)
+			$builder->where($where);
+
+		return $builder->get();
+	}
+
+	public function getDataReportEmpLang($where = null)
+	{
+		$builder = $this->db->table('v_rpt_employee_language');
+
+		if ($where)
+			$builder->where($where);
+
+		return $builder->get();
+	}
 }

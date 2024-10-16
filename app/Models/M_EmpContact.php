@@ -39,4 +39,14 @@ class M_EmpContact extends Model
 		$this->request = $request;
 		$this->builder = $this->db->table($this->table);
 	}
+
+	public function getDataReport($where = null)
+	{
+		$builder = $this->db->table('v_rpt_employee_contact');
+
+		if ($where)
+			$builder->where($where);
+
+		return $builder->get();
+	}
 }
