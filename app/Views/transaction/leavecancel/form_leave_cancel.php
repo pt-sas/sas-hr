@@ -86,6 +86,25 @@
                     <small class="form-text text-danger" id="error_reference_id"></small>
                 </div>
             </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>Foto </label>
+                    <div class="form-upload-result">
+                        <label class="col-md-4 form-result">
+                            <button type="button" class="close-img" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <img class="img-result">
+                        </label>
+                    </div>
+                    <div class="form-upload">
+                        <label class="col-md-4 form-upload-foto" id="image-upload">
+                            <input type="file" class="control-upload-image" id="image" name="image" onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
+                            <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="row">
             <div class="col-md-12">

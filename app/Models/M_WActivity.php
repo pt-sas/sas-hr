@@ -62,7 +62,10 @@ class M_WActivity extends Model
 	{
 		$role = $this->getRole();
 
-		$this->builder->select($this->table . '.*');
+		$this->builder->select($this->table . '.*,
+				sys_wfscenario.name as scenario,
+				sys_wfresponsible.name as wfresponsible');
+		$this->builder->join('sys_wfscenario', 'sys_wfscenario.sys_wfscenario_id = ' . $this->table . '.sys_wfscenario_id', 'left');
 		$this->builder->join('sys_wfresponsible', 'sys_wfresponsible.sys_wfresponsible_id = ' . $this->table . '.sys_wfresponsible_id', 'left');
 		$this->builder->where([
 			$this->table . '.state'			=> 'OS',

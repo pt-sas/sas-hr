@@ -55,7 +55,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="date">Tanggal Mutasi <span class="required">*</span></label>
+                    <label for="date">Tanggal Efektif <span class="required">*</span></label>
                     <div class="input-icon">
                         <input type="text" class="form-control datepicker" name="date">
                         <span class="input-icon-addon">
