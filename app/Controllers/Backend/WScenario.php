@@ -313,6 +313,8 @@ class WScenario extends BaseController
             $trxLine = $this->modelDetail->where($primaryKey, $trxID)->findAll();
         }
 
+        $docType = $mDocType->find($trx->submissiontype);
+
         if (!$trx && $docStatus === $this->DOCSTATUS_Completed) {
             $this->entity->setDocStatus($this->DOCSTATUS_Invalid);
             $this->entity->setWfScenarioId(0);
@@ -356,6 +358,9 @@ class WScenario extends BaseController
                 $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
                 $this->entity->setWfScenarioId($this->sys_wfscenario_id);
                 $isWfscenario = true;
+            } else if ($docType->getIsRealization() === "Y" && !is_null($modelDetail) && $trxLine) {
+                $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
+                $this->entity->setIsApproved("Y");
             } else {
                 $this->entity->setDocStatus($this->DOCSTATUS_Completed);
             }
@@ -378,8 +383,6 @@ class WScenario extends BaseController
         $result = $this->save();
 
         if ($result && $isWfscenario) {
-            $docType = $mDocType->find($trx->submissiontype);
-
             if ($docType->getIsApprovedLine() === "Y" && !is_null($modelDetail) && $trxLine) {
                 $this->modelDetail = $modelDetail;
 
