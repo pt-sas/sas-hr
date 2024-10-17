@@ -39,7 +39,7 @@ class M_Rule extends Model
 		'md_rule.value',
 		'md_rule.min',
 		'md_rule.max',
-		'md_rule.menu_id',
+		'md_rule.menu_url',
 		'md_rule.priority',
 		'md_rule.isdetail',
 		'md_rule.isactive'
@@ -50,7 +50,7 @@ class M_Rule extends Model
 		'md_rule.value',
 		'md_rule.min',
 		'md_rule.max',
-		'md_rule.menu_id',
+		'md_rule.menu_url',
 		'md_rule.priority',
 		'md_rule.isdetail',
 		'md_rule.isactive'
