@@ -715,9 +715,10 @@ class Validation
         ],
         'image'                 => [
             'label'             => 'gambar',
-            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            // 'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
-                'uploaded'      => 'Mohon upload {field} dahulu',
+                // 'uploaded'      => 'Mohon upload {field} dahulu',
                 'max_size'      => 'Data {field} melebehi batas maksimum 3 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
@@ -2506,6 +2507,15 @@ class Validation
     ];
 
     public $pembatalan_cuti = [
+        'image'                 => [
+            'label'             => 'foto',
+            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
         'md_employee_id'        => [
             'label'             => 'Karyawan',
             'rules'             => 'required',
