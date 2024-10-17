@@ -75,12 +75,17 @@ class WActivity extends BaseController
                         $summary = "{$menuName} {$record_id}";
                     }
 
+                    $responsible = $value->wfresponsible;
+                    $scenario = $value->scenario;
+                    $scenario = "{$scenario} [{$responsible}]";
+
                     $row[] = $ID;
                     $row[] = $record_id;
                     $row[] = $table;
                     $row[] = $menu;
                     $row[] = $node;
                     $row[] = $created_at;
+                    $row[] = $scenario;
                     $row[] = $summary;
                     $data[] = $row;
                 endforeach;

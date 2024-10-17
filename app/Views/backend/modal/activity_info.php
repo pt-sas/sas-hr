@@ -20,6 +20,7 @@
                                         <th>#Menu</th>
                                         <th>Node</th>
                                         <th>Created</th>
+                                        <th>Scenario</th>
                                         <th>Summary</th>
                                     </tr>
                                 </thead>
