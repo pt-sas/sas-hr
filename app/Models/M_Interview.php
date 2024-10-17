@@ -133,7 +133,7 @@ class M_Interview extends Model
 
             $list = $this->find($ID);
 
-            if ($list->isapproved === "Y" && $list->docstatus === "CO") {
+            if ($list->docstatus === "CO") {
 
                 $todayTime = date('Y-m-d H:i:s');
                 $updatedBy = $rows['data']['updated_by'];

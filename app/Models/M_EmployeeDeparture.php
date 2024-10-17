@@ -155,6 +155,8 @@ class M_EmployeeDeparture extends Model
 
     public function findBy($where = null, $field = null, $orderBy = [])
     {
+        $this->builder->select("*, CONCAT(trx_employee_departure.documentno, ' - ', e.value) as docvalue");
+
         //* Check arg where if not null value
         if (!empty($where))
             $this->builder->where($where);
@@ -162,7 +164,7 @@ class M_EmployeeDeparture extends Model
         if (!is_array($field) && !is_array($where) && !empty($field) && !empty($where))
             $this->builder->where($field, $where);
 
-        // $this->builder->join('sys_ref_detail', 'sys_ref_detail.sys_reference_id = ' . $this->table . '.' . $this->primaryKey);
+        $this->builder->join('md_employee e', 'e.md_employee_id = ' . $this->table . '.md_employee_id', 'inner join');
 
         if (is_array($orderBy) && !empty($orderBy))
             $this->builder->orderBy($orderBy['field'], $orderBy['option']);

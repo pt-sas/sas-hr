@@ -8,8 +8,6 @@ use App\Models\M_Employee;
 use App\Models\M_AccessMenu;
 use App\Models\M_Branch;
 use App\Models\M_Division;
-use App\Models\M_Rule;
-use App\Models\M_RuleDetail;
 use App\Models\M_EmployeeDeparture;
 use App\Models\M_Interview;
 use App\Models\M_InterviewDetail;
@@ -208,6 +206,14 @@ class ExitInterview extends BaseController
             $post["submissiontype"] = $this->model->Pengajuan_Exit_Interview;
             $post["necessary"] = 'EI';
 
+            $table = json_decode($post['table']);
+
+            //! Mandatory property for detail validation
+            $post['line'] = countLine($table);
+            $post['detail'] = [
+                'table' => arrTableLine($table)
+            ];
+
             try {
                 if (!$this->validation->run($post, 'exit_interview')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
@@ -235,15 +241,24 @@ class ExitInterview extends BaseController
     {
         $mEmployee = new M_Employee($this->request);
         $mEmpDeparture = new M_EmployeeDeparture($this->request);
+        // $mBranch = new M_Branch($this->request);
+        // $mDivision = new M_Division($this->request);
+        // $mPosition = new M_Position($this->request);
 
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
                 $line = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
+                // $rowBranch = $mBranch->where($mBranch->primaryKey, $list[0]->getBranchId())->first();
+                // $rowDivision = $mDivision->where($mDivision->primaryKey, $list[0]->getDivisionId())->first();
+                // $rowPosition = $mPosition->where($mPosition->primaryKey, $list[0]->getPositionId())->first();
                 $rowEmpDepart = $mEmpDeparture->where($mEmpDeparture->primaryKey, $list[0]->getReferenceId())->first();
 
-                $list = $this->field->setDataSelect($mEmpDeparture->table, $list, "reference_id", $rowEmpDepart->getEmployeeDepartureId(), $rowEmpDepart->getDocumentNo());
+                $list = $this->field->setDataSelect($mEmpDeparture->table, $list, "reference_id", $rowEmpDepart->getEmployeeDepartureId(), $rowEmpDepart->getDocumentNo() . ' - ' . $rowEmp->getValue());
+                // $list = $this->field->setDataSelect($mBranch->table, $list, $mBranch->primaryKey, $rowBranch->getBranchId(), $rowBranch->getName());
+                // $list = $this->field->setDataSelect($mDivision->table, $list, $mDivision->primaryKey, $rowDivision->getDivisionId(), $rowDivision->getName());
+                // $list = $this->field->setDataSelect($mPosition->table, $list, $mPosition->primaryKey, $rowPosition->getPositionId(), $rowPosition->getName());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 

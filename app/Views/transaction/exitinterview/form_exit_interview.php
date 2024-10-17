@@ -9,7 +9,7 @@
                         <select class="form-control select2" id="reference_id" name="reference_id">
                             <option value="">Pilih Doc Resign</option>
                             <?php foreach ($resign_list as $row) : ?>
-                            <option value="<?= $row->trx_employee_departure_id ?>"><?= $row->documentno ?> </option>
+                            <option value="<?= $row->trx_employee_departure_id ?>"><?= $row->docvalue ?> </option>
                             <?php endforeach; ?>
                         </select>
                         <small class="form-text text-danger" id="error_reference_id"></small>
@@ -91,9 +91,9 @@
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label for="terminatedate">Tanggal Berhenti <span class="required">*</span></label>
+                        <label for="terminatedate">Tanggal Efektif <span class="required">*</span></label>
                         <div class="input-icon">
-                            <input type="text" class="form-control datepicker" name="terminatedate" disabled>
+                            <input type="text" class="form-control datepicker" name="terminatedate">
                             <span class="input-icon-addon">
                                 <i class="fa fa-calendar"></i>
                             </span>
@@ -157,10 +157,46 @@
                                                 </select>
                                             </div>
                                         </td>
+                                        <?php } else if ($row2->answertype == "scale") { ?>
+                                        <td class="answer" data-type="<?= $row2->answertype ?>">
+                                            <div class="selectgroup w-100">
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="answer_<?= $key2 ?>"
+                                                        id="answer_<?= $key2 ?>" value="1"
+                                                        class="selectgroup-input <?= $key2 ?>" checked="">
+                                                    <span class="selectgroup-button">1</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="answer_<?= $key2 ?>"
+                                                        id="answer_<?= $key2 ?>" value="2"
+                                                        class="selectgroup-input <?= $key2 ?>">
+                                                    <span class="selectgroup-button">2</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="answer_<?= $key2 ?>"
+                                                        id="answer_<?= $key2 ?>" value="3"
+                                                        class="selectgroup-input <?= $key2 ?>">
+                                                    <span class="selectgroup-button">3</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="answer_<?= $key2 ?>"
+                                                        id="answer_<?= $key2 ?>" value="4"
+                                                        class="selectgroup-input <?= $key2 ?>">
+                                                    <span class="selectgroup-button">4</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="answer_<?= $key2 ?>"
+                                                        id="answer_<?= $key2 ?>" value="5"
+                                                        class="selectgroup-input <?= $key2 ?>">
+                                                    <span class="selectgroup-button">5</span>
+                                                </label>
+                                            </div>
+                                        </td>
                                         <?php } else { ?>
                                         <td class="answer" data-type="<?= $row2->answertype ?>">
                                             <div class="form-group">
-                                                <input type="text" class="form-control line" name="answer" id="answer">
+                                                <input type="text" class="form-control line" name="answer" id="answer"
+                                                    required>
                                             </div>
                                         </td>
                                         <?php } ?>
