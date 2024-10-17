@@ -899,7 +899,7 @@ $("#form_exit_interview").on("change", "#reference_id", function (e) {
           if (form.find("input[name=nik]").length)
             form.find("input[name=nik]").val(result[0].nik);
 
-          if (form.find("input[name=terminatedate]").length)
+          if (form.find("input[name=terminatedate]").length && setSave == "add")
             form
               .find("input[name=terminatedate]")
               .val(moment(result[0].date).format("DD-MMM-YYYY"));
