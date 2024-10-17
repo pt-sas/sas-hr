@@ -92,26 +92,22 @@ class LeaveCancel extends BaseController
                 if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                    $where['trx_absent.md_employee_id'] = [
+                    $where['md_employee.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['md_employee.md_employee_id'] = [
                         'value'     => $arrEmpBased
                     ];
                 } else {
-                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
                 }
             } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['trx_absent.md_employee_id'] = [
+                $where['md_employee.md_employee_id'] = [
                     'value'     => $arrEmployee
                 ];
             } else {
-                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Pembatalan_Cuti;
@@ -162,9 +158,11 @@ class LeaveCancel extends BaseController
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
         $mAttendance = new M_Attendance($this->request);
+        $mEmployee = new M_Employee($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $file = $this->request->getFile('image');
 
             $post["submissiontype"] = $this->model->Pengajuan_Pembatalan_Cuti;
             $post["necessary"] = 'CB';
@@ -183,6 +181,21 @@ class LeaveCancel extends BaseController
             $post['enddate'] = date('Y-m-d H:i', strtotime($post['submissiondate']));
 
             try {
+                $img_name = "";
+
+                if (!empty($post['md_employee_id'])) {
+                    $row = $mEmployee->find($post['md_employee_id']);
+                    $lenPos = strpos($row->getValue(), '-');
+                    $value = substr_replace($row->getValue(), "", $lenPos);
+                    $ymd = date('YmdHis');
+                }
+
+                if ($file && $file->isValid()) {
+                    $ext = $file->getClientExtension();
+                    $img_name = $this->model->Pengajuan_Pembatalan_Cuti . '_' . $value . '_' . $ymd . '.' . $ext;
+                    $post['image'] = $img_name;
+                }
+
                 if (!$this->validation->run($post, 'pembatalan_cuti')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
@@ -298,6 +311,20 @@ class LeaveCancel extends BaseController
 
 
                         if ($insert) {
+                            $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                            if ($this->isNew() && $file && $file->isValid()) {
+                                uploadFile($file, $path, $img_name);
+                            } else {
+                                $row = $this->model->find($this->getID());
+
+                                if (!empty($row->getImage()) && $post['image'] !== $row->getImage() && file_exists($path . $row->getImage()))
+                                    unlink($path . $row->getImage());
+
+                                if ($post['image'] !== $row->getImage() && $file && $file->isValid())
+                                    uploadFile($file, $path, $img_name);
+                            }
+
                             $this->entity->fill($post);
 
                             if ($this->isNew()) {
@@ -329,6 +356,15 @@ class LeaveCancel extends BaseController
                 $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
                 $refLeave = $this->model->where([$this->model->primaryKey => $list[0]->reference_id])->first();
+
+                $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                if (file_exists($path . $list[0]->getImage())) {
+                    $path = 'uploads/' . $this->PATH_Pengajuan . '/';
+                    $list[0]->setImage($path . $list[0]->getImage());
+                } else {
+                    $list[0]->setImage(null);
+                }
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
                 $list = $this->field->setDataSelect($this->model->table, $list, 'reference_id', $refLeave->trx_absent_id, $refLeave->documentno);

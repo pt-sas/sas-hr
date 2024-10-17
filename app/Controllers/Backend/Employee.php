@@ -191,7 +191,7 @@ class Employee extends BaseController
                 } else {
                     $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
 
-                    if ($this->isNew()) {
+                    if ($this->isNew() && $file && $file->isValid()) {
                         uploadFile($file, $path, $img_name);
                     } else {
                         $row = $this->model->find($this->getID());

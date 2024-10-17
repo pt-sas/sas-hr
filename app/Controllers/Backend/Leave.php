@@ -95,19 +95,15 @@ class Leave extends BaseController
                 if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                    $where['trx_absent.md_employee_id'] = [
+                    $where['md_employee.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['md_employee.md_employee_id'] = [
                         'value'     => $arrEmpBased
                     ];
                 } else {
-                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
                 }
             } else if (!empty($this->session->get('md_employee_id'))) {
                 $where['trx_absent.md_employee_id'] = [
