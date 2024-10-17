@@ -3656,6 +3656,40 @@ function errorForm(parent, data) {
             }
           }
         });
+      } else if (parent.find(".card-section").length) {
+        let cardSection = parent.find(".card-section");
+
+        $.each(cardSection, function (index, section) {
+          let _tableQuestion = $(section).find(".tb_question");
+          const rows = _tableQuestion.find("tbody tr");
+
+          $.each(rows, function (i) {
+            const tag = $(this).find("input, select, textarea");
+
+            $.each(tag, function (index) {
+              let value = this.value;
+              let name = $(this).attr("name");
+
+              if ($(this).attr("required")) {
+                // Error validation for every line
+                if (
+                  typeof error !== "undefined" &&
+                  error === "error_table" &&
+                  labelMsg !== ""
+                ) {
+                  if (name === field && (value === "" || value == 0)) {
+                    $(this).closest(".form-group").addClass("has-error");
+                  }
+                } else if (
+                  typeof error !== "undefined" &&
+                  error !== "error_table"
+                ) {
+                  $(this).closest(".form-group").removeClass("has-error");
+                }
+              }
+            });
+          });
+        });
       }
     } else {
       parent.find("small[id=" + textName + "]:not(.line)").html("");

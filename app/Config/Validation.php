@@ -2659,6 +2659,13 @@ class Validation
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu',
             ]
+        ],
+        'detail.table.*.answer_line'  => [
+            'label'             => 'Jawaban',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi detail {field} dahulu',
+            ]
         ]
     ];
 
