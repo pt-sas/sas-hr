@@ -386,10 +386,10 @@ class WActivity extends BaseController
     public function doNotApproved()
     {
         $this->session->set([
-            'sys_user_id'       => 1,
+            'sys_user_id'       => 100000,
         ]);
 
-        $where = 'ADDDATE(sys_wfactivity.created_at, INTERVAL 3 DAY) <= NOW()';
+        $where = 'ADDDATE(sys_wfactivity.created_at, INTERVAL 2 DAY) <= NOW()';
 
         $list = $this->model->getActivity(null, $where);
 
