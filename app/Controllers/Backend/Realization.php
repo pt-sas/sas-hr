@@ -107,7 +107,6 @@ class Realization extends BaseController
 
             $number = $this->request->getPost('start');
             $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
-            // $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search);
 
             foreach ($list as $value) :
                 $row = [];
@@ -120,7 +119,6 @@ class Realization extends BaseController
                 if ($value->comment)
                     $reason .= " | <small class='text-danger'>{$value->comment}</small>";
 
-                // $row[] = $this->field->fieldTable($fieldChk);
                 $row[] = $number;
                 $row[] = format_dmy($value->date, '-');
                 $row[] = $value->doctype;
@@ -132,9 +130,6 @@ class Realization extends BaseController
                 $row[] = $this->template->tableButtonProcess($ID);
                 $data[] = $row;
             endforeach;
-
-            // $recordsTotal = count($data);
-            // $recordsFiltered = count($data);
 
             $result = [
                 'draw'              => $this->request->getPost('draw'),
@@ -553,7 +548,6 @@ class Realization extends BaseController
             }
 
             return $this->response->setJSON($response);
-            // return json_encode($response);
         }
     }
 
@@ -895,5 +889,63 @@ class Realization extends BaseController
         }
 
         return $this->response->setJSON($response);
+    }
+
+    public function doApprovedRealization()
+    {
+        $absent = $this->model
+            ->where([
+                'docstatus'  => "$this->DOCSTATUS_Inprogress",
+                'isapproved' => 'Y'
+            ])
+            ->groupStart()
+            ->where('approveddate IS NULL')
+            ->where('ADDDATE(updated_at, INTERVAL 2 DAY) <= NOW()')
+            ->orGroupStart()
+            ->where('approveddate IS NOT NULL')
+            ->where('ADDDATE(approveddate, INTERVAL 2 DAY) <= NOW()')
+            ->groupEnd()
+            ->groupEnd()
+            ->findAll();
+
+        if ($absent) {
+            $this->session->set([
+                'sys_user_id'       => 100000,
+            ]);
+
+            $mAbsentDetail = new M_AbsentDetail($this->request);
+            $todayTime = date('Y-m-d H:i:s');
+
+            $absentIds = array_column($absent, 'trx_absent_id');
+
+            $absentDetail = $mAbsentDetail->where('isagree', 'H')
+                ->whereIn('trx_absent_id', $absentIds)
+                ->findAll();
+
+            $arr = [];
+
+            foreach ($absentDetail as $row) {
+                $arr[] = [
+                    "trx_absent_detail_id"  => $row->trx_absent_detail_id,
+                    "trx_absent_id"         => $row->trx_absent_id,
+                    "isagree"               => "Y",
+                    "updated_at"            => $todayTime,
+                    "updated_by"            => $this->session->get('sys_user_id')
+                ];
+            }
+
+            $result = $mAbsentDetail->builder->updateBatch($arr, $mAbsentDetail->primaryKey);
+
+            if ($result > 0) {
+                $this->entity = new \App\Entities\Absent();
+
+                foreach ($absentIds as $id) {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                    $this->entity->setReceivedDate($todayTime);
+                    $this->entity->setAbsentId($id);
+                    $this->save();
+                }
+            }
+        }
     }
 }

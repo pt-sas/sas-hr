@@ -44,6 +44,7 @@ $routes->post('(:any)/accessmenu/getAccess', 'Backend\AccessMenu::getAccess');
 
 $routes->get('cron-not-approved', 'Backend\WActivity::doNotApproved');
 $routes->get('cron-update-employee', 'Backend\EmployeeAllocation::updateMasterEmployee');
+$routes->get('cron-approved-realization', 'Backend\Realization::doApprovedRealization');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
 
