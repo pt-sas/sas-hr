@@ -586,32 +586,22 @@ function getOptionLevelling(elem, level) {
 }
 
 $(".tb_displaytab").on("change", "select[name=status]", function (e) {
-  const tr = $(this).closest("tr");
-  let value = this.value;
+  const dateOfDeathInput = $(this)
+    .closest("tr")
+    .find("input[name=dateofdeath]");
+  const isMeninggal = this.value === "MENINGGAL";
 
-  if (value === "MENINGGAL") {
-    tr.find("input[name=dateofdeath]").val(null).removeAttr("disabled");
-  } else {
-    tr.find("input[name=dateofdeath]").val(null).attr("disabled", true);
-  }
+  dateOfDeathInput.val(null).prop("disabled", !isMeninggal);
 });
 
 $("#form_employee").on("change", "select[name=marital_status]", function (e) {
-  const target = $(e.target);
-  const modalTab = target.closest(".modal-tab");
-  const a = modalTab.find("li>div.dropdown-menu a");
-  let value = this.value.toUpperCase();
-  const BELUM_KAWIN = "BELUM KAWIN";
+  const modalTab = $(e.target).closest(".modal-tab");
+  const keluargaLink = modalTab.find(
+    "li>div.dropdown-menu a[href='#keluarga']"
+  );
+  const isBelumKawin = this.value.toUpperCase() === "BELUM KAWIN";
 
-  $.each(a, function () {
-    let href = $(this).attr("href");
-
-    if (value !== BELUM_KAWIN && href === "#keluarga")
-      $(this).removeClass("d-none");
-
-    if (value === BELUM_KAWIN && href === "#keluarga")
-      $(this).addClass("d-none");
-  });
+  keluargaLink.toggleClass("d-none", isBelumKawin);
 });
 
 $("#form_rule").on("change", "select[name=isdetail]", function (e) {
