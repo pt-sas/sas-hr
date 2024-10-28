@@ -34,7 +34,7 @@ LEFT JOIN md_branch branch ON empbranch.`md_branch_id` = branch.`md_branch_id`
 LEFT JOIN md_employee_division empdiv ON e.`md_employee_id` = empdiv.`md_employee_id`
 LEFT JOIN md_division divi ON empdiv.`md_division_id` = divi.`md_division_id` 
 LEFT JOIN md_employee_family_core famcore ON e.`md_employee_id` = famcore.`md_employee_id`
-ORDER BY branch.md_branch_id, divi.md_division_id,e.md_employee_id, famcore.member DESC
+ORDER BY branch.md_branch_id, divi.md_division_id,e.registerdate,e.md_employee_id, famcore.birthdate ASC
 )");
     }
 
