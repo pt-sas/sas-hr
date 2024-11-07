@@ -1300,7 +1300,6 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
-        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
@@ -1638,7 +1637,6 @@ function Edit(id, status, last_url) {
             hideLoadingForm(form.prop("id"));
           },
           success: function (result) {
-            console.log(result);
             if (result[0].success) {
               let arrMsg = result[0].message;
 
@@ -2071,7 +2069,6 @@ function docProcess(id, status) {
             CURRENT_URL + "/processIt?id=" + id + "&docaction=" + docAction;
 
           $.getJSON(url, function (result) {
-            console.log(result);
             if (result[0].success) {
               if (result[0].message == true) {
                 Swal.fire({
@@ -2173,8 +2170,6 @@ $(document).on("click", ".x_form, .close_form, .reset_form", function (evt) {
       cardHeader.find("button").show();
     }
 
-    cardTitle.html(oriTitle);
-
     //TODO: Call reloadTable();
     $(".btn_requery").click();
 
@@ -2210,6 +2205,8 @@ $(document).on("click", ".x_form, .close_form, .reset_form", function (evt) {
         $(this).removeClass("show active");
       }
     });
+  } else {
+    cardTitle.html(oriTitle);
   }
 
   ID = 0;
@@ -2749,15 +2746,16 @@ $(".add_row").click(function (evt) {
           .prop("disabled", true);
 
         for (let i = 0; i < fieldReadOnly.length; i++) {
-          form
-            .find(
-              "input:checkbox[name=" +
-                fieldReadOnly[i] +
-                "], select[name=" +
-                fieldReadOnly[i] +
-                "]"
-            )
-            .attr("disabled", true);
+          if (fieldReadOnly[i] !== "")
+            form
+              .find(
+                "input:checkbox[name=" +
+                  fieldReadOnly[i] +
+                  "], select[name=" +
+                  fieldReadOnly[i] +
+                  "]"
+              )
+              .attr("disabled", true);
         }
       },
       complete: function () {
@@ -3053,6 +3051,8 @@ $(".btn_ok_form").on("click", function (evt) {
 
         row["type"] = this.type;
 
+        row["required"] = this.required;
+
         return row;
       }
     })
@@ -3062,6 +3062,12 @@ $(".btn_ok_form").on("click", function (evt) {
 
   //! Set attribute disabled field
   disabled.prop("disabled", true);
+
+  const isValid = validateForm(form, field);
+
+  if (!isValid) {
+    return;
+  }
 
   //* Set clear to true
   clear = false;
@@ -3914,7 +3920,6 @@ function clearForm(evt) {
               let value = form
                 .find(".datepicker[name=" + field[i].name + "]")
                 .val();
-
               if (value === "")
                 form
                   .find(".datepicker[name=" + field[i].name + "]")
@@ -4916,104 +4921,98 @@ function putFieldData(form, data, status = null) {
   const modalTab = form.closest(".modal-tab");
 
   if (data.length > 1) {
-    const field = form.find("input, textarea, select").not(".line");
+    const fields = form.find("input, textarea, select").not(".line");
 
-    if (form.find("select.select-data").length > 0) {
-      let select = form.find("select.select-data");
-      initSelectData(select, data[1].field, data[1].label);
+    if (form.find("select.select-data").length) {
+      initSelectData(
+        form.find("select.select-data"),
+        data[1].field,
+        data[1].label
+      );
     }
 
-    if (modalTab.length) {
-      const form = modalTab.find("form");
-
-      $.each(form, function () {
+    // Retrieve default read-only and checked fields
+    const processFields = (formFields) => {
+      formFields.each(function () {
         const field = $(this).find("input, textarea, select").not(".line");
 
-        for (let i = 0; i < field.length; i++) {
-          //? Retrieve field name default is readonly/disabled in the attribute field
+        field.each(function () {
           if (
-            (field[i].readOnly || field[i].disabled) &&
-            field[i].type !== "radio" &&
+            (this.readOnly || this.disabled) &&
+            this.type !== "radio" &&
             !changeTab
           )
-            fieldReadOnly.push(field[i].name);
+            fieldReadOnly.push(this.name);
 
-          //? Retrieve field name default checked in the attribute field
-          if (field[i].checked && !changeTab) fieldChecked.push(field[i].name);
-        }
+          if (this.checked && !changeTab) fieldChecked.push(this.name);
+        });
       });
-    } else {
-      for (let i = 0; i < field.length; i++) {
-        //? Retrieve field name default is readonly/disabled in the attribute field
-        if (
-          (field[i].readOnly || field[i].disabled) &&
-          field[i].type !== "radio"
-        )
-          fieldReadOnly.push(field[i].name);
+    };
 
-        //? Retrieve field name default checked in the attribute field
-        if (field[i].checked) {
-          fieldChecked.push(field[i].name);
-        }
-      }
+    if (modalTab.length) {
+      processFields(modalTab.find("form"));
+    } else {
+      processFields(fields);
     }
 
     if (setSave === "detail") readonly(form, true);
 
-    for (let i = 0; i < data.length; i++) {
-      let fieldInput = data[i].field;
-      let label = data[i].label;
+    data.forEach((item) => {
+      const fieldInput = item.field;
+      const label = item.label;
 
-      for (let i = 0; i < field.length; i++) {
-        let fields = [];
-        let fieldName = field[i].name;
+      fields.each(function () {
+        const fieldName = this.name;
+        const className = this.className.split(/\s+/);
 
-        if (fieldName !== "" && fieldName === fieldInput) {
-          let className = field[i].className.split(/\s+/);
+        if (fieldName === fieldInput) {
+          // Hide/Show field logic
+          const toggleFields = (attribute, action) => {
+            $(this)
+              .attr(attribute)
+              ?.split(",")
+              .forEach((fieldToToggle) => {
+                form
+                  .find(
+                    `input[name=${fieldToToggle}], textarea[name=${fieldToToggle}], select[name=${fieldToToggle}]`
+                  )
+                  .not(".line")
+                  .closest(".form-group, .form-check")
+                  [action]();
+              });
+          };
 
           if (className.includes("datepicker")) {
             if (label !== null)
               form
-                .find("input:text[name=" + fieldName + "]")
+                .find(`input:text[name=${fieldName}]`)
                 .not(".line")
                 .val(moment(label).format("DD-MMM-Y"));
           } else if (className.includes("rupiah")) {
             form
-              .find("input:text[name=" + fieldName + "]")
+              .find(`input:text[name=${fieldName}]`)
               .not(".line")
               .val(formatRupiah(label));
           } else if (
-            typeof $(field[i]).attr("set-id") === "undefined" &&
-            field[i].type !== "file"
+            this.type !== "file" &&
+            typeof $(this).attr("set-id") === "undefined"
           ) {
             form
               .find(
-                "input:text[name=" +
-                  fieldName +
-                  "], input:hidden[name=" +
-                  fieldName +
-                  "], textarea[name=" +
-                  fieldName +
-                  "], input:password[name=" +
-                  fieldName +
-                  "] "
+                `input:text[name=${fieldName}], input:hidden[name=${fieldName}], textarea[name=${fieldName}], input:password[name=${fieldName}]`
               )
               .not(".line")
               .val(label);
           }
 
-          if (
-            form.find("textarea.summernote[name=" + fieldName + "]").length >
-              0 ||
-            form.find("textarea.summernote-product[name=" + fieldName + "]")
-              .length > 0
-          ) {
-            $("[name =" + fieldName + "]")
-              .not(".line")
-              .summernote("code", label);
+          // Summernote editor handling
+          const summernoteSelector = `textarea.summernote[name=${fieldName}], textarea.summernote-product[name=${fieldName}]`;
+          if (form.find(summernoteSelector).length) {
+            $(`[name=${fieldName}]`).not(".line").summernote("code", label);
           }
 
-          if (field[i].type === "select-one") {
+          // Dropdown select handling
+          if (this.type === "select-one") {
             if (typeof label === "object" && label !== null) {
               let option_ID = label.id;
               let option_Txt = label.name;
@@ -5027,8 +5026,9 @@ function putFieldData(form, data, status = null) {
               let newOption = $("<option selected='selected'></option>")
                 .val(option_ID)
                 .text(option_Txt);
+
               form
-                .find("select[name=" + fieldName + "]")
+                .find(`select[name=${fieldName}]`)
                 .not(".line")
                 .append(newOption)
                 .change();
@@ -5042,21 +5042,20 @@ function putFieldData(form, data, status = null) {
               });
 
               form
-                .find("select[name=" + fieldName + "]")
+                .find(`select[name=${fieldName}]`)
                 .not(".line")
                 .val(label)
                 .change();
             }
           }
 
-          if (field[i].type === "select-multiple" && label !== null) {
-            // array label explode into array
+          // Multi-select handling
+          if (this.type === "select-multiple" && label !== null) {
             if (typeof label === "object") {
               let option_ID = label.id;
-              let option_Txt = label.name;
 
               form
-                .find("select[name=" + fieldName + "]")
+                .find(`select[name=${fieldName}]`)
                 .not(".line")
                 .val(option_ID)
                 .change();
@@ -5067,14 +5066,14 @@ function putFieldData(form, data, status = null) {
 
               if (arrLabel.length > 1) {
                 form
-                  .find("select[name=" + fieldName + "]")
+                  .find(`select[name=${fieldName}]`)
                   .not(".line")
                   .val(arrLabel)
                   .change();
               } else {
                 arrMultiSelect.push(label);
                 form
-                  .find("select[name=" + fieldName + "]")
+                  .find(`select[name=${fieldName}]`)
                   .not(".line")
                   .val(arrMultiSelect)
                   .change();
@@ -5082,206 +5081,58 @@ function putFieldData(form, data, status = null) {
             }
           }
 
+          // Checkbox handling
+          if (this.type === "checkbox") {
+            form
+              .find(`input[name=${fieldName}]`)
+              .not(".line")
+              .prop("checked", label === "Y");
+
+            if (className.includes("active"))
+              readonly(form, this.checked ? false : true);
+
+            toggleFields("hide-field", this.checked ? "hide" : "show");
+            toggleFields("show-field", this.checked ? "show" : "hide");
+          }
+
+          // Radio button handling
+          if (this.type === "radio" && this.value == label) {
+            this.checked = true;
+          }
+
+          // File input handling
+          if (
+            this.type === "file" &&
+            className.includes("control-upload-image")
+          ) {
+            previewImage(
+              form.find(`input[name=${fieldName}]`)[0],
+              "",
+              label,
+              status
+            );
+          }
+
           //? Check exist attribute edit-disabled
-          if ($(field[i]).attr("edit-disabled")) {
+          if ($(this).attr("edit-disabled")) {
             form
               .find(
-                "input:checkbox[name=" +
-                  fieldName +
-                  "], select[name=" +
-                  fieldName +
-                  "], input:radio[name=" +
-                  fieldName +
-                  "]"
+                `input:checkbox[name=${fieldName}], select[name=${fieldName}], input:radio[name=${fieldName}]`
               )
               .not(".line")
               .prop("disabled", true);
           }
 
           //? Check exist attribute edit-readonly
-          if ($(field[i]).attr("edit-readonly")) {
+          if ($(this).attr("edit-readonly")) {
             form
-              .find("input:text[name=" + fieldName + "]")
+              .find(`input:text[name=${fieldName}]`)
               .not(".line")
               .prop("readonly", true);
           }
-
-          if (field[i].type === "checkbox") {
-            if (label === "Y")
-              form
-                .find("input[name=" + fieldName + "]")
-                .not(".line")
-                .prop("checked", true);
-            else if (label === "N")
-              form
-                .find("input[name=" + fieldName + "]")
-                .not(".line")
-                .removeAttr("checked");
-
-            if (className.includes("active") && field[i].checked)
-              readonly(form, false);
-            else if (className.includes("active") && !field[i].checked)
-              readonly(form, true);
-          }
-
-          // Set value checked for field type Radio Button
-          if (field[i].type == "radio") {
-            if (field[i].value == label) {
-              field[i].checked = true;
-            }
-          }
-
-          // Pass data form input file to function previewImage
-          if (field[i].type === "file") {
-            if (className.includes("control-upload-image")) {
-              previewImage(
-                form.find("input[name=" + fieldName + "]")[0],
-                "",
-                label,
-                status
-              );
-            }
-          }
         }
-
-        //? Condition field and contain attribute hide-field
-        if ($(field[i]).attr("hide-field") && fieldName !== "") {
-          fields = $(field[i])
-            .attr("hide-field")
-            .split(",")
-            .map((element) => element.trim());
-
-          //TODO: Checkbox
-          if (field[i].type === "checkbox") {
-            if (field[i].checked) {
-              for (let i = 0; i < fields.length; i++) {
-                let formGroup = form
-                  .find(
-                    "input[name=" +
-                      fields[i] +
-                      "], textarea[name=" +
-                      fields[i] +
-                      "], select[name=" +
-                      fields[i] +
-                      "]"
-                  )
-                  .not(".line")
-                  .closest(".form-group, .form-check");
-                formGroup.hide();
-              }
-            } else {
-              for (let i = 0; i < fields.length; i++) {
-                let formGroup = form
-                  .find(
-                    "input[name=" +
-                      fields[i] +
-                      "], textarea[name=" +
-                      fields[i] +
-                      "], select[name=" +
-                      fields[i] +
-                      "]"
-                  )
-                  .not(".line")
-                  .closest(".form-group, .form-check");
-                formGroup.show();
-              }
-            }
-          }
-
-          //TODO: Dropdown select
-          if (field[i].type === "select-one") {
-            for (let i = 0; i < fields.length; i++) {
-              const select = form
-                .find("select[name=" + fields[i] + "]")
-                .not(".line");
-              let formGroup = [];
-
-              if ($(select).val() === null && $(select).val() === "") {
-                formGroup = $(select).closest(".form-group");
-                formGroup.hide();
-              } else if ($(select).val() !== null && $(select).val() !== "") {
-                formGroup = $(select).closest(".form-group");
-                formGroup.show();
-              } else if ($(select).val() === null) {
-                formGroup = $(select).closest(".form-group");
-                formGroup.hide();
-              }
-            }
-          }
-
-          //TODO: Radio Button
-          if (field[i].type === "radio") {
-            if (field[i].checked) {
-              for (let i = 0; i < fields.length; i++) {
-                const input = form
-                  .find(
-                    "input[name=" +
-                      fields[i] +
-                      "], textarea[name=" +
-                      fields[i] +
-                      "], select[name=" +
-                      fields[i] +
-                      "]"
-                  )
-                  .not(".line");
-
-                //? Condition field is not null
-                if (input.val() !== null) {
-                  input.closest(".form-group").show();
-                } else {
-                  input.closest(".form-group").hide();
-                }
-              }
-            }
-          }
-        }
-
-        //? Condition field and contain attribute show-field
-        if ($(field[i]).attr("show-field") && fieldName !== "") {
-          fields = $(field[i])
-            .attr("show-field")
-            .split(",")
-            .map((element) => element.trim());
-
-          //TODO: Checkbox
-          if (field[i].type === "checkbox") {
-            if (field[i].checked) {
-              for (let i = 0; i < fields.length; i++) {
-                let formGroup = form
-                  .find(
-                    "input[name=" +
-                      fields[i] +
-                      "], textarea[name=" +
-                      fields[i] +
-                      "], select[name=" +
-                      fields[i] +
-                      "]"
-                  )
-                  .not(".line")
-                  .closest(".form-group, .form-check");
-                formGroup.show();
-              }
-            } else if (field[i].type === "checkbox") {
-              for (let i = 0; i < fields.length; i++) {
-                let formGroup = form
-                  .find(
-                    "input[name=" +
-                      fields[i] +
-                      "], textarea[name=" +
-                      fields[i] +
-                      "], select[name=" +
-                      fields[i] +
-                      "]"
-                  )
-                  .not(".line")
-                  .closest(".form-group, .form-check");
-                formGroup.hide();
-              }
-            }
-          }
-        }
-      }
-    }
+      });
+    });
   }
 }
 
@@ -6076,3 +5927,26 @@ $(".import_file").click(function (evt) {
     },
   });
 });
+
+// Fungsi Validasi
+function validateForm(form, fields) {
+  let isValid = true;
+
+  fields.forEach(function (field) {
+    if (
+      field.required &&
+      ((typeof field.value === "object" && field.value.length == 0) ||
+        !field.value)
+    ) {
+      isValid = false;
+      form.find(`[name="${field.name}"]`).closest("div").addClass("has-error");
+    } else {
+      form
+        .find(`[name="${field.name}"]`)
+        .closest("div")
+        .removeClass("has-error");
+    }
+  });
+
+  return isValid;
+}
