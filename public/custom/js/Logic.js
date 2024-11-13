@@ -1099,3 +1099,70 @@ function getEmployee(elem, employee) {
     },
   });
 }
+
+/** This Section for Event Handler Table Childrow */
+$(".tb_childrow").on("click", "td.details-control", function () {
+  var tr = $(this).closest("tr");
+  var row = _tableLine.row(tr);
+  var id = tr.find("[name=md_employee_id]").data("line-id");
+
+  if (row.child.isShown()) {
+    row.child.hide();
+    tr.removeClass("shown");
+  } else {
+    getAssignmentDate(id, function (tableHtml) {
+      row.child(tableHtml).show();
+      tr.addClass("shown");
+    });
+  }
+});
+
+function getAssignmentDate(id, callback) {
+  let url = `${SITE_URL}/getAssignmentDate`;
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: { id: id },
+    success: function (result) {
+      if (result[0].success) {
+        let data = result[0].message;
+        let tableHtml = `
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="20%">Tanggal</th>
+                                    <th width="10%">Status</th>
+                                    <th width="50%">Deskripsi</th>
+                                    <th width="20%">Reference</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+        data.forEach((item) => {
+          tableHtml += `
+                        <tr>
+                            <td>${item.date}</td>
+                            <td>${item.isagree}</td>
+                            <td>${item.description}</td>
+                            <td>${item.reference_id}</td>
+                        </tr>
+                    `;
+        });
+
+        tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+        callback(tableHtml);
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}

@@ -378,8 +378,10 @@ function statusRealize($str)
         return '<small class="badge badge-warning">Tidak Disetujui</small>';
     else if ($str === "C")
         return '<small class="badge badge-danger">Anulir</small>';
+    else if ($str === "M")
+        return '<small class="badge badge-dark">Menunggu Persetujuan Manager</small>';
     else
-        return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
+        return '<small class="badge badge-dark">Menunggu Persetujuan HRD</small>';
 }
 
 function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_off = [], $allDays = false)

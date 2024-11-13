@@ -8,6 +8,7 @@ use App\Models\M_Absent;
 use App\Models\M_Employee;
 use App\Models\M_AbsentDetail;
 use App\Models\M_AccessMenu;
+use App\Models\M_AssignmentDate;
 use App\Models\M_Holiday;
 use App\Models\M_Attendance;
 use App\Models\M_Rule;
@@ -412,7 +413,13 @@ class Permission extends BaseController
                 $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
 
                 if (!empty($row->ref_absent_detail_id)) {
-                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    if ($row->table === 'trx_assignment_date') {
+
+                        $lineRef = (new M_AssignmentDate($this->request))->getDetail('trx_assignment_date_id', $row->ref_absent_detail_id)->getRow();
+                    } else {
+                        $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    }
+
                     $docNoRef = $lineRef->documentno;
                 }
 

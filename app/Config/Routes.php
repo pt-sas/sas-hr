@@ -333,6 +333,8 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('tugas-kantor/show/(:any)', 'Backend\OfficeDuties::show/$1');
     $routes->get('tugas-kantor/destroy/(:any)', 'Backend\OfficeDuties::destroy/$1');
     $routes->get('tugas-kantor/processIt', 'Backend\OfficeDuties::processIt');
+    $routes->post('tugas-kantor/tableLine', 'Backend\OfficeDuties::tableLine');
+    $routes->post('tugas-kantor/getAssignmentDate', 'Backend\OfficeDuties::getAssignmentDate');
     $routes->get('tugas-kantor/print/(:any)', 'Backend\OfficeDuties::exportPDF/$1');
 
     $routes->add('tugas-kantor-fka', 'Backend\HalfDayOfficeDuties::index');

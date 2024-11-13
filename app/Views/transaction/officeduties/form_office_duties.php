@@ -4,7 +4,7 @@
         <div class="row">
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
+                    <label for="md_employee_id">Pemohon <span class="required">*</span></label>
                     <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
                         data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
@@ -12,13 +12,7 @@
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="nik">NIK <span class="required">*</span></label>
-                    <input type="text" class="form-control" id="nik" name="nik" readonly>
-                    <small class="form-text text-danger" id="error_nik"></small>
-                </div>
-            </div>
+            <div class="col-md-3"></div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
@@ -59,6 +53,13 @@
                     <small class="form-text text-danger" id="error_receiveddate"></small>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="reason">Alasan <span class="required">*</span></label>
+                    <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
+                    <small class="form-text text-danger" id="error_reason"></small>
+                </div>
+            </div>
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal Mulai <span class="required">*</span></label>
@@ -83,42 +84,25 @@
                     <small class="form-text text-danger" id="error_enddate"></small>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="form-check mt-4">
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" name="isbranch" checked hide-id="branch_to">
-                        <span class="form-check-sign">Ke Cabang</span>
-                    </label>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="branch_to">Tujuan Cabang <span class="required">*</span></label>
-                    <select class="form-control select2" id="branch_to" name="branch_to">
-                        <option value="">Pilih Cabang</option>
-                    </select>
-                    <small class="form-text text-danger" id="error_branch_to"></small>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="reason">Alasan <span class="required">*</span></label>
-                    <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
-                    <small class="form-text text-danger" id="error_reason"></small>
-                </div>
-            </div>
         </div>
         <div class="row">
             <div class="col-md-12">
-                <div class="form-group table-responsive">
-                    <table class="table table-light table-hover tb_displayline" style="width: 100%">
+                <div class="form-group">
+                    <div class="text-right">
+                        <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row"
+                            title="Tambah Baru"><i class="fa fa-plus fa-fw"></i> Tambah</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-group">
+                    <table class="table table-light table-hover tb_displayline tb_childrow" style="width: 100%">
                         <thead>
                             <tr>
-                                <th>Line</th>
-                                <th>Tanggal Tidak Masuk</th>
-                                <th>Doc No</th>
-                                <th>Doc Referensi</th>
-                                <th>Status</th>
+                                <th></th>
+                                <th>Karyawan</th>
+                                <th>Deskripsi</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                     </table>

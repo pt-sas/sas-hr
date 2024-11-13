@@ -1735,6 +1735,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
   let clock_out;
   let id = this.id;
   let leaveTypeID = 0;
+  let formAssignmentList = ["Tugas Kantor", "Penugasan"];
 
   const form = $(
     "#form_realization_agree, #form_overtime_realization_agree, #form_attendance_realization_agree"
@@ -1754,23 +1755,35 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
     date_out = tr.find("td:eq(9)").text();
     clock_out = tr.find("td:eq(10)").text();
   } else if (form.is($("#form_attendance_realization_agree"))) {
+    formType = tr.find("td:eq(4)").text();
     submissionDate = tr.find("td:eq(1)").text();
     date_out = tr.find("td:eq(8)").text();
     clock_out = tr.find("td:eq(9)").text();
   }
 
   if (this.name === "agree") {
-    $(
-      "#modal_realization_agree, #modal_overtime_realization_agree, #modal_attendance_realization_agree"
-    ).modal({
-      backdrop: "static",
-      keyboard: false,
-    });
+    if (
+      form.is("#form_attendance_realization_agree") &&
+      formAssignmentList.includes(formType)
+    ) {
+      $("#modal_attendance_realization_agree_assignment").modal({
+        backdrop: "static",
+        keyboard: false,
+      });
+    } else {
+      $(
+        "#modal_realization_agree, #modal_overtime_realization_agree, #modal_attendance_realization_agree"
+      ).modal({
+        backdrop: "static",
+        keyboard: false,
+      });
+    }
 
     if (form.is($("#form_realization_agree"))) {
       form.find("input[name=submissiondate]").val(submissionDate);
       form.find("input[name=isagree]").val("Y");
       form.find("input[name=md_leavetype_id]").val(leaveTypeID);
+      form.find("input[name=submissionform]").val(formType);
       ID = id;
     } else if (form.is($("#form_overtime_realization_agree"))) {
       form.find("input[name=enddate]").val(enddate);
@@ -1788,6 +1801,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
       form.find("input[name=enddate_att]").val(date_out);
       form.find("input[name=endtime_att]").val(clock_out);
       form.find("input[name=enddate_realization]").val(submissionDate);
+      form.find("input[name=submissionform]").val(formType);
       ID = id;
 
       if (date_out !== "" || clock_out !== "") {
@@ -1806,14 +1820,14 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
     }
   } else {
     $(
-      "#modal_realization_not_agree, #modal_overtime_realization_not_agree"
+      "#modal_realization_not_agree, #modal_overtime_realization_not_agree, #modal_realization_attendance_not_agree"
     ).modal({
       backdrop: "static",
       keyboard: false,
     });
 
     const form = $(
-      "#form_realization_not_agree, #form_overtime_realization_not_agree"
+      "#form_realization_not_agree, #form_overtime_realization_not_agree, #form_attendance_realization_not_agree"
     );
 
     if (form.is($("#form_realization_not_agree"))) {
@@ -1822,6 +1836,9 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
       description = tr.find("td:eq(6)");
       if (description.find("span").length)
         leaveTypeID = description.find("span").attr("id");
+    } else {
+      formType = tr.find("td:eq(4)").text();
+      submissionDate = tr.find("td:eq(2)").text();
     }
 
     if (form.is($("#form_realization_not_agree"))) {
@@ -1829,6 +1846,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
       form.find("input[name=isagree]").val("N");
       form.find("input[name=foreignkey]").val(id);
       form.find("input[name=md_leavetype_id]").val(leaveTypeID);
+      form.find("input[name=submissionform]").val(formType);
 
       if (form.find("select.select-data").length) {
         form
@@ -1837,8 +1855,10 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
 
         initSelectData(form.find("select.select-data"));
       }
-    } else if (form.is($("#form_overtime_realization_not_agree"))) {
+    } else {
       form.find("input[name=isagree]").val("N");
+      form.find("input[name=submissiondate]").val(submissionDate);
+      form.find("input[name=submissionform]").val(formType);
       ID = id;
     }
   }

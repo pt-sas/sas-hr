@@ -523,6 +523,11 @@ _tableLine = $(".tb_displayline").DataTable({
         });
       }
     });
+
+    $(".tb_childrow tbody tr td:first-child").each(function () {
+      if ($(this).closest("tr").children("td").length > 1)
+        $(this).addClass("details-control");
+    });
   },
   initComplete: function (settings, json) {
     $(".tb_displayline").wrap(
