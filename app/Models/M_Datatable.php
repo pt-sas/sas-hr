@@ -259,6 +259,11 @@ class M_Datatable extends Model
                 $model = new M_EmployeeAllocation($this->request);
                 $model->doAfterUpdate($rows);
             }
+
+            if ($this->table === "trx_assignment") {
+                $model = new M_Assignment($this->request);
+                $model->doAfterUpdate($rows);
+            }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

@@ -10,8 +10,7 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>No Form</th>
-                <th>Karyawan</th>
-                <th>NIK</th>
+                <th>Pemohon</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Tanggal Pengajuan</th>

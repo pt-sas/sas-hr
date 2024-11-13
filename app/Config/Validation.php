@@ -2159,7 +2159,7 @@ class Validation
 
     public $tugasKantor = [
         'md_employee_id'        => [
-            'label'             => 'karyawan',
+            'label'             => 'pemohon',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
@@ -2195,13 +2195,6 @@ class Validation
         ],
         'reason'                => [
             'label'             => 'alasan',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
-            ]
-        ],
-        'branch_to'          => [
-            'label'             => 'tujuan cabang',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
@@ -2889,5 +2882,22 @@ class Validation
                 'required'      => 'Mohon mengisi detail {field} dahulu'
             ]
         ]
+    ];
+
+    public $TugasKantorAddRow = [
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'Divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
     ];
 }
