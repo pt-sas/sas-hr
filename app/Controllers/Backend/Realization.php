@@ -13,6 +13,9 @@ use App\Models\M_RuleDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
+use App\Models\M_Assignment;
+use App\Models\M_AssignmentDate;
+use App\Models\M_AssignmentDetail;
 use App\Models\M_EmpBenefit;
 use App\Models\M_Employee;
 use Config\Services;
@@ -67,22 +70,21 @@ class Realization extends BaseController
     public function showAll()
     {
         if ($this->request->getMethod(true) === 'POST') {
-            $table = $this->model->table;
-            $select = $this->model->getSelectDetail();
-            $join = $this->model->getJoinDetail();
+            $table = 'v_realization';
+            $select = '*';
+            $join = [];
             $order = [
                 '', // Number
-                'trx_absent_detail.date',
-                'md_doctype.name',
-                'md_branch.name',
-                'md_division.name',
-                'md_employee.fullname',
-                'trx_absent.reason',
-                'trx_absent.docstatus',
-                'sys_user.name'
+                'realization.date',
+                'realization.doctype',
+                'realization.branch',
+                'realization.division',
+                'realization.employee_fullname',
+                '',
+                'realization.reason'
             ];
             $search = $this->request->getPost('search');
-            $sort = ['trx_absent_detail.date' => 'ASC', 'md_employee.fullname' => 'ASC'];
+            $sort = ['realization.date' => 'ASC', 'realization.employee_fullname' => 'ASC'];
 
             $formType = [
                 $this->model->Pengajuan_Lupa_Absen_Masuk,
@@ -92,10 +94,10 @@ class Realization extends BaseController
             ];
 
             $where = [
-                "trx_absent.docstatus = '{$this->DOCSTATUS_Inprogress}' 
-                AND trx_absent.isapproved = 'Y' 
-                AND trx_absent_detail.isagree = 'H' 
-                AND trx_absent.submissiontype NOT IN (" . implode(",", $formType) . ")"
+                "docstatus = '{$this->DOCSTATUS_Inprogress}' 
+                AND isapproved = 'Y' 
+                AND isagree = 'H' 
+                AND submissiontype NOT IN (" . implode(",", $formType) . ")"
             ];
 
             $data = [];
@@ -110,7 +112,7 @@ class Realization extends BaseController
 
             foreach ($list as $value) :
                 $row = [];
-                $ID = $value->trx_absent_detail_id;
+                $ID = $value->id;
 
                 $number++;
 
@@ -125,7 +127,7 @@ class Realization extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = $value->employee_fullname;
-                $row[] = viewImage($value->trx_absent_id, $value->image);
+                $row[] = viewImage($value->header_id, $value->image);
                 $row[] = $reason;
                 $row[] = $this->template->tableButtonProcess($ID);
                 $data[] = $row;
@@ -246,128 +248,63 @@ class Realization extends BaseController
 
     public function showAllAttendance()
     {
-        $mAccess = new M_AccessMenu($this->request);
-        $mAttendance = new M_Attendance($this->request);
-        $mEmployee = new M_Employee($this->request);
+        $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mAssignment = new M_Assignment($this->request);
+        $mAssignmentDate = new M_AssignmentDate($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
-            $table = $this->model->table;
-            $select = $this->model->getSelectDetail();
-            $join = $this->model->getJoinDetail();
+
+            //** This for Getting data from table Trx Absent */
             $order = [
                 '', // Number
                 'trx_absent_detail.date',
+                '',
+                'trx_absent.documentno',
                 'md_doctype.name',
                 'md_branch.name',
                 'md_division.name',
                 'md_employee.fullname',
-                'trx_absent.reason',
-                'trx_absent.docstatus',
-                'sys_user.name'
+                '',
+                '',
+                'trx_absent.reason'
             ];
             $search = $this->request->getPost('search');
             $sort = ['trx_absent_detail.date' => 'ASC', 'md_employee.fullname' => 'ASC'];
+            $typeFormAbsent = [$this->model->Pengajuan_Lupa_Absen_Masuk, $this->model->Pengajuan_Lupa_Absen_Pulang, $this->model->Pengajuan_Datang_Terlambat, $this->model->Pengajuan_Pulang_Cepat];
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+            $result1 = $this->getTransactionData($this->model, $order, $sort, $search, $typeFormAbsent, $mAbsentDetail);
 
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
+            $orderAssignment = [
+                '', // Number
+                'trx_assignment_date.date',
+                '',
+                'trx_assignment.documentno',
+                'md_doctype.name',
+                'md_branch.name',
+                'md_division.name',
+                'md_employee.fullname',
+                '',
+                '',
+                'trx_assignment.description'
+            ];
+            $sortAssignment = ['trx_assignment_date.date' => 'ASC', 'md_employee.fullname' => 'ASC'];
 
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['trx_absent.md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
-            }
-
-            $where['trx_absent.docstatus'] = $this->DOCSTATUS_Inprogress;
-            $where['trx_absent_detail.isagree'] = 'H';
-            $typeForm = [$this->model->Pengajuan_Lupa_Absen_Masuk, $this->model->Pengajuan_Lupa_Absen_Pulang, $this->model->Pengajuan_Datang_Terlambat, $this->model->Pengajuan_Pulang_Cepat];
-            $where['trx_absent.submissiontype'] = ['value' => $typeForm];
-
-            $number = $this->request->getPost('start');
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
-
-            $data = [];
-            foreach ($list as $value) :
-                $row = [];
-                $ID = $value->trx_absent_detail_id;
-                $tanggal = '';
-                $clock = '';
-
-                $startDate = date('Y-m-d', strtotime($value->startdate));
-
-                $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
-                $whereClause .= " AND v_attendance.date = '{$startDate}'";
-
-                if ($value->submissiontype == $this->model->Pengajuan_Pulang_Cepat)
-                    $whereClause .= " AND v_attendance.clock_out IS NOT NULL";
-                else if ($value->submissiontype == $this->model->Pengajuan_Datang_Terlambat)
-                    $whereClause .= " AND v_attendance.clock_in IS NOT null";
-
-                $attendance = null;
-
-                if ($whereClause)
-                    $attendance = $mAttendance->getAttendance($whereClause)->getRow();
-
-                if ($attendance && $value->submissiontype == $this->model->Pengajuan_Pulang_Cepat) {
-                    $tanggal = format_dmy($attendance->date, '-');
-                    $clock = format_time($attendance->clock_out);
-                } else if ($attendance && $value->submissiontype == $this->model->Pengajuan_Datang_Terlambat) {
-                    $tanggal = format_dmy($attendance->date, '-');
-                    $clock = format_time($attendance->clock_in);
-                }
-
-                $number++;
-
-                $row[] = $number;
-                $row[] = format_dmy($value->date, '-');
-                $row[] = format_time($value->date);
-                $row[] = $value->documentno;
-                $row[] = $value->doctype;
-                $row[] = $value->branch;
-                $row[] = $value->division;
-                $row[] = $value->employee_fullname;
-                $row[] = isset($tanggal) ? $tanggal : '';
-                $row[] = isset($clock) ? $clock : '';
-                $row[] = $value->reason;
-                $row[] = $this->template->tableButtonProcess($ID, true);
-                $data[] = $row;
-            endforeach;
+            $result2 = $this->getTransactionData(
+                $mAssignment,
+                $orderAssignment,
+                $sortAssignment,
+                $search,
+                null,
+                null,
+                $mAssignmentDate
+            );
 
             $result = [
-                'draw'              => $this->request->getPost('draw'),
-                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
-                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
-                'data'              => $data
+                'draw'              => $result1['draw'],
+                'recordsTotal'      => $result1['recordsTotal'] + $result2['recordsTotal'],
+                'recordsFiltered'   => $result1['recordsFiltered'] + $result2['recordsFiltered'],
+                'data'              => array_merge($result1['data'], $result2['data'])
             ];
-
             return $this->response->setJSON($result);
         }
     }
@@ -386,6 +323,8 @@ class Realization extends BaseController
             $today = date('Y-m-d');
             $todayTime = date('Y-m-d H:i:s');
             $leaveTypeId = $post['md_leavetype_id'];
+            $submissionForm = $post['submissionform'];
+            $typeFormAssignment = ['Tugas Kantor', 'Penugasan'];
 
             try {
                 if (!$this->validation->run($post, 'realisasi_agree') && $isAgree === 'Y') {
@@ -393,153 +332,251 @@ class Realization extends BaseController
                 } else if (!$this->validation->run($post, 'realisasi_not_agree') && $isAgree === 'N') {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    if ($isAgree === $agree) {
-                        $this->model = new M_AbsentDetail($this->request);
-                        $this->entity = new \App\Entities\AbsentDetail();
+                    $isAssignment = in_array($submissionForm, $typeFormAssignment);
 
-                        $line = $this->model->find($post['id']);
+                    if ($isAgree === $agree) {
+                        // Set model dan entity sesuai kondisi tipe Form
+                        $this->model = $isAssignment ? new M_AssignmentDate($this->request) : new M_AbsentDetail($this->request);
+                        $this->entity = $isAssignment ? new \App\Entities\AssignmentDate() : new \App\Entities\AbsentDetail();
+
+                        $line = $isAssignment ? (new M_AssignmentDetail($this->request))->find((new M_AssignmentDate($this->request))->find($post['id'])->trx_assignment_detail_id)
+                            : (new M_AbsentDetail($this->request))->find($post['id']);
+
+                        $row = $isAssignment ? (new M_Assignment($this->request))->find($line->trx_assignment_id)
+                            : (new M_Absent($this->request))->find($line->trx_absent_id);
 
                         if (empty($leaveTypeId)) {
                             $this->entity->isagree = $isAgree;
                             $response = $this->save();
                         } else {
                             $list = $this->model->where('trx_absent_id', $line->trx_absent_id)->findAll();
-
-                            $arr = [];
-
-                            foreach ($list as $row) {
-                                $arr[] = [
-                                    "trx_absent_detail_id" => $row->trx_absent_detail_id,
-                                    "isagree"           => "Y",
-                                    "updated_by"        => $this->session->get('sys_user_id')
-                                ];
-                            }
+                            $arr = array_map(fn($row) => [
+                                "trx_absent_detail_id" => $row->trx_absent_detail_id,
+                                "isagree" => "Y",
+                                "updated_by" => $this->session->get('sys_user_id')
+                            ], $list);
 
                             $this->model->builder->updateBatch($arr, $this->model->primaryKey);
-                            $this->message = notification("updated");
-                            $response = message('success', true, $this->message);
+                            $response = message('success', true, notification("updated"));
                         }
                     }
 
                     if ($isAgree === $notAgree) {
-                        $this->model = new M_AbsentDetail($this->request);
-                        $line = $this->model->find($post['foreignkey']);
 
-                        $this->model = new M_Absent($this->request);
-                        $this->entity = new \App\Entities\Absent();
+                        //** This is Oldways*/
+                        // if ($isAssignment) {
+                        //     $mAssignment = new M_Assignment($this->request);
+                        //     $mAssignmentDetail = new M_AssignmentDetail($this->request);
+                        //     $mAssignmentDate = new M_AssignmentDate($this->request);
 
-                        $row = $this->model->find($line->trx_absent_id);
+                        //     $subLine = $mAssignmentDate->find($post['foreignkey']);
+                        //     $line = $mAssignmentDetail->find($subLine->trx_assignment_detail_id);
+                        //     $row = $mAssignment->find($line->trx_assignment_id);
+                        // } else {
+                        //     $mAbsent = new M_Absent($this->request);
+                        //     $mAbsentDetail = new M_AbsentDetail($this->request);
 
-                        /**
-                         * Insert Pengajuan baru
-                         */
-                        $necessary = '';
-                        if ($post['submissiontype'] === 'ijin') {
-                            $necessary = 'IJ';
-                            $submissionType = $this->model->Pengajuan_Ijin;
-                            $this->entity->setNecessary($necessary);
-                            $this->entity->setSubmissionType($submissionType);
+                        //     $line = $mAbsentDetail->find($post['foreignkey']);
+                        //     $row = $mAbsent->find($line->trx_absent_id);
+                        // }
+
+                        //** This is Newways*/
+                        $line = $isAssignment ? (new M_AssignmentDetail($this->request))->find((new M_AssignmentDate($this->request))->find($post['foreignkey'])->trx_assignment_detail_id)
+                            : (new M_AbsentDetail($this->request))->find($post['foreignkey']);
+                        $row = $isAssignment ? (new M_Assignment($this->request))->find($line->trx_assignment_id)
+                            : (new M_Absent($this->request))->find($line->trx_absent_id);
+
+                        if ($post['submissiontype'] !== 'tidak setuju') {
+                            $this->model = new M_Absent($this->request);
+                            $this->entity = new \App\Entities\Absent();
+
+                            /**
+                             * Insert Pengajuan baru
+                             */
+
+                            //** This is Oldways*/
+                            // $necessary = '';
+                            // if ($post['submissiontype'] === 'ijin') {
+                            //     $necessary = 'IJ';
+                            //     $submissionType = $this->model->Pengajuan_Ijin;
+                            //     $this->entity->setNecessary($necessary);
+                            //     $this->entity->setSubmissionType($submissionType);
+                            // }
+
+                            // if ($post['submissiontype'] === 'alpa') {
+                            //     $necessary = 'AL';
+                            //     $submissionType = $this->model->Pengajuan_Alpa;
+                            //     $this->entity->setNecessary($necessary);
+                            //     $this->entity->setSubmissionType($submissionType);
+                            // }
+
+                            // if ($post['submissiontype'] === 'lupa absen masuk') {
+                            //     $necessary = 'LM';
+                            //     $submissionType = $this->model->Pengajuan_Lupa_Absen_Masuk;
+                            //     $this->entity->setNecessary($necessary);
+                            //     $this->entity->setSubmissionType($submissionType);
+                            // }
+
+                            // if ($post['submissiontype'] === 'datang terlambat') {
+                            //     $necessary = 'DT';
+                            //     $submissionType = $this->model->Pengajuan_Datang_Terlambat;
+                            //     $this->entity->setNecessary($necessary);
+                            //     $this->entity->setSubmissionType($submissionType);
+                            // }
+
+                            //** This is Newways*/
+                            $necessaryMap = [
+                                'ijin' => ['IJ', $this->model->Pengajuan_Ijin],
+                                'alpa' => ['AL', $this->model->Pengajuan_Alpa],
+                                'lupa absen masuk' => ['LM', $this->model->Pengajuan_Lupa_Absen_Masuk],
+                                'datang terlambat' => ['DT', $this->model->Pengajuan_Datang_Terlambat]
+                            ];
+
+                            if (isset($necessaryMap[$post['submissiontype']])) {
+                                [$necessary, $submissionType] = $necessaryMap[$post['submissiontype']];
+                                $this->entity->setNecessary($necessary);
+                                $this->entity->setSubmissionType($submissionType);
+                            }
+
+                            //** This is Oldways*/
+                            // if ($isAssignment) {
+                            //     $mEmployee = new M_Employee($this->request);
+                            //     $employee = $mEmployee->find($line->md_employee_id);
+                            //     $this->entity->setEmployeeId($employee->getEmployeeId());
+                            //     $this->entity->setNik($employee->getNik());
+                            // } else {
+                            //     $this->entity->setEmployeeId($row->getEmployeeId());
+                            //     $this->entity->setNik($row->getNik());
+                            // }
+
+                            //** This is Newways */
+                            $employee = $isAssignment ? (new M_Employee($this->request))->find($line->md_employee_id) : $row;
+
+                            $this->entity->setEmployeeId($employee->getEmployeeId());
+                            $this->entity->setNik($employee->getNik());
+
+
+                            $this->entity->setBranchId($row->getBranchId());
+                            $this->entity->setDivisionId($row->getDivisionId());
+                            $this->entity->setReceivedDate($todayTime);
+                            $this->entity->setReason($post['reason']);
+                            $this->entity->setSubmissionDate($today);
+                            $this->entity->setStartDate(date('Y-m-d', strtotime($submissionDate)));
+                            $this->entity->setEndDate(date('Y-m-d', strtotime($submissionDate)));
+                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                            $post['submissiondate'] = $this->entity->getSubmissionDate();
+                            $post['necessary'] = $necessary;
+
+                            $docNo = $this->model->getInvNumber("submissiontype", $submissionType, $post);
+                            $this->entity->setDocumentNo($docNo);
+                            $this->isNewRecord = true;
+
+                            $response = $this->save();
+
+                            //* Foreignkey id 
+                            $ID =  $this->insertID;
+
+                            $this->model = new M_AbsentDetail($this->request);
+                            $this->entity = new \App\Entities\AbsentDetail();
+
+                            $this->entity->isagree = $holdAgree;
+                            $this->entity->trx_absent_id = $ID;
+                            $this->entity->lineno = 1;
+                            $this->entity->date = date('Y-m-d', strtotime($submissionDate));
+                            $this->save();
+
+                            //* Foreignkey id
+                            $lineID = $this->insertID;
+
+                            /**
+                             * Update Pengajuan lama
+                             */
+                            $this->isNewRecord = false;
+
+                            //** This is Oldways*/
+                            // if ($isAssignment) {
+                            //     $this->model = new M_AssignmentDate($this->request);
+                            //     $this->entity = new \App\Entities\AssignmentDate();
+                            //     $this->entity->isagree = $isAgree;
+                            //     $this->entity->trx_assignment_date_id = $post['foreignkey'];
+                            //     $this->entity->reference_id = $lineID;
+                            //     $this->save();
+                            // } else {
+                            //     $this->model = new M_AbsentDetail($this->request);
+                            //     $this->entity = new \App\Entities\AbsentDetail();
+                            //     $this->entity->isagree = $isAgree;
+                            //     $this->entity->trx_absent_detail_id = $post['foreignkey'];
+                            //     $this->entity->ref_absent_detail_id = $lineID;
+                            //     $this->save();
+                            // }
+
+                            //** This is Newways*/
+                            $this->model = $isAssignment ? new M_AssignmentDate($this->request) : new M_AbsentDetail($this->request);
+                            $this->entity = $isAssignment ? new \App\Entities\AssignmentDate() : new \App\Entities\AbsentDetail();
+                            $this->entity->isagree = $isAgree;
+                            $this->entity->{$isAssignment ? 'trx_assignment_date_id' : 'trx_absent_detail_id'} = $post['foreignkey'];
+                            $this->entity->table = 'trx_absent_detail';
+                            $this->entity->{$isAssignment ? 'reference_id' : 'ref_absent_detail_id'} = $lineID;
+                            $this->save();
+
+                            /**
+                             * Update Pengajuan ref absent detail
+                             */
+                            $this->model = new M_AbsentDetail($this->request);
+                            $this->entity = new \App\Entities\AbsentDetail();
+                            $this->entity->ref_absent_detail_id = $post['foreignkey'];
+                            $this->entity->isagree = $agree;
+                            $this->entity->table = $isAssignment ? 'trx_assignment_date' : 'trx_absent_detail';
+                            $this->entity->trx_absent_detail_id = $lineID;
+                            $this->save();
+
+                            $this->model = new M_Absent($this->request);
+                            $this->entity = new \App\Entities\Absent();
+                            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                            $this->entity->setAbsentId($ID);
+                            $this->save();
+                        } else {
+                            $this->model = $isAssignment ? new M_AssignmentDate($this->request) : new M_AbsentDetail($this->request);
+                            $this->entity = $isAssignment ? new \App\Entities\AssignmentDate() : new \App\Entities\AbsentDetail();
+                            $this->entity->isagree = $isAgree;
+                            $this->entity->{$isAssignment ? 'trx_assignment_date_id' : 'trx_absent_detail_id'} = $post['foreignkey'];
+                            $response = $this->save();
                         }
-
-                        if ($post['submissiontype'] === 'alpa') {
-                            $necessary = 'AL';
-                            $submissionType = $this->model->Pengajuan_Alpa;
-                            $this->entity->setNecessary($necessary);
-                            $this->entity->setSubmissionType($submissionType);
-                        }
-
-                        if ($post['submissiontype'] === 'lupa absen masuk') {
-                            $necessary = 'LM';
-                            $submissionType = $this->model->Pengajuan_Lupa_Absen_Masuk;
-                            $this->entity->setNecessary($necessary);
-                            $this->entity->setSubmissionType($submissionType);
-                        }
-
-                        if ($post['submissiontype'] === 'datang terlambat') {
-                            $necessary = 'DT';
-                            $submissionType = $this->model->Pengajuan_Datang_Terlambat;
-                            $this->entity->setNecessary($necessary);
-                            $this->entity->setSubmissionType($submissionType);
-                        }
-
-                        $this->entity->setEmployeeId($row->getEmployeeId());
-                        $this->entity->setNik($row->getNik());
-                        $this->entity->setBranchId($row->getBranchId());
-                        $this->entity->setDivisionId($row->getDivisionId());
-                        $this->entity->setReceivedDate($todayTime);
-                        $this->entity->setReason($post['reason']);
-                        $this->entity->setSubmissionDate($today);
-                        $this->entity->setStartDate(date('Y-m-d', strtotime($submissionDate)));
-                        $this->entity->setEndDate(date('Y-m-d', strtotime($submissionDate)));
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-
-                        $post['submissiondate'] = $this->entity->getSubmissionDate();
-                        $post['necessary'] = $necessary;
-
-                        $docNo = $this->model->getInvNumber("submissiontype", $submissionType, $post);
-                        $this->entity->setDocumentNo($docNo);
-                        $this->isNewRecord = true;
-
-                        $response = $this->save();
-
-                        //* Foreignkey id 
-                        $ID =  $this->insertID;
-
-                        $this->model = new M_AbsentDetail($this->request);
-                        $this->entity = new \App\Entities\AbsentDetail();
-
-                        $this->entity->isagree = $holdAgree;
-                        $this->entity->trx_absent_id = $ID;
-                        $this->entity->lineno = 1;
-                        $this->entity->date = date('Y-m-d', strtotime($submissionDate));
-                        $this->save();
-
-                        //* Foreignkey id
-                        $lineID = $this->insertID;
-
-                        /**
-                         * Update Pengajuan lama
-                         */
-                        $this->isNewRecord = false;
-
-                        $this->model = new M_AbsentDetail($this->request);
-                        $this->entity = new \App\Entities\AbsentDetail();
-                        $this->entity->isagree = $isAgree;
-                        $this->entity->trx_absent_detail_id = $post['foreignkey'];
-                        $this->entity->ref_absent_detail_id = $lineID;
-                        $this->save();
-
-                        /**
-                         * Update Pengajuan ref absent detail
-                         */
-                        $this->model = new M_AbsentDetail($this->request);
-                        $this->entity = new \App\Entities\AbsentDetail();
-                        $this->entity->ref_absent_detail_id = $post['foreignkey'];
-                        $this->entity->isagree = $agree;
-                        $this->entity->trx_absent_detail_id = $lineID;
-                        $this->save();
-
-                        $this->model = new M_Absent($this->request);
-                        $this->entity = new \App\Entities\Absent();
-                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                        $this->entity->setAbsentId($ID);
-                        $this->save();
                     }
 
-                    $this->model = new M_AbsentDetail($this->request);
-                    $list = $this->model->where([
-                        'isagree'       => $holdAgree,
-                        'trx_absent_id' => $line->trx_absent_id
-                    ])->first();
+                    if ($isAssignment) {
+                        $mAssignment = new M_Assignment($this->request);
 
-                    if (is_null($list)) {
-                        $this->model = new M_Absent($this->request);
-                        $this->entity = new \App\Entities\Absent();
+                        $where = "trx_assignment.trx_assignment_id = {$line->trx_assignment_id}";
+                        $where .= " AND trx_assignment_date.isagree IN ('M','H')";
+                        $subLineData = $mAssignment->checkStatusDate($where)->getRow();
 
-                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                        $this->entity->setReceivedDate($todayTime);
-                        $this->entity->setAbsentId($line->trx_absent_id);
-                        $this->save();
+                        if (is_null($subLineData)) {
+                            $this->model = new M_Assignment($this->request);
+                            $this->entity = new \App\Entities\Assignment();
+
+                            $this->entity->setAssignmentId($row->trx_assignment_id);
+                            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                            $this->entity->setReceivedDate($today);
+                            $this->save();
+                        }
+                    } else {
+                        $this->model = new M_AbsentDetail($this->request);
+                        $list = $this->model->where([
+                            'isagree'       => $holdAgree,
+                            'trx_absent_id' => $line->trx_absent_id
+                        ])->first();
+
+                        if (is_null($list)) {
+                            $this->model = new M_Absent($this->request);
+                            $this->entity = new \App\Entities\Absent();
+
+                            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                            $this->entity->setReceivedDate($todayTime);
+                            $this->entity->setAbsentId($line->trx_absent_id);
+                            $this->save();
+                        }
                     }
                 }
             } catch (\Exception $e) {
@@ -639,54 +676,100 @@ class Realization extends BaseController
             $today = date('Y-m-d');
 
             $isAgree = $post['isagree'];
+            $submissionForm = $post['submissionform'];
+            $typeFormAssignment = ['Tugas Kantor', 'Penugasan'];
 
             try {
-                if (!$this->validation->run($post, 'realisasi_kehadiran') && $isAgree === 'Y') {
+                if (
+                    in_array($submissionForm, $typeFormAssignment) ? false :
+                    !$this->validation->run($post, 'realisasi_kehadiran') && $isAgree === 'Y'
+                ) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $mAbsent = new M_Absent($this->request);
-                    $this->model = new M_AbsentDetail($this->request);
-                    $this->entity = new \App\Entities\AbsentDetail();
+                    if (in_array($submissionForm, $typeFormAssignment)) {
+                        $mAssignment = new M_Assignment($this->request);
+                        $mAssignmentDetail = new M_AssignmentDetail($this->request);
+                        $this->model = new M_AssignmentDate($this->request);
+                        $this->entity = new \App\Entities\AssignmentDate();
 
-                    $id = $this->model->find($post['id']);
+                        $id = $this->model->find($post['id']);
 
-                    $list = $mAbsent->where('trx_absent_id', $id->trx_absent_id)->first();
+                        $this->entity->trx_assignment_date_id = $post['id'];
 
-                    if ($isAgree === $agree) {
+                        if ($isAgree === $agree) {
+                            $this->entity->comment = $post['comment'];
+                            $this->entity->isagree = $holdAgree;
+                        } else {
+                            $this->entity->isagree = $notAgree;
+                            $this->entity->description = $post['description'];
+                        }
+
+                        $response = $this->save();
+
+
+                        $lineData = $mAssignmentDetail->find($id->trx_assignment_detail_id);
+
+                        $where = "trx_assignment.trx_assignment_id = {$lineData->trx_assignment_id}";
+                        $where .= " AND trx_assignment_date.isagree IN ('M','H')";
+                        $subLineData = $mAssignment->checkStatusDate($where)->getRow();
+
+                        if (is_null($subLineData)) {
+                            $headData = $mAssignment->find($lineData->trx_assignment_id);
+
+                            $this->model = new M_Assignment($this->request);
+                            $this->entity = new \App\Entities\Assignment();
+
+                            $this->entity->setAssignmentId($headData->trx_assignment_id);
+                            $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                            $this->entity->setReceivedDate($today);
+                            $this->save();
+                        }
+                    } else {
+                        $mAbsent = new M_Absent($this->request);
                         $this->model = new M_AbsentDetail($this->request);
                         $this->entity = new \App\Entities\AbsentDetail();
 
-                        $enddate =   date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
-                        $this->entity->trx_absent_detail_id = $post['id'];
-                        $this->entity->date = $enddate;
-                        $this->entity->isagree = $isAgree;
-                        $response = $this->save();
+                        $id = $this->model->find($post['id']);
+
+                        $list = $mAbsent->where('trx_absent_id', $id->trx_absent_id)->first();
+
+                        if ($isAgree === $agree) {
+                            $this->model = new M_AbsentDetail($this->request);
+                            $this->entity = new \App\Entities\AbsentDetail();
+
+                            $enddate =   date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
+                            $this->entity->trx_absent_detail_id = $post['id'];
+                            $this->entity->date = $enddate;
+                            $this->entity->isagree = $isAgree;
+                            $response = $this->save();
+                        }
+
+                        if ($isAgree === $notAgree) {
+                            $this->model = new M_AbsentDetail($this->request);
+                            $this->entity = new \App\Entities\AbsentDetail();
+                            $this->entity->trx_absent_detail_id = $post['id'];
+                            $this->entity->isagree = $isAgree;
+
+                            $response = $this->save();
+                        }
+
+                        $this->model = new M_Absent($this->request);
+                        $this->entity = new \App\Entities\Absent();
+
+                        $this->entity->setAbsentId($list->trx_absent_id);
+                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                        $this->entity->setReceivedDate($today);
+
+                        if ($isAgree === $agree)
+                            $this->entity->setEndDateRealization($enddate);
+
+                        $this->save();
                     }
-
-                    // if ($isAgree === $notAgree) {
-                    //     $this->model = new M_AbsentDetail($this->request);
-                    //     $this->entity = new \App\Entities\AbsentDetail();
-                    //     $this->entity->trx_absent_detail_id = $post['id'];
-                    //     $this->entity->isagree = $isAgree;
-
-                    //     $response = $this->save();
-                    // }
-
-                    $mAbsent = new M_Absent($this->request);
-                    $aEntity = new \App\Entities\Absent();
-
-                    $aEntity->setAbsentId($list->trx_absent_id);
-                    $aEntity->setDocStatus($this->DOCSTATUS_Completed);
-                    $aEntity->setReceivedDate($today);
-                    $aEntity->setEndDateRealization($enddate);
-                    $mAbsent->save($aEntity);
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
             return $this->response->setJSON($response);
-
-            // return json_encode($post);
         }
     }
 
@@ -698,22 +781,27 @@ class Realization extends BaseController
             $response = [];
 
             try {
-                if (!empty($post['name']) && $post['name'] === "Tugas Kantor") {
-                    $list = [
-                        [
-                            'id'    => 'lupa absen masuk',
-                            'name'  => 'Lupa Absen Masuk'
-                        ],
-                        [
-                            'id'    => 'datang terlambat',
-                            'name'  => 'Datang Terlambat'
-                        ],
-                    ];
-                } else if (!empty($post['name']) && $post['name'] === "Ijin") {
+                // if (!empty($post['name']) && $post['name'] === "Tugas Kantor") {
+                //     $list = [
+                //         [
+                //             'id'    => 'lupa absen masuk',
+                //             'name'  => 'Lupa Absen Masuk'
+                //         ],
+                //         [
+                //             'id'    => 'datang terlambat',
+                //             'name'  => 'Datang Terlambat'
+                //         ],
+                //     ];
+                // } else 
+                if (!empty($post['name']) && $post['name'] === "Ijin") {
                     $list = [
                         [
                             'id'    => 'alpa',
                             'name'  => 'Alpa'
+                        ],
+                        [
+                            'id'    => 'tidak setuju',
+                            'name'  => 'Tidak Setuju'
                         ],
                     ];
                 } else {
@@ -725,6 +813,10 @@ class Realization extends BaseController
                         [
                             'id'    => 'ijin',
                             'name'  => 'Ijin'
+                        ],
+                        [
+                            'id'    => 'tidak setuju',
+                            'name'  => 'Tidak Setuju'
                         ],
                     ];
                 }
@@ -947,5 +1039,130 @@ class Realization extends BaseController
                 }
             }
         }
+    }
+
+    private function getTransactionData($model, $order, $sort, $search, $typeForm = null, $modelDetail = null, $modelSubDetail = null)
+    {
+        $mAttendance = new M_Attendance($this->request);
+        $mAccess = new M_AccessMenu($this->request);
+        $mEmployee = new M_Employee($this->request);
+
+        $table = $model->table;
+        $select = $model->getSelectDetail();
+        $join = $model->getJoinDetail();
+
+        /**
+         * Hak akses
+         */
+        $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+        $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+        $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+        if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+            $arrBranch = $arrAccess["branch"];
+            $arrDiv = $arrAccess["division"];
+
+            $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
+
+            if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                $where[$table . '.md_employee_id'] = [
+                    'value'     => $arrMerge
+                ];
+            } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                $where[$table . '.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
+            } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                $where[$table . '.md_employee_id'] = [
+                    'value'     => $arrEmpBased
+                ];
+            } else {
+                $where[$table . '.md_employee_id'] = $this->session->get('md_employee_id');
+            }
+        } else if (!empty($this->session->get('md_employee_id'))) {
+            $where[$table . '.md_employee_id'] = [
+                'value'     => $arrEmployee
+            ];
+        } else {
+            $where[$table . '.md_employee_id'] = $this->session->get('md_employee_id');
+        }
+
+        $where[$table . '.docstatus'] = $this->DOCSTATUS_Inprogress;
+        $where[$table . '.isapproved'] = 'Y';
+
+        if ($modelSubDetail) {
+            $where[$modelSubDetail->table . '.isagree'] = 'M';
+        } else {
+            $where[$modelDetail->table . '.isagree'] = 'H';
+        }
+
+        if ($typeForm)
+            $where[$table . '.submissiontype'] = ['value' => $typeForm];
+
+        $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+
+        $number = $this->request->getPost('start');
+        $data = [];
+        foreach ($list as $value) :
+            $row = [];
+
+            if ($modelSubDetail) {
+                $ID = $value->{$modelSubDetail->primaryKey};
+            } else {
+                $ID = $value->{$modelDetail->primaryKey};
+            }
+
+            $tanggal = '';
+            $clock = '';
+
+            $startDate = date('Y-m-d', strtotime($value->startdate));
+
+            $whereClause = "v_attendance.md_employee_id = {$value->employee_id}";
+            $whereClause .= " AND v_attendance.date = '{$startDate}'";
+
+            if ($value->submissiontype == $model->Pengajuan_Pulang_Cepat)
+                $whereClause .= " AND v_attendance.clock_out IS NOT NULL";
+            else if ($value->submissiontype == $model->Pengajuan_Datang_Terlambat)
+                $whereClause .= " AND v_attendance.clock_in IS NOT null";
+
+            $attendance = $mAttendance->getAttendance($whereClause)->getRow();
+
+            if ($attendance && $value->submissiontype == $model->Pengajuan_Pulang_Cepat) {
+                $tanggal = format_dmy($attendance->date, '-');
+                $absent = format_time($attendance->clock_out);
+                $clock = format_time($value->date);
+            } else if ($attendance && $value->submissiontype == $model->Pengajuan_Datang_Terlambat) {
+                $tanggal = format_dmy($attendance->date, '-');
+                $absent = format_time($attendance->clock_in);
+                $clock = format_time($value->date);
+            }
+
+            $number++;
+
+            $row[] = $number;
+            $row[] = format_dmy($value->date, '-');
+            $row[] = $clock ?? '';
+            $row[] = $value->documentno;
+            $row[] = $value->doctype;
+            $row[] = $value->branch;
+            $row[] = $value->division;
+            $row[] = $value->employee_fullname;
+            $row[] = $tanggal ?? '';
+            $row[] = $absent ?? '';
+            $row[] = $value->reason;
+            $row[] = $this->template->tableButtonProcess($ID);
+            $data[] = $row;
+        endforeach;
+
+        $result = [
+            'draw'              => $this->request->getPost('draw'),
+            'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
+            'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
+            'data'              => $data
+        ];
+
+        return $result;
     }
 }
