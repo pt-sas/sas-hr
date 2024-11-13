@@ -149,7 +149,8 @@ class M_Absent extends Model
                 trx_absent_detail.isagree,
                 trx_absent_detail.date,
                 md_leavetype.name as leavetype,
-                md_doctype.name as doctype';
+                md_doctype.name as doctype,
+                trx_absent.md_employee_id as employee_id';
 
         return $sql;
 

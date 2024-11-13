@@ -15,6 +15,7 @@ class M_AbsentDetail extends Model
         'date',
         'isagree',
         'ref_absent_detail_id',
+        'table',
         'created_by',
         'updated_by',
     ];
