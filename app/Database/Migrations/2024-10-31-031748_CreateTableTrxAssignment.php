@@ -21,8 +21,8 @@ class CreateTableTrxAssignment extends Migration
             'branch_to'             => ['type' => 'INT', 'constraint' => 11, 'null' => true],
             'submissiontype'        => ['type' => 'INT', 'constraint' => 11, 'null' => false],
             'submissiondate'        => ['type' => 'date', 'null' => false],
-            'startdate'             => ['type' => 'timestamp', 'default' => '0000-00-00 00:00:00', 'null' => false],
-            'enddate'               => ['type' => 'timestamp', 'default' => '0000-00-00 00:00:00', 'null' => false],
+            'startdate'             => ['type' => 'timestamp', 'null' => false],
+            'enddate'               => ['type' => 'timestamp', 'null' => false],
             'reason'           => ['type' => 'VARCHAR', 'constraint' => 255, 'null' => true],
             'docstatus'             => ['type' => 'CHAR', 'constraint' => 2, 'null' => false],
             'isapproved'            => ['type' => 'CHAR', 'constraint' => 1, 'null' => true],
@@ -32,7 +32,6 @@ class CreateTableTrxAssignment extends Migration
             'image'            =>  [
                 'type'          => 'VARCHAR',
                 'constraint'    => 255,
-                'after'         => 'image2',
                 'null'          => true
             ]
         ]);
