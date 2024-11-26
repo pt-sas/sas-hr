@@ -22,6 +22,8 @@ class Assignment extends Entity
     protected $receiveddate;
     protected $approveddate;
     protected $sys_wfscenario_id;
+    protected $branch_in;
+    protected $branch_out;
     protected $created_by;
     protected $updated_by;
 
@@ -81,14 +83,24 @@ class Assignment extends Entity
         $this->attributes['md_division_id'] = $md_division_id;
     }
 
-    public function getBranchTo()
+    public function getBranchIn()
     {
-        return $this->attributes['branch_to'];
+        return $this->attributes['branch_in'];
     }
 
-    public function setBranchTo($branch_to)
+    public function setBranchIn($branch_in)
     {
-        $this->attributes['branch_to'] = $branch_to;
+        $this->attributes['branch_in'] = $branch_in;
+    }
+
+    public function getBranchOut()
+    {
+        return $this->attributes['branch_out'];
+    }
+
+    public function setBranchOut($branch_out)
+    {
+        $this->attributes['branch_out'] = $branch_out;
     }
 
     public function getSubmissionType()
@@ -117,7 +129,6 @@ class Assignment extends Entity
 
         return $this->attributes['startdate'];
     }
-
 
     public function setStartDate($startdate)
     {

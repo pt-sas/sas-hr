@@ -25,6 +25,8 @@ class M_Assignment extends Model
         'receiveddate',
         'approveddate',
         'sys_wfscenario_id',
+        'branch_in',
+        'branch_out',
         'created_by',
         'updated_by',
     ];
@@ -166,9 +168,13 @@ class M_Assignment extends Model
         return $prefix;
     }
 
-    public function checkStatusDate($where)
+    public function getDetailData($where)
     {
-        $this->builder->select('*');
+        $this->builder->select($this->table . '.*,
+        trx_assignment_detail.md_employee_id as karyawan_id,
+        trx_assignment_date.trx_assignment_date_id,
+        trx_assignment_date.date,
+        trx_assignment_date.isagree');
         $this->builder->join('trx_assignment_detail', 'trx_assignment_detail.trx_assignment_id = trx_assignment.trx_assignment_id', 'left');
         $this->builder->join('trx_assignment_date', 'trx_assignment_date.trx_assignment_detail_id = trx_assignment_detail.trx_assignment_detail_id', 'left');
 
@@ -191,7 +197,7 @@ class M_Assignment extends Model
 
             $startDate = $header->startdate;
             $endDate = $header->enddate;
-            $isSingleDay = in_array($header->submissiontype, [$this->Pengajuan_Tugas_Kantor_setengah_Hari, $this->Pengajuan_Ijin_Keluar_Kantor]);
+            $isSingleDay = in_array($header->submissiontype, [$this->Pengajuan_Tugas_Kantor_setengah_Hari]);
 
             $workDay = $mEmpWork->where([
                 'md_employee_id' => $line->md_employee_id,
@@ -206,23 +212,48 @@ class M_Assignment extends Model
                 $daysOff = getDaysOff($workDetail);
             }
 
-            $date_range = getDatesFromRange(
-                $isSingleDay ? $endDate : $startDate,
-                $endDate,
-                $holiday,
-                'Y-m-d H:i:s',
-                'all',
-                $daysOff
-            );
+            if ($header->submissiontype == $this->Pengajuan_Penugasan) {
+                $date_range = getDatesFromRange(
+                    $isSingleDay ? $endDate : $startDate,
+                    $endDate,
+                    $holiday,
+                    'Y-m-d H:i:s',
+                    'all',
+                    []
+                );
+            } else {
+                $date_range = getDatesFromRange(
+                    $isSingleDay ? $endDate : $startDate,
+                    $endDate,
+                    $holiday,
+                    'Y-m-d H:i:s',
+                    'all',
+                    $daysOff
+                );
+            }
 
-            $data = array_map(function ($date) use ($rows) {
-                return [
-                    'trx_assignment_detail_id' => $rows['id'],
-                    'date' => $date,
-                    'isagree' => $rows['isagree'] ?? "H",
-                    'created_by' => $rows['created_by'],
-                    'updated_by' => $rows['updated_by'],
-                ];
+
+            $data = array_map(function ($date) use ($rows, $header) {
+                if ($header->submissiontype == $this->Pengajuan_Penugasan) {
+                    return [
+                        'trx_assignment_detail_id' => $rows['id'],
+                        'date' => $date,
+                        'isagree' => $rows['isagree'] ?? "H",
+                        'branch_in' => $header->branch_in,
+                        'branch_out' => $header->branch_out,
+                        'created_by' => $rows['created_by'],
+                        'updated_by' => $rows['updated_by'],
+                    ];
+                } else {
+                    return [
+                        'trx_assignment_detail_id' => $rows['id'],
+                        'date' => $date,
+                        'isagree' => $rows['isagree'] ?? "H",
+                        'created_by' => $rows['created_by'],
+                        'updated_by' => $rows['updated_by'],
+
+                    ];
+                }
             }, $date_range);
 
             $result = $mAssignmentDate->builder->insertBatch($data);
@@ -245,8 +276,6 @@ class M_Assignment extends Model
         $line = $mAssignmentDetail->where($this->primaryKey, $ID)->findAll();
 
         $agree = 'Y';
-        $notAgree = 'N';
-        $holdAgree = 'H';
         $rlzManager = 'M';
 
         $updatedBy = $rows['data']['updated_by'] ?? session()->get('id');

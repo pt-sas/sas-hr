@@ -1713,6 +1713,7 @@ $(".btn_filter_realize").on("click", function (e) {
 });
 
 _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
+  const parent = $(this).closest("table");
   const tr = $(this).closest("tr");
   let formType;
   let submissionDate;
@@ -1725,74 +1726,127 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
   let clock_out;
   let id = this.id;
   let leaveTypeID = 0;
-  let formAssignmentList = ["Tugas Kantor", "Penugasan"];
 
-  const form = $(
-    "#form_realization_agree, #form_overtime_realization_agree, #form_attendance_realization_agree"
-  );
-
-  if (form.is($("#form_realization_agree"))) {
+  if (parent.hasClass("table_hrd")) {
     formType = tr.find("td:eq(2)").text();
     submissionDate = tr.find("td:eq(1)").text();
     description = tr.find("td:eq(6)");
     if (description.find("span").length)
       leaveTypeID = description.find("span").attr("id");
-  } else if (form.is($("#form_overtime_realization_agree"))) {
-    startdate = tr.find("td:eq(5)").text();
-    enddate = tr.find("td:eq(6)").text();
-    starttime = tr.find("td:eq(7)").text();
-    endtime = tr.find("td:eq(8)").text();
-    date_out = tr.find("td:eq(9)").text();
-    clock_out = tr.find("td:eq(10)").text();
-  } else if (form.is($("#form_attendance_realization_agree"))) {
-    formType = tr.find("td:eq(4)").text();
-    submissionDate = tr.find("td:eq(1)").text();
-    date_out = tr.find("td:eq(8)").text();
-    clock_out = tr.find("td:eq(9)").text();
-  }
 
-  if (this.name === "agree") {
-    if (
-      form.is("#form_attendance_realization_agree") &&
-      formAssignmentList.includes(formType)
-    ) {
-      $("#modal_attendance_realization_agree_assignment").modal({
-        backdrop: "static",
-        keyboard: false,
-      });
-    } else {
-      $(
-        "#modal_realization_agree, #modal_overtime_realization_agree, #modal_attendance_realization_agree"
-      ).modal({
-        backdrop: "static",
-        keyboard: false,
-      });
-    }
+    if (this.name === "agree") {
+      const form = $(
+        "#form_realization_hr_agree, #form_assignment_realization_hr_agree"
+      );
 
-    if (form.is($("#form_realization_agree"))) {
+      if (formType == "Penugasan") {
+        $("#modal_assignment_realization_hr_agree").modal({
+          backdrop: "static",
+          keyboard: false,
+        });
+      } else {
+        $("#modal_realization_hr_agree").modal({
+          backdrop: "static",
+          keyboard: false,
+        });
+      }
+
       form.find("input[name=submissiondate]").val(submissionDate);
       form.find("input[name=isagree]").val("Y");
       form.find("input[name=md_leavetype_id]").val(leaveTypeID);
       form.find("input[name=submissionform]").val(formType);
       ID = id;
-    } else if (form.is($("#form_overtime_realization_agree"))) {
-      form.find("input[name=enddate]").val(enddate);
-      form.find("input[name=enddate_realization]").val(enddate);
-      form.find("input[name=startdate]").val(startdate);
-      form.find("input[name=starttime]").val(starttime);
-      form.find("input[name=endtime]").val(endtime);
-      form.find("input[name=enddate_att]").val(date_out);
-      form.find("input[name=endtime_att]").val(clock_out);
-      form.find("input[name=isagree]").val("Y");
-      ID = id;
-    } else if (form.is($("#form_attendance_realization_agree"))) {
+
+      if (formType == "Penugasan") {
+        if (form.find("select.select-data").length) {
+          initSelectData(form.find("select.select-data"));
+        }
+
+        $.ajax({
+          url: ADMIN_URL + "/penugasan/getRealizationData",
+          type: "POST",
+          data: { id: ID },
+          caches: false,
+          dataType: "JSON",
+          success: function (result) {
+            let optionBranchIn = $("<option selected='selected'></option>")
+              .val(result.branch_in.id)
+              .text(result.branch_in.text);
+
+            let optionBranchOut = $("<option selected='selected'></option>")
+              .val(result.branch_out.id)
+              .text(result.branch_out.text);
+
+            form.find("select[name=branch_in]").append(optionBranchIn).change();
+            form
+              .find("select[name=branch_out]")
+              .append(optionBranchOut)
+              .change();
+            form.find("input[name=starttime_att]").val(result.clock_in);
+            form.find("input[name=endtime_att]").val(result.clock_out);
+          },
+          error: function (jqXHR, exception) {
+            showError(jqXHR, exception);
+          },
+        });
+      }
+    } else {
+      const form = $("#form_realization_hr_not_agree");
+
+      $("#modal_realization_hr_not_agree").modal({
+        backdrop: "static",
+        keyboard: false,
+      });
+
+      form.find("input[name=submissiondate]").val(submissionDate);
+      form.find("input[name=isagree]").val("N");
+      form.find("input[name=foreignkey]").val(id);
+      form.find("input[name=md_leavetype_id]").val(leaveTypeID);
+      form.find("input[name=submissionform]").val(formType);
+
+      if (form.find("select.select-data").length) {
+        form
+          .find("select.select-data")
+          .attr("data-url", "realisasi/getList/$" + formType);
+
+        initSelectData(form.find("select.select-data"));
+      }
+    }
+  } else if (parent.hasClass("table_superior")) {
+    formType = tr.find("td:eq(4)").text();
+    submissionDate = tr.find("td:eq(1)").text();
+    date_out = tr.find("td:eq(8)").text();
+    clock_out = tr.find("td:eq(9)").text();
+    ID = id;
+
+    if (this.name === "agree") {
+      const form = $(
+        "#form_attendance_realization_sup_agree, #form_assignment_realization_sup_agree_officeduties, #form_assignment_realization_sup_agree"
+      );
+
+      if (formType == "Tugas Kantor") {
+        $("#modal_assignment_realization_sup_agree_officeduties").modal({
+          backdrop: "static",
+          keyboard: false,
+        });
+      } else if (formType == "Penugasan") {
+        $("#modal_assignment_realization_sup_agree").modal({
+          backdrop: "static",
+          keyboard: false,
+        });
+      } else {
+        $("#modal_attendance_realization_sup_agree").modal({
+          backdrop: "static",
+          keyboard: false,
+        });
+      }
+
       form.find("input[name=submissiondate]").val(submissionDate);
       form.find("input[name=isagree]").val("Y");
       form.find("input[name=enddate_att]").val(date_out);
       form.find("input[name=endtime_att]").val(clock_out);
       form.find("input[name=enddate_realization]").val(submissionDate);
       form.find("input[name=submissionform]").val(formType);
-      ID = id;
 
       if (date_out !== "" || clock_out !== "") {
         form
@@ -1807,49 +1861,82 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
           .change()
           .prop("disabled", false);
       }
-    }
-  } else {
-    $(
-      "#modal_realization_not_agree, #modal_overtime_realization_not_agree, #modal_realization_attendance_not_agree"
-    ).modal({
-      backdrop: "static",
-      keyboard: false,
-    });
-
-    const form = $(
-      "#form_realization_not_agree, #form_overtime_realization_not_agree, #form_attendance_realization_not_agree"
-    );
-
-    if (form.is($("#form_realization_not_agree"))) {
-      formType = tr.find("td:eq(2)").text();
-      submissionDate = tr.find("td:eq(1)").text();
-      description = tr.find("td:eq(6)");
-      if (description.find("span").length)
-        leaveTypeID = description.find("span").attr("id");
-    } else {
-      formType = tr.find("td:eq(4)").text();
-      submissionDate = tr.find("td:eq(2)").text();
-    }
-
-    if (form.is($("#form_realization_not_agree"))) {
-      form.find("input[name=submissiondate]").val(submissionDate);
-      form.find("input[name=isagree]").val("N");
-      form.find("input[name=foreignkey]").val(id);
-      form.find("input[name=md_leavetype_id]").val(leaveTypeID);
-      form.find("input[name=submissionform]").val(formType);
 
       if (form.find("select.select-data").length) {
-        form
-          .find("select.select-data")
-          .attr("data-url", "realisasi/getList/$" + formType);
-
         initSelectData(form.find("select.select-data"));
       }
+
+      if (formType == "Penugasan") {
+        $.ajax({
+          url: ADMIN_URL + "/penugasan/getRealizationData",
+          type: "POST",
+          data: { id: ID },
+          caches: false,
+          dataType: "JSON",
+          success: function (result) {
+            let optionBranchIn = $("<option selected='selected'></option>")
+              .val(result.branch_in.id)
+              .text(result.branch_in.text);
+
+            let optionBranchOut = $("<option selected='selected'></option>")
+              .val(result.branch_out.id)
+              .text(result.branch_out.text);
+
+            form.find("select[name=branch_in]").append(optionBranchIn).change();
+            form
+              .find("select[name=branch_out]")
+              .append(optionBranchOut)
+              .change();
+            form.find("input[name=starttime_att]").val(result.clock_in);
+            form.find("input[name=endtime_att]").val(result.clock_out);
+          },
+          error: function (jqXHR, exception) {
+            showError(jqXHR, exception);
+          },
+        });
+      }
     } else {
+      const form = $("#form_attendance_realization_sup_not_agree");
+
+      $("#modal_realization_attendance_sup_not_agree").modal({
+        backdrop: "static",
+        keyboard: false,
+      });
+
       form.find("input[name=isagree]").val("N");
       form.find("input[name=submissiondate]").val(submissionDate);
       form.find("input[name=submissionform]").val(formType);
-      ID = id;
+    }
+  } else if (parent.hasClass("table_overtime")) {
+    startdate = tr.find("td:eq(5)").text();
+    enddate = tr.find("td:eq(6)").text();
+    starttime = tr.find("td:eq(7)").text();
+    endtime = tr.find("td:eq(8)").text();
+    date_out = tr.find("td:eq(9)").text();
+    clock_out = tr.find("td:eq(10)").text();
+    ID = id;
+
+    if (this.name === "agree") {
+      const form = $("#form_overtime_realization_agree");
+
+      $("#modal_overtime_realization_agree").modal({
+        backdrop: "static",
+        keyboard: false,
+      });
+
+      form.find("input[name=enddate]").val(enddate);
+      form.find("input[name=enddate_realization]").val(enddate);
+      form.find("input[name=startdate]").val(startdate);
+      form.find("input[name=starttime]").val(starttime);
+      form.find("input[name=endtime]").val(endtime);
+      form.find("input[name=enddate_att]").val(date_out);
+      form.find("input[name=endtime_att]").val(clock_out);
+      form.find("input[name=isagree]").val("Y");
+    } else {
+      $("#modal_overtime_realization_not_agree").modal({
+        backdrop: "static",
+        keyboard: false,
+      });
     }
   }
 });
@@ -1901,6 +1988,7 @@ $(".btn_ok_realization").click(function (e) {
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
+      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",

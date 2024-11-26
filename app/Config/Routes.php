@@ -520,13 +520,16 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('hari-kerja-karyawan/show', 'Backend\EmpWorkDay::show');
     $routes->get('hari-kerja-karyawan/show/(:any)', 'Backend\EmpWorkDay::show/$1');
 
-    $routes->add('tugas-kantor-khusus', 'Backend\SpecialOfficeDuties::index');
-    $routes->match(['get', 'post'], 'tugas-kantor-khusus/showAll', 'Backend\SpecialOfficeDuties::showAll');
-    $routes->post('tugas-kantor-khusus/create', 'Backend\SpecialOfficeDuties::create');
-    $routes->get('tugas-kantor-khusus/show/(:any)', 'Backend\SpecialOfficeDuties::show/$1');
-    $routes->get('tugas-kantor-khusus/destroy/(:any)', 'Backend\SpecialOfficeDuties::destroy/$1');
-    $routes->get('tugas-kantor-khusus/processIt', 'Backend\SpecialOfficeDuties::processIt');
-    $routes->get('tugas-kantor-khusus/print/(:any)', 'Backend\SpecialOfficeDuties::exportPDF/$1');
+    $routes->add('penugasan', 'Backend\SpecialOfficeDuties::index');
+    $routes->match(['get', 'post'], 'penugasan/showAll', 'Backend\SpecialOfficeDuties::showAll');
+    $routes->post('penugasan/create', 'Backend\SpecialOfficeDuties::create');
+    $routes->get('penugasan/show/(:any)', 'Backend\SpecialOfficeDuties::show/$1');
+    $routes->get('penugasan/destroy/(:any)', 'Backend\SpecialOfficeDuties::destroy/$1');
+    $routes->get('penugasan/processIt', 'Backend\SpecialOfficeDuties::processIt');
+    $routes->post('penugasan/tableLine', 'Backend\SpecialOfficeDuties::tableLine');
+    $routes->post('penugasan/getAssignmentDate', 'Backend\SpecialOfficeDuties::getAssignmentDate');
+    $routes->post('penugasan/getRealizationData', 'Backend\SpecialOfficeDuties::getRealizationData');
+    $routes->get('penugasan/print/(:any)', 'Backend\SpecialOfficeDuties::exportPDF/$1');
 
     $routes->add('document-type', 'Backend\DocumentType::index');
     $routes->match(['get', 'post'], 'document-type/showAll', 'Backend\DocumentType::showAll');

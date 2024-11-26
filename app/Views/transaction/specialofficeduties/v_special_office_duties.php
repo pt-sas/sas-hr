@@ -10,12 +10,11 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>No Form</th>
-                <th>Karyawan</th>
-                <th>NIK</th>
+                <th>Pemohon</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Tanggal Pengajuan</th>
-                <th>Tanggal Tugas Kantor</th>
+                <th>Tanggal Penugasan</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>

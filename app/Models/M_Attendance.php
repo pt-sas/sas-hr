@@ -105,4 +105,28 @@ class M_Attendance extends Model
 
         return $sql;
     }
+
+    public function getAttendanceBranch($where, $order = null)
+    {
+        $builder = $this->db->table("v_attendance_serialnumber");
+
+        $sql = 'v_attendance_serialnumber.*,
+        md_attendance_machines.md_branch_id';
+
+        $builder->select($sql);
+
+        if ($order === 'ASC') {
+            $builder->orderBy('v_attendance_serialnumber.date', 'ASC');
+        } else if ($order === 'DESC') {
+            $builder->orderBy('v_attendance_serialnumber.date', 'DESC');
+        }
+
+        // $builder->join('md_employee', 'md_employee.nik = v_attendance.nik', 'left');
+        $builder->join('md_attendance_machines', 'md_attendance_machines.serialnumber = v_attendance_serialnumber.serialnumber', 'left');
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
+    }
 }
