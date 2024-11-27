@@ -2900,4 +2900,101 @@ class Validation
             ]
         ],
     ];
+
+    public $penugasan = [
+        'md_employee_id'        => [
+            'label'             => 'pemohon',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'branch_in'          => [
+            'label'             => 'cabang absen masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'branch_out'          => [
+            'label'             => 'cabang absen pulang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'startdate'             => [
+            'label'             => 'tanggal mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'enddate'               => [
+            'label'             => 'tanggal selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                => [
+            'label'             => 'alasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+    ];
+
+    public $realisasi_agree_penugasan = [
+        'submissiondate'        => [
+            'label'             => 'Tanggal Tidak Masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'branch_in'          => [
+            'label'             => 'cabang absen masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'branch_out'          => [
+            'label'             => 'cabang absen pulang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'starttime_att'          => [
+            'label'             => 'absen masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'endtime_att'          => [
+            'label'             => 'absen pulang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+    ];
 }

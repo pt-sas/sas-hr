@@ -3,6 +3,8 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_AssignmentDate;
+use App\Models\M_AssignmentDetail;
 use App\Models\M_Attendance;
 use Config\Services;
 
@@ -84,15 +86,34 @@ class Attendance extends BaseController
             try {
                 $data = '';
 
-                $att = $this->model->getAttendance([
-                    'v_attendance.nik'        => $post['nik'],
-                    'v_attendance.date'       => date("Y-m-d", strtotime($post['startdate']))
-                ])->getRow();
+                if ($post['typeform'] == 100008) {
+                    $mAssignmentDate = new M_AssignmentDate($this->request);
+                    $mAssignmentDetail = new M_AssignmentDetail($this->request);
 
-                if ($post['typeform'] == 100012 && $att) {
-                    $data = format_time($att->clock_in);
-                } else if ($post['typeform'] == 100013 && $att) {
-                    $data = format_time($att->clock_out);
+                    $subDetail = $mAssignmentDate->find($post['id']);
+                    $detail = $mAssignmentDetail->find($subDetail->{$mAssignmentDetail->primaryKey});
+
+                    $att = $this->model->getAttendanceBranch([
+                        'v_attendance_serialnumber.md_employee_id' => $detail->md_employee_id,
+                        'v_attendance_serialnumber.date' => date("Y-m-d", strtotime($subDetail->date)),
+                        'md_attendance_machines.md_branch_id' => $post['md_branch_id']
+                    ])->getRow();
+
+                    $data = [
+                        'clock_in' => $att && $att->clock_in ? format_time($att->clock_in) : '',
+                        'clock_out' => $att && $att->clock_out ? format_time($att->clock_out) : ''
+                    ];
+                } else {
+                    $att = $this->model->getAttendance([
+                        'v_attendance.nik'        => $post['nik'],
+                        'v_attendance.date'       => date("Y-m-d", strtotime($post['startdate']))
+                    ])->getRow();
+
+                    if ($post['typeform'] == 100012 && $att) {
+                        $data = format_time($att->clock_in);
+                    } else if ($post['typeform'] == 100013 && $att) {
+                        $data = format_time($att->clock_out);
+                    }
                 }
 
                 $response['clock'] = $data;

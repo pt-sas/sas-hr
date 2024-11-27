@@ -480,13 +480,13 @@ $(".week-picker")
     );
   });
 
-$("#form_special_office_duties").on(
-  "dp.change",
-  "input[name=startdate]",
-  function (e) {
-    $("[name=enddate]").data("DateTimePicker").date(moment(e.date));
-  }
-);
+// $("#form_special_office_duties").on(
+//   "dp.change",
+//   "input[name=startdate]",
+//   function (e) {
+//     $("[name=enddate]").data("DateTimePicker").date(moment(e.date));
+//   }
+// );
 
 $("#form_office_duties").on("change", "input[name=isbranch]", function (e) {
   const _this = $(this);
@@ -1120,24 +1120,39 @@ $(".tb_childrow").on("click", "td.details-control", function () {
 function getAssignmentDate(id, callback) {
   let url = `${SITE_URL}/getAssignmentDate`;
 
+  const form = $("#form_office_duties, #form_special_office_duties");
+  console.log(form);
+
   $.ajax({
     url: url,
     type: "POST",
     data: { id: id },
     success: function (result) {
+      console.log(result);
       if (result[0].success) {
         let data = result[0].message;
         let tableHtml = `
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
-                                <tr>
-                                    <th width="20%">Tanggal</th>
+                            <tr>
+                                    <th width="10%">Tanggal</th>
+                                    <th width="30%">Deskripsi</th>
+                `;
+
+        if (form.is($("#form_special_office_duties"))) {
+          tableHtml += `
+                                    <th width="10%">Absen Masuk</th>
+                                    <th width="10%">Jam</th>
+                                    <th width="10%">Absen Pulang</th>
+                                    <th width="10%">Jam</th>`;
+        }
+
+        tableHtml += `
                                     <th width="10%">Status</th>
-                                    <th width="50%">Deskripsi</th>
-                                    <th width="20%">Reference</th>
+                                    <th width="10%">Reference</th>
                                 </tr>
-                            </thead>
+                                </thead>
                             <tbody>
                 `;
 
@@ -1145,11 +1160,22 @@ function getAssignmentDate(id, callback) {
           tableHtml += `
                         <tr>
                             <td>${item.date}</td>
-                            <td>${item.isagree}</td>
                             <td>${item.description}</td>
+                            `;
+
+          if (form.is($("#form_special_office_duties"))) {
+            tableHtml += `
+                            <td>${item.branch_in}</td>
+                            <td>${item.clock_in}</td>
+                            <td>${item.branch_out}</td>
+                            <td>${item.clock_out}</td>`;
+          }
+
+          tableHtml += `
+                            <td>${item.isagree}</td>
                             <td>${item.reference_id}</td>
                         </tr>
-                    `;
+          `;
         });
 
         tableHtml += `
@@ -1166,3 +1192,41 @@ function getAssignmentDate(id, callback) {
     },
   });
 }
+$("#form_assignment_realization_sup_agree").on(
+  "change",
+  "#branch_in, #branch_out",
+  function (e) {
+    let _this = $(this);
+    let value = this.value;
+    const form = _this.closest("form");
+    let formData = new FormData();
+    let url = ADMIN_URL + "Kehadiran/getJamAbsen";
+
+    formData.append("id", ID);
+    formData.append("md_branch_id", value);
+    formData.append("typeform", 100008);
+
+    if (value.length) {
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        success: function (result) {
+          let data = result.clock;
+          if (_this.attr("id") == "branch_in") {
+            form.find("input[name=starttime_att]").val(data.clock_in);
+          } else if (_this.attr("id") == "branch_out") {
+            form.find("input[name=endtime_att]").val(data.clock_out);
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
+  }
+);

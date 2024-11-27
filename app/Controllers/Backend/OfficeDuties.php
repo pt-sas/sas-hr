@@ -406,15 +406,39 @@ class OfficeDuties extends BaseController
             if (!$this->validation->run($post, 'TugasKantorAddRow')) {
                 $table = $this->field->errorValidation($this->model->table, $post);
             } else {
-                if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
-                    $whereClause = "md_employee.isactive = 'Y'";
-                    $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}";
-                    $whereClause .= " AND md_employee_division.md_division_id = {$post['md_division_id']}";
-                    $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
-                    $dataEmployee = $employee->getEmployee($whereClause);
+                // if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
+                //     $whereClause = "md_employee.isactive = 'Y'";
 
-                    $fieldEmployee->setList($dataEmployee);
+                //     if ($emp->getLevellingId() == 100002) {
+                //         $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
+                //     } else {
+                // $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}
+                //         AND md_employee_division.md_division_id = {$post['md_division_id']}
+                //         AND (md_employee.md_levelling_id IN (SELECT l.md_levelling_id
+                //         FROM md_levelling l
+                //         WHERE l.md_levelling_id > {$emp->md_levelling_id}))
+                //         AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
+                // }
+
+                // }
+
+
+                $emp = $employee->find($this->session->get('md_employee_id'));
+                $empId = $emp->getEmployeeId();
+
+                $whereClause = "md_employee.isactive = 'Y'";
+
+                if ($emp->getLevellingId() == 100002) {
+                    $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
+                } else {
+                    $whereClause .= " AND superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
+                    $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
+                    $whereClause .= " OR md_employee.superior_id = $empId";
+                    $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
                 }
+
+                $dataEmployee = $employee->getEmployee($whereClause);
+                $fieldEmployee->setList($dataEmployee);
 
                 $table = [
                     $this->field->fieldTable($btnChildRow),
@@ -431,10 +455,34 @@ class OfficeDuties extends BaseController
                 $id = $row->getAssignmentId();
                 $header = $this->model->where('trx_assignment_id', $id)->first();
 
+                // $whereClause = "md_employee.isactive = 'Y'";
+
+                // if ($emp->getLevellingId() == 100002) {
+                //     $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
+                // } else {
+                //     $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}
+                //                 AND md_employee_division.md_division_id = {$header->md_division_id}
+                //                 AND (md_employee.md_levelling_id IN (SELECT l.md_levelling_id
+                //                 FROM md_levelling l
+                //                 WHERE l.md_levelling_id > {$emp->md_levelling_id}))
+                //                 AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
+                // }
+
+                $emp = $employee->find($header->md_employee_id);
+                $empId = $emp->getEmployeeId();
+
                 $whereClause = "md_employee.isactive = 'Y'";
-                $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}";
-                $whereClause .= " AND md_employee_division.md_division_id = {$header->md_division_id}";
-                $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
+
+                if (
+                    $emp->getLevellingId() == 100002
+                ) {
+                    $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
+                } else {
+                    $whereClause .= " AND superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
+                    $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
+                    $whereClause .= " OR md_employee.superior_id = $empId";
+                    $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
+                }
 
                 $dataEmployee = $employee->getEmployee($whereClause);
                 $fieldEmployee->setList($dataEmployee);
@@ -477,8 +525,8 @@ class OfficeDuties extends BaseController
 
                     $result[] = [
                         'date' => format_dmy($row->date, '-'),
-                        'isagree' => statusRealize($row->isagree),
                         'description' => $row->description ?? '',
+                        'isagree' => statusRealize($row->isagree),
                         'reference_id' => $docNoRef
                     ];
                 }

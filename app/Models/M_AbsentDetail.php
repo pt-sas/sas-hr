@@ -720,4 +720,16 @@ class M_AbsentDetail extends Model
 
         return $result;
     }
+
+    public function getAllSubmission($where)
+    {
+        $builder = $this->db->table("v_realization");
+
+        // $this->builder->join('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.trx_absent_id', 'left');
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
+    }
 }

@@ -14,6 +14,12 @@ class AssignmentDate extends Entity
     protected $reference_id;
     protected $comment;
     protected $description;
+    protected $branch_in;
+    protected $branch_out;
+    protected $realization_in;
+    protected $realization_out;
+    protected $instruction_in;
+    protected $instruction_out;
     protected $created_by;
     protected $updated_by;
 
@@ -53,6 +59,65 @@ class AssignmentDate extends Entity
         $this->attributes['date'] = $date;
     }
 
+    public function getBranchIn()
+    {
+        return $this->attributes['branch_in'];
+    }
+
+    public function setBranchIn($branch_in)
+    {
+        $this->attributes['branch_in'] = $branch_in;
+    }
+
+    public function getBranchOut()
+    {
+        return $this->attributes['branch_out'];
+    }
+
+    public function setBranchOut($branch_out)
+    {
+        $this->attributes['branch_out'] = $branch_out;
+    }
+
+    public function getRealizationIn()
+    {
+        return $this->attributes['realization_in'];
+    }
+
+    public function setRealizationIn($realization_in)
+    {
+        $this->attributes['realization_in'] = $realization_in;
+    }
+
+    public function getRealizationOut()
+    {
+        return $this->attributes['realization_out'];
+    }
+
+    public function setRealizationOut($realization_out)
+    {
+        $this->attributes['realization_out'] = $realization_out;
+    }
+
+    public function getInstructionIn()
+    {
+        return $this->attributes['instruction_in'];
+    }
+
+    public function setInstructionIn($instruction_in)
+    {
+        $this->attributes['instruction_in'] = $instruction_in;
+    }
+
+    public function getInstructionOut()
+    {
+        return $this->attributes['instruction_out'];
+    }
+
+    public function setInstructionOut($instruction_out)
+    {
+        $this->attributes['instruction_out'] = $instruction_out;
+    }
     // Getter and Setter for isagree
     public function getIsAgree()
     {

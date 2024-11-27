@@ -29,7 +29,8 @@ dt.name AS doctype,
 a.md_employee_id AS employee_id,
 a.image AS image,
 a.md_branch_id,
-a.md_division_id
+a.md_division_id,
+e.md_employee_id
 FROM trx_absent a
 LEFT JOIN trx_absent_detail adetail ON a.`trx_absent_id` = adetail.`trx_absent_id`
 LEFT JOIN md_employee e ON a.`md_employee_id` = e.`md_employee_id`
@@ -58,7 +59,8 @@ dt.name AS doctype,
 a.md_employee_id AS employee_id,
 '' AS image,
 a.md_branch_id,
-a.md_division_id
+a.md_division_id,
+e.md_employee_id
 FROM trx_assignment a
 LEFT JOIN trx_assignment_detail adetail ON a.trx_assignment_id = adetail.trx_assignment_id
 LEFT JOIN trx_assignment_date adate ON adetail.trx_assignment_detail_id = adate.trx_assignment_detail_id
