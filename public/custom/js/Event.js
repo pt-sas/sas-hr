@@ -1933,10 +1933,14 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
       form.find("input[name=endtime_att]").val(clock_out);
       form.find("input[name=isagree]").val("Y");
     } else {
+      const form = $("#form_overtime_realization_not_agree");
+
       $("#modal_overtime_realization_not_agree").modal({
         backdrop: "static",
         keyboard: false,
       });
+
+      form.find("input[name=isagree]").val("N");
     }
   }
 });
