@@ -1661,6 +1661,21 @@ class Validation
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
         ],
+        'detail.table.*.starttime_line'  => [
+            'label'             => 'Jam Mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+
+        'detail.table.*.endtime_line'  => [
+            'label'             => 'Jam Mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
     ];
 
     public $alpa = [

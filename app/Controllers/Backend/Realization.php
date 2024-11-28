@@ -162,7 +162,7 @@ class Realization extends BaseController
             $sort = ['trx_overtime.documentno' => 'ASC'];
 
             $where['trx_overtime.docstatus'] = $this->DOCSTATUS_Inprogress;
-            $where['trx_overtime_detail.status'] = 'H';
+            $where['trx_overtime_detail.status'] = 'M';
             $where['trx_overtime.isapproved'] = 'Y';
 
             /**
@@ -666,7 +666,7 @@ class Realization extends BaseController
 
             $agree = 'Y';
             $notAgree = 'N';
-            $holdAgree = 'H';
+            $holdAgree = 'M';
             $today = date('Y-m-d');
             $todayTime = date('Y-m-d H:i:s');
 
@@ -675,22 +675,20 @@ class Realization extends BaseController
             try {
                 if (!$this->validation->run($post, 'realisasi_lembur_agree') && $isAgree === 'Y') {
                     $response = $this->field->errorValidation($this->model->table, $post);
+                } else if ($isAgree === "Y" && date('Y-m-d', strtotime($post['enddate_realization'])) > $today) {
+                    $response = message('success', false, 'tanggal realisasi belum terpenuhi');
                 } else {
                     $this->model = new M_OvertimeDetail($this->request);
                     $this->entity = new \App\Entities\OvertimeDetail();
 
                     $line = $this->model->find($post['id']);
 
-                    $isOvertime = $mEmpBenefit->where(["md_employee_id" => $line->md_employee_id, "benefit" => "Lembur"])->first();
-
                     if ($isAgree === $agree) {
 
                         $startdate = date('Y-m-d', strtotime($line->startdate)) . " " . $post['starttime'];
                         $enddate = date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
 
-                        if ($isOvertime && $isOvertime->status === 'Y') {
-                            $ovt = $this->getHourOvertime($startdate, $enddate, $line->md_employee_id);
-                        }
+                        $ovt = $this->getHourOvertime($startdate, $enddate, $line->md_employee_id);
 
                         $this->entity->trx_overtime_detail_id = $post['id'];
                         $this->entity->startdate = $startdate;

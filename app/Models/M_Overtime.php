@@ -15,6 +15,7 @@ class M_Overtime extends Model
         'md_branch_id',
         'md_division_id',
         'submissiondate',
+        'submissiontype',
         'description',
         'docstatus',
         'isapproved',
@@ -58,6 +59,8 @@ class M_Overtime extends Model
     protected $request;
     protected $db;
     protected $builder;
+
+    protected $Pengajuan_Lembur      = 100014;
 
     public function __construct(RequestInterface $request)
     {
@@ -133,15 +136,14 @@ class M_Overtime extends Model
         ];
     }
 
-    public function getInvNumber()
+    public function getInvNumber($field, $where, $post)
     {
-        $post = $this->request->getPost();
-
         $year = date("Y", strtotime($post['submissiondate']));
         $month = date("m", strtotime($post['submissiondate']));
 
         $this->builder->select('MAX(RIGHT(documentno,4)) AS documentno');
         $this->builder->where("DATE_FORMAT(submissiondate, '%m')", $month);
+        $this->builder->where($field, $where);
         $sql = $this->builder->get();
 
         $code = "";
@@ -153,7 +155,7 @@ class M_Overtime extends Model
         } else {
             $code = "0001";
         }
-        $first = 'LB';
+        $first = $post["necessary"];
 
         $prefix = $first . "/" . $year . "/" . $month . "/" . $code;
 

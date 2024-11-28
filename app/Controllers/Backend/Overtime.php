@@ -138,6 +138,9 @@ class Overtime extends BaseController
 
             $table = json_decode($post['table']);
 
+            $post['submissiontype'] = $this->model->Pengajuan_Lembur;
+            $post["necessary"] = 'LB';
+
             //! Mandatory property for detail validation
             $post['line'] = countLine($table);
             $post['detail'] = [
@@ -153,7 +156,6 @@ class Overtime extends BaseController
                 if (!$this->validation->run($post, 'lembur')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $response = $post;
                     $holidays = $mHoliday->getHolidayDate();
                     $startDate = date('Y-m-d', strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
@@ -229,7 +231,7 @@ class Overtime extends BaseController
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                         } else if ($lastDate < $subDate) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
-                        } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $subDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
+                        } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $startDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
                             $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
                         } else if ($empWork) {
                             $value = implode(", ", array_map(function ($row) {
@@ -243,7 +245,7 @@ class Overtime extends BaseController
                             if ($this->isNew()) {
                                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                $docNo = $this->model->getInvNumber();
+                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Lembur, $post);
                                 $this->entity->setDocumentNo($docNo);
                             }
 
@@ -336,7 +338,7 @@ class Overtime extends BaseController
                             $ovt_line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 
                             foreach ($ovt_line as $key => $value) {
-                                $value->status = 'H';
+                                $value->status = 'M';
                                 $this->modelDetail->save($value);
                             }
                             // 
@@ -393,6 +395,7 @@ class Overtime extends BaseController
         $fieldStartTime = new \App\Entities\Table();
         $fieldStartTime->setName("starttime");
         $fieldStartTime->setId("starttime");
+        $fieldStartTime->setIsRequired(true);
         $fieldStartTime->setType("text");
         $fieldStartTime->setClass("timepicker");
         $fieldStartTime->setLength(100);
@@ -400,6 +403,7 @@ class Overtime extends BaseController
         $fieldEndTime = new \App\Entities\Table();
         $fieldEndTime->setName("endtime");
         $fieldEndTime->setId("endtime");
+        $fieldEndTime->setIsRequired(true);
         $fieldEndTime->setType("text");
         $fieldEndTime->setClass("timepicker");
         $fieldEndTime->setLength(100);
@@ -428,8 +432,8 @@ class Overtime extends BaseController
             } else {
                 if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
                     $whereClause = "md_employee.isactive = 'Y'";
-                    $whereClause .= " AND md_employee_benefit.benefit = 'Lembur'";
-                    $whereClause .= " AND md_employee_benefit.status = 'Y'";
+                    $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
+                    $whereClause .= " AND md_benefit_detail.status = 'Y'";
                     $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}";
                     $whereClause .= " AND md_employee_division.md_division_id = {$post['md_division_id']}";
                     $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
@@ -464,8 +468,8 @@ class Overtime extends BaseController
                 $header = $this->model->where('trx_overtime_id', $id)->first();
 
                 $whereClause = "md_employee.isactive = 'Y'";
-                $whereClause .= " AND md_employee_benefit.benefit = 'Lembur'";
-                $whereClause .= " AND md_employee_benefit.status = 'Y'";
+                $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
+                $whereClause .= " AND md_benefit_detail.status = 'Y'";
                 $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}";
                 $whereClause .= " AND md_employee_division.md_division_id = {$header->md_division_id}";
                 $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";

@@ -12,6 +12,7 @@ class Overtime extends Entity
     protected $md_branch_id;
     protected $md_division_id;
     protected $submissiondate;
+    protected $submissiontype;
     protected $startdate;
     protected $enddate;
     protected $description;
@@ -90,6 +91,16 @@ class Overtime extends Entity
     public function setSubmissionDate($submissiondate)
     {
         $this->attributes['submissiondate'] = $submissiondate;
+    }
+
+    public function getSubmissionType()
+    {
+        return $this->attributes['submissiontype'];
+    }
+
+    public function setSubmissionType($submissiontype)
+    {
+        $this->attributes['submissiontype'] = $submissiontype;
     }
 
     public function getDescription()
