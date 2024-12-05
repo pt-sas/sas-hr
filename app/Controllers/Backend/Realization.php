@@ -749,7 +749,7 @@ class Realization extends BaseController
             try {
                 if ($isAgree === 'Y' && (in_array($submissionForm, $typeFormAssignment) ? false : !$this->validation->run($post, 'realisasi_kehadiran'))) {
                     $response = $this->field->errorValidation($this->model->table, $post);
-                } else if (date('Y-m-d', strtotime($post['submissiondate'])) > $today) {
+                } else if (($isAgree == "Y") && date('Y-m-d', strtotime($post['submissiondate'])) > $today) {
                     $response = message('success', false, 'tanggal realisasi belum terpenuhi');
                 } else {
                     if (in_array($submissionForm, $typeFormAssignment)) {

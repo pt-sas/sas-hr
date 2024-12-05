@@ -8,6 +8,7 @@ use App\Models\M_AbsentDetail;
 use App\Models\M_Employee;
 use App\Models\M_Holiday;
 use App\Models\M_Rule;
+use App\Models\M_Assignment;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
@@ -145,6 +146,7 @@ class PermissionLeaveEarly extends BaseController
     public function create()
     {
         $mHoliday = new M_Holiday($this->request);
+        $mAssignment = new M_Assignment($this->request);
         $mRule = new M_Rule($this->request);
         $mAttendance = new M_Attendance($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
@@ -202,13 +204,13 @@ class PermissionLeaveEarly extends BaseController
                         $whereClause .= " AND md_day.name = '{$day}'";
                         $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
-                        //TODO : Get submission Tugas Kantor, Tugas Kantor Khusus
-                        $whereClause = "trx_absent.nik = '{$nik}'";
-                        $whereClause .= " AND DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$startDate}'";
-                        $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                        $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                        $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Khusus})";
-                        $trx = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+                        //TODO : Get submission Tugas Kantor
+                        $whereClause = "trx_assignment_detail.md_employee_id = {$post['md_employee_id']}";
+                        $whereClause .= " AND DATE_FORMAT(trx_assignment_date.date, '%Y-%m-%d') = '{$startDate}'";
+                        $whereClause .= " AND trx_assignment.docstatus = '{$this->DOCSTATUS_Completed}'";
+                        $whereClause .= " AND trx_assignment_date.isagree = 'Y'";
+                        $whereClause .= " AND trx_assignment.submissiontype IN ({$mAssignment->Pengajuan_Tugas_Kantor}, {$mAssignment->Pengajuan_Penugasan})";
+                        $trx = $mAssignment->getDetailData($whereClause)->getRow();
 
                         if ($startDate > $subDate && (is_null($work) || is_null($trx))) {
                             $response = message('success', false, 'Tidak terdaftar pada hari kerja');
@@ -222,15 +224,15 @@ class PermissionLeaveEarly extends BaseController
                             if ($startDate <= $subDate) {
                                 $whereClause = "v_attendance.nik = '{$nik}'";
                                 $whereClause .= " AND v_attendance.date > '{$endDate}'";
-                                $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
+                                $attPresentNextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
 
                                 if (is_null($attPresentNextDay)) {
-                                    $whereClause = "trx_absent.nik = {$nik}";
-                                    $whereClause .= " AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') > '{$endDate}'";
-                                    $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                                    $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                                    $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Khusus})";
-                                    $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+                                    $whereClause = "trx_assignment_detail.md_employee_id = {$post['md_employee_id']}";
+                                    $whereClause .= " AND DATE_FORMAT(trx_assignment_date.date, '%Y-%m-%d') > '{$endDate}'";
+                                    $whereClause .= " AND trx_assignment.docstatus = '{$this->DOCSTATUS_Completed}'";
+                                    $whereClause .= " AND trx_assignment_date.isagree = 'Y'";
+                                    $whereClause .= " AND trx_assignment.submissiontype IN ({$mAssignment->Pengajuan_Tugas_Kantor}, {$mAssignment->Pengajuan_Penugasan})";
+                                    $trxPresentNextDay = $mAssignment->getDetailData($whereClause)->getRow();
 
                                     $presentNextDate = $trxPresentNextDay ? $trxPresentNextDay->date : $endDate;
                                 } else {

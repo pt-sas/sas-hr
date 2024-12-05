@@ -7,6 +7,7 @@ use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
 use App\Models\M_Employee;
 use App\Models\M_AccessMenu;
+use App\Models\M_Assignment;
 use App\Models\M_Holiday;
 use App\Models\M_Rule;
 use App\Models\M_EmpWorkDay;
@@ -149,6 +150,7 @@ class ForgotAbsentLeave extends BaseController
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mAttendance = new M_Attendance($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mAssignment = new M_Assignment($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -202,14 +204,14 @@ class ForgotAbsentLeave extends BaseController
                         $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
                         //TODO : Get submission Tugas Kantor, Tugas Kantor Khusus
-                        $whereClause = "trx_absent.nik = '{$nik}'";
-                        $whereClause .= " AND DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$startDate}'";
-                        $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                        $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                        $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Khusus})";
-                        $trx = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+                        $whereClause = "trx_assignment_detail.md_employee_id = {$post['md_employee_id']}";
+                        $whereClause .= " AND DATE_FORMAT(trx_assignment_date.date, '%Y-%m-%d') = '{$startDate}'";
+                        $whereClause .= " AND trx_assignment.docstatus = '{$this->DOCSTATUS_Completed}'";
+                        $whereClause .= " AND trx_assignment_date.isagree = 'Y'";
+                        $whereClause .= " AND trx_assignment.submissiontype IN ({$mAssignment->Pengajuan_Tugas_Kantor}, {$mAssignment->Pengajuan_Penugasan})";
+                        $trx = $mAssignment->getDetailData($whereClause)->getRow();
 
-                        if ($startDate > $subDate && (is_null($work) || is_null($trx))) {
+                        if ($startDate > $subDate && (is_null($work) && is_null($trx))) {
                             $response = message('success', false, 'Tidak terdaftar pada hari kerja');
                         } else {
                             $daysOff = getDaysOff($workDetail);
@@ -221,15 +223,15 @@ class ForgotAbsentLeave extends BaseController
                             if ($startDate <= $submissionDate) {
                                 $whereClause = "v_attendance.nik = '{$nik}'";
                                 $whereClause .= " AND v_attendance.date > '{$endDate}'";
-                                $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
+                                $attPresentNextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
 
                                 if (is_null($attPresentNextDay)) {
-                                    $whereClause = "trx_absent.nik = {$nik}";
-                                    $whereClause .= " AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') > '{$endDate}'";
-                                    $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                                    $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                                    $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Khusus})";
-                                    $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+                                    $whereClause = "trx_assignment_detail.md_employee_id = {$post['md_employee_id']}";
+                                    $whereClause .= " AND DATE_FORMAT(trx_assignment_date.date, '%Y-%m-%d') > '{$endDate}'";
+                                    $whereClause .= " AND trx_assignment.docstatus = '{$this->DOCSTATUS_Completed}'";
+                                    $whereClause .= " AND trx_assignment_date.isagree = 'Y'";
+                                    $whereClause .= " AND trx_assignment.submissiontype IN ({$mAssignment->Pengajuan_Tugas_Kantor}, {$mAssignment->Pengajuan_Penugasan})";
+                                    $trxPresentNextDay = $mAssignment->getDetailData($whereClause)->getRow();
 
                                     $presentNextDate = $trxPresentNextDay ? $trxPresentNextDay->date : $endDate;
                                 } else {
@@ -255,7 +257,7 @@ class ForgotAbsentLeave extends BaseController
                                 $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                             } else if (!is_null($presentNextDate) && !($lastDate >= $subDate) && $work) {
                                 $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
-                            } else if ($attPresent && !empty($attPresent->clock_in)) {
+                            } else if ($attPresent && !empty($attPresent->clock_out)) {
                                 $response = message('success', false, 'Anda sudah ada absen pulang');
                             } else {
                                 $this->entity->fill($post);
@@ -287,6 +289,7 @@ class ForgotAbsentLeave extends BaseController
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+                $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
@@ -304,7 +307,8 @@ class ForgotAbsentLeave extends BaseController
                 $fieldHeader->setList($list);
 
                 $result = [
-                    'header'    => $this->field->store($fieldHeader)
+                    'header'    => $this->field->store($fieldHeader),
+                    'line'      => $this->tableLine('edit', $detail)
                 ];
 
                 $response = message('success', true, $result);

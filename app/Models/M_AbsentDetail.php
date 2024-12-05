@@ -703,6 +703,7 @@ class M_AbsentDetail extends Model
      */
     public function doChangeValueField($data, $id, $dataHeader): array
     {
+        $mAbsent = new M_Absent($this->request);
         $result = [];
 
         $number = 1;
@@ -711,8 +712,16 @@ class M_AbsentDetail extends Model
             if (property_exists($row, "lineno"))
                 $row->lineno = $number;
 
-            if (!property_exists($row, "isagree"))
-                $row->isagree = "H";
+            if (!property_exists($row, "isagree")) {
+                $header = $mAbsent->find($row->trx_absent_id);
+
+                $formAttendance = [$mAbsent->Pengajuan_Lupa_Absen_Masuk, $mAbsent->Pengajuan_Lupa_Absen_Pulang, $mAbsent->Pengajuan_Datang_Terlambat, $mAbsent->Pengajuan_Pulang_Cepat];
+                if (in_array($header->submissiontype, $formAttendance)) {
+                    $row->isagree = "M";
+                } else {
+                    $row->isagree = "H";
+                }
+            }
 
             $result[] = $row;
             $number++;
