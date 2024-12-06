@@ -45,7 +45,7 @@ class M_Absent extends Model
     protected $beforeInsert         = [];
     protected $afterInsert          = [];
     protected $beforeUpdate         = [];
-    protected $afterUpdate          = [];
+    protected $afterUpdate          = ['doAfterUpdate'];
     protected $beforeDelete         = [];
     protected $afterDelete          = [];
     protected $column_order         = [
@@ -352,25 +352,32 @@ class M_Absent extends Model
         $mAllowance = new M_AllowanceAtt($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mLeaveBalance = new M_LeaveBalance($this->request);
-        $mAbsentDetail = new M_AbsentDetail($this->request);
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-
         $sql = $this->find($ID);
         $line = $mAbsentDetail->where($this->primaryKey, $ID)->first();
 
         $agree = 'Y';
         $notAgree = 'N';
         $holdAgree = 'H';
+        $rlzMgr = 'M';
+
+        $formAttendance = [$this->Pengajuan_Lupa_Absen_Masuk, $this->Pengajuan_Lupa_Absen_Pulang, $this->Pengajuan_Datang_Terlambat, $this->Pengajuan_Pulang_Cepat];
+        $isSubAttendance = in_array($sql->submissiontype, $formAttendance);
 
         $updatedBy = $rows['data']['updated_by'] ?? session()->get('id');
 
-        if ($sql->getIsApproved() === 'Y' && ($sql->docstatus === "IP" || $sql->docstatus === "CO") && is_null($line)) {
+        if (($sql->getIsApproved() === 'Y' || $isSubAttendance) && ($sql->docstatus === "IP" || $sql->docstatus === "CO") && is_null($line)) {
             if ($sql->docstatus === "CO")
                 $isAgree = $agree;
 
-            if ($sql->docstatus === "IP")
-                $isAgree = $holdAgree;
+            if ($sql->docstatus === "IP") {
+                if ($isSubAttendance) {
+                    $isAgree = $rlzMgr;
+                } else {
+                    $isAgree = $holdAgree;
+                }
+            }
 
             $data = [
                 'id'         => $ID,

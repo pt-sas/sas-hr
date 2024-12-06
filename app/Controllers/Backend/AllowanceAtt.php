@@ -404,6 +404,22 @@ class AllowanceAtt extends BaseController
 
                         $absent = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
 
+                        $parAbsent = "DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$date}'
+                        AND trx_absent.docstatus = 'CO'
+                        AND trx_absent_detail.isagree = 'N'
+                        AND trx_absent.md_employee_id = {$row->md_employee_id}
+                        AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Pulang_Cepat})";
+
+                        $absentNA = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
+
+                        $parAbsent = "DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$date}'
+                        AND trx_absent.docstatus = 'CO'
+                        AND trx_absent.md_employee_id = {$row->md_employee_id}
+                        AND trx_absent_detail.isagree = 'N'
+                        AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang})";
+
+                        $forgetAbsentNA = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
+
                         $parAbsent = "DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'
                             AND trx_absent.docstatus = 'CO'
                             AND trx_absent.md_employee_id = {$row->md_employee_id}
@@ -423,6 +439,8 @@ class AllowanceAtt extends BaseController
                                 if ($absent && $allow && ($absent->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat
                                     || $absent->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat)) {
                                     $qty = $qty + $allow->amount;
+                                } else if (!empty($absentNA)) {
+                                    $qty = $qty + -1.5;
                                 } else {
                                     $qty = 0;
                                 }
@@ -449,6 +467,12 @@ class AllowanceAtt extends BaseController
                                     && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang
                                 ) {
                                     $qty = $qty - 0.5;
+                                } else if (!empty($absentNA)) {
+                                    if (!empty($forgetAbsentNA)) {
+                                        $qty = $qty + -1.5;
+                                    } else {
+                                        $qty = $qty + -2;
+                                    }
                                 } else if (empty($absent)) {
                                     $qty = 0;
                                 }
@@ -526,6 +550,22 @@ class AllowanceAtt extends BaseController
 
                         $absent = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
 
+                        $parAbsent = "DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$date}'
+                        AND trx_absent.docstatus = 'NA'
+                        AND trx_absent_detail.isagree = 'N'
+                        AND trx_absent.md_employee_id = {$row->md_employee_id}
+                        AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Pulang_Cepat})";
+
+                        $absentNA = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
+
+                        $parAbsent = "DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$date}'
+                        AND trx_absent.docstatus = 'CO'
+                        AND trx_absent.md_employee_id = {$row->md_employee_id}
+                        AND trx_absent_detail.isagree = 'N'
+                        AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang})";
+
+                        $forgetAbsentNA = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
+
                         $parAbsent = "DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'
                             AND trx_absent.docstatus = 'CO'
                             AND trx_absent.md_employee_id = {$row->md_employee_id}
@@ -545,6 +585,8 @@ class AllowanceAtt extends BaseController
                                 if ($absent && $allow && ($absent->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat
                                     || $absent->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat)) {
                                     $qty = $qty + $allow->amount;
+                                } else if (!empty($absentNA)) {
+                                    $qty = $qty + -1.5;
                                 } else {
                                     $qty = 0;
                                 }
@@ -558,6 +600,12 @@ class AllowanceAtt extends BaseController
                                     && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk
                                 ) {
                                     $qty = $qty - 0.5;
+                                } else if (!empty($absentNA)) {
+                                    if (!empty($forgetAbsentNA)) {
+                                        $qty = $qty + -1.5;
+                                    } else {
+                                        $qty = $qty + -2;
+                                    }
                                 } else if (empty($absent)) {
                                     $qty = 0;
                                 }

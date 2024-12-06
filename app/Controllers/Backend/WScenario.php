@@ -358,7 +358,7 @@ class WScenario extends BaseController
                 $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
                 $this->entity->setWfScenarioId($this->sys_wfscenario_id);
                 $isWfscenario = true;
-            } else if ($docType->getIsRealization() === "Y" && !is_null($modelDetail) && $trxLine) {
+            } else if ($docType->getIsRealization() === "Y") {
                 $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
                 $this->entity->setIsApproved("Y");
             } else {

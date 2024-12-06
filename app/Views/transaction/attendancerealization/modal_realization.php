@@ -96,15 +96,17 @@
             <div class="modal-body" id="realization">
                 <form class="form-horizontal" id="form_attendance_realization_sup_not_agree">
                     <div class="row">
-                        <div class="form-group">
-                            <label for="submissiondate">Tanggal Tidak Masuk<span class="required">*</span></label>
-                            <div class="input-icon">
-                                <input type="text" class="form-control datepicker" name="submissiondate" readonly>
-                                <span class="input-icon-addon">
-                                    <i class="fa fa-calendar"></i>
-                                </span>
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="submissiondate">Tanggal Tidak Masuk<span class="required">*</span></label>
+                                <div class="input-icon">
+                                    <input type="text" class="form-control datepicker" name="submissiondate" readonly>
+                                    <span class="input-icon-addon">
+                                        <i class="fa fa-calendar"></i>
+                                    </span>
+                                </div>
+                                <small class="form-text text-danger" id="error_submissiondate"></small>
                             </div>
-                            <small class="form-text text-danger" id="error_submissiondate"></small>
                         </div>
                         <div class="col-md-12">
                             <div class="form-group">
