@@ -109,41 +109,41 @@ class M_AssignmentDate extends Model
                     $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => 'Sanksi', 'isactive' => 'Y'])->first();
 
                     //TODO : Get work day employee
-                    $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $line->md_employee_id,
-                        'validfrom <='      => $today
-                    ])->orderBy('validfrom', 'ASC')->first();
+                    // $workDay = $mEmpWork->where([
+                    //     'md_employee_id'    => $line->md_employee_id,
+                    //     'validfrom <='      => $today
+                    // ])->orderBy('validfrom', 'ASC')->first();
 
-                    $whereClause = "md_work_detail.isactive = 'Y'";
-                    $whereClause .= " AND md_employee_work.md_employee_id = $line->md_employee_id";
-                    $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                    $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                    // $whereClause = "md_work_detail.isactive = 'Y'";
+                    // $whereClause .= " AND md_employee_work.md_employee_id = $line->md_employee_id";
+                    // $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                    // $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                    $daysOff = getDaysOff($workDetail);
-                    $dateIndex = date('w', strtotime($subLine->date));
+                    // $daysOff = getDaysOff($workDetail);
+                    // $dateIndex = date('w', strtotime($subLine->date));
 
-                    $holidays = $mHoliday->getHolidayDate();
+                    // $holidays = $mHoliday->getHolidayDate();
 
-                    if (in_array($dateIndex, $daysOff) || in_array(date('Y-m-d', strtotime($subLine->date)), $holidays)) {
-                        $amount = $rule->condition ?: $rule->value;
+                    // if (in_array($dateIndex, $daysOff) || in_array(date('Y-m-d', strtotime($subLine->date)), $holidays)) {
+                    //     $amount = $rule->condition ?: $rule->value;
 
-                        if ($amount != 0 && $subLine->isagree === 'Y') {
-                            $entity = new \App\Entities\AllowanceAtt();
+                    // if ($amount != 0 && $subLine->isagree === 'Y') {
+                    //     $entity = new \App\Entities\AllowanceAtt();
 
-                            $entity->record_id = $sql->{$mAssignment->primaryKey};
-                            $entity->table = $mAssignment->table;
-                            $entity->submissiontype = $sql->submissiontype;
-                            $entity->submissiondate = $subLine->date;
-                            $entity->md_employee_id = $line->md_employee_id;
-                            $entity->amount = $amount;
-                            $entity->created_by = $updated_by;
-                            $entity->updated_by = $updated_by;
+                    //     $entity->record_id = $sql->{$mAssignment->primaryKey};
+                    //     $entity->table = $mAssignment->table;
+                    //     $entity->submissiontype = $sql->submissiontype;
+                    //     $entity->submissiondate = $subLine->date;
+                    //     $entity->md_employee_id = $line->md_employee_id;
+                    //     $entity->amount = $amount;
+                    //     $entity->created_by = $updated_by;
+                    //     $entity->updated_by = $updated_by;
 
-                            $mAllowance->save($entity);
+                    //     $mAllowance->save($entity);
 
-                            $amount = 0; // Reset amount for the next iteration
-                        }
-                    }
+                    //     $amount = 0; // Reset amount for the next iteration
+                    // }
+                    // }
 
                     $sanksi =  $mRuleValue->where(['md_rule_detail_id' => $ruleDetail->md_rule_detail_id])->findAll();
 
