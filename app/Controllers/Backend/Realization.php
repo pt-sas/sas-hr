@@ -77,16 +77,16 @@ class Realization extends BaseController
             $join = [];
             $order = [
                 '', // Number
-                'realization.date',
-                'realization.doctype',
-                'realization.branch',
-                'realization.division',
-                'realization.employee_fullname',
+                'v_realization.date',
+                'v_realization.doctype',
+                'v_realization.branch',
+                'v_realization.division',
+                'v_realization.employee_fullname',
                 '',
-                'realization.reason'
+                'v_realization.reason'
             ];
             $search = $this->request->getPost('search');
-            $sort = ['realization.date' => 'ASC', 'realization.employee_fullname' => 'ASC'];
+            $sort = ['v_realization.date' => 'ASC', 'v_realization.employee_fullname' => 'ASC'];
 
             $formType = [
                 $this->model->Pengajuan_Lupa_Absen_Masuk,
