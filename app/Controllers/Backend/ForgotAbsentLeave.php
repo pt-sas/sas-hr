@@ -79,27 +79,35 @@ class ForgotAbsentLeave extends BaseController
             /**
              * Hak akses
              */
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get("md_employee_id"));
-            $arrEmployee = implode(",", $arrEmployee);
+            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
-            $access = $mAccess->getAccess($this->session->get("sys_user_id"));
+            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                $arrBranch = $arrAccess["branch"];
+                $arrDiv = $arrAccess["division"];
 
-            if ($access && isset($access["branch"]) && isset($access["division"])) {
-                $where['trx_absent.md_branch_id'] = [
-                    'value'     => $access["branch"]
-                ];
+                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
-                $where['trx_absent.md_division_id'] = [
-                    'value'     => $access["division"]
-                ];
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                if ($arrEmployee)
-                    $where = [
-                        '(trx_absent.created_by =' . $this->session->get("sys_user_id") . ' OR trx_absent.md_employee_id IN (' . $arrEmployee . '))'
+                    $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrMerge
                     ];
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrEmpBased
+                    ];
+                } else {
+                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+            } else if (!empty($this->session->get('md_employee_id'))) {
+                $where['trx_absent.md_employee_id'] = [
+                    'value'     => $arrEmployee
+                ];
             } else {
-                $where['trx_absent.md_branch_id'] = "";
-                $where['trx_absent.md_division_id'] = "";
+                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Lupa_Absen_Pulang;
