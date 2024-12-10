@@ -85,7 +85,7 @@ class M_Absent extends Model
     /** Pengajuan Tugas Kantor */
     protected $Pengajuan_Tugas_Kantor = 100007;
     /** Pengajuan Tugas Khusus */
-    protected $Pengajuan_Tugas_Khusus = 100008;
+    protected $Pengajuan_Penugasan = 100008;
     /** Pengajuan Tugas Kantor Setengah Hari */
     protected $Pengajuan_Tugas_Kantor_setengah_Hari = 100009;
     /** Pengajuan Lupa Absen Masuk */
