@@ -85,14 +85,20 @@ class ListAbsent extends BaseController
                             ])->orderBy('validfrom', 'ASC')->first();
 
                             if ($workDay) {
-                                $parSub = [
-                                    'trx_absent_detail.date' => $date,
-                                    'trx_absent.docstatus' => "'{$this->DOCSTATUS_Completed}'",
-                                    'trx_absent.md_employee_id' => $val->md_employee_id,
-                                    'trx_absent_detail.isagree' => 'Y'
-                                ];
+                                // $parSub = [
+                                //     'v_realization.date' => $date,
+                                //     'v_realization.md_employee_id' => $val->md_employee_id,
+                                //     'v_realization.isagree' => 'Y'
+                                // ];
 
-                                $submission = $mAbsentDetail->getAbsentDetail($parSub)->getResult();
+                                // $submission = $mAbsentDetail->getAbsentDetail($parSub)->getResult();
+
+                                $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
+                                              AND v_realization.md_employee_id = {$val->md_employee_id}
+                                              AND v_realization.isagree = 'Y'";
+
+                                $submission = $mAbsentDetail->getAllSubmission($parAbsent)->getResult();
+
 
                                 //TODO : Get Work Detail
                                 $whereClause = "md_work_detail.isactive = 'Y'";
