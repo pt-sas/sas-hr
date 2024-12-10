@@ -409,14 +409,14 @@ class AllowanceAtt extends BaseController
 
                         $absent = $mAbsentDetail->getAllSubmission($parAbsent)->getRow();
 
-                        $parAbsent = "DATE_FORMAT(v_realization.date, '%YM-%m-%d') = '{$date}'
+                        $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
                         AND v_realization.md_employee_id = {$row->md_employee_id}
                         AND v_realization.isagree = 'Y'
                         AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Datang_Terlambat}, {$mAbsent->Pengajuan_Lupa_Absen_Masuk})";
 
                         $absentIn = $mAbsentDetail->getAllSubmission($parAbsent)->getRow();
 
-                        $parAbsent = "DATE_FORMAT(v_realization.date, '%YM-%m-%d') = '{$date}'
+                        $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
                         AND v_realization.md_employee_id = {$row->md_employee_id}
                         AND v_realization.isagree = 'Y'
                         AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang}, {$mAbsent->Pengajuan_Pulang_Cepat})";
@@ -504,6 +504,7 @@ class AllowanceAtt extends BaseController
                             }
 
                             if ($absentIn && $absentOut) {
+                                log_message('info', 'okeokeoke');
                                 $qty = 0;
                             }
                         } else if (empty($attend)) {
