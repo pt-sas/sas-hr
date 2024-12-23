@@ -484,3 +484,31 @@ tr.shown td.details-control:before {
   border-bottom: 0px solid transparent;
   border-right: 5px solid transparent;
 }
+
+    /* .tb_notification thead {
+        display: none;
+    } */
+    
+    .row-notif {
+        cursor: pointer;
+    }
+    
+    .unread {
+    position: relative;
+      font-weight: 400;
+      background: #ececec;
+    }
+    
+    .unread:after {
+      content: '';
+      position: absolute;
+      width: 3px;
+      background: #1572E8;
+      left: 0px;
+      top: 0px;
+      bottom: 0px;
+    }
+
+    .action-notif {
+        cursor: pointer;
+    }

@@ -1230,3 +1230,185 @@ $("#form_assignment_realization_sup_agree").on(
     }
   }
 );
+
+_tableNotification.on(
+  "click",
+  ".row-notif td:nth-child(2),.row-notif td:nth-child(3),.row-notif td:nth-child(4)",
+  function () {
+    // Event Handler for avoiding spam click
+    const clickedElement = $(this);
+    if (clickedElement.data("processing")) return;
+    clickedElement.data("processing", true);
+
+    const tr = $(this).closest("tr");
+    const checkbox = tr.find(".check-message");
+    const id = checkbox.val();
+    const isRead = checkbox.attr("data-isread");
+    let formData = new FormData();
+    let url = ADMIN_URL + "pesan/updateRead";
+    formData.append("trx_message_id", id);
+
+    if (isRead == "N") {
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        complete: function () {
+          Edit(id, "IP");
+        },
+        success: function (result) {
+          if (result[0].success) reloadTable();
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    } else {
+      Edit(id, "IP");
+    }
+
+    setTimeout(() => {
+      clickedElement.data("processing", false);
+    }, 1000);
+  }
+);
+
+_tableNotification.on("click", ".check-message", function (e) {
+  const card = $(e.target).closest(".card");
+  const floatRight = card.find(".card-header .float-right");
+
+  const checkedCheckboxes = _tableNotification
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-message:checked");
+
+  floatRight.toggleClass("d-none", checkedCheckboxes.length === 0);
+});
+
+/**
+ * Delete Data for Notification
+ * **/
+$(".multiple-delete").on("click", function () {
+  let formData = new FormData();
+  let url = CURRENT_URL + DELETE;
+  let row = [];
+
+  _tableNotification
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-message:checked")
+    .each(function () {
+      row.push(this.value);
+    });
+
+  formData.append("id", row);
+
+  Swal.fire({
+    title: "Delete ?",
+    text: "Are you sure you wish to delete the selected data ? ",
+    type: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    confirmButtonText: "Ok",
+    cancelButtonText: "Close",
+    reverseButtons: true,
+  }).then((data) => {
+    if (data.value) {
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        success: function (result) {
+          if (result[0].success) {
+            Toast.fire({
+              title: "Deleted!",
+              text: "Your data has been deleted.",
+              type: "success",
+              showConfirmButton: false,
+              timer: 1000,
+            });
+            reloadTable();
+          } else if (result[0].error) {
+            Toast.fire({
+              type: "error",
+              title: "Error!",
+              text: result[0].message,
+              showConfirmButton: true,
+            });
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
+  });
+});
+function showNotifMessage() {
+  let url = ADMIN_URL + "pesan/showNotif";
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    dataType: "JSON",
+    data: { type: "count" },
+    success: function (response) {
+      if (response > 0)
+        $(".notif-message").addClass("notification").text(response);
+      else $(".notif-message").removeClass("notification").text("");
+    },
+  });
+}
+
+$(".bell-notif").on("click", function (e) {
+  let url = ADMIN_URL + "pesan/showNotif";
+  const parent = $(this).parent();
+  console.log(parent);
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    dataType: "JSON",
+    beforeSend: function () {
+      parent.find(".notif-div").removeAttr("style");
+    },
+    success: function (response) {
+      parent.find(".dropdown-title").html(response.total);
+      parent.find(".list-notif").html(response.data);
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+});
+
+$(document).on("click", ".action-notif", function (e) {
+  e.preventDefault();
+  const _this = $(this);
+  let record_id = _this.attr("data-url");
+  let menu = "pesan";
+
+  if (ADMIN_URL + menu == CURRENT_URL) {
+    Edit(record_id, "IP");
+  } else {
+    let arrData = {
+      record_id: record_id,
+      menu: menu,
+    };
+    arrData = JSON.stringify(arrData);
+    sessionStorage.setItem("reloading", "true");
+    sessionStorage.setItem("data", arrData);
+
+    window.open(ADMIN_URL + menu, "_self");
+  }
+});

@@ -1012,6 +1012,30 @@ class BaseController extends Controller
 		return $result;
 	}
 
+	public function deleteBatch(array $id): bool
+	{
+		foreach ($id as $id) {
+			$row = $this->model->findAll($id);
+			$result = $this->model->delete($id);
+
+			if ($result) {
+				$this->logChanges($this->model->table, $this->model->primaryKey, $row, $this->model->db->getFieldNames($this->model->table));
+
+				if ($this->modelDetail) {
+					$line = $this->modelDetail->where($this->primaryKey, $id)->findAll();
+					$this->modelDetail->where($this->primaryKey, $id)->delete();
+
+					//** Inserting log changes for detail*/
+					$this->logChanges($this->modelDetail->table, $this->modelDetail->primaryKey, $line, $this->modelDetail->db->getFieldNames($this->modelDetail->table));
+				}
+			} else {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	private function logChanges($table, $primaryKey, $rows, $fields)
 	{
 		$changeLog = new M_ChangeLog($this->request);

@@ -86,6 +86,7 @@ $(document).ready(function (e) {
   }
 
   showNotification();
+  showNotifMessage();
 
   // Enable pusher logging - don't include this in production
   Pusher.logToConsole = false;
@@ -97,6 +98,7 @@ $(document).ready(function (e) {
   var channel = pusher.subscribe("my-channel");
   channel.bind("my-event", function (data) {
     showNotification();
+    showNotifMessage();
   });
 
   $(".select2").select2({
@@ -829,6 +831,52 @@ _tableRealization = $(".table_realization")
   .columns.adjust();
 
 /**
+ * Table Notification
+ */
+_tableNotification = $(".tb_notification")
+  .DataTable({
+    drawCallback: function () {
+      $(".tb_notification tbody tr").each(function () {
+        const checkbox = $(this).find(".check-message");
+        let isRead = checkbox.attr("data-isread");
+
+        $(this).addClass("row-notif");
+
+        if (isRead == "N") {
+          $(this).addClass("unread");
+        }
+      });
+    },
+    serverSide: true,
+    ajax: {
+      url: CURRENT_URL + SHOWALL,
+      type: "POST",
+    },
+    columnDefs: [
+      {
+        targets: 0,
+        visible: false, //hide column
+      },
+      { targets: 1, width: "10%" },
+      { targets: 2, width: "10%" },
+      { targets: 3, width: "70%", orderable: false },
+      { targets: 4, width: "10%" },
+    ],
+    lengthMenu: [
+      [10, 25, 50, 100, -1],
+      [10, 25, 50, 100, "All"],
+    ],
+    // displayLength: 50,
+    searching: true,
+    order: [],
+    autoWidth: true,
+    scrollX: true,
+    scrollY: "70vh",
+    scrollCollapse: true,
+  })
+  .columns.adjust();
+
+/**
  *
  * @returns check fixed column datatable
  */
@@ -867,6 +915,8 @@ function reloadTable() {
   else if ($(".table_report").length) _tableReport.ajax.reload(null, false);
   else if ($(".table_realization").length)
     _tableRealization.ajax.reload(null, false);
+  else if ($(".tb_notification").length)
+    _tableNotification.ajax.reload(null, false);
 }
 
 /**
@@ -1862,6 +1912,15 @@ function Edit(id, status, last_url) {
                     }
                   }
                 }
+              }
+
+              if (arrMsg.notification) {
+                let data = arrMsg.notification;
+                cardTitle.html(data[0].subject);
+                $(".sender").html(data[0].author);
+                $(".date").html(data[0].date);
+                $(".email-body").append(data[0].body);
+                $(".avatar").append(data[0].image);
               }
 
               $("html, body").animate(
@@ -3797,6 +3856,7 @@ function clearForm(evt) {
   const parent = target.closest(".row");
   const cardForm = parent.find(".card-form");
   const navTab = parent.find("ul.nav-tabs");
+  const emailBody = parent.find(".email-body");
   let form = cardForm.length ? cardForm.find("form") : parent.find("form");
 
   if (navTab.length) {
@@ -3821,8 +3881,19 @@ function clearForm(evt) {
     form = modal.find("form");
   }
 
-  //TODO: Clear field data on the form
-  form[0].reset();
+  //? To Do Clear email body on the form and reload table notification
+  if (emailBody.length) {
+    emailBody.empty();
+    reloadTable();
+  }
+
+  if (parent.find(".avatar-notif").length) {
+    parent.find(".avatar-notif").empty();
+  }
+
+  if (form.length)
+    //TODO: Clear field data on the form
+    form[0].reset();
 
   const field = form.find("input, textarea, select, button");
   const errorText = form.find("small");
@@ -4973,7 +5044,8 @@ function putFieldData(form, data, status = null) {
           if (
             (field[i].readOnly || field[i].disabled) &&
             field[i].type !== "radio" &&
-            !changeTab
+            !changeTab &&
+            field[i].name
           )
             fieldReadOnly.push(field[i].name);
 

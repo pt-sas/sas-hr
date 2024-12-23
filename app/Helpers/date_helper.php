@@ -144,3 +144,24 @@ function calculateAge($birthdate, $date = null)
 
     return $diff->y . " Tahun " . $diff->m . " Bulan " . $diff->d . " Hari";
 }
+
+function calculateTime($date)
+{
+    $now = new DateTime();
+    $date = new DateTime($date);
+
+    // Hitung selisih dalam detik
+    $differenceInSeconds = $now->getTimestamp() - $date->getTimestamp();
+
+    // Konversi ke menit, jam, atau hari
+    if ($differenceInSeconds < 3600) { // Jika di bawah 1 jam
+        $differenceInMinutes = floor($differenceInSeconds / 60);
+        return $differenceInMinutes . ' menit yang lalu';
+    } elseif ($differenceInSeconds < 86400) { // Jika di bawah 24 jam
+        $differenceInHours = floor($differenceInSeconds / 3600);
+        return $differenceInHours . ' jam yang lalu';
+    } else { // Jika lebih dari 24 jam
+        $differenceInDays = floor($differenceInSeconds / 86400);
+        return $differenceInDays . ' hari yang lalu';
+    }
+}

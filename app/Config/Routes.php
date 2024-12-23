@@ -43,8 +43,9 @@ $routes->get('logout', 'Backend\Auth::logout');
 $routes->post('(:any)/accessmenu/getAccess', 'Backend\AccessMenu::getAccess');
 
 $routes->get('cron-not-approved', 'Backend\WActivity::doNotApproved');
-$routes->get('cron-update-employee', 'Backend\EmployeeAllocation::updateMasterEmployee');
+// $routes->get('cron-update-employee', 'Backend\EmployeeAllocation::updateMasterEmployee');
 $routes->get('cron-approved-realization', 'Backend\Realization::doApprovedRealization');
+$routes->get('cron-absent-alert', 'Backend\Attendance::toDoCheckAbsent');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
 
@@ -692,6 +693,13 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('laporan-master-karyawan', 'Backend\Rpt_Employee::index');
     $routes->match(['get', 'post'], 'laporan-master-karyawan/showAll', 'Backend\Rpt_Employee::showAll');
+
+    $routes->add('pesan', 'Backend\Message::index');
+    $routes->match(['get', 'post'], 'pesan/showAll', 'Backend\Message::showAll');
+    $routes->get('pesan/show/(:any)', 'Backend\Message::show/$1');
+    $routes->match(['get', 'post'], 'pesan/updateRead', 'Backend\Message::updateRead');
+    $routes->match(['get', 'post'], 'pesan/destroy', 'Backend\Message::destroy');
+    $routes->match(['get', 'post'], 'pesan/showNotif', 'Backend\Message::getNotifMessage');
 });
 
 /*
