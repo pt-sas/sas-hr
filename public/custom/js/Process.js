@@ -525,11 +525,6 @@ _tableLine = $(".tb_displayline").DataTable({
         });
       }
     });
-
-    $(".tb_childrow tbody tr td:first-child").each(function () {
-      if ($(this).closest("tr").children("td").length > 1)
-        $(this).addClass("details-control");
-    });
   },
   initComplete: function (settings, json) {
     $(".tb_displayline").wrap(
@@ -1705,6 +1700,23 @@ function Edit(id, status, last_url) {
                   let line = JSON.parse(arrLine);
 
                   _tableLine.rows.add(line).draw(false);
+
+                  //? For set Button Sub Detail for tb_childrow
+                  if ($(".tb_childrow").length) {
+                    $(".tb_childrow tbody tr").each(function () {
+                      let $row = $(this);
+                      if (
+                        $row.children("td").length > 1 &&
+                        $row
+                          .find("select[name=md_employee_id]")
+                          .attr("data-subdetail") === "Y"
+                      ) {
+                        $row
+                          .children("td:first-child")
+                          .addClass("details-control");
+                      }
+                    });
+                  }
 
                   let btnAction = _tableLine
                     .rows()

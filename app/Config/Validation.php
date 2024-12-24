@@ -2215,6 +2215,20 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'line'                  => [
+            'label'             => 'Detail Tugas Kantor',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.md_employee_id_line'  => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
     ];
 
     public $memo = [
@@ -2971,6 +2985,20 @@ class Validation
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'line'                  => [
+            'label'             => 'Detail Penugasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.md_employee_id_line'  => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
             ]
         ],
     ];

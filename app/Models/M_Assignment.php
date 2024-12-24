@@ -36,7 +36,7 @@ class M_Assignment extends Model
     protected $beforeInsert         = [];
     protected $afterInsert          = [];
     protected $beforeUpdate         = [];
-    protected $afterUpdate          = [];
+    protected $afterUpdate          = ['doAfterUpdate'];
     protected $beforeDelete         = [];
     protected $afterDelete          = [];
     protected $column_order         = [

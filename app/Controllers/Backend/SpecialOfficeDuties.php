@@ -378,6 +378,7 @@ class SpecialOfficeDuties extends BaseController
     public function tableLine($set = null, $detail = [])
     {
         $employee = new M_Employee($this->request);
+        $mAssignmentDate = new M_AssignmentDate($this->request);
 
         $post = $this->request->getPost();
 
@@ -431,7 +432,7 @@ class SpecialOfficeDuties extends BaseController
                 $fieldEmployee->setList($dataEmployee);
 
                 $table = [
-                    $this->field->fieldTable($btnChildRow),
+                    '',
                     $this->field->fieldTable($fieldEmployee),
                     $this->field->fieldTable($fieldDesctiprion),
                     $this->field->fieldTable($btnDelete)
@@ -442,9 +443,9 @@ class SpecialOfficeDuties extends BaseController
         //? Update
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
-
                 $id = $row->getAssignmentId();
                 $header = $this->model->where('trx_assignment_id', $id)->first();
+                $subDetail = $mAssignmentDate->where('trx_assignment_detail_id', $row->getAssignmentDetailId())->first();
 
                 $emp = $employee->find($header->md_employee_id);
                 $empId = $emp->getEmployeeId();
@@ -466,12 +467,12 @@ class SpecialOfficeDuties extends BaseController
                 $fieldEmployee->setList($dataEmployee);
 
                 $fieldEmployee->setValue($row->getEmployeeId());
-                $fieldEmployee->setAttribute(['data-line-id' => $row->getAssignmentDetailId()]);
+                $fieldEmployee->setAttribute(['data-line-id' => $row->getAssignmentDetailId(), 'data-subdetail' => $subDetail ? 'Y' : 'N']);
                 $fieldDesctiprion->setValue($row->getDescription());
                 $btnDelete->setValue($row->getAssignmentDetailId());
 
                 $table[] = [
-                    $this->field->fieldTable($btnChildRow),
+                    '',
                     $this->field->fieldTable($fieldEmployee),
                     $this->field->fieldTable($fieldDesctiprion),
                     $this->field->fieldTable($btnDelete)
