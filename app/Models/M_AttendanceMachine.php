@@ -69,7 +69,7 @@ class M_AttendanceMachine extends Model
     public function getSelect()
     {
         $sql = $this->table . '.*,
-                md_employee.fullname as leader';
+                md_branch.name as branch';
 
         return $sql;
     }
@@ -77,7 +77,7 @@ class M_AttendanceMachine extends Model
     public function getJoin()
     {
         $sql = [
-            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.leader_id', 'left')
+            $this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left')
         ];
 
         return $sql;

@@ -3040,4 +3040,29 @@ class Validation
             ]
         ],
     ];
+
+    public $attendance_machine = [
+        'name'          => [
+            'label'             => 'Nama',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'serialnumber'        => [
+            'label'             => 'Nomor Seri',
+            'rules'             => 'required|is_unique[md_attendance_machines.serialnumber,md_attendance_machines_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
 }

@@ -700,6 +700,12 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'pesan/updateRead', 'Backend\Message::updateRead');
     $routes->match(['get', 'post'], 'pesan/destroy', 'Backend\Message::destroy');
     $routes->match(['get', 'post'], 'pesan/showNotif', 'Backend\Message::getNotifMessage');
+
+    $routes->add('mesin-absen', 'Backend\AttendanceMachine::index');
+    $routes->match(['get', 'post'], 'mesin-absen/showAll', 'Backend\AttendanceMachine::showAll');
+    $routes->get('mesin-absen/show/(:any)', 'Backend\AttendanceMachine::show/$1');
+    $routes->post('mesin-absen/create', 'Backend\AttendanceMachine::create');
+    $routes->get('mesin-absen/destroy/(:any)', 'Backend\AttendanceMachine::destroy/$1');
 });
 
 /*
