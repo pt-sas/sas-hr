@@ -5,27 +5,24 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Absent;
 use App\Models\M_AccessMenu;
+use App\Models\M_Assignment;
 use App\Models\M_Employee;
-use App\Models\M_AbsentDetail;
 use App\Models\M_Attendance;
-use App\Models\M_Configuration;
-use App\Models\M_Holiday;
-use App\Models\M_EmpWorkDay;
+use App\Models\M_DocumentType;
+use App\Models\M_EmpBranch;
 use App\Models\M_Rule;
-use App\Models\M_WorkDetail;
-use App\Models\M_LeaveBalance;
-use App\Models\M_MassLeave;
-use App\Models\M_Transaction;
+use App\Models\M_SubmissionCancel;
+use App\Models\M_SubmissionCancelDetail;
 use Config\Services;
 
-class LeaveCancel extends BaseController
+class SubmissionCancel extends BaseController
 {
     public function __construct()
     {
         $this->request = Services::request();
-        $this->model = new M_Absent($this->request);
-        $this->modelDetail = new M_AbsentDetail($this->request);
-        $this->entity = new \App\Entities\Absent();
+        $this->model = new M_SubmissionCancel($this->request);
+        $this->modelDetail = new M_SubmissionCancelDetail($this->request);
+        $this->entity = new \App\Entities\SubmissionCancel();
     }
 
     public function index()
@@ -34,7 +31,7 @@ class LeaveCancel extends BaseController
             'today'     => date('d-M-Y'),
         ];
 
-        return $this->template->render('transaction/leavecancel/v_leave_cancel', $data);
+        return $this->template->render('transaction/submissioncancel/v_submission_cancel', $data);
     }
 
     public function showAll()
@@ -46,40 +43,15 @@ class LeaveCancel extends BaseController
             $table = $this->model->table;
             $select = $this->model->getSelect();
             $join = $this->model->getJoin();
-            $order = [
-                '', // Hide column
-                '', // Number column
-                'trx_absent.documentno',
-                'md_employee.fullname',
-                'trx_absent.nik',
-                'md_branch.name',
-                'md_division.name',
-                'ref.documentno',
-                'trx_absent.submissiondate',
-                'trx_absent.receiveddate',
-                'trx_absent.reason',
-                'trx_absent.docstatus',
-                'sys_user.name'
-            ];
-            $search = [
-                'trx_absent.documentno',
-                'md_employee.fullname',
-                'trx_absent.nik',
-                'md_branch.name',
-                'md_division.name',
-                'ref.documentno',
-                'trx_absent.submissiondate',
-                'trx_absent.receiveddate',
-                'trx_absent.reason',
-                'trx_absent.docstatus',
-                'sys_user.name'
-            ];
-            $sort = ['trx_absent.submissiondate' => 'DESC'];
+            $order = $this->model->column_order;
+            $search = $this->model->column_search;
+            $sort = ['trx_submission_cancel.submissiondate' => 'DESC'];
 
             /**
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
@@ -93,6 +65,14 @@ class LeaveCancel extends BaseController
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                     $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
+                    $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
+                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['trx_absent.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
                 } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
@@ -110,7 +90,7 @@ class LeaveCancel extends BaseController
                 $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Pembatalan_Cuti;
+            $where['trx_submission_cancel.submissiontype'] = $this->model->Pengajuan_Pembatalan;
 
             $data = [];
 
@@ -119,7 +99,7 @@ class LeaveCancel extends BaseController
 
             foreach ($list as $value) :
                 $row = [];
-                $ID = $value->trx_absent_id;
+                $ID = $value->trx_submission_cancel_id;
 
                 $number++;
 
@@ -127,10 +107,9 @@ class LeaveCancel extends BaseController
                 $row[] = $number;
                 $row[] = $value->documentno;
                 $row[] = $value->employee_fullname;
-                $row[] = $value->nik;
                 $row[] = $value->branch;
                 $row[] = $value->division;
-                $row[] = $value->reference_doc;
+                $row[] = $value->ref_docno;
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
@@ -154,20 +133,18 @@ class LeaveCancel extends BaseController
     public function create()
     {
         $mRule = new M_Rule($this->request);
-        $mHoliday = new M_Holiday($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
         $mAttendance = new M_Attendance($this->request);
         $mEmployee = new M_Employee($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
             $file = $this->request->getFile('image');
 
-            $post["submissiontype"] = $this->model->Pengajuan_Pembatalan_Cuti;
-            $post["necessary"] = 'CB';
-            $today = date('Y-m-d');
-            $employeeId = $post['md_employee_id'];
+            $post["submissiontype"] = $this->model->Pengajuan_Pembatalan;
+            $post["necessary"] = 'PB';
+
+            $post['ref_table'] = $post['ref_submissiontype'] == 100008 ? "trx_assignment" : "trx_absent";
 
             $table = json_decode($post['table']);
 
@@ -176,9 +153,6 @@ class LeaveCancel extends BaseController
             $post['detail'] = [
                 'table' => arrTableLine($table)
             ];
-
-            $post['startdate'] = date('Y-m-d H:i', strtotime($post['submissiondate']));
-            $post['enddate'] = date('Y-m-d H:i', strtotime($post['submissiondate']));
 
             try {
                 $img_name = "";
@@ -192,150 +166,95 @@ class LeaveCancel extends BaseController
 
                 if ($file && $file->isValid()) {
                     $ext = $file->getClientExtension();
-                    $img_name = $this->model->Pengajuan_Pembatalan_Cuti . '_' . $value . '_' . $ymd . '.' . $ext;
+                    $img_name = $this->model->Pengajuan_Pembatalan . '_' . $value . '_' . $ymd . '.' . $ext;
                     $post['image'] = $img_name;
                 }
 
                 if (!$this->validation->run($post, 'pembatalan_cuti')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $holidays = $mHoliday->getHolidayDate();
-                    $nik = $post['nik'];
                     $submissionDate = $post['submissiondate'];
                     $subDate = date('Y-m-d', strtotime($submissionDate));
 
                     $rule = $mRule->where([
-                        'name'      => 'Pembatalan Cuti',
+                        'name'      => 'Pembatalan',
                         'isactive'  => 'Y'
                     ])->first();
 
-                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
                     $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
 
-                    //TODO : Get work day employee
-                    $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today
-                    ])->orderBy('validfrom', 'ASC')->first();
+                    //* last index of array from variable addDays
+                    $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                    $addDays = end($addDays);
 
-                    if (is_null($workDay)) {
-                        $response = message('success', false, 'Hari kerja belum ditentukan');
-                    } else {
-                        //TODO : Get Work Detail
-                        $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                    // Property For Loop
+                    $insert = false;
+                    $lastLoop = end($table);
 
-                        $daysOff = getDaysOff($workDetail);
+                    foreach ($table as $key => $value) {
+                        $dateClause = date('Y-m-d', strtotime($value->date));
 
-                        //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
-                        $addDays = end($addDays);
+                        // TODO : Get Cancel Submission
+                        $whereClause = "trx_submission_cancel_detail.md_employee_id = '{$value->md_employee_id}'";
+                        $whereClause .= " AND trx_submission_cancel_detail.date = '{$dateClause}'";
+                        $whereClause .= " AND trx_submission_cancel.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+                        $whereClause .= " AND trx_submission_cancel.ref_submissiontype = {$post['ref_submissiontype']}";
+                        $whereClause .= " AND trx_submission_cancel.reference_id = {$post['reference_id']}";
+                        $trxSubmissionCancel = $this->modelDetail->getDetail(null, $whereClause)->getRow();
 
-                        // Property For Loop
-                        $insert = false;
-                        $lastLoop = end($table);
-
-                        foreach ($table as $key => $value) {
-                            //TODO : Get next day attendance from enddate
-                            $presentNextDate = null;
-
-                            $dateClause = date('Y-m-d', strtotime($value->date));
-
-                            if ($dateClause <= $subDate) {
-                                $whereClause = "trx_absent.nik = $nik";
-                                $whereClause .= " AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') > '$dateClause'";
-                                $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                                $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                                $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Sakit})";
-                                $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                                if (is_null($trxPresentNextDay)) {
-                                    $whereClause = "v_attendance.nik = '{$nik}'";
-                                    $whereClause .= " AND v_attendance.date > '{$dateClause}'";
-                                    $attPresentNextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
-
-                                    $presentNextDate = $attPresentNextDay ? $attPresentNextDay->date : $dateClause;
-                                } else {
-                                    $presentNextDate = $trxPresentNextDay->date;
-                                }
-
-                                $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
-
-                                //* last index of array from variable nextDate
-                                $lastDate = end($nextDate);
-                            }
-
-                            // TODO : Get Office Duties & SickLeave Submission
-                            $whereClause = "trx_absent.nik = '{$nik}'";
-                            $whereClause .= " AND trx_absent_detail.date = '{$dateClause}'";
-                            $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                            $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Sakit})";
-                            $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
-
-                            // TODO : Get Leave Cancel Submission
-                            $whereClause = "trx_absent.nik = '{$nik}'";
-                            $whereClause .= " AND trx_absent_detail.date = '{$dateClause}'";
-                            $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
-                            $whereClause .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Pembatalan_Cuti}";
-                            $trxLeaveCancel = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
-
+                        if ($dateClause == $subDate) {
+                            $empBranch = $mEmpBranch->where('md_employee_id', $value->md_employee_id)->first();
                             //TODO : Get attendance employee
-                            $whereClause = "v_attendance.nik = '{$nik}'";
-                            $whereClause .= " AND v_attendance.date = '{$dateClause}'";
-                            $attPresent = $mAttendance->getAttendance($whereClause)->getRow();
-
-                            $dateNow = format_dmy($value->date, '-');
-
-                            if ($dateClause > $addDays) {
-                                $response = message('success', false, "Tanggal {$dateNow} melewati tanggal ketentuan");
-                                break;
-                            } else if ($presentNextDate && !($lastDate >= $subDate)) {
-                                $lastDate = format_dmy($lastDate, '-');
-
-                                $response = message('success', false, "Maksimal pembatalan cuti untuk tanggal {$dateNow} adalah tanggal : {$lastDate}");
-                                break;
-                            } else if (($dateClause <= $subDate) && !$attPresent && !$trx) {
-                                $response = message('success', false, "Tidak ada kehadiran, tidak bisa mengajukan pembatalan cuti pada tanggal : {$dateNow}");
-                                break;
-                            } else if ($trxLeaveCancel) {
-                                $response = message('success', false, "Tidak bisa mengajukan pembatalan untuk tanggal {$dateNow}, karena sudah ada pengajuan lain");
-                                break;
-                            }
-
-                            if ($value === $lastLoop)
-                                $insert = true;
+                            $whereClause = "v_attendance_serialnumber.md_employee_id = '{$value->md_employee_id}'";
+                            $whereClause .= " AND v_attendance_serialnumber.date = '{$dateClause}'";
+                            $whereClause .= " AND md_attendance_machines.md_branch_id = {$empBranch->md_branch_id}";
+                            $attPresent = $mAttendance->getAttendanceBranch($whereClause)->getRow();
                         }
 
+                        $dateNow = format_dmy($value->date, '-');
 
-                        if ($insert) {
-                            $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+                        if ($dateClause > $addDays) {
+                            $response = message('success', false, "Tanggal {$dateNow} melewati tanggal ketentuan");
+                            break;
+                        } else if ($dateClause < $subDate) {
+                            $response = message('success', false, "Tanggal {$dateNow} tidak bisa dibatalkan karena kurang dari tanggal pengajuan");
+                            break;
+                        } else if (($dateClause == $subDate) && is_null($attPresent)) {
+                            $response = message('success', false, "Tidak ada kehadiran, tidak bisa mengajukan pembatalan pada tanggal : {$dateNow}");
+                            break;
+                        } else if ($trxSubmissionCancel) {
+                            $response = message('success', false, "Tidak bisa mengajukan pembatalan untuk tanggal {$dateNow}, karena sudah ada pengajuan lain dengan nomor {$trxSubmissionCancel->documentno}");
+                            break;
+                        }
 
-                            if ($this->isNew() && $file && $file->isValid()) {
+                        if ($value === $lastLoop)
+                            $insert = true;
+                    }
+
+                    if ($insert) {
+                        $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                        if ($this->isNew() && $file && $file->isValid()) {
+                            uploadFile($file, $path, $img_name);
+                        } else {
+                            $row = $this->model->find($this->getID());
+                            if (!empty($row->getImage()) && $post['image'] !== $row->getImage() && file_exists($path . $row->getImage()))
+                                unlink($path . $row->getImage());
+
+                            if ($post['image'] !== $row->getImage() && $file && $file->isValid())
                                 uploadFile($file, $path, $img_name);
-                            } else {
-                                $row = $this->model->find($this->getID());
-
-                                if (!empty($row->getImage()) && $post['image'] !== $row->getImage() && file_exists($path . $row->getImage()))
-                                    unlink($path . $row->getImage());
-
-                                if ($post['image'] !== $row->getImage() && $file && $file->isValid())
-                                    uploadFile($file, $path, $img_name);
-                            }
-
-                            $this->entity->fill($post);
-
-                            if ($this->isNew()) {
-                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pembatalan_Cuti, $post);
-                                $this->entity->setDocumentNo($docNo);
-                            }
-
-                            $response = $this->save();
                         }
+
+                        $this->entity->fill($post);
+
+                        if ($this->isNew()) {
+                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                            $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pembatalan, $post);
+                            $this->entity->setDocumentNo($docNo);
+                        }
+
+                        $response = $this->save();
                     }
                 }
             } catch (\Exception $e) {
@@ -349,13 +268,13 @@ class LeaveCancel extends BaseController
     public function show($id)
     {
         $mEmployee = new M_Employee($this->request);
+        $mDocType = new M_DocumentType($this->request);
 
         if ($this->request->isAJAX()) {
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
                 $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
-                $refLeave = $this->model->where([$this->model->primaryKey => $list[0]->reference_id])->first();
 
                 $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
 
@@ -367,7 +286,14 @@ class LeaveCancel extends BaseController
                 }
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
-                $list = $this->field->setDataSelect($this->model->table, $list, 'reference_id', $refLeave->trx_absent_id, $refLeave->documentno);
+
+                $model = $list[0]->ref_table === "trx_absent" ? new M_Absent($this->request) : new M_Assignment($this->request);
+
+                $refData = $model->find($list[0]->reference_id);
+                $list = $this->field->setDataSelect($model->table, $list, 'reference_id', $refData->{$model->primaryKey}, $refData->documentno);
+
+                $refDocType = $mDocType->find($list[0]->ref_submissiontype);
+                $list = $this->field->setDataSelect($mDocType->table, $list, 'ref_submissiontype', $refDocType->getDocTypeId(), $refDocType->getName());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
 
@@ -420,7 +346,7 @@ class LeaveCancel extends BaseController
             $_DocAction = $post['docaction'];
 
             $row = $this->model->find($_ID);
-            $rowDetail = $this->modelDetail->where($this->model->primaryKey, $row->trx_absent_id)->findAll();
+            $rowDetail = $this->modelDetail->where($this->model->primaryKey, $row->trx_submission_cancel_id)->findAll();
             $menu = $this->request->uri->getSegment(2);
             $today = date("Y-m-d");
 
@@ -429,33 +355,42 @@ class LeaveCancel extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-
                         $keys = array_keys($rowDetail);
                         $lastLoop = end($keys);
-                        $nik = $row->nik;
 
                         $process = false;
                         foreach ($rowDetail as $key => $value) {
                             $dateClause = date('Y-m-d', strtotime($value->date));
 
-                            // TODO : Get Office Duties & SickLeave Submission
-                            $whereClause = "trx_absent.nik = '{$nik}'";
-                            $whereClause .= " AND trx_absent_detail.date = '{$dateClause}'";
-                            $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                            $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Sakit})";
-                            $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
+                            // TODO : Get Cancel Submission
+                            $whereClause = "trx_submission_cancel_detail.md_employee_id = '{$value->md_employee_id}'";
+                            $whereClause .= " AND trx_submission_cancel_detail.date = '{$dateClause}'";
+                            $whereClause .= " AND trx_submission_cancel.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+                            $whereClause .= " AND trx_submission_cancel.ref_submissiontype = {$row->getRefSubmissionType()}";
+                            $whereClause .= " AND trx_submission_cancel.reference_id = {$row->getReferenceId()}";
 
-                            //TODO : Get attendance employee
-                            $whereClause = "v_attendance.nik = '{$nik}'";
-                            $whereClause .= " AND v_attendance.date = '{$dateClause}'";
-                            $attPresent = $mAttendance->getAttendance($whereClause)->getRow();
+                            $trxSubmissionCancel = $this->modelDetail->getDetail(null, $whereClause)->getRow();
+
+                            if ($dateClause == $today) {
+                                $empBranch = $mEmpBranch->where('md_employee_id', $value->md_employee_id)->first();
+                                //TODO : Get attendance employee
+                                $whereClause = "v_attendance_serialnumber.md_employee_id = '{$value->md_employee_id}'";
+                                $whereClause .= " AND v_attendance_serialnumber.date = '{$dateClause}'";
+                                $whereClause .= " AND md_attendance_machines.md_branch_id = {$empBranch->md_branch_id}";
+                                $attPresent = $mAttendance->getAttendanceBranch($whereClause)->getRow();
+                            }
 
                             $dateNow = format_dmy($value->date, '-');
 
-
-                            if (($dateClause <= $today) && !$attPresent && !$trx) {
-                                $response = message('error', true, "Saldo cuti tanggal {$dateNow} sudah terpakai");
+                            if ($dateClause < $today) {
+                                $response = message('error', true, "Tidak bisa proses dokumen, tanggal {$dateNow} sudah melewati batas pembatalan");
+                                break;
+                            } else 
+                            if (($dateClause == $today) && is_null($attPresent)) {
+                                $response = message('error', true, "Tidak bisa proses dokumen, tanggal {$dateNow} sudah tidak ada kehadiran");
+                                break;
+                            } else if ($trxSubmissionCancel) {
+                                $response = message('error', true, "Tidak bisa proses dokumen, sudah ada pengajuan lain dengan nomor dokumen : {$trxSubmissionCancel->documentno}");
                                 break;
                             }
 
@@ -465,6 +400,15 @@ class LeaveCancel extends BaseController
 
                         if ($process) {
                             $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+
+                            foreach ($rowDetail as $val) :
+                                $this->entity = new \App\Entities\AbsentDetail();
+                                $this->entity->trx_submission_cancel_detail_id = $val->trx_submission_cancel_detail_id;
+                                $this->entity->isagree = 'H';
+
+                                $this->modelDetail->save($this->entity);
+                            endforeach;
+
                             $response = message('success', true, true);
                         }
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
@@ -489,7 +433,7 @@ class LeaveCancel extends BaseController
 
     public function tableLine($set = null, $detail = [])
     {
-        $post = $this->request->getPost();
+        $mEmployee = new M_Employee($this->request);
 
         $table = [];
 
@@ -499,6 +443,18 @@ class LeaveCancel extends BaseController
         $fieldLine->setType("text");
         $fieldLine->setLength(50);
         $fieldLine->setIsReadonly(true);
+
+        $fieldEmployee = new \App\Entities\Table();
+        $fieldEmployee->setName("md_employee_id");
+        $fieldEmployee->setIsRequired(true);
+        $fieldEmployee->setType("select");
+        $fieldEmployee->setClass("select2");
+        $fieldEmployee->setField([
+            'id'    => 'md_employee_id',
+            'text'  => 'value'
+        ]);
+        $fieldEmployee->setLength(200);
+        $fieldEmployee->setIsReadonly(true);
 
         $fieldDate = new \App\Entities\Table();
         $fieldDate->setName("date");
@@ -516,10 +472,14 @@ class LeaveCancel extends BaseController
         // ? Create
         if (empty($set)) {
             foreach ($detail as $row) :
+                $dataEmployee = $mEmployee->where($mEmployee->primaryKey, $row->md_employee_id)->findAll();
+                $fieldEmployee->setList($dataEmployee);
+                $fieldEmployee->setValue($row->md_employee_id);
                 $fieldDate->setValue(format_dmy($row->date, '-'));
 
                 $table[] = [
                     $this->field->fieldTable($fieldLine),
+                    $this->field->fieldTable($fieldEmployee),
                     $this->field->fieldTable($fieldDate),
                     '',
                     $this->field->fieldTable($btnDelete)
@@ -530,9 +490,14 @@ class LeaveCancel extends BaseController
         //? Update
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
+                $dataEmployee = $mEmployee->where($mEmployee->primaryKey, $row->md_employee_id)->findAll();
+                $fieldEmployee->setList($dataEmployee);
+                $fieldEmployee->setValue($row->md_employee_id);
+
+
                 $fieldLine->setValue($row->lineno);
                 $fieldDate->setValue(format_dmy($row->date, '-'));
-                $btnDelete->setValue($row->trx_absent_detail_id);
+                $btnDelete->setValue($row->trx_submission_cancel_detail_id);
 
                 if ($row->isagree) {
                     $status = statusRealize($row->isagree);
@@ -542,6 +507,7 @@ class LeaveCancel extends BaseController
 
                 $table[] = [
                     $this->field->fieldTable($fieldLine),
+                    $this->field->fieldTable($fieldEmployee),
                     $this->field->fieldTable($fieldDate),
                     $status,
                     $this->field->fieldTable($btnDelete)
@@ -552,22 +518,59 @@ class LeaveCancel extends BaseController
         return json_encode($table);
     }
 
-    public function getLeaveDetail()
+    public function getSubmissionDetail()
     {
+
         if ($this->request->isAjax()) {
             $post = $this->request->getVar();
 
             try {
-                $detail = $this->modelDetail->where([
-                    $this->model->primaryKey    => $post['id'],
-                    'isagree'                   => 'Y'
-                ])->findAll();
+
+                $where = "v_all_submission.documentno = '{$post['document_no']}'";
+                $where .= " AND v_all_submission.docstatus IN ('CO','IP')";
+                $where .= " AND v_all_submission.isagree NOT IN ('C', 'N')";
+                $where .= " AND (v_all_submission.ref_id IS NULL OR v_all_submission.ref_id = 0)";
+                $where .= " AND trx_submission_cancel_detail.trx_submission_cancel_id IS NULL";
+                // $where .= " AND date >= '{date('Y-m-d')}'";
+                // $where .= " AND trx_submission_cancel_detail.isagree NOT IN ('H','Y','')";
+
+                $detail = $this->model->getAllSubmission($where, true)->getResult();
 
                 $result = [
                     'line'      => $this->tableLine(null, $detail)
                 ];
 
                 $response = message('success', true, $result);
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    public function getAllSubmission()
+    {
+        $post = $this->request->getVar();
+
+        if ($this->request->isAJAX()) {
+
+            try {
+                $where = "v_all_submission.employee_id = {$post['md_employee_id']}";
+                $where .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+                $where .= " AND v_all_submission.submissiontype = {$post['ref_submissiontype']}";
+                $where .= " AND v_all_submission.isagree NOT IN ('C', 'N')";
+                $where .= " AND (v_all_submission.ref_id IS NULL OR v_all_submission.ref_id = 0)";
+                $where .= " AND trx_submission_cancel_detail.trx_submission_cancel_id IS NULL";
+                // $where .= " AND v_all_submission.date >= '{date('Y-m-d)}'";
+                // $where .= " AND trx_submission_cancel_detail.isagree NOT IN ('H','Y','')";
+
+                $list_data = array_unique(array_map(fn($val) => [
+                    'id' => $val->header_id,
+                    'text' => $val->documentno
+                ], $this->model->getAllSubmission($where, true)->getResult()), SORT_REGULAR);
+
+                $response = array_values($list_data);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

@@ -17,6 +17,7 @@ use App\Models\M_AllowanceAtt;
 use App\Models\M_Assignment;
 use App\Models\M_AssignmentDate;
 use App\Models\M_AssignmentDetail;
+use App\Models\M_Configuration;
 use App\Models\M_EmpBenefit;
 use App\Models\M_Employee;
 use App\Models\M_RuleValue;
@@ -98,7 +99,7 @@ class Realization extends BaseController
             $where = [
                 "docstatus = '{$this->DOCSTATUS_Inprogress}' 
                 AND isapproved = 'Y' 
-                AND isagree = 'H' 
+                AND isagree = 'S' 
                 AND submissiontype NOT IN (" . implode(",", $formType) . ")"
             ];
 
@@ -398,18 +399,18 @@ class Realization extends BaseController
                 $leaveTypeId = $post['md_leavetype_id'];
 
             $submissionForm = $post['submissionform'];
-            $typeFormAssignment = ['Tugas Kantor', 'Penugasan'];
+            $typeFormAssignment = ['Penugasan'];
 
             try {
                 if (
-                    // $isAgree === 'Y' && ($submissionForm == "Penugasan" ? !$this->validation->run($post, 'realisasi_agree_penugasan') : 
+                    $isAgree === 'Y' && $submissionForm == "Penugasan" ? !$this->validation->run($post, 'realisasi_agree_penugasan') :
                     !$this->validation->run($post, 'realisasi_agree')
                 ) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else if (!$this->validation->run($post, 'realisasi_not_agree') && $isAgree === 'N') {
                     $response = $this->field->errorValidation($this->model->table, $post);
-                } else if ($submissionDate > $today) {
-                    $response = message('success', false, 'tanggal realisasi belum terpenuhi');
+                    // } else if ($submissionDate > $today) {
+                    //     $response = message('success', false, 'tanggal realisasi belum terpenuhi');
                 } else {
                     $isAssignment = in_array($submissionForm, $typeFormAssignment);
 
@@ -614,13 +615,13 @@ class Realization extends BaseController
                         }
                     }
 
+                    // TODO : Set Complete if There's no line need to realize
                     if ($isAssignment) {
                         $mAssignment = new M_Assignment($this->request);
 
                         $where = "trx_assignment.trx_assignment_id = {$line->trx_assignment_id}";
-                        $where .= " AND trx_assignment_date.isagree IN ('M','H')";
+                        $where .= " AND trx_assignment_date.isagree IN ('M','H','S')";
                         $subLineData = $mAssignment->getDetailData($where)->getRow();
-
                         if (is_null($subLineData)) {
                             $this->model = new M_Assignment($this->request);
                             $this->entity = new \App\Entities\Assignment();
@@ -632,10 +633,11 @@ class Realization extends BaseController
                         }
                     } else {
                         $this->model = new M_AbsentDetail($this->request);
-                        $list = $this->model->where([
-                            'isagree'       => $holdAgree,
-                            'trx_absent_id' => $line->trx_absent_id
-                        ])->first();
+
+                        $list = $this->model->where(
+                            'trx_absent_id',
+                            $line->trx_absent_id
+                        )->whereIn('isagree', ['M', 'S', 'H'])->first();
 
                         if (is_null($list)) {
                             $this->model = new M_Absent($this->request);
@@ -697,6 +699,7 @@ class Realization extends BaseController
                         $this->entity->overtime_expense = isset($ovt) ? $ovt['expense'] : null;
                         $this->entity->overtime_balance = isset($ovt) ? $ovt['balance'] : null;
                         $this->entity->total = isset($ovt) ? $ovt['total'] : null;
+                        $this->entity->realization_by = $this->access->getSessionUser();
 
                         $response = $this->save();
                     }
@@ -706,6 +709,7 @@ class Realization extends BaseController
                         $this->entity->trx_overtime_detail_id = $post['id'];
                         $this->entity->description = $post['description'];
                         $this->entity->status = $isAgree;
+                        $this->entity->realization_by = $this->access->getSessionUser();
 
                         $response = $this->save();
                     }
@@ -744,13 +748,13 @@ class Realization extends BaseController
 
             $isAgree = $post['isagree'];
             $submissionForm = $post['submissionform'];
-            $typeFormAssignment = ['Tugas Kantor', 'Penugasan'];
+            $typeFormAssignment = ['Penugasan'];
 
             try {
-                if ($isAgree === 'Y' && (in_array($submissionForm, $typeFormAssignment) ? false : !$this->validation->run($post, 'realisasi_kehadiran'))) {
+                if ($isAgree === 'Y' && ((in_array($submissionForm, $typeFormAssignment) || $submissionForm === 'Tugas Kantor') ? false : !$this->validation->run($post, 'realisasi_kehadiran'))) {
                     $response = $this->field->errorValidation($this->model->table, $post);
-                } else if (($isAgree == "Y") && date('Y-m-d', strtotime($post['submissiondate'])) > $today) {
-                    $response = message('success', false, 'tanggal realisasi belum terpenuhi');
+                    // } else if (($isAgree == "Y") && date('Y-m-d', strtotime($post['submissiondate'])) > $today) {
+                    //     $response = message('success', false, 'tanggal realisasi belum terpenuhi');
                 } else {
                     if (in_array($submissionForm, $typeFormAssignment)) {
                         $mAssignment = new M_Assignment($this->request);
@@ -761,10 +765,11 @@ class Realization extends BaseController
                         $id = $this->model->find($post['id']);
 
                         $this->entity->trx_assignment_date_id = $post['id'];
+                        $this->entity->realization_by = $this->access->getSessionUser();
 
                         if ($isAgree === $agree) {
                             $this->entity->comment = $post['comment'];
-                            $this->entity->isagree = $holdAgree;
+                            $this->entity->isagree = $agree;
 
                             if ($submissionForm === "Penugasan") {
                                 $this->entity->branch_in = $post['branch_in'];
@@ -783,7 +788,7 @@ class Realization extends BaseController
                         $lineData = $mAssignmentDetail->find($id->trx_assignment_detail_id);
 
                         $where = "trx_assignment.trx_assignment_id = {$lineData->trx_assignment_id}";
-                        $where .= " AND trx_assignment_date.isagree IN ('M','H')";
+                        $where .= " AND trx_assignment_date.isagree IN ('M','H','S')";
                         $subLineData = $mAssignment->getDetailData($where)->getRow();
 
                         if (is_null($subLineData)) {
@@ -810,10 +815,15 @@ class Realization extends BaseController
                             $this->model = new M_AbsentDetail($this->request);
                             $this->entity = new \App\Entities\AbsentDetail();
 
-                            $enddate =   date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
                             $this->entity->trx_absent_detail_id = $post['id'];
-                            $this->entity->date = $enddate;
+
+                            if ($submissionForm !== "Tugas Kantor") {
+                                $enddate =   date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
+                                $this->entity->date = $enddate;
+                            }
+
                             $this->entity->isagree = $isAgree;
+                            $this->entity->realization_by = $this->access->getSessionUser();
                             $response = $this->save();
                         }
 
@@ -822,6 +832,7 @@ class Realization extends BaseController
                             $this->entity = new \App\Entities\AbsentDetail();
                             $this->entity->trx_absent_detail_id = $post['id'];
                             $this->entity->isagree = $isAgree;
+                            $this->entity->realization_by = $this->access->getSessionUser();
 
                             $response = $this->save();
                         }
@@ -833,7 +844,7 @@ class Realization extends BaseController
                         $this->entity->setDocStatus($this->DOCSTATUS_Completed);
                         $this->entity->setReceivedDate($today);
 
-                        if ($isAgree === $agree)
+                        if ($isAgree === $agree && $submissionForm !== 'Tugas Kantor')
                             $this->entity->setEndDateRealization($enddate);
 
                         $this->save();
@@ -857,22 +868,6 @@ class Realization extends BaseController
                 if (!empty($post['name']) && $post['name'] === "Penugasan") {
                     $list = [
                         [
-                            'id'    => 'lupa absen masuk',
-                            'name'  => 'Lupa Absen Masuk'
-                        ],
-                        [
-                            'id'    => 'lupa absen pulang',
-                            'name'  => 'Lupa Absen Pulang'
-                        ],
-                        [
-                            'id'    => 'datang terlambat',
-                            'name'  => 'Datang Terlambat'
-                        ],
-                        [
-                            'id'    => 'pulang cepat',
-                            'name'  => 'Pulang Cepat'
-                        ],
-                        [
                             'id'    => 'alpa',
                             'name'  => 'Alpa'
                         ],
@@ -891,6 +886,13 @@ class Realization extends BaseController
                         [
                             'id'    => 'alpa',
                             'name'  => 'Alpa'
+                        ]
+                    ];
+                } else if (!empty($post['name']) && $post['name'] === "Cuti") {
+                    $list = [
+                        [
+                            'id'    => 'ijin',
+                            'name'  => 'Ijin'
                         ]
                     ];
                 } else {
@@ -1074,57 +1076,64 @@ class Realization extends BaseController
 
     public function doApprovedRealization()
     {
-        $absent = $this->model
-            ->where([
-                'docstatus'  => "$this->DOCSTATUS_Inprogress",
-                'isapproved' => 'Y'
-            ])
-            ->groupStart()
-            ->where('approveddate IS NULL')
-            ->where('ADDDATE(updated_at, INTERVAL 2 DAY) <= NOW()')
-            ->orGroupStart()
-            ->where('approveddate IS NOT NULL')
-            ->where('ADDDATE(approveddate, INTERVAL 2 DAY) <= NOW()')
-            ->groupEnd()
-            ->groupEnd()
-            ->findAll();
+        $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mConfig = new M_Configuration($this->request);
 
-        if ($absent) {
-            $this->session->set([
-                'sys_user_id'       => 100000,
-            ]);
+        //TODO : Get Rule How Many Days to Auto Approve
+        $rule = $mConfig->where(['name' => 'AUTO_APPROVE_REALIZATION', 'isactive' => 'Y'])->first();
 
-            $mAbsentDetail = new M_AbsentDetail($this->request);
-            $todayTime = date('Y-m-d H:i:s');
+        if ($rule && $rule->value > 0) {
 
-            $absentIds = array_column($absent, 'trx_absent_id');
+            $where = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
+            $where .= " AND isapproved = 'Y'";
+            $where .= " AND isagree IN ('M','S')";
+            $where .= " AND ADDDATE(date, INTERVAL {$rule->value} DAY) <= NOW()";
 
-            $absentDetail = $mAbsentDetail->where('isagree', 'H')
-                ->whereIn('trx_absent_id', $absentIds)
-                ->findAll();
+            $listApproved = $mAbsentDetail->getAllSubmission($where)->getResult();
 
-            $arr = [];
+            if ($listApproved) {
+                $this->session->set([
+                    'sys_user_id'       => 100000,
+                ]);
 
-            foreach ($absentDetail as $row) {
-                $arr[] = [
-                    "trx_absent_detail_id"  => $row->trx_absent_detail_id,
-                    "trx_absent_id"         => $row->trx_absent_id,
-                    "isagree"               => "Y",
-                    "updated_at"            => $todayTime,
-                    "updated_by"            => $this->session->get('sys_user_id')
-                ];
-            }
+                $todayTime = date('Y-m-d H:i:s');
 
-            $result = $mAbsentDetail->builder->updateBatch($arr, $mAbsentDetail->primaryKey);
+                foreach ($listApproved as $row) {
+                    //TODO : Update Detail Status to Approved
+                    $this->modelDetail = $row->table === 'trx_absent' ? new M_AbsentDetail($this->request) : new M_AssignmentDate($this->request);
 
-            if ($result > 0) {
-                $this->entity = new \App\Entities\Absent();
+                    $data = [
+                        "isagree"               => "Y",
+                        "updated_at"            => $todayTime,
+                        "updated_by"            => $this->session->get('sys_user_id')
+                    ];
 
-                foreach ($absentIds as $id) {
-                    $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                    $this->entity->setReceivedDate($todayTime);
-                    $this->entity->setAbsentId($id);
-                    $this->save();
+                    $this->modelDetail->builder->update($data, [$this->modelDetail->primaryKey => $row->id]);
+
+                    $where = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
+                    $where .= " AND isapproved = 'Y'";
+                    $where .= " AND isagree IN ('M','S')";
+                    $where .= " AND header_id = {$row->header_id}";
+                    $where .= " AND table = '{$row->table}'";
+
+                    //TODO : Update Header Status to Complete if There's No Another Line to Realization
+                    $remaining = $mAbsentDetail->getAllSubmission($where)->getRow();
+
+                    if (!$remaining) {
+                        $this->model = $row->table === 'trx_absent' ? new M_Absent($this->request) : new M_Assignment($this->request);
+                        $this->entity = $row->table === 'trx_absent' ? new \App\Entities\Absent() : new \App\Entities\Assignment();
+
+                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                        $this->entity->setReceivedDate($todayTime);
+
+                        if ($row->table === 'trx_absent') {
+                            $this->entity->setAbsentId($row->header_id);
+                        } else {
+                            $this->entity->setAssignmentId($row->header_id);
+                        }
+
+                        $this->save();
+                    }
                 }
             }
         }

@@ -4,6 +4,7 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_AlertRecipient;
+use App\Models\M_Configuration;
 use App\Models\M_Responsible;
 use App\Models\M_User;
 use App\Models\M_WActivity;
@@ -156,23 +157,23 @@ class WActivity extends BaseController
 
                 $docType = $mDocType->find($trx->submissiontype);
 
-                if ($docType->getIsRealization() === "Y") {
-                    //TODO : Initialize modeling data table 
-                    $trxModel = $this->model->initDataTable($table);
+                // if ($docType->getIsRealization() === "Y") {
+                //     //TODO : Initialize modeling data table 
+                //     $trxModel = $this->model->initDataTable($table);
 
-                    //TODO : Call data transaction
-                    $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
+                //     //TODO : Call data transaction
+                //     $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
 
-                    $this->entity->{$this->model->primaryKey} = $record_id;
-                    $this->entity->approveddate = date("Y-m-d H:i:s");
-                } else {
-                    $trxModelLine = $this->model->initDataTable($tableLine);
+                //     $this->entity->{$this->model->primaryKey} = $record_id;
+                //     $this->entity->approveddate = date("Y-m-d H:i:s");
+                // } else {
+                $trxModelLine = $this->model->initDataTable($tableLine);
 
-                    $trxLine = $trxModelLine->where($trxModelLine->primaryKey, $recordLine_id)->first();
+                $trxLine = $trxModelLine->where($trxModelLine->primaryKey, $recordLine_id)->first();
 
-                    $this->entity->{$this->model->primaryKey} = $recordLine_id;
-                    $this->entity->{$trxModel->primaryKey} = $record_id;
-                }
+                $this->entity->{$this->model->primaryKey} = $recordLine_id;
+                $this->entity->{$trxModel->primaryKey} = $record_id;
+                // }
             } else {
                 //TODO : Initialize modeling data table 
                 $trxModel = $this->model->initDataTable($table);
@@ -254,6 +255,20 @@ class WActivity extends BaseController
                         //! SAS Form Realisasi 
                         if ($docType->getIsRealization() === "Y") {
                             $this->entity->isapproved = "Y";
+
+                            $subType = [
+                                100001 => 'S', // Sakit
+                                100003 => 'S', // Cuti
+                                100004 => 'S', // Ijin
+                                100005 => 'S', // Ijin Resmi
+                                100007 => 'M', // Tugas Kantor
+                                100008 => 'M', // Penugasan
+                                100014 => 'M', // Lembur
+                                100010 => 'M', // Lupa Absen Masuk
+                                100011 => 'M'  // Lupa Absen Pulang
+                            ];
+
+                            $this->entity->isagree = $subType[$docType->getDocTypeId()];
 
                             if ($isanswer === "W")
                                 $this->entity->comment = $textmsg;
@@ -385,17 +400,25 @@ class WActivity extends BaseController
 
     public function doNotApproved()
     {
+        $mConfig = new M_Configuration($this->request);
+
         $this->session->set([
             'sys_user_id'       => 100000,
         ]);
 
-        $where = 'ADDDATE(sys_wfactivity.created_at, INTERVAL 2 DAY) <= NOW()';
+        //TODO : Get Rule for Not Approve Approval
+        $rule = $mConfig->where(['name' => 'AUTO_REJECT_APPROVAL', 'isactive' => 'Y'])->first();
 
-        $list = $this->model->getActivity(null, $where);
+        //TODO : If configuration is equal or under 0 then Cron will not run
+        if ($rule->value > 0) {
+            $where = "ADDDATE(sys_wfactivity.created_at, INTERVAL {$rule->value} DAY) <= NOW()";
 
-        if ($list) {
-            foreach ($list as $row) {
-                $this->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, session()->get('sys_user_id'), $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu);
+            $list = $this->model->getActivity(null, $where);
+
+            if ($list) {
+                foreach ($list as $row) {
+                    $this->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, session()->get('sys_user_id'), $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu);
+                }
             }
         }
     }

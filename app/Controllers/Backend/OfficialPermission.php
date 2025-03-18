@@ -290,6 +290,29 @@ class OfficialPermission extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
+                        $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+
+                        if (is_null($line)) {
+                            // TODO : Create Line if not exist
+                            $data = [
+                                'id'        => $_ID,
+                                'created_by' => $this->access->getSessionUser(),
+                                'updated_by' => $this->access->getSessionUser()
+                            ];
+
+                            $this->model->createAbsentDetail($data, $row);
+                        } else {
+                            //TODO : Update line if line exist
+                            foreach ($line as $row) :
+                                $entity = new \App\Entities\AbsentDetail();
+
+                                $entity->trx_absent_detail_id = $row->trx_absent_detail_id;
+                                $entity->isagree = 'H';
+
+                                $this->modelDetail->save($entity);
+                            endforeach;
+                        }
+
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
                         $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
@@ -371,7 +394,14 @@ class OfficialPermission extends BaseController
                 $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
 
                 if (!empty($row->ref_absent_detail_id)) {
-                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    if ($row->table === 'trx_submission_cancel_detail') {
+                        $refModel = new M_SubmissionCancelDetail($this->request);
+                    } else if ($row->table === 'trx_assignment') {
+                        $refModel = new M_AssignmentDate($this->request);
+                    } else {
+                        $refModel = new M_AbsentDetail($this->request);
+                    }
+                    $lineRef = $refModel->getDetail($refModel->primaryKey, $row->ref_absent_detail_id)->getRow();
                     $docNoRef = $lineRef->documentno;
                 }
 

@@ -1,5 +1,5 @@
 <div class="card-body card-form">
-    <form class="form-horizontal form-absent" id="form_leave_cancel">
+    <form class="form-horizontal form-absent" id="form_submission_cancel">
         <?= csrf_field(); ?>
         <div class="row">
             <div class="col-md-3">
@@ -12,13 +12,7 @@
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="nik">NIK <span class="required">*</span></label>
-                    <input type="text" class="form-control" id="nik" name="nik" readonly>
-                    <small class="form-text text-danger" id="error_nik"></small>
-                </div>
-            </div>
+            <div class="col-md-3"></div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form </label>
@@ -77,18 +71,28 @@
                     <small class="form-text text-danger" id="error_reason"></small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <div class="form-group">
-                    <label for="reference_id">Pengajuan Cuti <span class="required">*</span></label>
+                    <label for="ref_submissiontype">Tipe Pengajuan <span class="required">*</span></label>
+                    <select class="form-control select-data" id="ref_submissiontype" name="ref_submissiontype"
+                        data-url="document-type/getList/$Submission">
+                        <option value="">Pilih Tipe Pengajuan</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_ref_submissiontype"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="reference_id">No Pengajuan <span class="required">*</span></label>
                     <select class="form-control select2" id="reference_id" name="reference_id">
-                        <option value="">Pilih Pengajuan Cuti</option>
+                        <option value="">Pilih Pengajuan</option>
                     </select>
                     <small class="form-text text-danger" id="error_reference_id"></small>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="form-group">
-                    <label>Foto </label>
+                    <label>Foto <span class="required">*</span></label>
                     <div class="form-upload-result">
                         <label class="col-md-4 form-result">
                             <button type="button" class="close-img" aria-label="Close">
@@ -99,9 +103,11 @@
                     </div>
                     <div class="form-upload">
                         <label class="col-md-4 form-upload-foto" id="image-upload">
-                            <input type="file" class="control-upload-image" id="image" name="image" onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
+                            <input type="file" class="control-upload-image" id="image" name="image"
+                                onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
+                        <small class="form-text text-danger" id="error_image"></small>
                     </div>
                 </div>
             </div>
@@ -113,7 +119,8 @@
                         <thead>
                             <tr>
                                 <th>Line</th>
-                                <th>Tanggal Cuti Batal</th>
+                                <th>Employee</th>
+                                <th>Tanggal Batal</th>
                                 <th>status</th>
                                 <th>aksi</th>
                             </tr>

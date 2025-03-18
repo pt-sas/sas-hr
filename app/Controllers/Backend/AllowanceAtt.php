@@ -13,6 +13,7 @@ use App\Models\M_Levelling;
 use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
 use App\Models\M_EmpWorkDay;
+use App\Models\M_RuleDetail;
 use App\Models\M_WorkDetail;
 use PHPExcel;
 use PHPExcel_IOFactory;
@@ -169,11 +170,15 @@ class AllowanceAtt extends BaseController
         $mWorkDetail = new M_WorkDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
 
         $md_branch_id = null;
         $md_division_id = null;
         $md_employee_id = null;
         $cutOff = 15;
+
+        $ruleArrive = $mRuleDetail->where(['name' => 'Terlambat 1/2 Hari'])->first();
 
         if (isset($post['md_branch_id']))
             $md_branch_id = $post['md_branch_id'];
@@ -391,17 +396,35 @@ class AllowanceAtt extends BaseController
                         $qty = 0;
                         $styleCell = $style_row_dayoff;
                     } else {
+                        // TODO : Get Allowance
                         $parAllow = [
                             'trx_allow_attendance.md_employee_id'                           => $row->md_employee_id,
                             'DATE_FORMAT(trx_allow_attendance.submissiondate, "%Y-%m-%d")'  => $date
                         ];
-
                         $allow = $this->model->getAllowance($parAllow)->getRow();
 
-                        $whereClause = "v_attendance.nik = {$row->nik}";
-                        $whereClause .= " AND v_attendance.date = '{$date}'";
-                        $attend = $mAttendance->getAttendance($whereClause)->getRow();
+                        //TODO : Get Attendance 
+                        $empBranch = $mEmpBranch->where([$mEmployee->primaryKey => $row->md_employee_id])->findAll();
 
+                        $whereClause = "v_attendance_serialnumber.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND v_attendance_serialnumber.date = '{$date}'";
+
+                        if (count($empBranch) > 1) {
+                            $branchID = [];
+
+                            foreach ($empBranch as $val) {
+                                $branchID[] = $val->md_branch_id;
+                            }
+
+                            $branchID = implode(" ,", $branchID);
+                            $whereClause .= " AND md_attendance_machines.md_branch_id IN ($branchID)";
+                        } else {
+                            $whereClause .= " AND md_attendance_machines.md_branch_id = {$empBranch[0]->md_branch_id}";
+                        }
+
+                        $attend = $mAttendance->getAttendanceBranch($whereClause)->getRow();
+
+                        //TODO : Get Submission  
                         $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
                         AND v_realization.md_employee_id = {$row->md_employee_id}
                         AND v_realization.isagree = 'Y'
@@ -409,6 +432,7 @@ class AllowanceAtt extends BaseController
 
                         $absent = $mAbsentDetail->getAllSubmission($parAbsent)->getRow();
 
+                        // TODO : Get Submission Permission Arrived and Forgot Absent In
                         $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
                         AND v_realization.md_employee_id = {$row->md_employee_id}
                         AND v_realization.isagree = 'Y'
@@ -416,6 +440,7 @@ class AllowanceAtt extends BaseController
 
                         $absentIn = $mAbsentDetail->getAllSubmission($parAbsent)->getRow();
 
+                        // TODO : Get Submission Permission Leave Early and Forgot Absent Out
                         $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
                         AND v_realization.md_employee_id = {$row->md_employee_id}
                         AND v_realization.isagree = 'Y'
@@ -423,6 +448,7 @@ class AllowanceAtt extends BaseController
 
                         $absentOut = $mAbsentDetail->getAllSubmission($parAbsent)->getRow();
 
+                        // TODO : Get Submission Permission Leave Early and Not Approved
                         $parAbsent = "DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$date}'
                         AND trx_absent.docstatus = 'CO'
                         AND trx_absent_detail.isagree = 'N'
@@ -431,6 +457,7 @@ class AllowanceAtt extends BaseController
 
                         $absentNA = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
 
+                        // TODO : Get Submission Forgot Absent Out and Not Approved
                         $parAbsent = "DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$date}'
                         AND trx_absent.docstatus = 'CO'
                         AND trx_absent.md_employee_id = {$row->md_employee_id}
@@ -439,6 +466,7 @@ class AllowanceAtt extends BaseController
 
                         $forgetAbsentNA = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
 
+                        // TODO : Get Submission Half Day Assignment
                         $parAbsent = "DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'
                             AND trx_absent.docstatus = 'CO'
                             AND trx_absent.md_employee_id = {$row->md_employee_id}
@@ -451,9 +479,17 @@ class AllowanceAtt extends BaseController
                         $qty = 1;
 
                         if ($attend) {
+                            // This Variable for calculating if employee absent clock in greater than maxAbsentIn then meaning employee is late and will be punished for half TKH
+                            $maxAbsentIn = convertToMinutes($work->startwork) + $ruleArrive->condition;
+                            // This Variable for calculating if employee absent clock out less than minAbsentOut then meaning employee is late and will be punished for half TKH
+                            $minAbsentOut = convertToMinutes($work->endwork);
+
+                            $empClockIn = !empty($attend->clock_in) ? convertToMinutes($attend->clock_in) : null;
+                            $empClockOut = !empty($attend->clock_out) ? convertToMinutes($attend->clock_out) : null;
+
                             if (
-                                empty($tugasNotKunjungan) && (!empty($attend->clock_in) && $attend->clock_in > "08:30")
-                                || (!empty($attend->clock_out) && $attend->clock_out < "17:00")
+                                empty($tugasNotKunjungan) && (!is_null($empClockIn) && $empClockIn > $maxAbsentIn)
+                                || (!is_null($empClockOut) && $empClockOut < $minAbsentOut)
                             ) {
                                 if ($absent && $allow && ($absent->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat
                                     || $absent->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat || $absent->submissiontype == $mAbsent->Pengajuan_Penugasan)) {
@@ -465,11 +501,11 @@ class AllowanceAtt extends BaseController
                                 }
                             }
 
-                            if (empty($tugasNotKunjungan) && empty($attend->clock_in) && $attend->clock_out >= "17:00") {
+                            if (empty($tugasNotKunjungan) && is_null($empClockIn) && $empClockOut >= $minAbsentOut) {
                                 if (
                                     $absent
                                     && $absent->enddate_realization !== "0000-00-00 00:00:00"
-                                    && date("H:i", strtotime($absent->enddate_realization)) > "08:30"
+                                    && convertToMinutes($absent->enddate_realization) < convertToMinutes($work->breakstart)
                                     && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk
                                 ) {
                                     $qty = $qty - 0.5;
@@ -478,11 +514,11 @@ class AllowanceAtt extends BaseController
                                 }
                             }
 
-                            if (empty($tugasNotKunjungan) && empty($attend->clock_out) && $attend->clock_in <= "08:00") {
+                            if (empty($tugasNotKunjungan) && is_null($empClockOut) && $empClockIn <= $maxAbsentIn) {
                                 if (
                                     $absent
                                     && $absent->enddate_realization !== "0000-00-00 00:00:00"
-                                    && date("H:i", strtotime($absent->enddate_realization)) < "17:30"
+                                    && convertToMinutes($absent->enddate_realization) > convertToMinutes($work->breakend)
                                     && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang
                                 ) {
                                     $qty = $qty - 0.5;
@@ -504,7 +540,6 @@ class AllowanceAtt extends BaseController
                             }
 
                             if ($absentIn && $absentOut) {
-                                log_message('info', 'okeokeoke');
                                 $qty = 0;
                             }
                         } else if (empty($attend)) {
@@ -567,17 +602,35 @@ class AllowanceAtt extends BaseController
                         $qty = 0;
                         $styleCell = $style_row_dayoff;
                     } else {
+                        // TODO : Get Allowance
                         $parAllow = [
                             'trx_allow_attendance.md_employee_id'                           => $row->md_employee_id,
                             'DATE_FORMAT(trx_allow_attendance.submissiondate, "%Y-%m-%d")'  => $date
                         ];
-
                         $allow = $this->model->getAllowance($parAllow)->getRow();
 
-                        $whereClause = "v_attendance.nik = {$row->nik}";
-                        $whereClause .= " AND v_attendance.date = '{$date}'";
-                        $attend = $mAttendance->getAttendance($whereClause)->getRow();
+                        //TODO : Get Attendance 
+                        $empBranch = $mEmpBranch->where([$mEmployee->primaryKey => $row->md_employee_id])->findAll();
 
+                        $whereClause = "v_attendance_serialnumber.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND v_attendance_serialnumber.date = '{$date}'";
+
+                        if (count($empBranch) > 1) {
+                            $branchID = [];
+
+                            foreach ($empBranch as $val) {
+                                $branchID[] = $val->md_branch_id;
+                            }
+
+                            $branchID = implode(" ,", $branchID);
+                            $whereClause .= " AND md_attendance_machines.md_branch_id IN ($branchID)";
+                        } else {
+                            $whereClause .= " AND md_attendance_machines.md_branch_id = {$empBranch[0]->md_branch_id}";
+                        }
+
+                        $attend = $mAttendance->getAttendanceBranch($whereClause)->getRow();
+
+                        //TODO : Get Submission  
                         $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
                         AND v_realization.md_employee_id = {$row->md_employee_id}
                         AND v_realization.isagree = 'Y'
@@ -585,20 +638,23 @@ class AllowanceAtt extends BaseController
 
                         $absent = $mAbsentDetail->getAllSubmission($parAbsent)->getRow();
 
-                        $parAbsent = "DATE_FORMAT(v_realization.date, '%YM-%m-%d') = '{$date}'
+                        // TODO : Get Submission Permission Arrived and Forgot Absent In
+                        $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
                         AND v_realization.md_employee_id = {$row->md_employee_id}
                         AND v_realization.isagree = 'Y'
                         AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Datang_Terlambat}, {$mAbsent->Pengajuan_Lupa_Absen_Masuk})";
 
                         $absentIn = $mAbsentDetail->getAllSubmission($parAbsent)->getRow();
 
-                        $parAbsent = "DATE_FORMAT(v_realization.date, '%YM-%m-%d') = '{$date}'
+                        // TODO : Get Submission Permission Leave Early and Forgot Absent Out
+                        $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
                         AND v_realization.md_employee_id = {$row->md_employee_id}
                         AND v_realization.isagree = 'Y'
                         AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang}, {$mAbsent->Pengajuan_Pulang_Cepat})";
 
                         $absentOut = $mAbsentDetail->getAllSubmission($parAbsent)->getRow();
 
+                        // TODO : Get Submission Permission Leave Early and Not Approved
                         $parAbsent = "DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$date}'
                         AND trx_absent.docstatus = 'NA'
                         AND trx_absent_detail.isagree = 'N'
@@ -607,6 +663,7 @@ class AllowanceAtt extends BaseController
 
                         $absentNA = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
 
+                        // TODO : Get Submission Forgot Absent Out and Not Approved
                         $parAbsent = "DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') = '{$date}'
                         AND trx_absent.docstatus = 'CO'
                         AND trx_absent.md_employee_id = {$row->md_employee_id}
@@ -615,6 +672,7 @@ class AllowanceAtt extends BaseController
 
                         $forgetAbsentNA = $mAbsentDetail->getAbsentDetail($parAbsent)->getRow();
 
+                        // TODO : Get Submission Half Day Assignment
                         $parAbsent = "DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'
                             AND trx_absent.docstatus = 'CO'
                             AND trx_absent.md_employee_id = {$row->md_employee_id}
@@ -627,12 +685,19 @@ class AllowanceAtt extends BaseController
                         $qty = 1;
 
                         if ($attend) {
+                            // This Variable for calculating if employee absent clock in greater than maxAbsentIn then meaning employee is late and will be punished for half TKH
+                            $maxAbsentIn = convertToMinutes($work->startwork) + $ruleArrive->condition;
+                            // This Variable for calculating if employee absent clock out less than minAbsentOut then meaning employee is late and will be punished for half TKH
+                            $minAbsentOut = convertToMinutes($work->endwork);
+
+                            $empClockIn = !empty($attend->clock_in) ? convertToMinutes($attend->clock_in) : null;
+                            $empClockOut = !empty($attend->clock_out) ? convertToMinutes($attend->clock_out) : null;
+
                             if (
-                                empty($tugasNotKunjungan) && (!empty($attend->clock_in) && $attend->clock_in > "08:30")
-                                || (!empty($attend->clock_out) && $attend->clock_out < "17:00")
+                                empty($tugasNotKunjungan) && (!is_null($empClockIn) && $empClockIn > $maxAbsentIn)
+                                || (!is_null($empClockOut) && $empClockOut < $minAbsentOut)
                             ) {
-                                if ($absent && $allow && ($absent->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat
-                                    || $absent->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat || $absent->submissiontype == $mAbsent->Pengajuan_Penugasan)) {
+                                if ($absent && $allow && ($absent->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat || $absent->submissiontype == $mAbsent->Pengajuan_Penugasan)) {
                                     $qty = $qty + $allow->amount;
                                 } else if (!empty($absentNA)) {
                                     $qty = $qty + -1.5;
@@ -641,11 +706,11 @@ class AllowanceAtt extends BaseController
                                 }
                             }
 
-                            if (empty($tugasNotKunjungan) && empty($attend->clock_in) && $attend->clock_out >= "17:00") {
+                            if (empty($tugasNotKunjungan) && is_null($empClockIn) && $empClockOut >= $minAbsentOut) {
                                 if (
                                     $absent
                                     && $absent->enddate_realization !== "0000-00-00 00:00:00"
-                                    && date("H:i", strtotime($absent->enddate_realization)) > "08:30"
+                                    && convertToMinutes($absent->enddate_realization) < convertToMinutes($work->breakstart)
                                     && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk
                                 ) {
                                     $qty = $qty - 0.5;
@@ -660,11 +725,11 @@ class AllowanceAtt extends BaseController
                                 }
                             }
 
-                            if (empty($tugasNotKunjungan) && empty($attend->clock_out) && $attend->clock_in <= "08:00") {
+                            if (empty($tugasNotKunjungan) && is_null($empClockOut) && $empClockIn <= $maxAbsentIn) {
                                 if (
                                     $absent
                                     && $absent->enddate_realization !== "0000-00-00 00:00:00"
-                                    && date("H:i", strtotime($absent->enddate_realization)) < "17:30"
+                                    && convertToMinutes($absent->enddate_realization) > convertToMinutes($work->breakend)
                                     && $absent->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang
                                 ) {
                                     $qty = $qty - 0.5;

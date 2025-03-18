@@ -120,8 +120,6 @@ class M_WActivity extends Model
 			$query .= $table . '.documentno,';
 			$query .= 'md_employee.fullname as employee,
 						md_employee.value,';
-
-			$this->builder->where($tableLine . ".isagree", "H");
 		}
 
 		$this->builder->select($query);

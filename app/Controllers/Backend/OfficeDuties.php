@@ -7,14 +7,13 @@ use App\Models\M_AbsentDetail;
 use Config\Services;
 use App\Models\M_Employee;
 use App\Models\M_AccessMenu;
-use App\Models\M_Assignment;
-use App\Models\M_AssignmentDate;
-use App\Models\M_AssignmentDetail;
+use App\Models\M_Absent;
 use App\Models\M_Holiday;
 use App\Models\M_Rule;
 use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Division;
+use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_RuleDetail;
 use TCPDF;
 
@@ -23,10 +22,9 @@ class OfficeDuties extends BaseController
     public function __construct()
     {
         $this->request = Services::request();
-        $this->model = new M_Assignment($this->request);
-        $this->modelDetail = new M_AssignmentDetail($this->request);
-        $this->modelSubDetail = new M_AssignmentDate($this->request);
-        $this->entity = new \App\Entities\Assignment();
+        $this->model = new M_Absent($this->request);
+        $this->modelDetail = new M_AbsentDetail($this->request);
+        $this->entity = new \App\Entities\Absent();
     }
 
     public function index()
@@ -50,36 +48,37 @@ class OfficeDuties extends BaseController
             $order = [
                 '', // Hide column
                 '', // Number column
-                'trx_assignment.documentno',
+                'trx_absent.documentno',
                 'md_employee.fullname',
                 'md_branch.name',
                 'md_division.name',
-                'trx_assignment.submissiondate',
-                'trx_assignment.startdate',
-                'trx_assignment.approveddate',
-                'trx_assignment.reason',
-                'trx_assignment.docstatus',
+                'trx_absent.submissiondate',
+                'trx_absent.startdate',
+                'trx_absent.approveddate',
+                'trx_absent.reason',
+                'trx_absent.docstatus',
                 'sys_user.name'
             ];
             $search = [
-                'trx_assignment.documentno',
+                'trx_absent.documentno',
                 'md_employee.fullname',
                 'md_branch.name',
                 'md_division.name',
-                'trx_assignment.submissiondate',
-                'trx_assignment.startdate',
-                'trx_assignment.enddate',
-                'trx_assignment.approveddate',
-                'trx_assignment.reason',
-                'trx_assignment.docstatus',
+                'trx_absent.submissiondate',
+                'trx_absent.startdate',
+                'trx_absent.enddate',
+                'trx_absent.approveddate',
+                'trx_absent.reason',
+                'trx_absent.docstatus',
                 'sys_user.name'
             ];
-            $sort = ['trx_assignment.submissiondate' => 'DESC'];
+            $sort = ['trx_absent.submissiondate' => 'DESC'];
 
             /**
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
@@ -92,29 +91,37 @@ class OfficeDuties extends BaseController
                 if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                    $where['trx_assignment.md_employee_id'] = [
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
+                    $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
+                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['trx_absent.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
                 } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['trx_assignment.md_employee_id'] = [
+                    $where['trx_absent.md_employee_id'] = [
                         'value'     => $arrEmployee
                     ];
                 } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['trx_assignment.md_employee_id'] = [
+                    $where['trx_absent.md_employee_id'] = [
                         'value'     => $arrEmpBased
                     ];
                 } else {
-                    $where['trx_assignment.md_employee_id'] = $this->session->get('md_employee_id');
+                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
                 }
             } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['trx_assignment.md_employee_id'] = [
+                $where['trx_absent.md_employee_id'] = [
                     'value'     => $arrEmployee
                 ];
             } else {
-                $where['trx_assignment.md_employee_id'] = $this->session->get('md_employee_id');
+                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['trx_assignment.submissiontype'] = $this->model->Pengajuan_Tugas_Kantor;
+            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Tugas_Kantor;
 
             $data = [];
 
@@ -123,7 +130,7 @@ class OfficeDuties extends BaseController
 
             foreach ($list as $value) :
                 $row = [];
-                $ID = $value->trx_assignment_id;
+                $ID = $value->trx_absent_id;
 
                 $number++;
 
@@ -227,21 +234,20 @@ class OfficeDuties extends BaseController
                         $todayMinutes = convertToMinutes($today);
                         $maxMinutes = $ruleDetail ? convertToMinutes(date("H:i", strtotime($ruleDetail->condition))) : null;
 
-                        $arrEmpId = array_map(function ($value) {
-                            return $value->md_employee_id;
-                        }, $table);
+                        //TODO : Get submission
+                        $date_range = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d H:i:s', 'all', $daysOff);
 
-                        $empWork = $mEmployee
-                            ->whereIn("md_employee_id", $arrEmpId)
-                            ->where("NOT EXISTS (SELECT 1 
-                                                FROM md_employee_work mew
-						                        WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
-                                                AND date_format(validto, '%Y-%m-%d') >= '{$startDate}'
-                                                AND (SELECT mwd.md_day_id
-                                                    FROM md_work_detail mwd
-                                                    WHERE mwd.md_work_id = mew.md_work_id
-                                                    AND mwd.md_day_id = {$day}))")
-                            ->findAll();
+                        foreach ($date_range as $date) {
+                            $whereClause = "trx_absent.md_employee_id = {$post['md_employee_id']}";
+                            $whereClause .= " AND trx_absent_detail.date = '$date'";
+                            $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+                            $whereClause .= " AND trx_absent_detail.isagree IN ('H','M','S','Y')";
+                            $trx = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+
+                            if (!empty($trx)) {
+                                break;
+                            }
+                        }
 
                         if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
@@ -249,12 +255,9 @@ class OfficeDuties extends BaseController
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
                         } else if ($dateReq === $subDate && ($maxMinutes && ($todayMinutes > $maxMinutes))) {
                             $response = message('success', false, 'Maksimal jam pengajuan ' . $ruleDetail->condition);
-                        } else if ($empWork) {
-                            $value = implode(", ", array_map(function ($row) {
-                                return $row->value;
-                            }, $empWork));
-
-                            $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
+                        } else if ($trx) {
+                            $date = format_dmy($trx->date, '-');
+                            $response = message('success', false, "Tidak bisa mengajukan pada tanggal : {$date}, karena sudah ada pengajuan lain dengan no : {$trx->documentno}");
                         } else {
                             $this->entity->fill($post);
 
@@ -346,6 +349,29 @@ class OfficeDuties extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
+                        $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+
+                        if (empty($line)) {
+                            // TODO : Create Line if not exist
+                            $data = [
+                                'id'        => $_ID,
+                                'created_by' => $this->access->getSessionUser(),
+                                'updated_by' => $this->access->getSessionUser()
+                            ];
+
+                            $this->model->createAbsentDetail($data, $row);
+                        } else {
+                            //TODO : Update line if line exist
+                            foreach ($line as $row) :
+                                $entity = new \App\Entities\AbsentDetail();
+
+                                $entity->trx_absent_detail_id = $row->trx_absent_detail_id;
+                                $entity->isagree = 'H';
+
+                                $this->modelDetail->save($entity);
+                            endforeach;
+                        }
+
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
                         $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
@@ -370,133 +396,32 @@ class OfficeDuties extends BaseController
 
     public function tableLine($set = null, $detail = [])
     {
-        $employee = new M_Employee($this->request);
-
-        $post = $this->request->getPost();
-
         $table = [];
-
-        $btnChildRow = new \App\Entities\Table();
-        $btnChildRow->setClass("details-control");
-
-        $fieldEmployee = new \App\Entities\Table();
-        $fieldEmployee->setName("md_employee_id");
-        $fieldEmployee->setIsRequired(true);
-        $fieldEmployee->setType("select");
-        $fieldEmployee->setClass("select2");
-        $fieldEmployee->setField([
-            'id'    => 'md_employee_id',
-            'text'  => 'value'
-        ]);
-        $fieldEmployee->setLength(200);
-
-        $fieldDesctiprion = new \App\Entities\Table();
-        $fieldDesctiprion->setName("description");
-        $fieldDesctiprion->setId("description");
-        $fieldDesctiprion->setType("text");
-        $fieldDesctiprion->setLength(250);
-
-        $btnDelete = new \App\Entities\Table();
-        $btnDelete->setName($this->modelDetail->primaryKey);
-        $btnDelete->setType("button");
-        $btnDelete->setClass("delete");
-
-        // ? Create
-        if (empty($set)) {
-            if (!$this->validation->run($post, 'TugasKantorAddRow')) {
-                $table = $this->field->errorValidation($this->model->table, $post);
-            } else {
-                // if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
-                //     $whereClause = "md_employee.isactive = 'Y'";
-
-                //     if ($emp->getLevellingId() == 100002) {
-                //         $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
-                //     } else {
-                // $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}
-                //         AND md_employee_division.md_division_id = {$post['md_division_id']}
-                //         AND (md_employee.md_levelling_id IN (SELECT l.md_levelling_id
-                //         FROM md_levelling l
-                //         WHERE l.md_levelling_id > {$emp->md_levelling_id}))
-                //         AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
-                // }
-
-                // }
-
-
-                $emp = $employee->find($this->session->get('md_employee_id'));
-                $empId = $emp->getEmployeeId();
-
-                $whereClause = "md_employee.isactive = 'Y'";
-
-                if ($emp->getLevellingId() == 100002) {
-                    $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
-                } else {
-                    $whereClause .= " AND superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
-                    $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
-                    $whereClause .= " OR md_employee.superior_id = $empId";
-                    $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
-                }
-
-                $dataEmployee = $employee->getEmployee($whereClause);
-                $fieldEmployee->setList($dataEmployee);
-
-                $table = [
-                    $this->field->fieldTable($btnChildRow),
-                    $this->field->fieldTable($fieldEmployee),
-                    $this->field->fieldTable($fieldDesctiprion),
-                    $this->field->fieldTable($btnDelete)
-                ];
-            }
-        }
 
         //? Update
         if (!empty($set) && count($detail) > 0) {
             foreach ($detail as $row) :
-                $id = $row->getAssignmentId();
-                $header = $this->model->where('trx_assignment_id', $id)->first();
+                $docNoRef = "";
+                $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
 
-                // $whereClause = "md_employee.isactive = 'Y'";
-
-                // if ($emp->getLevellingId() == 100002) {
-                //     $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
-                // } else {
-                //     $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}
-                //                 AND md_employee_division.md_division_id = {$header->md_division_id}
-                //                 AND (md_employee.md_levelling_id IN (SELECT l.md_levelling_id
-                //                 FROM md_levelling l
-                //                 WHERE l.md_levelling_id > {$emp->md_levelling_id}))
-                //                 AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
-                // }
-
-                $emp = $employee->find($header->md_employee_id);
-                $empId = $emp->getEmployeeId();
-
-                $whereClause = "md_employee.isactive = 'Y'";
-
-                if (
-                    $emp->getLevellingId() == 100002
-                ) {
-                    $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
-                } else {
-                    $whereClause .= " AND superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
-                    $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
-                    $whereClause .= " OR md_employee.superior_id = $empId";
-                    $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
+                if (!empty($row->ref_absent_detail_id)) {
+                    if ($row->table === 'trx_submission_cancel_detail') {
+                        $refModel = new M_SubmissionCancelDetail($this->request);
+                    } else if ($row->table === 'trx_assignment') {
+                        $refModel = new M_AssignmentDate($this->request);
+                    } else {
+                        $refModel = new M_AbsentDetail($this->request);
+                    }
+                    $lineRef = $refModel->getDetail($refModel->primaryKey, $row->ref_absent_detail_id)->getRow();
+                    $docNoRef = $lineRef->documentno;
                 }
 
-                $dataEmployee = $employee->getEmployee($whereClause);
-                $fieldEmployee->setList($dataEmployee);
-
-                $fieldEmployee->setValue($row->getEmployeeId());
-                $fieldEmployee->setAttribute(['data-line-id' => $row->getAssignmentDetailId()]);
-                $fieldDesctiprion->setValue($row->getDescription());
-                $btnDelete->setValue($row->getAssignmentDetailId());
-
                 $table[] = [
-                    $this->field->fieldTable($btnChildRow),
-                    $this->field->fieldTable($fieldEmployee),
-                    $this->field->fieldTable($fieldDesctiprion),
-                    $this->field->fieldTable($btnDelete)
+                    $row->lineno,
+                    format_dmy($row->date, '-'),
+                    $line->getDocumentNo(),
+                    $docNoRef,
+                    statusRealize($row->isagree)
                 ];
             endforeach;
         }
@@ -505,38 +430,38 @@ class OfficeDuties extends BaseController
     }
 
 
-    public function getAssignmentDate()
-    {
-        if ($this->request->isAJAX()) {
-            $mAbsentDetail = new M_AbsentDetail($this->request);
-            $post = $this->request->getVar();
-            $result = [];
+    //     public function getAssignmentDate()
+    //     {
+    //         if ($this->request->isAJAX()) {
+    //             $mAbsentDetail = new M_AbsentDetail($this->request);
+    //             $post = $this->request->getVar();
+    //             $result = [];
 
-            try {
-                $line = $this->modelSubDetail->where('trx_assignment_detail_id', $post['id'])->orderBy('date', 'ASC')->findAll();
+    //             try {
+    //                 $line = $this->modelSubDetail->where('trx_assignment_detail_id', $post['id'])->orderBy('date', 'ASC')->findAll();
 
-                foreach ($line as $row) {
-                    $docNoRef = "";
+    //                 foreach ($line as $row) {
+    //                     $docNoRef = "";
 
-                    if (!empty($row->reference_id)) {
-                        $lineRef = $mAbsentDetail->getDetail('trx_absent_detail_id', $row->reference_id)->getRow();
-                        $docNoRef = $lineRef->documentno;
-                    }
+    //                     if (!empty($row->reference_id)) {
+    //                         $lineRef = $mAbsentDetail->getDetail('trx_absent_detail_id', $row->reference_id)->getRow();
+    //                         $docNoRef = $lineRef->documentno;
+    //                     }
 
-                    $result[] = [
-                        'date' => format_dmy($row->date, '-'),
-                        'description' => $row->description ?? '',
-                        'isagree' => statusRealize($row->isagree),
-                        'reference_id' => $docNoRef
-                    ];
-                }
+    //                     $result[] = [
+    //                         'date' => format_dmy($row->date, '-'),
+    //                         'description' => $row->description ?? '',
+    //                         'isagree' => statusRealize($row->isagree),
+    //                         'reference_id' => $docNoRef
+    //                     ];
+    //                 }
 
-                $response = message('success', true, $result);
-            } catch (\Exception $e) {
-                $response = message('error', false, $e->getMessage());
-            }
+    //                 $response = message('success', true, $result);
+    //             } catch (\Exception $e) {
+    //                 $response = message('error', false, $e->getMessage());
+    //             }
 
-            return $this->response->setJSON($response);
-        }
-    }
+    //             return $this->response->setJSON($response);
+    //         }
+    //     }
 }

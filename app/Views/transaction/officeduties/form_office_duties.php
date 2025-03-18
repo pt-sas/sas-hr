@@ -87,22 +87,15 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <div class="form-group">
-                    <div class="text-right">
-                        <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row"
-                            title="Tambah Baru"><i class="fa fa-plus fa-fw"></i> Tambah</button>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-12">
-                <div class="form-group">
-                    <table class="table table-light table-hover tb_displayline tb_childrow" style="width: 100%">
+                <div class="form-group table-responsive">
+                    <table class="table table-light table-hover tb_displayline" style="width: 100%">
                         <thead>
                             <tr>
-                                <th></th>
-                                <th>Karyawan</th>
-                                <th>Deskripsi</th>
-                                <th>Aksi</th>
+                                <th>Line</th>
+                                <th>Tanggal Tugas Kantor</th>
+                                <th>Doc No</th>
+                                <th>Doc Referensi</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                     </table>

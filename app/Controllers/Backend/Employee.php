@@ -428,6 +428,7 @@ class Employee extends BaseController
 
             try {
                 $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+                $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
                 $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
                 $arrEmployee = $this->model->getChartEmployee($this->session->get('md_employee_id'));
 
@@ -446,6 +447,17 @@ class Employee extends BaseController
                                     'isactive'          => 'Y',
                                 ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                     ->whereIn('md_employee_id', $arrMerge)
+                                    ->like('value', $post['search'])
+                                    ->orderBy('value', 'ASC')
+                                    ->findAll();
+                            } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
+                                $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                                $list = $this->model->where([
+                                    'isactive'          => 'Y',
+                                ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                                    ->whereIn('md_employee_id', $arrMerge)
+                                    ->whereIn('md_levelling_id', [100005, 100006])
                                     ->like('value', $post['search'])
                                     ->orderBy('value', 'ASC')
                                     ->findAll();
@@ -509,6 +521,16 @@ class Employee extends BaseController
                                 'isactive'          => 'Y',
                             ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                 ->whereIn('md_employee_id', $arrMerge)
+                                ->orderBy('value', 'ASC')
+                                ->findAll();
+                        } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
+                            $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                            $list = $this->model->where([
+                                'isactive'          => 'Y',
+                            ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                                ->whereIn('md_employee_id', $arrMerge)
+                                ->whereIn('md_levelling_id', [100005, 100006])
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {

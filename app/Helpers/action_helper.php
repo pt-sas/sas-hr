@@ -372,16 +372,20 @@ function encode_img($src)
 
 function statusRealize($str)
 {
-    if ($str === "Y")
-        return '<small class="badge badge-success">Disetujui</small>';
-    else if ($str === "N")
-        return '<small class="badge badge-warning">Tidak Disetujui</small>';
-    else if ($str === "C")
-        return '<small class="badge badge-danger">Anulir</small>';
-    else if ($str === "M")
-        return '<small class="badge badge-dark">Menunggu Persetujuan Manager</small>';
-    else
-        return '<small class="badge badge-dark">Menunggu Persetujuan HRD</small>';
+    switch ($str) {
+        case "Y":
+            return '<small class="badge badge-success">Disetujui</small>';
+        case "N":
+            return '<small class="badge badge-warning">Tidak Disetujui</small>';
+        case "C":
+            return '<small class="badge badge-danger">Anulir</small>';
+        case "M":
+            return '<small class="badge badge-dark">Menunggu Persetujuan Atasan</small>';
+        case "S":
+            return '<small class="badge badge-dark">Menunggu Persetujuan HRD</small>';
+        default:
+            return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
+    }
 }
 
 function lastWorkingDays($date, $holidays, $countDays, $backwards = true, $days_off = [], $allDays = false)

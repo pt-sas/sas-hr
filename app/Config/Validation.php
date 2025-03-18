@@ -2517,8 +2517,9 @@ class Validation
     public $pembatalan_cuti = [
         'image'                 => [
             'label'             => 'foto',
-            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'required|max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu',
                 'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
@@ -2973,6 +2974,20 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'line'                  => [
+            'label'             => 'Detail Penugasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.md_employee_id_line'  => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
     ];
 
     public $realisasi_agree_penugasan = [
@@ -3011,5 +3026,56 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+    ];
+
+    public $attendance_machine = [
+        'name'          => [
+            'label'             => 'Nama',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'serialnumber'        => [
+            'label'             => 'Nomor Seri',
+            'rules'             => 'required|is_unique[md_attendance_machines.serialnumber,md_attendance_machines_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'is_unique'     => 'Data {field} ini sudah ada'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $config = [
+        'auto_reject_approval'          => [
+            'label'             => 'Auto Reject Approval',
+            'rules'             => 'required|max_length[2]|',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu',
+                'max_length'    => 'Maksimal {field} harus {param} karakter',
+            ]
+        ],
+        'auto_approve_realization'        => [
+            'label'             => 'Auto Approve Realisasi',
+            'rules'             => 'required|max_length[2]|',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu',
+                'max_length'    => 'Maksimal {field} harus {param} karakter',
+            ]
+        ],
+        'day_cut_off_leave'     => [
+            'label'             => 'Tanggal Cut Off Cuti',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
     ];
 }

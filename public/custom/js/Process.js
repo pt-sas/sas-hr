@@ -86,6 +86,7 @@ $(document).ready(function (e) {
   }
 
   showNotification();
+  showNotifMessage();
 
   // Enable pusher logging - don't include this in production
   Pusher.logToConsole = false;
@@ -97,6 +98,7 @@ $(document).ready(function (e) {
   var channel = pusher.subscribe("my-channel");
   channel.bind("my-event", function (data) {
     showNotification();
+    showNotifMessage();
   });
 
   $(".select2").select2({
@@ -523,11 +525,6 @@ _tableLine = $(".tb_displayline").DataTable({
         });
       }
     });
-
-    $(".tb_childrow tbody tr td:first-child").each(function () {
-      if ($(this).closest("tr").children("td").length > 1)
-        $(this).addClass("details-control");
-    });
   },
   initComplete: function (settings, json) {
     $(".tb_displayline").wrap(
@@ -806,7 +803,7 @@ _tableRealization = $(".table_realization")
       },
       {
         targets: 1,
-        width: "10%",
+        width: "15%",
       },
     ],
     lengthMenu: [
@@ -822,6 +819,52 @@ _tableRealization = $(".table_realization")
     },
     searching: false,
     autoWidth: false,
+    scrollX: true,
+    scrollY: "70vh",
+    scrollCollapse: true,
+  })
+  .columns.adjust();
+
+/**
+ * Table Notification
+ */
+_tableNotification = $(".tb_notification")
+  .DataTable({
+    drawCallback: function () {
+      $(".tb_notification tbody tr").each(function () {
+        const checkbox = $(this).find(".check-message");
+        let isRead = checkbox.attr("data-isread");
+
+        $(this).addClass("row-notif");
+
+        if (isRead == "N") {
+          $(this).addClass("unread");
+        }
+      });
+    },
+    serverSide: true,
+    ajax: {
+      url: CURRENT_URL + SHOWALL,
+      type: "POST",
+    },
+    columnDefs: [
+      {
+        targets: 0,
+        visible: false, //hide column
+      },
+      { targets: 1, width: "10%" },
+      { targets: 2, width: "10%" },
+      { targets: 3, width: "70%", orderable: false },
+      { targets: 4, width: "10%" },
+    ],
+    lengthMenu: [
+      [10, 25, 50, 100, -1],
+      [10, 25, 50, 100, "All"],
+    ],
+    // displayLength: 50,
+    searching: true,
+    order: [],
+    autoWidth: true,
     scrollX: true,
     scrollY: "70vh",
     scrollCollapse: true,
@@ -867,6 +910,8 @@ function reloadTable() {
   else if ($(".table_report").length) _tableReport.ajax.reload(null, false);
   else if ($(".table_realization").length)
     _tableRealization.ajax.reload(null, false);
+  else if ($(".tb_notification").length)
+    _tableNotification.ajax.reload(null, false);
 }
 
 /**
@@ -1656,6 +1701,23 @@ function Edit(id, status, last_url) {
 
                   _tableLine.rows.add(line).draw(false);
 
+                  //? For set Button Sub Detail for tb_childrow
+                  if ($(".tb_childrow").length) {
+                    $(".tb_childrow tbody tr").each(function () {
+                      let $row = $(this);
+                      if (
+                        $row.children("td").length > 1 &&
+                        $row
+                          .find("select[name=md_employee_id]")
+                          .attr("data-subdetail") === "Y"
+                      ) {
+                        $row
+                          .children("td:first-child")
+                          .addClass("details-control");
+                      }
+                    });
+                  }
+
                   let btnAction = _tableLine
                     .rows()
                     .nodes()
@@ -1862,6 +1924,15 @@ function Edit(id, status, last_url) {
                     }
                   }
                 }
+              }
+
+              if (arrMsg.notification) {
+                let data = arrMsg.notification;
+                cardTitle.html(data[0].subject);
+                $(".sender").html(data[0].author);
+                $(".date").html(data[0].date);
+                $(".email-body").append(data[0].body);
+                $(".avatar").append(data[0].image);
               }
 
               $("html, body").animate(
@@ -3797,6 +3868,7 @@ function clearForm(evt) {
   const parent = target.closest(".row");
   const cardForm = parent.find(".card-form");
   const navTab = parent.find("ul.nav-tabs");
+  const emailBody = parent.find(".email-body");
   let form = cardForm.length ? cardForm.find("form") : parent.find("form");
 
   if (navTab.length) {
@@ -3821,8 +3893,19 @@ function clearForm(evt) {
     form = modal.find("form");
   }
 
-  //TODO: Clear field data on the form
-  form[0].reset();
+  //? To Do Clear email body on the form and reload table notification
+  if (emailBody.length) {
+    emailBody.empty();
+    reloadTable();
+  }
+
+  if (parent.find(".avatar-notif").length) {
+    parent.find(".avatar-notif").empty();
+  }
+
+  if (form.length)
+    //TODO: Clear field data on the form
+    form[0].reset();
 
   const field = form.find("input, textarea, select, button");
   const errorText = form.find("small");
@@ -3835,7 +3918,10 @@ function clearForm(evt) {
   //TODO: Clear data, remove attribute readonly, disabled and remove class invalid on the field
   for (let i = 0; i < field.length; i++) {
     if (field[i].name !== "") {
-      if (fieldReadOnly.length == 0) {
+      if (
+        fieldReadOnly.length == 0 &&
+        !form.attr("id").includes("realization")
+      ) {
         form
           .find(
             "input[name=" +
@@ -3892,7 +3978,10 @@ function clearForm(evt) {
         field[i].name === defaultLogic[0].field &&
         defaultLogic[0].condition
       ) {
-        if (fieldReadOnly.length == 0) {
+        if (
+          fieldReadOnly.length == 0 &&
+          !form.attr("id").includes("realization")
+        ) {
           form
             .find("select[name=" + field[i].name + "]")
             .val(defaultLogic[0].id)
@@ -3920,7 +4009,10 @@ function clearForm(evt) {
           }
         }
       } else {
-        if (fieldReadOnly.length == 0) {
+        if (
+          fieldReadOnly.length == 0 &&
+          !form.attr("id").includes("realization")
+        ) {
           form
             .find("select[name=" + field[i].name + "]")
             .val(null)
@@ -4385,6 +4477,7 @@ function initSelectData(select, field = null, id = null) {
     let url = $(item).attr("data-url");
     let defaultID = $(item).attr("default-id");
     let defaultText = $(item).attr("default-text");
+    console.log(url);
 
     let lastParam = "";
 
@@ -4759,11 +4852,13 @@ function showFormData(form) {
       $(".main-panel").removeClass("is-loading");
     },
     success: function (result) {
+      console.log(result);
       if (result[0].success) {
         let arrMsg = result[0].message;
 
         if (arrMsg.header) {
           let data = arrMsg.header;
+          console.log(data);
           let length = data.length;
 
           if (length > 1) {
@@ -4973,7 +5068,8 @@ function putFieldData(form, data, status = null) {
           if (
             (field[i].readOnly || field[i].disabled) &&
             field[i].type !== "radio" &&
-            !changeTab
+            !changeTab &&
+            field[i].name
           )
             fieldReadOnly.push(field[i].name);
 

@@ -129,11 +129,26 @@ class DocumentType extends BaseController
 
             $response = [];
 
+            $docSubmission = [
+                100001, // Sakit
+                100003, // Cuti
+                100004, // Ijin
+                100005, // Ijin Resmi
+                100007, // Tugas Kantor
+                100008  // Penugasan
+            ];
+
             try {
                 if (isset($post['search'])) {
                     if (isset($post['isinternal']) && $post['isinternal'] === "Y") {
                         $list = $this->model->where('isactive', 'Y')
                             ->whereIn('md_doctype_id', [100010, 100011, 100012, 100013])
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else if (isset($post['name']) && !empty($post['name'])) {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereIn('md_doctype_id', $docSubmission)
                             ->like('name', $post['search'])
                             ->orderBy('name', 'ASC')
                             ->findAll();
@@ -144,6 +159,11 @@ class DocumentType extends BaseController
                             ->orderBy('name', 'ASC')
                             ->findAll();
                     }
+                } else if (isset($post['name']) && !empty($post['name'])) {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->whereIn('md_doctype_id', $docSubmission)
+                        ->orderBy('name', 'ASC')
+                        ->findAll();
                 } else {
                     if (isset($post['isinternal']) && $post['isinternal'] === "Y") {
                         $list = $this->model->where('isactive', 'Y')

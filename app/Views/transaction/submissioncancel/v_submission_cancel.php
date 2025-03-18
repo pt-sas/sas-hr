@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 
-<?= $this->include('transaction/leavecancel/form_leave_cancel'); ?>
+<?= $this->include('transaction/submissioncancel/form_submission_cancel'); ?>
 <div class="card-body card-main">
     <table class="table table-striped table-hover tb_display" style="width: 100%">
         <thead>
@@ -11,10 +11,9 @@
                 <th>No</th>
                 <th>No Form</th>
                 <th>Karyawan</th>
-                <th>NIK</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
-                <th>Ref Cuti</th>
+                <th>Ref</th>
                 <th>Tanggal Pengajuan</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>

@@ -1763,7 +1763,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
         }
 
         $.ajax({
-          url: ADMIN_URL + "/penugasan/getRealizationData",
+          url: ADMIN_URL + "penugasan/getRealizationData",
           type: "POST",
           data: { id: ID },
           caches: false,
@@ -1868,7 +1868,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
 
       if (formType == "Penugasan") {
         $.ajax({
-          url: ADMIN_URL + "/penugasan/getRealizationData",
+          url: ADMIN_URL + "penugasan/getRealizationData",
           type: "POST",
           data: { id: ID },
           caches: false,

@@ -34,6 +34,7 @@ class Absent extends Entity
     protected $isbranch;
     protected $branch_to;
     protected $reference_id;
+    protected $totaldays;
 
     protected $dates   = [
         'created_at',
@@ -345,5 +346,15 @@ class Absent extends Entity
     public function setReferenceId($reference_id)
     {
         $this->attributes['reference_id'] = $reference_id;
+    }
+
+    public function getTotalDays()
+    {
+        return $this->attributes['totaldays'];
+    }
+
+    public function setTotalDays($totaldays)
+    {
+        $this->attributes['totaldays'] = $totaldays;
     }
 }

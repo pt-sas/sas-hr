@@ -37,7 +37,8 @@ class M_Absent extends Model
         'isbranch',
         'branch_to',
         'reference_id',
-        'availableleavedays'
+        'availableleavedays',
+        'totaldays'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';
@@ -96,8 +97,6 @@ class M_Absent extends Model
     protected $Pengajuan_Datang_Terlambat = 100012;
     /** Pengajuan Ijin Pulang Cepat */
     protected $Pengajuan_Pulang_Cepat = 100013;
-    /** Pengajuan Pembatalan Cuti */
-    protected $Pengajuan_Pembatalan_Cuti = 100018;
 
     public function __construct(RequestInterface $request)
     {
@@ -338,6 +337,12 @@ class M_Absent extends Model
             }, $data);
 
             $mAllowance->createAllowance($data);
+
+            //TODO : Insert Total Days
+            $entity = new \App\Entities\Absent();
+            $entity->trx_absent_id = $rows['id'];
+            $entity->totaldays = $number;
+            $this->save($entity);
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
@@ -360,7 +365,17 @@ class M_Absent extends Model
         $agree = 'Y';
         $notAgree = 'N';
         $holdAgree = 'H';
-        $rlzMgr = 'M';
+
+        // 'M' Is Realization Manager, 'S' is Realization HRD 
+        $subType = [
+            100001 => 'S', // Sakit
+            100003 => 'S', // Cuti
+            100004 => 'S', // Ijin
+            100005 => 'S', // Ijin Resmi
+            100007 => 'M', // Tugas Kantor
+            100010 => 'M', // Lupa Absen Masuk
+            100011 => 'M'  // Lupa Absen Pulang
+        ];
 
         $formAttendance = [$this->Pengajuan_Lupa_Absen_Masuk, $this->Pengajuan_Lupa_Absen_Pulang, $this->Pengajuan_Datang_Terlambat, $this->Pengajuan_Pulang_Cepat];
         $isSubAttendance = in_array($sql->submissiontype, $formAttendance);
@@ -372,11 +387,7 @@ class M_Absent extends Model
                 $isAgree = $agree;
 
             if ($sql->docstatus === "IP") {
-                if ($isSubAttendance) {
-                    $isAgree = $rlzMgr;
-                } else {
-                    $isAgree = $holdAgree;
-                }
+                $isagree = $subType[$sql->getSubmissionType()];
             }
 
             $data = [
@@ -387,6 +398,27 @@ class M_Absent extends Model
             ];
 
             $this->createAbsentDetail($data, $sql);
+        }
+
+        // TODO : If line is not null then update isagree on line
+        if (!empty($sql->getIsApproved()) && ($sql->docstatus === "NA" || $sql->docstatus === "IP") && !is_null($line)) {
+            $line = $mAbsentDetail->where($this->primaryKey, $ID)->findAll();
+
+            if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP") {
+                $isagree = $subType[$sql->getSubmissionType()];
+            } else {
+                // TODO : If is not approved then update isagree to Not Approved
+                $isagree = 'N';
+            }
+
+            foreach ($line as $row) :
+                $entity = new \App\Entities\AbsentDetail();
+
+                $entity->{$mAbsentDetail->primaryKey} = $row->{$mAbsentDetail->primaryKey};
+                $entity->isagree = $isagree;
+
+                $mAbsentDetail->save($entity);
+            endforeach;
         }
 
         if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "VO" && !is_null($line)) {
@@ -472,5 +504,15 @@ class M_Absent extends Model
                 $mLeaveBalance->builder->insertBatch($saldo);
             }
         }
+    }
+
+    public function getAllSubmission($where)
+    {
+        $builder = $this->db->table("v_all_submission");
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
     }
 }
