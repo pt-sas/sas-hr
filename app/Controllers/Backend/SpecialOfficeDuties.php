@@ -18,6 +18,7 @@ use App\Models\M_EmpWorkDay;
 use App\Models\M_Rule;
 use App\Models\M_Division;
 use App\Models\M_RuleDetail;
+use App\Models\M_SubmissionCancelDetail;
 use TCPDF;
 
 class SpecialOfficeDuties extends BaseController
@@ -487,13 +488,11 @@ class SpecialOfficeDuties extends BaseController
     {
         if ($this->request->isAJAX()) {
             $mBranch = new M_Branch($this->request);
-            $mAbsentDetail = new M_AbsentDetail($this->request);
             $post = $this->request->getVar();
             $result = [];
 
             try {
                 $line = $this->modelSubDetail->where('trx_assignment_detail_id', $post['id'])->orderBy('date', 'ASC')->findAll();
-
 
                 foreach ($line as $row) {
                     $branch_in = $mBranch->find($row->branch_in);
@@ -502,10 +501,11 @@ class SpecialOfficeDuties extends BaseController
                     $docNoRef = "";
 
                     if (!empty($row->reference_id)) {
-                        $lineRef = $mAbsentDetail->getDetail('trx_absent_detail_id', $row->reference_id)->getRow();
+                        $refModel = $row->table == 'trx_submission_cancel_detail' ? new M_SubmissionCancelDetail($this->request) : new M_AbsentDetail($this->request);
+
+                        $lineRef = $refModel->getDetail($refModel->primaryKey, $row->reference_id)->getRow();
                         $docNoRef = $lineRef->documentno;
                     }
-
                     $time_in = '';
                     $time_out = '';
 
@@ -551,7 +551,8 @@ class SpecialOfficeDuties extends BaseController
                 $line = $mAssignmentDetail->find($subDetail->{$mAssignmentDetail->primaryKey});
 
                 $date = date('Y-m-d', strtotime($subDetail->date));
-
+                $time_in = null;
+                $time_out = null;
 
                 $branch_in = $mBranch->find($subDetail->branch_in);
                 $branch_out = $mBranch->find($subDetail->branch_out);
@@ -559,20 +560,27 @@ class SpecialOfficeDuties extends BaseController
                 $whereIn = " v_attendance_serialnumber.md_employee_id = {$line->md_employee_id}";
                 $whereIn .= " AND v_attendance_serialnumber.date = '{$date}'";
                 $whereIn .= " AND md_attendance_machines.md_branch_id = {$subDetail->branch_in}";
-
                 $clock_in = $mAttendance->getAttendanceBranch($whereIn)->getRow();
+
+                if ($clock_in && $clock_in->clock_in) {
+                    $time_in = format_time($clock_in->clock_in);
+                }
 
                 $whereOut = " v_attendance_serialnumber.md_employee_id = {$line->md_employee_id}";
                 $whereOut .= " AND v_attendance_serialnumber.date = '{$date}'";
                 $whereOut .= " AND md_attendance_machines.md_branch_id = {$subDetail->branch_out}";
                 $clock_out = $mAttendance->getAttendanceBranch($whereOut)->getRow();
 
+                if ($clock_out && $clock_out->clock_out) {
+                    $time_out = format_time($clock_out->clock_out);
+                }
+
                 $response = [
                     'branch_in' => ['id' => $branch_in->getBranchId(), 'text' => $branch_in->getName()],
                     'branch_out' => ['id' => $branch_out->getBranchId(), 'text' => $branch_out->getName()],
                     // 'branch_in' => $subDetail->branch_in,
-                    'clock_in' => $clock_in  ? format_time($clock_in->clock_in) : '',
-                    'clock_out' => $clock_out ? format_time($clock_out->clock_out) : ''
+                    'clock_in' => $time_in  ?? '',
+                    'clock_out' => $time_out ?? ''
                 ];
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

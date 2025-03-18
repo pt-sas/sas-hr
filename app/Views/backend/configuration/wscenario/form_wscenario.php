@@ -30,7 +30,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="md_status_id">Status Karyawan</label>
-                    <select class="form-control select-data" id="md_status_id" name="md_status_id" data-url="status/getList">
+                    <select class="form-control select-data" id="md_status_id" name="md_status_id"
+                        data-url="status/getList">
                         <option value="">Select Status</option>
                     </select>
                 </div>
@@ -38,7 +39,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="md_branch_id">Cabang </label>
-                    <select class="form-control select-data" id="md_branch_id" name="md_branch_id" data-url="branch/getList">
+                    <select class="form-control select-data" id="md_branch_id" name="md_branch_id"
+                        data-url="branch/getList">
                         <option value="">Select Cabang</option>
                     </select>
                 </div>
@@ -46,7 +48,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="md_division_id">Divisi </label>
-                    <select class="form-control select-data" id="md_division_id" name="md_division_id" data-url="division/getList">
+                    <select class="form-control select-data" id="md_division_id" name="md_division_id"
+                        data-url="division/getList">
                         <option value="">Select Divisi</option>
                     </select>
                 </div>
@@ -60,8 +63,18 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="md_levelling_id">Jabatan </label>
-                    <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id" data-url="levelling/getList">
+                    <select class="form-control select-data" id="md_levelling_id" name="md_levelling_id"
+                        data-url="levelling/getList">
                         <option value="">Select Jabatan</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="submissiontype">Tipe Form </label>
+                    <select class="form-control select-data" id="submissiontype" name="submissiontype"
+                        data-url="document-type/getList">
+                        <option value="">Select Tipe Form</option>
                     </select>
                 </div>
             </div>
@@ -82,7 +95,8 @@
             <div class="col-md-12">
                 <div class="form-group">
                     <div class="text-right">
-                        <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row" title="Tambah Baru"><i class="fa fa-plus fa-fw"></i> Tambah Baru</button>
+                        <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row"
+                            title="Tambah Baru"><i class="fa fa-plus fa-fw"></i> Tambah Baru</button>
                     </div>
                 </div>
             </div>

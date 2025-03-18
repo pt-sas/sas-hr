@@ -80,6 +80,7 @@ class ForgotAbsentLeave extends BaseController
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
@@ -93,6 +94,14 @@ class ForgotAbsentLeave extends BaseController
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                     $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
+                    $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
+                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['trx_absent.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
                 } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
@@ -264,7 +273,7 @@ class ForgotAbsentLeave extends BaseController
                             if ($endDate > $addDays) {
                                 $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                             } else if (!is_null($presentNextDate) && !($lastDate >= $subDate) && $work) {
-                                $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
+                                $response = message('success', false, 'Maksimal tanggal pengajuan harus dihari yang sama');
                             } else if ($attPresent && !empty($attPresent->clock_out)) {
                                 $response = message('success', false, 'Anda sudah ada absen pulang');
                             } else {

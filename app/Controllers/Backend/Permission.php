@@ -15,6 +15,7 @@ use App\Models\M_Rule;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_Division;
+use App\Models\M_SubmissionCancelDetail;
 use TCPDF;
 
 class Permission extends BaseController
@@ -80,6 +81,7 @@ class Permission extends BaseController
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
@@ -90,6 +92,14 @@ class Permission extends BaseController
                 $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
                 if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['trx_absent.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
+                    $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
+                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                     $where['trx_absent.md_employee_id'] = [
@@ -380,6 +390,29 @@ class Permission extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
+                        $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+
+                        if (empty($line)) {
+                            // TODO : Create Line if not exist
+                            $data = [
+                                'id'        => $_ID,
+                                'created_by' => $this->access->getSessionUser(),
+                                'updated_by' => $this->access->getSessionUser()
+                            ];
+
+                            $this->model->createAbsentDetail($data, $row);
+                        } else {
+                            //TODO : Update line if line exist
+                            foreach ($line as $row) :
+                                $entity = new \App\Entities\AbsentDetail();
+
+                                $entity->trx_absent_detail_id = $row->trx_absent_detail_id;
+                                $entity->isagree = 'H';
+
+                                $this->modelDetail->save($entity);
+                            endforeach;
+                        }
+
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
                         $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
@@ -413,13 +446,14 @@ class Permission extends BaseController
                 $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
 
                 if (!empty($row->ref_absent_detail_id)) {
-                    if ($row->table === 'trx_assignment_date') {
-
-                        $lineRef = (new M_AssignmentDate($this->request))->getDetail('trx_assignment_date_id', $row->ref_absent_detail_id)->getRow();
+                    if ($row->table === 'trx_submission_cancel_detail') {
+                        $refModel = new M_SubmissionCancelDetail($this->request);
+                    } else if ($row->table === 'trx_assignment') {
+                        $refModel = new M_AssignmentDate($this->request);
                     } else {
-                        $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                        $refModel = new M_AbsentDetail($this->request);
                     }
-
+                    $lineRef = $refModel->getDetail($refModel->primaryKey, $row->ref_absent_detail_id)->getRow();
                     $docNoRef = $lineRef->documentno;
                 }
 

@@ -15,6 +15,7 @@ use App\Models\M_WorkDetail;
 use App\Models\M_LeaveBalance;
 use App\Models\M_MassLeave;
 use App\Models\M_Transaction;
+use App\Models\M_SubmissionCancelDetail;
 use Config\Services;
 
 class Leave extends BaseController
@@ -83,6 +84,7 @@ class Leave extends BaseController
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
 
@@ -96,6 +98,14 @@ class Leave extends BaseController
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                     $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrMerge
+                    ];
+                } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
+                    $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
+                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
+                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                    $where['trx_absent.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
                 } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
@@ -220,20 +230,26 @@ class Leave extends BaseController
                             $this->DOCSTATUS_Drafted
                         ];
 
-                        if (isset($post['id'])) {
-                            $trx = $this->model->where([
-                                'trx_absent.nik'            => $nik,
-                                'trx_absent.startdate >='   => $startDate,
-                                'trx_absent.enddate <='     => $endDate,
-                                'trx_absent.trx_absent_id <>' => $post['id']
-                            ])->whereIn('trx_absent.docstatus', $docStatus)->first();
-                        } else {
-                            $trx = $this->model->where([
-                                'trx_absent.nik'            => $nik,
-                                'trx_absent.startdate >='   => $startDate,
-                                'trx_absent.enddate <='     => $endDate
-                            ])->whereIn('trx_absent.docstatus', $docStatus)->first();
-                        }
+                        // if (isset($post['id'])) {
+                        //     $trx = $this->model->where([
+                        //         'trx_absent.nik'            => $nik,
+                        //         'trx_absent.startdate >='   => $startDate,
+                        //         'trx_absent.enddate <='     => $endDate,
+                        //         'trx_absent.trx_absent_id <>' => $post['id']
+                        //     ])->whereIn('trx_absent.docstatus', $docStatus)->first();
+                        // } else {
+                        //     $trx = $this->model->where([
+                        //         'trx_absent.nik'            => $nik,
+                        //         'trx_absent.startdate >='   => $startDate,
+                        //         'trx_absent.enddate <='     => $endDate
+                        //     ])->whereIn('trx_absent.docstatus', $docStatus)->first();
+                        // }
+
+                        $whereClause = "trx_absent.nik = '{$nik}'";
+                        $whereClause .= " AND DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') >= '{$startDate}' AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') <= '{$endDate}'";
+                        $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Drafted}')";
+                        $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
+                        $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
 
                         $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
 
@@ -451,7 +467,14 @@ class Leave extends BaseController
                 $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
 
                 if (!empty($row->ref_absent_detail_id)) {
-                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    if ($row->table === 'trx_submission_cancel_detail') {
+                        $refModel = new M_SubmissionCancelDetail($this->request);
+                    } else if ($row->table === 'trx_assignment') {
+                        $refModel = new M_AssignmentDate($this->request);
+                    } else {
+                        $refModel = new M_AbsentDetail($this->request);
+                    }
+                    $lineRef = $refModel->getDetail($refModel->primaryKey, $row->ref_absent_detail_id)->getRow();
                     $docNoRef = $lineRef->documentno;
                 }
 

@@ -803,7 +803,7 @@ _tableRealization = $(".table_realization")
       },
       {
         targets: 1,
-        width: "10%",
+        width: "15%",
       },
     ],
     lengthMenu: [
@@ -3918,7 +3918,10 @@ function clearForm(evt) {
   //TODO: Clear data, remove attribute readonly, disabled and remove class invalid on the field
   for (let i = 0; i < field.length; i++) {
     if (field[i].name !== "") {
-      if (fieldReadOnly.length == 0) {
+      if (
+        fieldReadOnly.length == 0 &&
+        !form.attr("id").includes("realization")
+      ) {
         form
           .find(
             "input[name=" +
@@ -3975,7 +3978,10 @@ function clearForm(evt) {
         field[i].name === defaultLogic[0].field &&
         defaultLogic[0].condition
       ) {
-        if (fieldReadOnly.length == 0) {
+        if (
+          fieldReadOnly.length == 0 &&
+          !form.attr("id").includes("realization")
+        ) {
           form
             .find("select[name=" + field[i].name + "]")
             .val(defaultLogic[0].id)
@@ -4003,7 +4009,10 @@ function clearForm(evt) {
           }
         }
       } else {
-        if (fieldReadOnly.length == 0) {
+        if (
+          fieldReadOnly.length == 0 &&
+          !form.attr("id").includes("realization")
+        ) {
           form
             .find("select[name=" + field[i].name + "]")
             .val(null)
@@ -4468,6 +4477,7 @@ function initSelectData(select, field = null, id = null) {
     let url = $(item).attr("data-url");
     let defaultID = $(item).attr("default-id");
     let defaultText = $(item).attr("default-text");
+    console.log(url);
 
     let lastParam = "";
 
@@ -4842,11 +4852,13 @@ function showFormData(form) {
       $(".main-panel").removeClass("is-loading");
     },
     success: function (result) {
+      console.log(result);
       if (result[0].success) {
         let arrMsg = result[0].message;
 
         if (arrMsg.header) {
           let data = arrMsg.header;
+          console.log(data);
           let length = data.length;
 
           if (length > 1) {
