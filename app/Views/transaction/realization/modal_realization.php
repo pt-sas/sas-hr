@@ -164,8 +164,8 @@
                         </div>
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label for="comment">Pesan ke HRD</span></label>
-                                <textarea type="text" class="form-control" name="comment" rows="4"></textarea>
+                                <label for="comment">Pesan Manager</span></label>
+                                <textarea type="text" class="form-control" name="comment" rows="4" readonly></textarea>
                             </div>
                         </div>
                         <input type="hidden" class="form-control" name="isagree">
