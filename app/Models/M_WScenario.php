@@ -23,6 +23,7 @@ class M_WScenario extends Model
 		'created_by',
 		'updated_by',
 		'md_levelling_id',
+		'submissiontype'
 	];
 	protected $useTimestamps		= true;
 	protected $returnType			= 'App\Entities\WScenario';
@@ -78,7 +79,8 @@ class M_WScenario extends Model
 			'md_status.name as status,
 			md_branch.name as branch,
 			md_division.name as division,
-			md_levelling.name as level';
+			md_levelling.name as level,
+			md_doctype.name as doctype';
 		return $sql;
 	}
 
@@ -89,6 +91,7 @@ class M_WScenario extends Model
 			$this->setDataJoin('md_branch', 'md_branch.md_branch_id = ' . $this->table . '.md_branch_id', 'left'),
 			$this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
 			$this->setDataJoin('md_levelling', 'md_levelling.md_levelling_id = ' . $this->table . '.md_levelling_id', 'left'),
+			$this->setDataJoin('md_doctype', 'md_doctype.md_doctype_id = ' . $this->table . '.submissiontype', 'left')
 		];
 
 		return $sql;
@@ -103,7 +106,7 @@ class M_WScenario extends Model
 		];
 	}
 
-	public function getScenario(string $menu, int $md_groupasset_id = null, int $md_status_id = null, int $md_branch_id = null, int $md_division_id = null, int $md_levelling_id = null, string $scenariotype = null, int $grandtotal = null)
+	public function getScenario(string $menu, int $md_groupasset_id = null, int $md_status_id = null, int $md_branch_id = null, int $md_division_id = null, int $md_levelling_id = null, string $scenariotype = null, int $grandtotal = null, int $submissiontype = null)
 	{
 		$this->builder->select('sys_wfscenario_id');
 		$this->builder->where([
@@ -151,6 +154,12 @@ class M_WScenario extends Model
 			$this->builder->where('grandtotal', $grandtotal);
 		} else {
 			$this->builder->where('(grandtotal IS NULL OR grandtotal = 0)');
+		}
+
+		if (!is_null($submissiontype)) {
+			$this->builder->where('submissiontype', $submissiontype);
+		} else {
+			$this->builder->where('(submissiontype IS NULL OR submissiontype = 0)');
 		}
 
 		$this->builder->orderBy('lineno', 'DESC');

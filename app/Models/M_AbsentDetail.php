@@ -133,6 +133,8 @@ class M_AbsentDetail extends Model
                     $mLeaveBalance->save($entityBal);
 
                     $dataLeaveUsage[] = [
+                        "record_id"         => $ID,
+                        "table"             => $this->table,
                         "transactiondate"   => $line->date,
                         "transactiontype"   => 'C-',
                         "year"              => $year,
@@ -151,6 +153,8 @@ class M_AbsentDetail extends Model
                     $mLeaveBalance->save($entityBal);
 
                     $dataLeaveUsage[] = [
+                        "record_id"         => $ID,
+                        "table"             => $this->table,
                         "transactiondate"   => $line->date,
                         "transactiontype"   => 'C-',
                         "year"              => $year,
@@ -221,6 +225,8 @@ class M_AbsentDetail extends Model
                                             $amount = 0;
 
                                             $dataLeaveUsage[] = [
+                                                "record_id"         => $ID,
+                                                "table"             => $this->table,
                                                 "transactiondate"   => $line->date,
                                                 "transactiontype"   => 'C-',
                                                 "year"              => $year,
@@ -242,6 +248,8 @@ class M_AbsentDetail extends Model
                                                 $amount = 0;
 
                                             $dataLeaveUsage[] = [
+                                                "record_id"         => $ID,
+                                                "table"             => $this->table,
                                                 "transactiondate"   => $line->date,
                                                 "transactiontype"   => 'C-',
                                                 "year"              => $year,
@@ -346,6 +354,8 @@ class M_AbsentDetail extends Model
                                             $amount = 0;
 
                                             $dataLeaveUsage[] = [
+                                                "record_id"         => $ID,
+                                                "table"             => $this->table,
                                                 "transactiondate"   => $line->date,
                                                 "transactiontype"   => 'C-',
                                                 "year"              => $year,
@@ -367,6 +377,8 @@ class M_AbsentDetail extends Model
                                                 $amount = 0;
 
                                             $dataLeaveUsage[] = [
+                                                "record_id"         => $ID,
+                                                "table"             => $this->table,
                                                 "transactiondate"   => $line->date,
                                                 "transactiontype"   => 'C-',
                                                 "year"              => $year,
@@ -670,24 +682,57 @@ class M_AbsentDetail extends Model
 
         try {
             $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-
+            $todayTime = date('Y-m-d H:i:s');
+            $updatedBy = $rows['data']['updated_by'];
             $line = $this->find($ID);
-            $list = $this->where([
-                'isagree'       => "H",
-                'trx_absent_id' => $line->{$mAbsent->primaryKey}
-            ])->first();
+
+            // TODO : Update Header if there no pending line
+            $list = $this->where(
+                'trx_absent_id',
+                $line->{$mAbsent->primaryKey}
+            )->whereIn('isagree', ['M', 'S', 'H'])->first();
 
             if (is_null($list)) {
-                $todayTime = date('Y-m-d H:i:s');
-                $updatedBy = $rows['data']['updated_by'];
-
                 $entity->setDocStatus("CO");
                 $entity->setReceivedDate($todayTime);
-                $entity->setAbsentId($line->{$mAbsent->primaryKey});
+                $entity->setAbsentId($line->trx_absent_id);
                 $entity->setUpdatedBy($updatedBy);
                 $mAbsent->save($entity);
             }
 
+            //TODO : Update Isapproved if there's no line to Approved
+            $pendingLine = $this->where([
+                'trx_absent_id' => $line->{$mAbsent->primaryKey},
+                'isagree'       => 'H'
+            ])->first();
+
+            if (is_null($pendingLine)) {
+                $header = $mAbsent->find($line->trx_absent_id);
+                if (empty($header->getIsApproved())) {
+                    $approvedLine = $this->where(
+                        'trx_absent_id',
+                        $line->{$mAbsent->primaryKey}
+                    )->whereIn('isagree', ['M', 'S', 'Y'])->first();
+
+                    if (!is_null($approvedLine)) {
+                        $dataUpdate = [
+                            'updated_by'    => $updatedBy,
+                            'approveddate'  => $todayTime,
+                            'isapproved'    => 'Y'
+                        ];
+                    } else {
+                        $dataUpdate = [
+                            'updated_by'    => $updatedBy,
+                            'approveddate'  => $todayTime,
+                            'isapproved'    => 'N',
+                            'docstatus'     => 'NA'
+                        ];
+                    }
+                    $mAbsent->builder->update($dataUpdate, [$mAbsent->primaryKey => $header->trx_absent_id]);
+                }
+            }
+
+            // TODO : Create Allowance when line is Aggreed
             if ($line->isagree === "Y")
                 $this->createAllowance($rows);
         } catch (\Exception $e) {

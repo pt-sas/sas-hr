@@ -122,6 +122,7 @@ class WScenario extends BaseController
         $mDiv = new M_Division($this->request);
         $mLevel = new M_Levelling($this->request);
         $mStatus = new M_Status($this->request);
+        $mDocType = new M_DocumentType($this->request);
 
         if ($this->request->isAJAX()) {
             try {
@@ -146,6 +147,11 @@ class WScenario extends BaseController
                 if (!empty($list[0]->getStatusId())) {
                     $rowStatus = $mStatus->find($list[0]->getStatusId());
                     $list = $this->field->setDataSelect($mStatus->table, $list, $mStatus->primaryKey, $rowStatus->getStatusId(), $rowStatus->getName());
+                }
+
+                if (!empty($list[0]->getSubmissionType())) {
+                    $rowDocType = $mDocType->find($list[0]->getSubmissionType());
+                    $list = $this->field->setDataSelect($mDocType->table, $list, 'submissiontype', $rowDocType->getDocTypeId(), $rowDocType->getName());
                 }
 
                 $fieldHeader = new \App\Entities\Table();
@@ -305,6 +311,7 @@ class WScenario extends BaseController
         $primaryKey = $this->model->primaryKey;
         $sessionUserId = $session->get('sys_user_id');
         $isWfscenario = false;
+        $totalDays = null;
 
         $trx = $this->model->find($trxID);
 
@@ -324,8 +331,6 @@ class WScenario extends BaseController
             $employee = $mEmployee->find($trx->md_employee_id);
 
             if ($table === 'trx_absent') {
-                $totalDays = 0;
-
                 if ($trx->submissiontype == $this->model->Pengajuan_Cuti) {
                     $totalDays = count($trxLine);
 
@@ -337,9 +342,10 @@ class WScenario extends BaseController
                         $totalDays = 6; //Set GT sesuai scenario
                 }
 
-                if ($trx->submissiontype == $this->model->Pengajuan_Pembatalan_Cuti) {
-                    $trxRefLine = $this->modelDetail->where($primaryKey, $trx->reference_id)->findAll();
-                    $totalDays = count($trxRefLine);
+                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, $totalDays, $trx->ref_submissiontype);
+            } else if ($table === "trx_submission_cancel") {
+                if ($trx->ref_submissiontype == 100003) {
+                    $totalDays = count($trxLine);
 
                     if ($totalDays <= 3)
                         $totalDays = 3; //Set GT sesuai scenario
@@ -347,9 +353,11 @@ class WScenario extends BaseController
                         $totalDays = 5; //Set GT sesuai scenario
                     else if ($totalDays > 5)
                         $totalDays = 6; //Set GT sesuai scenario
-                }
 
-                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, $totalDays);
+                    $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, $totalDays, $trx->ref_submissiontype);
+                } else {
+                    $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null, null, null, $trx->ref_submissiontype);
+                }
             } else {
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
             }
@@ -357,6 +365,7 @@ class WScenario extends BaseController
             if ($this->sys_wfscenario_id) {
                 $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
                 $this->entity->setWfScenarioId($this->sys_wfscenario_id);
+                $this->entity->setIsApproved("");
                 $isWfscenario = true;
             } else if ($docType->getIsRealization() === "Y") {
                 $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
@@ -383,7 +392,9 @@ class WScenario extends BaseController
         $result = $this->save();
 
         if ($result && $isWfscenario) {
-            if ($docType->getIsApprovedLine() === "Y" && !is_null($modelDetail) && $trxLine) {
+            $totalDays = $trx->totaldays ?? 0;
+
+            if (($docType->getIsApprovedLine() === "Y" && $totalDays <= 14) && !is_null($modelDetail) && $trxLine) {
                 $this->modelDetail = $modelDetail;
 
                 $tableLine = $this->modelDetail->table;

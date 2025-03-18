@@ -83,4 +83,14 @@ class M_EmpDivision extends Model
 
 		return $result;
 	}
+
+	public function getDivisionDetail($where)
+	{
+		$this->builder->select($this->table . '.*, md_division.name as division_name');
+		$this->builder->join('md_division', 'md_employee_division.md_division_id = md_division.md_division_id', 'left');
+		if ($where)
+			$this->builder->where($where);
+
+		return $this->builder->get();
+	}
 }

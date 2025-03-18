@@ -619,7 +619,7 @@ $("#form_resign").on("change", "#departuretype", function (e) {
 let prevData;
 
 $(document).ready(function (evt) {
-  $("#form_leave_cancel #reference_id")
+  $("#form_submission_cancel #reference_id")
     .on("focus", function (e) {
       prevData = this.value;
     })
@@ -627,20 +627,21 @@ $(document).ready(function (evt) {
       const form = $(this).closest("form");
       const attrName = $(this).attr("name");
 
-      let leave_id = this.value;
+      let ref_id = this.value;
+      let docno = $(this).find(":selected").text();
 
       // create data
-      if (leave_id !== "" && setSave === "add") {
+      if (ref_id !== "" && setSave === "add") {
         _tableLine.clear().draw(false);
-        setLeaveDetail(form, leave_id);
+        setSubmissionDetail(form, ref_id, 0, docno);
       }
 
       // update data
       $.each(option, function (idx, elem) {
         if (elem.fieldName === attrName && setSave !== "add") {
           if (
-            leave_id !== "" &&
-            leave_id != elem.option_ID &&
+            ref_id !== "" &&
+            ref_id != elem.option_ID &&
             _tableLine.data().any()
           ) {
             Swal.fire({
@@ -655,7 +656,7 @@ $(document).ready(function (evt) {
             }).then((data) => {
               if (data.value) {
                 _tableLine.clear().draw(false);
-                setLeaveDetail(form, leave_id, ID);
+                setSubmissionDetail(form, ref_id, ID, docno);
               } else {
                 form
                   .find("select[name=" + attrName + "]")
@@ -666,23 +667,23 @@ $(document).ready(function (evt) {
           }
 
           if (
-            leave_id !== "" &&
-            leave_id != elem.option_ID &&
+            ref_id !== "" &&
+            ref_id != elem.option_ID &&
             !_tableLine.data().any()
           ) {
-            setLeaveDetail(form, leave_id);
+            setSubmissionDetail(form, ref_id, 0, docno);
           }
 
           if (
             typeof prev !== "undefined" &&
             prev !== "" &&
-            leave_id !== "" &&
-            prev != leave_id &&
+            ref_id !== "" &&
+            prev != ref_id &&
             prev != elem.option_ID &&
             !_tableLine.data().any()
           ) {
             _tableLine.clear().draw(false);
-            setLeaveDetail(form, leave_id);
+            setSubmissionDetail(form, ref_id, 0, docno);
           }
         }
       });
@@ -691,16 +692,20 @@ $(document).ready(function (evt) {
     });
 });
 
-function setLeaveDetail(form, id, cancel_id = 0) {
-  let url = ADMIN_URL + "pembatalan-cuti/getLeaveDetail";
+function setSubmissionDetail(form, id, cancel_id = 0, docno) {
+  let url = ADMIN_URL + "pembatalan/getSubmissionDetail";
+  let formData = new FormData();
+
+  formData.append("id", id);
+  formData.append("cancel_id", cancel_id);
+  formData.append("document_no", docno);
 
   $.ajax({
     url: url,
     type: "POST",
-    data: {
-      id: id,
-      cancel_id: cancel_id,
-    },
+    data: formData,
+    processData: false,
+    contentType: false,
     cache: false,
     dataType: "JSON",
     beforeSend: function () {
@@ -763,73 +768,81 @@ function setLeaveDetail(form, id, cancel_id = 0) {
   });
 }
 
-$("#form_leave_cancel").on("change", "#md_employee_id", function (e) {
-  let _this = $(this);
-  let value = this.value;
-  let formData = new FormData();
-  const form = _this.closest("form");
-  const field = form.find("select[name=reference_id]");
+$("#form_submission_cancel").on(
+  "change",
+  "#md_employee_id, #ref_submissiontype",
+  function (e) {
+    let _this = $(this);
+    let formData = new FormData();
+    const form = _this.closest("form");
+    const field = form.find("select[name=reference_id]");
+    let employeeID = form.find("select[name=md_employee_id]").val();
+    let submissionType = form.find("select[name=ref_submissiontype]").val();
 
-  let url = `${ADMIN_URL}cuti/get-list`;
+    let url = `${ADMIN_URL}pembatalan/get-list`;
 
-  formData.append("md_employee_id", value);
-  formData.append("id", ID);
+    // _tableLine.clear().draw(false);
 
-  field.empty();
+    formData.append("md_employee_id", employeeID);
+    formData.append("ref_submissiontype", submissionType);
+    formData.append("id", ID);
 
-  if (value !== "") {
-    $.ajax({
-      url: url,
-      type: "POST",
-      data: formData,
-      processData: false,
-      contentType: false,
-      cache: false,
-      dataType: "JSON",
-      beforeSend: function () {
-        $(".x_form").prop("disabled", true);
-        $(".close_form").prop("disabled", true);
-      },
-      complete: function () {
-        $(".x_form").removeAttr("disabled");
-        $(".close_form").removeAttr("disabled");
-      },
-      success: function (result) {
-        if (result.length) {
-          field.append('<option value=""></option>');
+    field.empty();
 
-          let reference_id = 0;
+    if (employeeID !== "" && submissionType !== "") {
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".x_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+        },
+        complete: function () {
+          $(".x_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+        },
+        success: function (result) {
+          if (result.length) {
+            field.append('<option value=""></option>');
 
-          if (option.length) {
-            $.each(option, function (i, item) {
-              if (item.fieldName == "reference_id") reference_id = item.label;
+            let reference_id = 0;
+
+            if (option.length) {
+              $.each(option, function (i, item) {
+                if (item.fieldName == "reference_id") reference_id = item.label;
+              });
+            }
+
+            $.each(result, function (idx, item) {
+              if (setSave === "detail" && reference_id == item.id)
+                field
+                  .append(
+                    '<option value="' +
+                      item.id +
+                      '" selected>' +
+                      item.text +
+                      "</option>"
+                  )
+                  .prop("disabled", true);
+              else
+                field.append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                );
             });
           }
-
-          $.each(result, function (idx, item) {
-            if (setSave === "detail" && reference_id == item.id)
-              field
-                .append(
-                  '<option value="' +
-                    item.id +
-                    '" selected>' +
-                    item.text +
-                    "</option>"
-                )
-                .prop("disabled", true);
-            else
-              field.append(
-                '<option value="' + item.id + '">' + item.text + "</option>"
-              );
-          });
-        }
-      },
-      error: function (jqXHR, exception) {
-        showError(jqXHR, exception);
-      },
-    });
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
   }
-});
+);
 
 $("#form_exit_interview").on("change", "#reference_id", function (e) {
   let _this = $(this);
@@ -1373,7 +1386,6 @@ function showNotifMessage() {
 $(".bell-notif").on("click", function (e) {
   let url = ADMIN_URL + "pesan/showNotif";
   const parent = $(this).parent();
-  console.log(parent);
 
   $.ajax({
     url: url,

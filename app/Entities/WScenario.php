@@ -19,6 +19,7 @@ class WScenario extends Entity
     protected $created_by;
     protected $updated_by;
     protected $md_levelling_id;
+    protected $submissiontype;
 
     protected $dates   = [
         'created_at',
@@ -154,5 +155,15 @@ class WScenario extends Entity
     public function setLevellingId($md_levelling_id)
     {
         $this->attributes['md_levelling_id'] = $md_levelling_id;
+    }
+
+    public function getSubmissionType()
+    {
+        return $this->attributes['submissiontype'];
+    }
+
+    public function setSubmissionType($submissiontype)
+    {
+        $this->attributes['submissiontype'] = $submissiontype;
     }
 }

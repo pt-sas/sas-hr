@@ -83,4 +83,14 @@ class M_EmpBranch extends Model
 
 		return $result;
 	}
+
+	public function getBranchDetail($where)
+	{
+		$this->builder->select($this->table . '.*, md_branch.name as branch_name');
+		$this->builder->join('md_branch', 'md_employee_branch.md_branch_id = md_branch.md_branch_id', 'left');
+		if ($where)
+			$this->builder->where($where);
+
+		return $this->builder->get();
+	}
 }

@@ -264,6 +264,11 @@ class M_Datatable extends Model
                 $model = new M_Assignment($this->request);
                 $model->doAfterUpdate($rows);
             }
+
+            if ($this->table === "trx_submission_cancel_detail") {
+                $model = new M_SubmissionCancelDetail($this->request);
+                $model->doAfterUpdate($rows);
+            }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
