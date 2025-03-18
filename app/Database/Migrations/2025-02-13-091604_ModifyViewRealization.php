@@ -8,6 +8,12 @@ class ModifyViewRealization extends Migration
 {
     public function up()
     {
+        $fields = ['realization_by' => ['type' => 'INT', 'constraint' => 11, 'null' => true]];
+
+        $this->forge->addColumn('trx_absent_detail', $fields);
+        $this->forge->addColumn('trx_assignment_date', $fields);
+        $this->forge->addColumn('trx_overtime_detail', $fields);
+
         $this->db->query("DROP VIEW IF EXISTS v_realization");
 
         $this->db->query("CREATE VIEW v_realization AS (
