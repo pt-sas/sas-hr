@@ -324,6 +324,14 @@ class HalfDayOfficeDuties extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
+                        $data = [
+                            'id'        => $_ID,
+                            'created_by' => $this->access->getSessionUser(),
+                            'updated_by' => $this->access->getSessionUser()
+                        ];
+
+                        $this->model->createAbsentDetail($data, $row);
+
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
                         $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {

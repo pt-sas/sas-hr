@@ -356,7 +356,7 @@ class WScenario extends BaseController
 
                     $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, $totalDays, $trx->ref_submissiontype);
                 } else {
-                    $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null, null, null, $trx->ref_submissiontype);
+                    $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, null, $trx->ref_submissiontype);
                 }
             } else {
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
