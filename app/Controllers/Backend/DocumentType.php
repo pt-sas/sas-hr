@@ -135,7 +135,8 @@ class DocumentType extends BaseController
                 100004, // Ijin
                 100005, // Ijin Resmi
                 100007, // Tugas Kantor
-                100008  // Penugasan
+                100008, // Penugasan
+                100009, // Tugas Kantor (Setengah Hari)
             ];
 
             try {

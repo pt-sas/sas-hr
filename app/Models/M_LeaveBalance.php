@@ -98,7 +98,7 @@ class M_LeaveBalance extends Model
                         FROM trx_absent_detail tad
                             JOIN trx_absent ta ON tad.trx_absent_id = ta.trx_absent_id
                         WHERE ta.docstatus = 'IP'
-                        and tad.isagree = 'H' 
+                        and tad.isagree IN ('H','S') 
                         and ta.submissiontype = 100003
                         GROUP BY ta.md_employee_id, year) xt ON xt.md_employee_id = tl.md_employee_id and xt.year = tl.`year`
                 WHERE 1=1
