@@ -46,6 +46,8 @@ $routes->get('cron-not-approved', 'Backend\WActivity::doNotApproved');
 // $routes->get('cron-update-employee', 'Backend\EmployeeAllocation::updateMasterEmployee');
 $routes->get('cron-approved-realization', 'Backend\Realization::doApprovedRealization');
 $routes->get('cron-absent-alert', 'Backend\Attendance::toDoCheckAbsent');
+$routes->get('cron-send-absent-summary', 'Backend\Attendance::toDoSendAbsentSummary');
+$routes->get('cron-delete-attendance-summary', 'Backend\Attendance::toDoDeleteAttSummary');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
 
@@ -485,6 +487,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'Kehadiran/getJamAbsen', 'Backend\Attendance::getClockInOut');
 
     $routes->add('import-kehadiran', 'Backend\ImportAttendance::index');
+    $routes->match(['get', 'post'], 'import-kehadiran/showAll', 'Backend\ImportAttendance::showAll');
     $routes->post('import-kehadiran/import', 'Backend\ImportAttendance::import');
 
     $routes->add('realisasi', 'Backend\Realization::index');
@@ -629,13 +632,14 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'resign/getRefDetail', 'Backend\Resign::getRefDetail');
     $routes->match(['get', 'post'], 'resign/getDetail', 'Backend\Resign::getDetailResign');
 
-    $routes->add('pembatalan-cuti', 'Backend\LeaveCancel::index');
-    $routes->match(['get', 'post'], 'pembatalan-cuti/showAll', 'Backend\LeaveCancel::showAll');
-    $routes->post('pembatalan-cuti/create', 'Backend\LeaveCancel::create');
-    $routes->get('pembatalan-cuti/show/(:any)', 'Backend\LeaveCancel::show/$1');
-    $routes->get('pembatalan-cuti/destroy/(:any)', 'Backend\LeaveCancel::destroy/$1');
-    $routes->get('pembatalan-cuti/processIt', 'Backend\LeaveCancel::processIt');
-    $routes->match(['get', 'post'], 'pembatalan-cuti/getLeaveDetail', 'Backend\LeaveCancel::getLeaveDetail');
+    $routes->add('pembatalan', 'Backend\SubmissionCancel::index');
+    $routes->match(['get', 'post'], 'pembatalan/showAll', 'Backend\SubmissionCancel::showAll');
+    $routes->post('pembatalan/create', 'Backend\SubmissionCancel::create');
+    $routes->get('pembatalan/show/(:any)', 'Backend\SubmissionCancel::show/$1');
+    $routes->get('pembatalan/destroy/(:any)', 'Backend\SubmissionCancel::destroy/$1');
+    $routes->get('pembatalan/processIt', 'Backend\SubmissionCancel::processIt');
+    $routes->match(['get', 'post'], 'pembatalan/get-list', 'Backend\SubmissionCancel::getAllSubmission');
+    $routes->match(['get', 'post'], 'pembatalan/getSubmissionDetail', 'Backend\SubmissionCancel::getSubmissionDetail');
 
     $routes->add('list-pertanyaan', 'Backend\QuestionGroup::index');
     $routes->match(['get', 'post'], 'list-pertanyaan/showAll', 'Backend\QuestionGroup::showAll');
@@ -706,6 +710,11 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('mesin-absen/show/(:any)', 'Backend\AttendanceMachine::show/$1');
     $routes->post('mesin-absen/create', 'Backend\AttendanceMachine::create');
     $routes->get('mesin-absen/destroy/(:any)', 'Backend\AttendanceMachine::destroy/$1');
+
+
+    $routes->add('pengaturan', 'Backend\Configuration::index');
+    $routes->match(['get', 'post'], 'pengaturan/showAll', 'Backend\Configuration::showAll');
+    $routes->post('pengaturan/create', 'Backend\Configuration::create');
 });
 
 /*
