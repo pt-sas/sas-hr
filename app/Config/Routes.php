@@ -48,6 +48,8 @@ $routes->get('cron-approved-realization', 'Backend\Realization::doApprovedRealiz
 $routes->get('cron-absent-alert', 'Backend\Attendance::toDoCheckAbsent');
 $routes->get('cron-send-absent-summary', 'Backend\Attendance::toDoSendAbsentSummary');
 $routes->get('cron-delete-attendance-summary', 'Backend\Attendance::toDoDeleteAttSummary');
+$routes->get('cron-proxy-reguler', 'Backend\User::proxyReguler');
+$routes->get('cron-return-proxy', 'Backend\ProxySpecial::proxySwitching');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
 
@@ -715,6 +717,14 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('pengaturan', 'Backend\Configuration::index');
     $routes->match(['get', 'post'], 'pengaturan/showAll', 'Backend\Configuration::showAll');
     $routes->post('pengaturan/create', 'Backend\Configuration::create');
+
+    $routes->add('proxy-khusus', 'Backend\ProxySpecial::index');
+    $routes->match(['get', 'post'], 'proxy-khusus/showAll', 'Backend\ProxySpecial::showAll');
+    $routes->get('proxy-khusus/show/(:any)', 'Backend\ProxySpecial::show/$1');
+    $routes->post('proxy-khusus/create', 'Backend\ProxySpecial::create');
+    $routes->get('proxy-khusus/destroy/(:any)', 'Backend\ProxySpecial::destroy/$1');
+    $routes->get('proxy-khusus/processIt', 'Backend\ProxySpecial::processIt');
+    $routes->post('proxy-khusus/getUserRole', 'Backend\ProxySpecial::getUserRole');
 });
 
 /*

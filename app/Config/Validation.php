@@ -3078,4 +3078,51 @@ class Validation
             ]
         ]
     ];
+
+    public $proxy_special = [
+        'sys_user_from'          => [
+            'label'             => 'Pengguna',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'sys_user_to'          => [
+            'label'             => 'Wakil',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'startdate'                 => [
+            'label'            => 'Tanggal Mulai',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'enddate'                 => [
+            'label'            => 'Tanggal Selesai',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+
+        'line'                  => [
+            'label'             => 'List Role',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.sys_role_id_line'  => [
+            'label'             => 'Role',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} Line'
+            ]
+        ]
+
+    ];
 }

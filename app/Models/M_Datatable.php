@@ -269,6 +269,11 @@ class M_Datatable extends Model
                 $model = new M_SubmissionCancelDetail($this->request);
                 $model->doAfterUpdate($rows);
             }
+
+            if ($this->table === "trx_proxy_special") {
+                $model = new M_ProxySpecial($this->request);
+                $model->doAfterUpdate($rows);
+            }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

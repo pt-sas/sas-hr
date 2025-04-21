@@ -138,5 +138,9 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
         $schedule->url(env("app.baseURL") . "cron-absent-alert")->named("CronAbsentAlert")->daily("08:20 am");
         $schedule->url(env("app.baseURL") . "cron-send-absent-summary")->named("CronAbsentSummary")->daily("11:59 am");
         $schedule->url(env("app.baseURL") . "cron-delete-attendance-summary")->named("CronDeleteAttSummary")->sundays("11:40 pm");
+
+        // Proxy
+        $schedule->url(env("app.baseURL") . "cron-proxy-reguler")->named("CronProxyReguler")->weekdays("10:00 am");
+        $schedule->url(env("app.baseURL") . "cron-return-proxy")->named("CronReturnProxy")->weekdays("11:52 pm");
     }
 }

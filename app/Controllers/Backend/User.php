@@ -10,7 +10,14 @@ use App\Models\M_Branch;
 use App\Models\M_BranchAccess;
 use App\Models\M_DivAccess;
 use App\Models\M_Division;
+use App\Models\M_EmpDelegation;
+use App\Models\M_ProxySwitching;
+use App\Models\M_Attendance;
 use App\Models\M_UserRole;
+use App\Models\M_NotificationText;
+use Html2Text\Html2Text;
+use App\Models\M_Absent;
+use App\Models\M_ProxySpecial;
 use Config\Services;
 
 class User extends BaseController
@@ -244,8 +251,21 @@ class User extends BaseController
 
 			try {
 				if (isset($post['search'])) {
+					if (isset($post['sys_user_id'])) {
+						$list = $this->model->where('isactive', 'Y')
+							->whereNotIn('sys_user_id', $post['sys_user_id'])
+							->like('name', $post['search'])
+							->orderBy('name', 'ASC')
+							->findAll();
+					} else {
+						$list = $this->model->where('isactive', 'Y')
+							->like('name', $post['search'])
+							->orderBy('name', 'ASC')
+							->findAll();
+					}
+				} else if (isset($post['sys_user_id'])) {
 					$list = $this->model->where('isactive', 'Y')
-						->like('name', $post['search'])
+						->whereNotIn('sys_user_id', [$post['sys_user_id']])
 						->orderBy('name', 'ASC')
 						->findAll();
 				} else {
@@ -263,6 +283,86 @@ class User extends BaseController
 			}
 
 			return $this->response->setJSON($response);
+		}
+	}
+
+	public function proxyReguler()
+	{
+		$mAttendance = new M_Attendance($this->request);
+		$mAbsent = new M_Absent($this->request);
+		$mEmployee = new M_Employee($this->request);
+		$mUserRole = new M_UserRole($this->request);
+		$mNotifText = new M_NotificationText($this->request);
+		$mProxySwitch = new M_ProxySpecial($this->request);
+		$cMail = new Mail();
+
+		$dataNotif = $mNotifText->where('name', 'Tindakan Pengalihan Approval')->first();
+		$message = $dataNotif->getText();
+
+
+		$hrRole = $mUserRole->where('sys_role_id', 5)->findAll();
+		$listHrUser = array_column($hrRole, "sys_user_id");
+		$hrUser = $this->model->whereIn('sys_user_id', $listHrUser)->findAll();
+
+		$where = "isactive = 'Y'";
+		// 100002 GM, 100003 Manager
+		$where .= " AND md_levelling_id IN (100002, 100003)";
+		$employee = $mEmployee->where($where)->findAll();
+
+		if ($employee) {
+			$today = date('Y-m-d');
+			foreach ($employee as $emp) {
+
+				$where = "md_employee.md_employee_id = {$emp->md_employee_id}";
+				$where .= " AND v_attendance.date = '{$today}'";
+				$empAttendance = $mAttendance->getAttendance($where)->getRow();
+
+				$where = "employee_id = {$emp->md_employee_id}";
+				$where .= " AND date = '{$today}'";
+				$where .= " AND isagree IN ('Y', 'M', 'H', 'S')";
+				$submission = $mAbsent->getAllSubmission($where)->getRow();
+
+				$user = $this->model->where(['md_employee_id' => $emp->md_employee_id, 'isactive' => 'Y'])->first();
+
+				if ((!$empAttendance && !$submission) && $user) {
+					//TODO : Get Superior data and do absent or submission check on superior
+					$superiorEmp = $mEmployee->where(['md_employee_id' => $emp->superior_id, 'isactive' => 'Y'])->first();
+					$superiorAtten = $superiorEmp ? $mAttendance->getAttendance("md_employee.md_employee_id = {$superiorEmp->md_employee_id} AND v_attendance.date = '{$today}'")->getRow() : null;
+					$superiorUser = $superiorEmp ? $this->model->where(['md_employee_id' => $superiorEmp->md_employee_id, 'isactive' => 'Y'])->first() : null;
+
+					$email = array_column($hrUser, "email");
+
+					if ($superiorAtten && $superiorUser) {
+						//TODO : Get All User Role Contains W_App
+						$where = "sys_user.sys_user_id = {$user->sys_user_id}";
+						$where .= " AND sr.name like 'W_App%'";
+						$userRole = $this->model->detail([], null, $where)->getResult();
+
+						//TODO : Switching Proxy 
+						foreach ($userRole as $role) {
+							$mProxySwitch->insertProxy($user->sys_user_id, $superiorUser->sys_user_id, $role->role);
+						}
+
+						// TODO : Set Email Recipient and get Data Notif Pengalihan Approval
+						$dataNotif = $mNotifText->where('name', 'Pengalihan Approval')->first();
+						$email = [$user->email, $superiorUser->email];
+					}
+					$message = $dataNotif->getText();
+					$message = str_replace(['(Var1)', '(Var2)'], [$user->username, $today], $message);
+
+					//TODO : Filter the data use array_unique remove duplicate value then array_filter and exclude null value 
+					$recipients = array_values(array_unique(array_filter($email)));
+
+					$subject = $dataNotif->getSubject();
+					$message = new Html2Text($message);
+					$message = $message->getText();
+
+					//TODO : Send Email
+					foreach ($recipients as $email) {
+						$cMail->sendEmail($email, $subject, $message, null, "SAS HR");
+					}
+				}
+			}
 		}
 	}
 }

@@ -358,6 +358,8 @@ class WScenario extends BaseController
                 } else {
                     $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, null, $trx->ref_submissiontype);
                 }
+            } else if ($table === "trx_proxy_special") {
+                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, null, null, null, null, null, $trx->submissiontype);
             } else {
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
             }

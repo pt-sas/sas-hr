@@ -13,6 +13,8 @@ class M_UserRole extends Model
 	protected $allowedFields = [
 		'sys_role_id',
 		'sys_user_id',
+		'updated_by',
+		'created_by',
 		'isactive'
 	];
 	protected $useTimestamps = true;
