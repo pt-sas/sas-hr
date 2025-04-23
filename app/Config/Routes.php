@@ -204,6 +204,8 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('sakit/destroy/(:any)', 'Backend\SickLeave::destroy/$1');
     $routes->get('sakit/processIt', 'Backend\SickLeave::processIt');
     $routes->get('sakit/print/(:any)', 'Backend\SickLeave::exportPDF/$1');
+    $routes->match(['get', 'post'], 'sakit/getList', 'Backend\SickLeave::getList');
+    $routes->match(['get', 'post'], 'sakit/getDetail', 'Backend\Sickleave::getDetail');
 
     $routes->add('cuti', 'Backend\Leave::index');
     $routes->match(['get', 'post'], 'cuti/showAll', 'Backend\Leave::showAll');
@@ -725,6 +727,13 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('proxy-khusus/destroy/(:any)', 'Backend\ProxySpecial::destroy/$1');
     $routes->get('proxy-khusus/processIt', 'Backend\ProxySpecial::processIt');
     $routes->post('proxy-khusus/getUserRole', 'Backend\ProxySpecial::getUserRole');
+
+    $routes->add('keterangan-sakit', 'Backend\MedicalCertificate::index');
+    $routes->match(['get', 'post'], 'keterangan-sakit/showAll', 'Backend\MedicalCertificate::showAll');
+    $routes->get('keterangan-sakit/show/(:any)', 'Backend\MedicalCertificate::show/$1');
+    $routes->post('keterangan-sakit/create', 'Backend\MedicalCertificate::create');
+    $routes->get('keterangan-sakit/destroy/(:any)', 'Backend\MedicalCertificate::destroy/$1');
+    $routes->get('keterangan-sakit/processIt', 'Backend\MedicalCertificate::processIt');
 });
 
 /*

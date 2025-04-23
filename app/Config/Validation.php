@@ -1782,9 +1782,9 @@ class Validation
         ],
         'image'                 => [
             'label'             => 'foto',
-            'rules'             => 'uploaded[image]|max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
-                'uploaded'      => 'Mohon upload {field} dahulu',
+                // 'uploaded'      => 'Mohon upload {field} dahulu',
                 'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
@@ -3124,5 +3124,50 @@ class Validation
             ]
         ]
 
+    ];
+
+    public $medical_certificate = [
+        'trx_absent_id'          => [
+            'label'             => 'No Sakit',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_employee_id'          => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_division_id'          => [
+            'label'             => 'Divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'date'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
     ];
 }

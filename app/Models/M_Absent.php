@@ -38,7 +38,8 @@ class M_Absent extends Model
         'branch_to',
         'reference_id',
         'availableleavedays',
-        'totaldays'
+        'totaldays',
+        'img_medical'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';
@@ -514,5 +515,16 @@ class M_Absent extends Model
             $builder->where($where);
 
         return $builder->get();
+    }
+
+    public function getSickLeaveSubmission($where)
+    {
+        $this->builder->select("{$this->table}.*,
+        md_employee.fullname as employee_fullname");
+        $this->builder->join('trx_medical_certificate', 'trx_medical_certificate.trx_absent_id = ' . $this->table . '.trx_absent_id', 'left');
+        $this->builder->join('md_employee', 'md_employee.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+        $this->builder->where($where);
+
+        return $this->builder->get();
     }
 }

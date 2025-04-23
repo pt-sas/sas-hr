@@ -1992,7 +1992,6 @@ $(".btn_ok_realization").click(function (e) {
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         Toast.fire({
           type: "success",
@@ -2249,12 +2248,27 @@ _tableRealization.on("click", ".btn_view_image", function (e) {
 
         $.each(result, function (i, item) {
           html += '<div class="item">';
-          html += '<img class="img-thumbnail" src="' + item + '">';
+
+          if (item.match(/\.pdf$/i)) {
+            html +=
+              '<canvas id="pdf-canvas-' +
+              i +
+              '" class="img-thumbnail"></canvas>';
+          } else {
+            html += '<img class="img-thumbnail" src="' + item + '">';
+          }
+
           html += "</div>";
         });
         html += "</div>";
 
         modalBody.html(html);
+
+        $.each(result, function (i, item) {
+          if (item.match(/\.pdf$/i)) {
+            renderPDF(item, i); // Render PDF
+          }
+        });
 
         $(".image-carousel").owlCarousel({
           nav: true, // Show next and prev buttons

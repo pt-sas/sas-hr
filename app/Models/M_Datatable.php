@@ -274,6 +274,11 @@ class M_Datatable extends Model
                 $model = new M_ProxySpecial($this->request);
                 $model->doAfterUpdate($rows);
             }
+
+            if ($this->table === "trx_medical_certificate") {
+                $model = new M_MedicalCertificate($this->request);
+                $model->doAfterUpdate($rows);
+            }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

@@ -97,8 +97,8 @@ class Realization extends BaseController
             ];
 
             $where = [
-                "docstatus = '{$this->DOCSTATUS_Inprogress}' 
-                AND isapproved = 'Y' 
+                "docstatus = '{$this->DOCSTATUS_Inprogress}'
+                AND isapproved = 'Y'
                 AND isagree = 'S' 
                 AND submissiontype NOT IN (" . implode(",", $formType) . ")"
             ];
@@ -409,8 +409,8 @@ class Realization extends BaseController
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else if (!$this->validation->run($post, 'realisasi_not_agree') && $isAgree === 'N') {
                     $response = $this->field->errorValidation($this->model->table, $post);
-                    // } else if ($submissionDate > $today) {
-                    //     $response = message('success', false, 'tanggal realisasi belum terpenuhi');
+                } else if ($submissionDate > $today) {
+                    $response = message('success', false, 'tanggal realisasi belum terpenuhi');
                 } else {
                     $isAssignment = in_array($submissionForm, $typeFormAssignment);
 
@@ -753,8 +753,8 @@ class Realization extends BaseController
             try {
                 if ($isAgree === 'Y' && ((in_array($submissionForm, $typeFormAssignment) || $submissionForm === 'Tugas Kantor') ? false : !$this->validation->run($post, 'realisasi_kehadiran'))) {
                     $response = $this->field->errorValidation($this->model->table, $post);
-                    // } else if (($isAgree == "Y") && date('Y-m-d', strtotime($post['submissiondate'])) > $today) {
-                    //     $response = message('success', false, 'tanggal realisasi belum terpenuhi');
+                } else if (($isAgree == "Y") && date('Y-m-d', strtotime($post['submissiondate'])) > $today) {
+                    $response = message('success', false, 'tanggal realisasi belum terpenuhi');
                 } else {
                     if (in_array($submissionForm, $typeFormAssignment)) {
                         $mAssignment = new M_Assignment($this->request);
@@ -1067,6 +1067,9 @@ class Realization extends BaseController
 
             if (!empty($row->getImage3()))
                 array_push($response, base_url('uploads/pengajuan/' . $row->getImage3()));
+
+            if (!empty($row->getImageMedical()))
+                array_push($response, base_url('uploads/keterangan/' . $row->getImageMedical()));
         } catch (\Exception $e) {
             $response = message('error', false, $e->getMessage());
         }
