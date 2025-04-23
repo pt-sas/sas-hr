@@ -208,6 +208,13 @@ class BaseController extends Controller
 	protected $PATH_Pengajuan = "pengajuan";
 
 	/**
+	 * PATH Folder for Pengajuan upload data Keterangan
+	 *
+	 * @var directory
+	 */
+	protected $PATH_Keterangan_Sakit = "keterangan";
+
+	/**
 	 * Notification Text Approved
 	 *
 	 * @var int

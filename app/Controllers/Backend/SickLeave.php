@@ -14,6 +14,7 @@ use App\Models\M_EmpWorkDay;
 use App\Models\M_Rule;
 use App\Models\M_WorkDetail;
 use App\Models\M_Division;
+use App\Models\M_MedicalCertificate;
 use App\Models\M_SubmissionCancelDetail;
 use TCPDF;
 use Config\Services;
@@ -105,7 +106,11 @@ class SickLeave extends BaseController
                     $where['trx_absent.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
                     $where['md_employee.md_employee_id'] = [
                         'value'     => $arrEmpBased
                     ];
@@ -333,7 +338,10 @@ class SickLeave extends BaseController
                             $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
 
                             if ($this->isNew()) {
-                                uploadFile($file, $path, $img_name);
+                                // uploadFile($file, $path, $img_name);
+
+                                if ($file && $file->isValid())
+                                    uploadFile($file, $path, $img_name);
 
                                 if ($file2 && $file2->isValid())
                                     uploadFile($file2, $path, $img2_name);
@@ -343,10 +351,16 @@ class SickLeave extends BaseController
                             } else {
                                 $row = $this->model->find($this->getID());
 
-                                if (!empty($post['image']) && !empty($row->getImage()) && $post['image'] !== $row->getImage()) {
-                                    if (file_exists($path . $row->getImage()))
-                                        unlink($path . $row->getImage());
+                                // if (!empty($post['image']) && !empty($row->getImage()) && $post['image'] !== $row->getImage()) {
+                                //     if (file_exists($path . $row->getImage()))
+                                //         unlink($path . $row->getImage());
 
+                                //     uploadFile($file, $path, $img_name);
+                                // }
+
+                                if (empty($post['image']) && !empty($row->getImage()) && file_exists($path . $row->getImage())) {
+                                    unlink($path . $row->getImage());
+                                } else {
                                     uploadFile($file, $path, $img_name);
                                 }
 
@@ -460,6 +474,7 @@ class SickLeave extends BaseController
     public function processIt()
     {
         $cWfs = new WScenario();
+        $mMedical = new M_MedicalCertificate($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -475,16 +490,26 @@ class SickLeave extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $data = [
-                            'id'        => $_ID,
-                            'created_by' => $this->access->getSessionUser(),
-                            'updated_by' => $this->access->getSessionUser()
-                        ];
+                        // TODO : Get Document Medical Status In Progress And Draft
+                        $docMedical = $mMedical->where('trx_absent_id', $row->trx_absent_id)->whereIn('docstatus', ['DR', 'IP'])->first();
 
-                        $this->model->createAbsentDetail($data, $row);
+                        // TODO : Check if this submission have Sick Letter
+                        if (empty($row->image) && empty($row->image2) && empty($row->image3) && empty($row->img_medical)) {
+                            $response = message('error', true, 'Pengajuan ini belum ada Foto Surat Sakit maupun Keterangan Surat Sakit');
+                        } else if ($docMedical) {
+                            $response = message('error', true, "Pengajuan ini ada surat keterangan sakit yang masih pending dengan nomor : {$docMedical->documentno}");
+                        } else {
+                            $data = [
+                                'id'        => $_ID,
+                                'created_by' => $this->access->getSessionUser(),
+                                'updated_by' => $this->access->getSessionUser()
+                            ];
 
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                        $response = message('success', true, true);
+                            $this->model->createAbsentDetail($data, $row);
+
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                            $response = message('success', true, true);
+                        }
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                         $response = $this->save();
@@ -598,6 +623,130 @@ class SickLeave extends BaseController
         $pdf->Cell(63, 0, 'HRD', 0, 0, 'C');
 
         $this->response->setContentType('application/pdf');
-        $pdf->Output('detail-laporan,pdf', 'I');
+        $pdf->Output('detail-laporan.pdf', 'I');
+    }
+
+    public function getList()
+    {
+        if ($this->request->isAjax()) {
+            $post = $this->request->getVar();
+            $response = [];
+
+            try {
+                $mAccess = new M_AccessMenu($this->request);
+                $mEmployee = new M_Employee($this->request);
+
+                /**
+                 * Hak akses
+                 */
+                $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+                $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
+                $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+                $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+                if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                    $arrBranch = $arrAccess["branch"];
+                    $arrDiv = $arrAccess["division"];
+
+                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
+
+                    if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                        $arrMerge = implode(',', array_unique(array_merge($arrEmpBased, $arrEmployee)));
+
+                        $where = "trx_absent.md_employee_id IN ({$arrMerge})";
+                    } else if ($roleEmpRepren && !empty($this->session->get('md_employee_id'))) {
+                        $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
+                        $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
+                        $arrMerge = implode(',', array_unique(array_merge($arrEmpBased, $arrEmployee)));
+
+                        $where = "trx_absent.md_employee_id IN ({$arrMerge})";
+                    } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                        $arrEmp = implode(',', $arrEmployee);
+                        $where = "trx_absent.md_employee_id IN ({$arrEmp})";
+                    } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                        $arrEmp = implode(',', $arrEmpBased);
+                        $where = "trx_absent.md_employee_id IN ({$arrEmp})";
+                    }
+                } else if (!empty($this->session->get('md_employee_id'))) {
+                    $arrEmp = implode(',', $arrEmployee);
+                    $where = "trx_absent.md_employee_id IN ({$arrEmp})";
+                }
+
+                $where .= " AND trx_absent.md_employee_id != {$this->session->get('md_employee_id')}";
+                $where .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Sakit}";
+                $where .= " AND trx_absent.docstatus = 'DR'";
+                $where .= " AND trx_medical_certificate.trx_medical_certificate_id IS NULL";
+                $where .= " AND trx_absent.startdate = trx_absent.enddate";
+
+                if (isset($post['search'])) {
+                    $search = $post['search'];
+                    $where .= " AND trx_absent.documentno LIKE '%{$search}%'";
+                }
+
+                $list = $this->model->getSickLeaveSubmission($where)->getResult();
+
+                foreach ($list as $key => $row) :
+                    $response[$key]['id'] = $row->trx_absent_id;
+                    $response[$key]['text'] = $row->documentno . ' - ' . $row->employee_fullname;
+                endforeach;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    public function getDetail()
+    {
+        if ($this->request->isAjax()) {
+            $mEmpWork = new M_EmpWorkDay($this->request);
+            $mWorkDetail = new M_WorkDetail($this->request);
+            $mHoliday = new M_Holiday($this->request);
+            $post = $this->request->getVar();
+            $response = [];
+
+            try {
+                $holiday = $mHoliday->getHolidayDate();
+                $today = date('Y-m-d');
+                $list = $this->model->where('trx_absent_id', $post['trx_absent_id'])->first();
+
+                /**
+                 *  This Section for getting employee days off
+                 */
+                $workDay = $mEmpWork->where([
+                    'md_employee_id'    => $list->md_employee_id,
+                    'validfrom <='      => $today
+                ])->orderBy('validfrom', 'ASC')->first();
+
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND md_employee_work.md_employee_id = {$list->md_employee_id}";
+                $whereClause .= " AND md_work.md_work_id = {$workDay->md_work_id}";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $daysOff = getDaysOff($workDetail);
+
+                $dateRange = getDatesFromRange($list->startdate, $list->enddate, $holiday, 'Y-m-d', 'all', $daysOff);
+                $listDate = [];
+                foreach ($dateRange as $date) {
+                    $nextDateIsDaysOff = in_array(date('w', strtotime("$date +1 day")), $daysOff);
+                    $lastDateIsDaysOff = in_array(date('w', strtotime("$date -1 day")), $daysOff);
+                    $nextDateIsHoliday = in_array(date('Y-m-d', strtotime("$date +1 day")), $holiday);
+                    $lastDateIsHoliday = in_array(date('Y-m-d', strtotime("$date -1 day")), $holiday);
+
+                    if (!$nextDateIsDaysOff && !$lastDateIsDaysOff && !$nextDateIsHoliday && !$lastDateIsHoliday) {
+                        $listDate[] = ['id' => $date, 'text' => format_dmy($date, '-')];
+                    }
+                }
+
+                $list->date = $listDate;
+
+                $response = $list;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
     }
 }

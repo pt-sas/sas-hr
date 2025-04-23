@@ -1782,9 +1782,9 @@ class Validation
         ],
         'image'                 => [
             'label'             => 'foto',
-            'rules'             => 'uploaded[image]|max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
-                'uploaded'      => 'Mohon upload {field} dahulu',
+                // 'uploaded'      => 'Mohon upload {field} dahulu',
                 'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
@@ -3077,5 +3077,97 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ]
+    ];
+
+    public $proxy_special = [
+        'sys_user_from'          => [
+            'label'             => 'Pengguna',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'sys_user_to'          => [
+            'label'             => 'Wakil',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'startdate'                 => [
+            'label'            => 'Tanggal Mulai',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'enddate'                 => [
+            'label'            => 'Tanggal Selesai',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+
+        'line'                  => [
+            'label'             => 'List Role',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.sys_role_id_line'  => [
+            'label'             => 'Role',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} Line'
+            ]
+        ]
+
+    ];
+
+    public $medical_certificate = [
+        'trx_absent_id'          => [
+            'label'             => 'No Sakit',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_employee_id'          => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_division_id'          => [
+            'label'             => 'Divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'date'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'reason'                => [
+            'label'            => 'Alasan',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
     ];
 }

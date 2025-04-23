@@ -255,6 +255,7 @@ class WActivity extends BaseController
                         //! SAS Form Realisasi 
                         if ($docType->getIsRealization() === "Y") {
                             $this->entity->isapproved = "Y";
+                            $this->entity->approved_by = $user_by;
 
                             $subType = [
                                 100001 => 'S', // Sakit
@@ -276,6 +277,8 @@ class WActivity extends BaseController
                             $this->entity->docstatus = $state;
                             $this->entity->receiveddate = date("Y-m-d H:i:s");
                             $this->entity->isagree = "Y";
+                            $this->entity->approved_by = $user_by;
+                            $this->entity->isapproved = "Y";
                         }
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {

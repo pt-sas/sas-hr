@@ -4,44 +4,43 @@ namespace App\Entities;
 
 use CodeIgniter\Entity\Entity;
 
-class Absent extends Entity
+class MedicalCertificate extends Entity
 {
-    protected $trx_absent_id;
+    protected $trx_medical_certificate_id;
     protected $documentno;
+    protected $trx_absent_id;
     protected $md_employee_id;
-    protected $nik;
     protected $md_branch_id;
     protected $md_division_id;
-    protected $submissiondate;
-    protected $receiveddate;
-    protected $necessary;
     protected $submissiontype;
-    protected $startdate;
-    protected $enddate;
+    protected $submissiondate;
+    protected $date;
     protected $reason;
     protected $docstatus;
-    protected $image;
     protected $isapproved;
+    protected $receiveddate;
     protected $approveddate;
     protected $sys_wfscenario_id;
-    protected $isactive;
+    protected $pdf;
+    protected $approved_by;
     protected $created_by;
     protected $updated_by;
-    protected $md_leavetype_id;
-    protected $image2;
-    protected $image3;
-    protected $enddate_realization;
-    protected $isbranch;
-    protected $branch_to;
-    protected $reference_id;
-    protected $totaldays;
-    protected $img_medical;
 
     protected $dates   = [
         'created_at',
         'updated_at',
         'deleted_at',
     ];
+
+    public function getMedicalCertificateId()
+    {
+        return $this->attributes['trx_medical_certificate_id'];
+    }
+
+    public function setMedicalCertificateId($trx_medical_certificate_id)
+    {
+        $this->attributes['trx_medical_certificate_id'] = $trx_medical_certificate_id;
+    }
 
     public function getAbsentId()
     {
@@ -71,16 +70,6 @@ class Absent extends Entity
     public function setEmployeeId($md_employee_id)
     {
         $this->attributes['md_employee_id'] = $md_employee_id;
-    }
-
-    public function getNik()
-    {
-        return $this->attributes['nik'];
-    }
-
-    public function setNik($nik)
-    {
-        $this->attributes['nik'] = $nik;
     }
 
     public function getBranchId()
@@ -126,15 +115,6 @@ class Absent extends Entity
         $this->attributes['receiveddate'] = $receiveddate;
     }
 
-    public function getNecessary()
-    {
-        return $this->attributes['necessary'];
-    }
-
-    public function setNecessary($necessary)
-    {
-        $this->attributes['necessary'] = $necessary;
-    }
 
     public function getSubmissionType()
     {
@@ -146,30 +126,17 @@ class Absent extends Entity
         $this->attributes['submissiontype'] = $submissiontype;
     }
 
-    public function getStartDate()
+    public function getDate()
     {
         // if (!empty($this->attributes['startdate']))
         // return format_dmy($this->attributes['startdate'], "-");
 
-        return $this->attributes['startdate'];
+        return $this->attributes['date'];
     }
 
-    public function setStartDate($startdate)
+    public function setDate($date)
     {
-        $this->attributes['startdate'] = $startdate;
-    }
-
-    public function getEndDate()
-    {
-        // if (!empty($this->attributes['enddate']))
-        //     return format_dmy($this->attributes['enddate'], "-");
-
-        return $this->attributes['enddate'];
-    }
-
-    public function setEndDate($enddate)
-    {
-        $this->attributes['enddate'] = $enddate;
+        $this->attributes['date'] = $date;
     }
 
     public function getReason()
@@ -190,16 +157,6 @@ class Absent extends Entity
     public function setDocStatus($docstatus)
     {
         $this->attributes['docstatus'] = $docstatus;
-    }
-
-    public function getImage()
-    {
-        return $this->attributes['image'];
-    }
-
-    public function setImage($image)
-    {
-        $this->attributes['image'] = $image;
     }
 
     public function getIsApproved()
@@ -238,15 +195,6 @@ class Absent extends Entity
         $this->attributes['sys_wfscenario_id'] = $sys_wfscenario_id;
     }
 
-    public function getIsActive()
-    {
-        return $this->attributes['isactive'];
-    }
-
-    public function setIsActive($isactive)
-    {
-        return $this->attributes['isactive'] = $isactive;
-    }
 
     public function getCreatedAt()
     {
@@ -278,94 +226,23 @@ class Absent extends Entity
         $this->attributes['updated_by'] = $updated_by;
     }
 
-    public function getLeaveTypeId()
+    public function getPDF()
     {
-        return $this->attributes['md_leavetype_id'];
+        return $this->attributes['pdf'];
     }
 
-    public function setLeaveTypeId($md_leavetype_id)
+    public function setPDF($pdf)
     {
-        $this->attributes['md_leavetype_id'] = $md_leavetype_id;
+        $this->attributes['pdf'] = $pdf;
     }
 
-    public function getImage2()
+    public function getApprovedBy()
     {
-        return $this->attributes['image2'];
+        return $this->attributes['approved_by'];
     }
 
-    public function setImage2($image2)
+    public function setApprovedBy()
     {
-        $this->attributes['image2'] = $image2;
-    }
-
-    public function getImage3()
-    {
-        return $this->attributes['image3'];
-    }
-
-    public function setImage3($image3)
-    {
-        $this->attributes['image3'] = $image3;
-    }
-
-    public function getEndDateRealization()
-    {
-        return $this->attributes['enddate_realization'];
-    }
-
-    public function setEndDateRealization($enddate_realization)
-    {
-
-        $this->attributes['enddate_realization'] = $enddate_realization;
-    }
-
-    public function getBranchTo()
-    {
-        return $this->attributes['branch_to'];
-    }
-
-    public function setBranchTo($branch_to)
-    {
-        $this->attributes['branch_to'] = $branch_to;
-    }
-
-    public function getIsBranch()
-    {
-        return $this->attributes['isbranch'];
-    }
-
-    public function setIsBranch($isbranch)
-    {
-        return $this->attributes['isbranch'] = $isbranch;
-    }
-
-    public function getReferenceId()
-    {
-        return $this->attributes['reference_id'];
-    }
-
-    public function setReferenceId($reference_id)
-    {
-        $this->attributes['reference_id'] = $reference_id;
-    }
-
-    public function getTotalDays()
-    {
-        return $this->attributes['totaldays'];
-    }
-
-    public function setTotalDays($totaldays)
-    {
-        $this->attributes['totaldays'] = $totaldays;
-    }
-
-    public function getImageMedical()
-    {
-        return $this->attributes['img_medical'];
-    }
-
-    public function setImageMedical($img_medical)
-    {
-        $this->attributes['img_medical'] = $img_medical;
+        $this->attributes['approved_by'] = $approved_by;
     }
 }

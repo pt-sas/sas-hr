@@ -1062,7 +1062,6 @@ function getEmployee(elem, employee) {
 
   let url = ADMIN_URL + "karyawan/getList";
   formData.append("md_employee_id", id);
-
   field.empty();
 
   $.ajax({
@@ -1084,7 +1083,6 @@ function getEmployee(elem, employee) {
     success: function (result) {
       if (result.length) {
         field.append('<option value=""></option>');
-
         $.each(result, function (idx, item) {
           if (setSave === "detail")
             field
@@ -1424,3 +1422,206 @@ $(document).on("click", ".action-notif", function (e) {
     window.open(ADMIN_URL + menu, "_self");
   }
 });
+
+$(document).ready(function (evt) {
+  $("#form_proxy_special #sys_user_from")
+    .on("focus", function (e) {
+      prevData = this.value;
+    })
+    .change(function (evt) {
+      const _this = $(this);
+      const form = _this.closest("form");
+      const field = form.find("select[name=sys_user_to]");
+      const attrName = $(this).attr("name");
+      let user_id = this.value;
+
+      // create data
+      if (user_id !== "" && setSave === "add") {
+        field.empty();
+        _tableLine.clear().draw(false);
+        getUser(form, user_id, field);
+        getUserRole(form, user_id);
+      }
+
+      // update data
+      $.each(option, function (idx, elem) {
+        if (elem.fieldName === attrName && setSave !== "add") {
+          if (
+            user_id !== "" &&
+            user_id != elem.option_ID &&
+            _tableLine.data().any()
+          ) {
+            Swal.fire({
+              title: "Delete?",
+              text: "Are you sure you want to change all data ? ",
+              type: "warning",
+              showCancelButton: true,
+              confirmButtonColor: "#d33",
+              confirmButtonText: "Okay",
+              cancelButtonText: "Close",
+              reverseButtons: true,
+            }).then((data) => {
+              if (data.value) {
+                field.empty();
+                _tableLine.clear().draw(false);
+                getUser(form, user_id, field);
+                getUserRole(form, user_id);
+              } else {
+                form
+                  .find("select[name=" + attrName + "]")
+                  .val(elem.option_ID)
+                  .change();
+              }
+            });
+          }
+
+          if (
+            user_id !== "" &&
+            user_id != elem.option_ID &&
+            !_tableLine.data().any()
+          ) {
+            field.empty();
+            getUser(form, user_id, field);
+            getUserRole(form, user_id);
+          }
+
+          if (
+            typeof prev !== "undefined" &&
+            prev !== "" &&
+            user_id !== "" &&
+            prev != user_id &&
+            prev != elem.option_ID &&
+            !_tableLine.data().any()
+          ) {
+            field.empty();
+            _tableLine.clear().draw(false);
+            getUser(form, user_id, field);
+            getUserRole(form, user_id);
+          }
+        }
+      });
+
+      prevData = this.value;
+    });
+});
+
+function getUser(form, id, field) {
+  let formData = new FormData();
+  formData.append("sys_user_id", id);
+
+  $.ajax({
+    type: "POST",
+    url: ADMIN_URL + "user/getList",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+        $.each(result, function (idx, item) {
+          if (setSave === "detail")
+            field
+              .append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              )
+              .prop("disabled", true);
+          else
+            field.append(
+              '<option value="' + item.id + '">' + item.text + "</option>"
+            );
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
+
+function getUserRole(form, id) {
+  let formData = new FormData();
+  formData.append("sys_user_id", id);
+
+  $.ajax({
+    type: "POST",
+    url: ADMIN_URL + "proxy-khusus/getUserRole",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      if (result[0].success) {
+        let arrMsg = result[0].message;
+
+        if (arrMsg.line) {
+          if (_tableLine.context.length) {
+            let line = JSON.parse(arrMsg.line);
+
+            _tableLine.rows.add(line).draw(false);
+
+            const field = _tableLine.rows().nodes().to$().find("input, select");
+
+            $.each(field, function (index, item) {
+              const tr = $(this).closest("tr");
+
+              if (item.type !== "text") {
+                tr.find(
+                  "input:checkbox[name=" +
+                    item.name +
+                    "], select[name=" +
+                    item.name +
+                    "], input:radio[name=" +
+                    item.name +
+                    "]"
+                ).prop("disabled", true);
+              } else {
+                tr.find(
+                  "input:text[name=" +
+                    item.name +
+                    "], textarea[name=" +
+                    item.name +
+                    "]"
+                ).prop("readonly", true);
+              }
+            });
+          }
+        }
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
