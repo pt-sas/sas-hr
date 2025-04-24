@@ -78,9 +78,13 @@ class PermissionLeaveOffice extends BaseController
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
+            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+            if (!empty($empDelegation)) {
+                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
+            }
 
             if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
                 $arrBranch = $arrAccess["branch"];
@@ -88,21 +92,21 @@ class PermissionLeaveOffice extends BaseController
 
                 $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
+                if (!empty($empDelegation)) {
+                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
+                }
+
                 if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                     $where['md_employee.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
-                } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
-                    $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
-                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrMerge
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrEmployee
                     ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
                     $where['md_employee.md_employee_id'] = [
                         'value'     => $arrEmpBased
                     ];
@@ -110,11 +114,11 @@ class PermissionLeaveOffice extends BaseController
                     $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
                 }
             } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['trx_absent.md_employee_id'] = [
+                $where['md_employee.md_employee_id'] = [
                     'value'     => $arrEmployee
                 ];
             } else {
-                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Ijin_Keluar_Kantor;

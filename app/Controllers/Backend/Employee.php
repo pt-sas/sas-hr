@@ -111,7 +111,11 @@ class Employee extends BaseController
                     $where['md_employee.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $where['md_employee.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
                     $where['md_employee.md_employee_id'] = [
                         'value'     => $arrEmpBased
                     ];
