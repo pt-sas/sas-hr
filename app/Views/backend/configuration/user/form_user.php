@@ -53,7 +53,7 @@
                         <select class="form-control multiple-select" id="sys_role_id" name="sys_role_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($role as $row) : ?>
-                                <option value="<?= $row->sys_role_id; ?>"><?= $row->name; ?></option>
+                            <option value="<?= $row->sys_role_id; ?>"><?= $row->name; ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -66,7 +66,7 @@
                         <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($branch as $row) : ?>
-                                <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
+                            <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <small class="form-text text-danger" id="error_md_branch_id"></small>
@@ -80,7 +80,7 @@
                         <select class="form-control multiple-select" id="md_division_id" name="md_division_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($division as $row) : ?>
-                                <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
+                            <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <small class="form-text text-danger" id="error_md_division_id"></small>
@@ -94,7 +94,7 @@
                         <select class="form-control multiple-select" id="sys_emp_delegation_id"
                             name="sys_emp_delegation_id" multiple="multiple" style="width: 100%;">
                             <?php foreach ($employee as $row) : ?>
-                                <option value="<?= $row->getEmployeeId(); ?>"><?= $row->getValue(); ?></option>
+                            <option value="<?= $row['md_employee_id']; ?>"><?= $row['value']; ?></option>
                             <?php endforeach; ?>
                         </select>
                         <small class="form-text text-danger" id="error_sys_emp_delegation_id"></small>
