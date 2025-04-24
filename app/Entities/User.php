@@ -20,6 +20,7 @@ class User extends Entity
 	protected $created_by;
 	protected $updated_by;
 	protected $md_employee_id;
+	protected $md_levelling_id;
 
 	protected $dates   = [
 		'created_at',
@@ -165,5 +166,15 @@ class User extends Entity
 	public function setEmployeeId($md_employee_id)
 	{
 		$this->attributes['md_employee_id'] = $md_employee_id;
+	}
+
+	public function getLevellingId()
+	{
+		return $this->attributes['md_levelling_id'];
+	}
+
+	public function setLevellingId($md_levelling_id)
+	{
+		$this->attributes['md_levelling_id'] = $md_levelling_id;
 	}
 }

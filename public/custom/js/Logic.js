@@ -907,7 +907,6 @@ $("#form_exit_interview").on("change", "#reference_id", function (e) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
-        // console.log(result);
         if (result.length) {
           if (form.find("input[name=nik]").length)
             form.find("input[name=nik]").val(result[0].nik);
@@ -1132,14 +1131,12 @@ function getAssignmentDate(id, callback) {
   let url = `${SITE_URL}/getAssignmentDate`;
 
   const form = $("#form_office_duties, #form_special_office_duties");
-  console.log(form);
 
   $.ajax({
     url: url,
     type: "POST",
     data: { id: id },
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         let data = result[0].message;
         let tableHtml = `
@@ -1624,4 +1621,370 @@ function getUserRole(form, id) {
       showError(jqXHR, exception);
     },
   });
+}
+
+$("#form_medical_certificate").on("change", "#trx_absent_id", function (e) {
+  let _this = $(this);
+  const form = _this.closest("form");
+  let value = this.value;
+  let formData = new FormData();
+  const field = form.find("select[name=date]");
+
+  formData.append("trx_absent_id", value);
+
+  let url = ADMIN_URL + "sakit/getDetail";
+
+  field.empty();
+
+  if (value === "") {
+    if (form.find("select[name=md_employee_id]").length)
+      form
+        .find("select[name=md_employee_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+
+    if (form.find("select[name=md_branch_id]").length)
+      form
+        .find("select[name=md_branch_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+
+    if (form.find("select[name=md_division_id]").length)
+      form
+        .find("select[name=md_division_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+  }
+
+  if (value !== "")
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".x_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "facebook");
+      },
+      complete: function () {
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result && Object.keys(result).length > 0) {
+          if (form.find("select[name=md_branch_id]").length)
+            getBranch(_this, result.md_branch_id);
+
+          if (form.find("select[name=md_division_id]").length)
+            getDivision(_this, result.md_division_id);
+
+          if (form.find("select[name=md_employee_id]").length)
+            getEmployee(_this, result.md_employee_id);
+
+          if (field.length) {
+            field.append('<option value=""></option>');
+
+            let date = null;
+
+            if (option.length) {
+              $.each(option, function (i, item) {
+                if (item.fieldName == "date")
+                  date = moment(item.label).format("YYYY-MM-DD");
+              });
+            }
+
+            $.each(result.date, function (idx, item) {
+              if (date == item.id) {
+                if (setSave === "detail")
+                  field
+                    .append(
+                      '<option value="' +
+                        item.id +
+                        '" selected>' +
+                        item.text +
+                        "</option>"
+                    )
+                    .prop("disabled", true);
+                else
+                  field.append(
+                    '<option value="' +
+                      item.id +
+                      '" selected>' +
+                      item.text +
+                      "</option>"
+                  );
+              } else {
+                if (setSave === "detail")
+                  field
+                    .append(
+                      '<option value="' +
+                        item.id +
+                        '" selected>' +
+                        item.text +
+                        "</option>"
+                    )
+                    .prop("disabled", true);
+                else
+                  field.append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  );
+              }
+            });
+          }
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+});
+
+// Function to render PDF to canvas
+function renderPDF(pdfUrl, index) {
+  const canvas = document.getElementById("pdf-canvas-" + index);
+  const context = canvas.getContext("2d");
+
+  pdfjsLib.getDocument(pdfUrl).promise.then((pdf) => {
+    pdf.getPage(1).then((page) => {
+      const scale = 1.5;
+      const viewport = page.getViewport({ scale });
+
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      page.render({ canvasContext: context, viewport });
+    });
+  });
+}
+
+$(document).ready(function (evt) {
+  $("#form_delegation_transfer #employee_from")
+    .on("focus", function (e) {
+      prevData = this.value;
+    })
+    .change(function (evt) {
+      const _this = $(this);
+      const form = _this.closest("form");
+      const field = form.find("select[name=employee_to]");
+      const attrName = $(this).attr("name");
+      let employee_id = this.value;
+
+      // create data
+      if (employee_id !== "" && setSave === "add") {
+        field.empty();
+        _tableLine.clear().draw(false);
+        getEmployeeDetail(form, employee_id);
+        getEmployeeDelegation(form, employee_id);
+      }
+
+      // update data
+      $.each(option, function (idx, elem) {
+        if (elem.fieldName === attrName && setSave !== "add") {
+          if (
+            employee_id !== "" &&
+            employee_id != elem.option_ID &&
+            _tableLine.data().any()
+          ) {
+            Swal.fire({
+              title: "Delete?",
+              text: "Are you sure you want to change all data ? ",
+              type: "warning",
+              showCancelButton: true,
+              confirmButtonColor: "#d33",
+              confirmButtonText: "Okay",
+              cancelButtonText: "Close",
+              reverseButtons: true,
+            }).then((data) => {
+              if (data.value) {
+                field.empty();
+                _tableLine.clear().draw(false);
+                getEmployeeDetail(form, employee_id);
+                getEmployeeDelegation(form, employee_id);
+              } else {
+                form
+                  .find("select[name=" + attrName + "]")
+                  .val(elem.option_ID)
+                  .change();
+              }
+            });
+          }
+
+          if (
+            employee_id !== "" &&
+            employee_id != elem.option_ID &&
+            !_tableLine.data().any()
+          ) {
+            field.empty();
+            getEmployeeDetail(form, employee_id);
+            getEmployeeDelegation(form, employee_id);
+          }
+
+          if (
+            typeof prev !== "undefined" &&
+            prev !== "" &&
+            employee_id !== "" &&
+            prev != employee_id &&
+            prev != elem.option_ID &&
+            !_tableLine.data().any()
+          ) {
+            field.empty();
+            _tableLine.clear().draw(false);
+            getEmployeeDetail(form, employee_id);
+            getEmployeeDelegation(form, employee_id);
+          }
+        }
+      });
+
+      prevData = this.value;
+    });
+});
+
+function getEmployeeDelegation(elem, id) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  formData.append("md_employee_id", id);
+
+  $.ajax({
+    type: "POST",
+    url: ADMIN_URL + "transfer-duta/getEmployeeDelegation",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      if (result[0].success) {
+        let arrMsg = result[0].message;
+
+        if (arrMsg.line) {
+          if (_tableLine.context.length) {
+            let line = JSON.parse(arrMsg.line);
+
+            _tableLine.rows.add(line).draw(false);
+
+            const field = _tableLine.rows().nodes().to$().find("input, select");
+
+            $.each(field, function (index, item) {
+              const tr = $(this).closest("tr");
+
+              if (item.type !== "text") {
+                tr.find(
+                  "input:checkbox[name=" +
+                    item.name +
+                    "], select[name=" +
+                    item.name +
+                    "], input:radio[name=" +
+                    item.name +
+                    "]"
+                ).prop("disabled", true);
+              } else {
+                tr.find(
+                  "input:text[name=" +
+                    item.name +
+                    "], textarea[name=" +
+                    item.name +
+                    "]"
+                ).prop("readonly", true);
+              }
+            });
+          }
+        }
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
+
+function getEmployeeDetail(elem, employee_id) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  formData.append("md_employee_id", employee_id);
+
+  let url = ADMIN_URL + "karyawan/getDetail";
+
+  if (employee_id === "") {
+    if (form.find("input[name=nik]").length)
+      form.find("input[name=nik]").val(null);
+
+    if (form.find("input[name=fullname]").length)
+      form.find("input[name=fullname]").val(null);
+
+    if (form.find("select[name=md_branch_id]").length)
+      form
+        .find("select[name=md_branch_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+
+    if (form.find("select[name=md_division_id]").length)
+      form
+        .find("select[name=md_division_id]")
+        .val(null)
+        .change()
+        .prop("disabled", true);
+  }
+
+  if (employee_id !== "")
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".x_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "facebook");
+      },
+      complete: function () {
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result.length) {
+          if (form.find("input[name=nik]").length)
+            form.find("input[name=nik]").val(result[0].nik);
+
+          if (form.find("input[name=fullname]").length)
+            form.find("input[name=fullname]").val(result[0].fullname);
+
+          if (form.find("select[name=md_branch_id]").length)
+            getOptionBranch(form, result[0].md_branch_id);
+
+          if (form.find("select[name=md_division_id]").length)
+            getOptionDivision(form, result[0].md_division_id);
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
 }

@@ -3170,4 +3170,56 @@ class Validation
             ]
         ],
     ];
+
+    public $transfer_duta = [
+        'employee_from'          => [
+            'label'             => 'Duta Awal',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'employee_to'          => [
+            'label'             => 'Duta Tujuan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_division_id'          => [
+            'label'             => 'Divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'date'                 => [
+            'label'            => 'Tanggal',
+            'rules'            =>    'required',
+            'errors'        => [
+                'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'line'                  => [
+            'label'             => 'List Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.md_employee_id_line'  => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Please Insert the {field} Line'
+            ]
+        ]
+    ];
 }

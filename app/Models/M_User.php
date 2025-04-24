@@ -22,7 +22,8 @@ class M_User extends Model
 		'updated_at',
 		'created_by',
 		'updated_by',
-		'md_employee_id'
+		'md_employee_id',
+		'md_levelling_id'
 	];
 	protected $useTimestamps        = true;
 	protected $returnType           = 'App\Entities\User';
@@ -74,8 +75,10 @@ class M_User extends Model
 		if (count($arrParam) > 0) {
 			$this->builder->where($arrParam);
 		} else {
-			if (!empty($where)) {
+			if (!empty($where) && !empty($field)) {
 				$this->builder->where($field, $where);
+			} else if (!empty($where)) {
+				$this->builder->where($where);
 			}
 		}
 
@@ -115,12 +118,37 @@ class M_User extends Model
 
 			$divAccess->create($post);
 		}
+
+		if (isset($post['sys_emp_delegation_id']) && !empty($post['sys_emp_delegation_id'])) {
+			$empDelegation = new M_EmpDelegation($this->request);
+
+			$post['md_employee_id'] = explode(',', $post['sys_emp_delegation_id']);
+			$post['sys_user_id'] = $rows['id'];
+
+			$empDelegation->create($post);
+		}
 	}
 
 	public function deleteUserRole(array $rows)
 	{
 		$userRole = new M_UserRole($this->request);
+		$empDelegation = new M_EmpDelegation($this->request);
 
 		$userRole->where($this->primaryKey, $rows['id'])->delete();
+		$empDelegation->where($this->primaryKey, $rows['id'])->delete();
+	}
+
+	public function getUserEmployee($where)
+	{
+		$this->builder->select($this->table . '.*');
+
+		$this->builder->join('md_employee emp', 'emp.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+
+		$this->builder->where($where);
+
+		$this->builder->orderBy('emp.md_employee_id', 'ASC');
+
+		$query = $this->builder->get();
+		return $query;
 	}
 }

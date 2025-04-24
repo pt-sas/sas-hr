@@ -82,9 +82,13 @@ class SickLeave extends BaseController
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
+            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+            if (!empty($empDelegation)) {
+                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
+            }
 
             if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
                 $arrBranch = $arrAccess["branch"];
@@ -92,18 +96,14 @@ class SickLeave extends BaseController
 
                 $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
+                if (!empty($empDelegation)) {
+                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
+                }
+
                 if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                     $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
-                    $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
-                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['trx_absent.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
                 } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
@@ -118,11 +118,11 @@ class SickLeave extends BaseController
                     $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
                 }
             } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['trx_absent.md_employee_id'] = [
+                $where['md_employee.md_employee_id'] = [
                     'value'     => $arrEmployee
                 ];
             } else {
-                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Sakit;
@@ -174,6 +174,7 @@ class SickLeave extends BaseController
         $mRule = new M_Rule($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mMedical = new M_MedicalCertificate($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -320,6 +321,12 @@ class SickLeave extends BaseController
                         $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
+                        //TODO : Get Medical Letter
+                        $trxMedical = null;
+                        if (!empty($post['id'])) {
+                            $trxMedical = $mMedical->where(['trx_absent_id' => $post['id']])->whereIn('docstatus', ['CO', 'DR', 'IP'])->first();
+                        }
+
                         if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                         } else if ($presentNextDate && !($lastDate >= $subDate) && $work && is_null($attNotPresent)) {
@@ -334,6 +341,8 @@ class SickLeave extends BaseController
                             $response = message('success', false, "Ada kehadiran, tidak bisa mengajukan pada tanggal : [{$date}]");
                         } else if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                        } else if ($trxMedical) {
+                            $response = message('success', false, 'Tidak bisa mengedit pengajuan ini, dikarenakan sudah ada pengajuan Surat Keterangan Sakit');
                         } else {
                             $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
 

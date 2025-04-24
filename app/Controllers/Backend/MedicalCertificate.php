@@ -50,9 +50,13 @@ class MedicalCertificate extends BaseController
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
+            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+            if (!empty($empDelegation)) {
+                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
+            }
 
             if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
                 $arrBranch = $arrAccess["branch"];
@@ -60,15 +64,11 @@ class MedicalCertificate extends BaseController
 
                 $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+                if (!empty($empDelegation)) {
+                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
+                }
 
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if ($roleEmpRepren && empty($this->session->get('md_employee_id'))) {
-                    $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
-                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
+                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
                     $where['md_employee.md_employee_id'] = [

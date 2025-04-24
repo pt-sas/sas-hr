@@ -1350,7 +1350,6 @@ $(".save_form").click(function (evt) {
         hideLoadingForm(form.prop("id"));
       },
       success: function (result) {
-        console.log(result);
         if (result[0].success) {
           Toast.fire({
             type: "success",
@@ -2147,7 +2146,6 @@ function docProcess(id, status) {
             CURRENT_URL + "/processIt?id=" + id + "&docaction=" + docAction;
 
           $.getJSON(url, function (result) {
-            console.log(result);
             if (result[0].success) {
               if (result[0].message == true) {
                 Swal.fire({
@@ -4477,7 +4475,6 @@ function initSelectData(select, field = null, id = null) {
     let url = $(item).attr("data-url");
     let defaultID = $(item).attr("default-id");
     let defaultText = $(item).attr("default-text");
-    console.log(url);
 
     let lastParam = "";
 
@@ -4852,13 +4849,11 @@ function showFormData(form) {
       $(".main-panel").removeClass("is-loading");
     },
     success: function (result) {
-      console.log(result);
       if (result[0].success) {
         let arrMsg = result[0].message;
 
         if (arrMsg.header) {
           let data = arrMsg.header;
-          console.log(data);
           let length = data.length;
 
           if (length > 1) {

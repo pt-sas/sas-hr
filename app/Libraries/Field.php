@@ -305,29 +305,26 @@ class Field
      * @param [type] $text
      * @param array $array
      */
-    public function setDataSelect($table, $data, $field = 'id', $value, $text, array $array = [])
+    public function setDataSelect($table, $data, $field = 'id', $value, $text, array $array = [], $uniqueKey = null)
     {
         if ($array) {
-            $value = null;
-            $value = (array) $value;
+            $value = [];
 
-            foreach ($array as $row) :
-                $value[] = $row->{$field};
-            endforeach;
+            foreach ($array as $row) {
+                if ($uniqueKey)
+                    $value[] = $row->{$uniqueKey};
+                else
+                    $value[] = $row->{$field};
+            }
         }
 
-        foreach ($data as $row) :
-            if ($this->db->fieldExists($field, $table))
-                $row->{$field} = ([
-                    'id'    => $value,
-                    'name'  => $text
-                ]);
-            else
-                $row->{$field} = ([
-                    'id'    => $value,
-                    'name'  => $text
-                ]);
-        endforeach;
+        foreach ($data as $row) {
+            // if ($this->db->fieldExists($field, $table))
+            $row->{$field} = ([
+                'id'    => $value,
+                'name'  => $text
+            ]);
+        }
 
         return $data;
     }
