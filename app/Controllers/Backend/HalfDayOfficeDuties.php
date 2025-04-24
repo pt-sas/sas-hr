@@ -78,8 +78,13 @@ class HalfDayOfficeDuties extends BaseController
              * Hak akses
              */
             $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
             $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
             $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+            if (!empty($empDelegation)) {
+                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
+            }
 
             if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
                 $arrBranch = $arrAccess["branch"];
@@ -87,29 +92,33 @@ class HalfDayOfficeDuties extends BaseController
 
                 $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
 
+                if (!empty($empDelegation)) {
+                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
+                }
+
                 if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                     $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                    $where['trx_absent.md_employee_id'] = [
+                    $where['md_employee.md_employee_id'] = [
                         'value'     => $arrMerge
                     ];
                 } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
+                    $where['md_employee.md_employee_id'] = [
                         'value'     => $arrEmployee
                     ];
                 } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
+                    $where['md_employee.md_employee_id'] = [
                         'value'     => $arrEmpBased
                     ];
                 } else {
-                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
                 }
             } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['trx_absent.md_employee_id'] = [
+                $where['md_employee.md_employee_id'] = [
                     'value'     => $arrEmployee
                 ];
             } else {
-                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
+                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
             $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Tugas_Kantor_setengah_Hari;
