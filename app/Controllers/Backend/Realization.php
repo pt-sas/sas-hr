@@ -947,7 +947,8 @@ class Realization extends BaseController
         // Getting Working Hour
         $workDay = $mEmpWork->where([
             'md_employee_id'    => $md_employee_id,
-            'validfrom <='      => $today
+            'validfrom <='      => $today,
+            'validto >='        => $today
         ])->orderBy('validfrom', 'ASC')->first();
 
         $dayName = strtoupper(formatDay_idn($day));

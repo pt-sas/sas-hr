@@ -230,7 +230,8 @@ class Alpha extends BaseController
 
                     $workDay = $mEmpWork->where([
                         'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today
+                        'validfrom <='      => $today,
+                        'validto >='        => $today
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     $day = strtoupper(formatDay_idn($day));
@@ -570,7 +571,8 @@ class Alpha extends BaseController
                  */
                 $workDay = $mEmpWork->where([
                     'md_employee_id'    => $_id,
-                    'validfrom <='      => $today
+                    'validfrom <='      => $today,
+                    'validto >='        => $today
                 ])->orderBy('validfrom', 'ASC')->first();
 
                 $whereClause = "md_work_detail.isactive = 'Y'";

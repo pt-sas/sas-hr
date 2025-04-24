@@ -46,8 +46,6 @@ class User extends BaseController
 			$emp[] = ['md_employee_id' => $val->md_employee_id, 'value' => $val->value];
 		}
 
-		logMessage($emp);
-
 		$data = [
 			'role'		=> $role->where('isactive', 'Y')
 				->orderBy('name', 'ASC')
