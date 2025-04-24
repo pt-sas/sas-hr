@@ -36,6 +36,18 @@ class User extends BaseController
 		$mDiv = new M_Division($this->request);
 		$mEmployee = new M_Employee($this->request);
 
+		$employee = $mEmployee->where('isactive', 'Y')->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+			->orderBy('value', 'ASC')
+			->findAll();
+
+		$emp = [];
+
+		foreach ($employee as $val) {
+			$emp[] = ['md_employee_id' => $val->md_employee_id, 'value' => $val->value];
+		}
+
+		logMessage($emp);
+
 		$data = [
 			'role'		=> $role->where('isactive', 'Y')
 				->orderBy('name', 'ASC')
@@ -46,9 +58,7 @@ class User extends BaseController
 			'division'    => $mDiv->where('isactive', 'Y')
 				->orderBy('name', 'ASC')
 				->findAll(),
-			'employee'    => $mEmployee->where('isactive', 'Y')
-				->orderBy('value', 'ASC')
-				->findAll()
+			'employee'    => $emp
 		];
 
 		return $this->template->render('backend/configuration/user/v_user', $data);
