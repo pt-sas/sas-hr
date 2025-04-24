@@ -734,6 +734,14 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('keterangan-sakit/create', 'Backend\MedicalCertificate::create');
     $routes->get('keterangan-sakit/destroy/(:any)', 'Backend\MedicalCertificate::destroy/$1');
     $routes->get('keterangan-sakit/processIt', 'Backend\MedicalCertificate::processIt');
+
+    $routes->add('transfer-duta', 'Backend\DelegationTransfer::index');
+    $routes->match(['get', 'post'], 'transfer-duta/showAll', 'Backend\DelegationTransfer::showAll');
+    $routes->get('transfer-duta/show/(:any)', 'Backend\DelegationTransfer::show/$1');
+    $routes->post('transfer-duta/create', 'Backend\DelegationTransfer::create');
+    $routes->get('transfer-duta/destroy/(:any)', 'Backend\DelegationTransfer::destroy/$1');
+    $routes->get('transfer-duta/processIt', 'Backend\DelegationTransfer::processIt');
+    $routes->post('transfer-duta/getEmployeeDelegation', 'Backend\DelegationTransfer::getEmployeeDelegation');
 });
 
 /*

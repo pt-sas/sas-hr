@@ -34,6 +34,7 @@ class User extends BaseController
 		$role = new M_Role($this->request);
 		$mBranch = new M_Branch($this->request);
 		$mDiv = new M_Division($this->request);
+		$mEmployee = new M_Employee($this->request);
 
 		$data = [
 			'role'		=> $role->where('isactive', 'Y')
@@ -44,6 +45,9 @@ class User extends BaseController
 				->findAll(),
 			'division'    => $mDiv->where('isactive', 'Y')
 				->orderBy('name', 'ASC')
+				->findAll(),
+			'employee'    => $mEmployee->where('isactive', 'Y')
+				->orderBy('value', 'ASC')
 				->findAll()
 		];
 
@@ -140,6 +144,7 @@ class User extends BaseController
 		$mBranch = new M_Branch($this->request);
 		$mDiv = new M_Division($this->request);
 		$mRole = new M_Role($this->request);
+		$mEmpDelegation = new M_EmpDelegation($this->request);
 
 		if ($this->request->isAJAX()) {
 			$get = $this->request->getGet();
@@ -156,6 +161,7 @@ class User extends BaseController
 				$rowRoleAcc = $mUserRole->where($this->model->primaryKey, $id)->findAll();
 				$rowBranchAcc = $mBranchAcc->where($this->model->primaryKey, $id)->findAll();
 				$rowDivAcc = $mDivAcc->where($this->model->primaryKey, $id)->findAll();
+				$rowEmpDel = $mEmpDelegation->where($this->model->primaryKey, $id)->findAll();
 
 				if ($rowRoleAcc) {
 					$list = $this->field->setDataSelect($mUserRole->table, $list, $mRole->primaryKey, $mRole->primaryKey, $mRole->primaryKey, $rowRoleAcc);
@@ -167,6 +173,10 @@ class User extends BaseController
 
 				if ($rowDivAcc) {
 					$list = $this->field->setDataSelect($mDivAcc->table, $list, $mDiv->primaryKey, $mDiv->primaryKey, $mDiv->primaryKey, $rowDivAcc);
+				}
+
+				if ($rowEmpDel) {
+					$list = $this->field->setDataSelect($mEmployee->table, $list, $mEmpDelegation->primaryKey, $mEmployee->primaryKey, $mEmployee->primaryKey, $rowEmpDel, 'md_employee_id');
 				}
 
 				if ($list) {
@@ -183,7 +193,7 @@ class User extends BaseController
 					$fieldHeader = new \App\Entities\Table();
 					$fieldHeader->setTitle($list[0]->getUserName());
 					$fieldHeader->setTable($this->model->table);
-					$fieldHeader->setField([$mRole->primaryKey, $mBranch->primaryKey, $mDiv->primaryKey]);
+					$fieldHeader->setField([$mRole->primaryKey, $mBranch->primaryKey, $mDiv->primaryKey, $mEmpDelegation->primaryKey]);
 					$fieldHeader->setList($list);
 
 					$result = [

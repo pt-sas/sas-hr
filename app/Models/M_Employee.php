@@ -314,4 +314,33 @@ class M_Employee extends Model
 
 		return $this->builder->get();
 	}
+
+	public function getEmpDelegation($user_id)
+	{
+		$mConfig = new M_Configuration($this->request);
+		$mUser = new M_User($this->request);
+
+		$lvlConfig = $mConfig->where('name', 'IS_DUTA_CHECK_LEVEL_ACCESS')->first();
+		$user = $mUser->where($mUser->primaryKey, $user_id)->first();
+
+		$result = [];
+
+		$this->builder->select($this->table . '.md_employee_id');
+		$this->builder->join('sys_emp_delegation ed', "ed.md_employee_id = {$this->table}.md_employee_id", 'left');
+		$this->builder->where('ed.sys_user_id', $user_id);
+
+		if ($lvlConfig && $lvlConfig->value === "Y") {
+			$level = $user->md_levelling_id && $user->md_levelling_id != 0 ? $user->md_levelling_id : 1100000;
+
+			$this->builder->where("md_employee.md_levelling_id >= {$level}");
+		}
+
+		$employeeId = $this->builder->get()->getResult();
+
+		foreach ($employeeId as $val) {
+			$result[] = $val->md_employee_id;
+		}
+
+		return $result;
+	}
 }
