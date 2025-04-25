@@ -113,27 +113,47 @@ class User extends BaseController
 	public function create()
 	{
 		if ($this->request->getMethod(true) === 'POST') {
+			$mEmpDelegation = new M_EmpDelegation($this->request);
+			$mEmployee = new M_Employee($this->request);
 			$post = $this->request->getVar();
 
 			try {
-				$this->entity->fill($post);
+				$empDelegation = null;
 
-				// 	// if (!$this->validation->run($post, 'user')) {
-				// 	// 	$response =	$this->field->errorValidation($this->model->table, $post);
-				// 	// } else {
-				$response = $this->save();
+				if (!empty($post['sys_emp_delegation_id'])) {
+					$empList = explode(',', $post['sys_emp_delegation_id']);
+					foreach ($empList as $val) {
+						if (!empty($post['id'])) {
+							$empDelegation = $mEmpDelegation->where(['md_employee_id' => $val])->whereNotIn('sys_user_id', [$post['id']])->first();
+						} else {
+							$empDelegation = $mEmpDelegation->where(['md_employee_id' => $val])->first();
+						}
 
-				if (isset($response[0]["success"])) {
-					$id = $this->getID();
-
-					if ($this->isNew()) {
-						$id = $this->insertID;
-						$response[0]["primarykey"] = $id;
+						if ($empDelegation) {
+							break;
+						}
 					}
-
-					$response[0]["header"] = $this->getData($id);
 				}
-				// 	// }
+
+				if ($empDelegation) {
+					$employee = $mEmployee->find($empDelegation->md_employee_id);
+					$response = message('success', false, "Karyawan {$employee->value} sudah ada duta lain");
+				} else {
+					$this->entity->fill($post);
+					$response = $this->save();
+
+
+					if (isset($response[0]["success"])) {
+						$id = $this->getID();
+
+						if ($this->isNew()) {
+							$id = $this->insertID;
+							$response[0]["primarykey"] = $id;
+						}
+
+						$response[0]["header"] = $this->getData($id);
+					}
+				}
 			} catch (\Exception $e) {
 				$response = message('error', false, $e->getMessage());
 			}

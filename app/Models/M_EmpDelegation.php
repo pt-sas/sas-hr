@@ -36,17 +36,20 @@ class M_EmpDelegation extends Model
 
 		$data['isactive'] = setCheckbox(isset($post['isactive']));
 		$data['sys_user_id'] = $sys_user_id;
+		$result = false;
 
 		// Insert data
 		if (!isset($post['id'])) {
 			foreach ($md_employee_id as $value) :
-				$data['md_employee_id'] = $value;
-				$data['created_at'] = date('Y-m-d H:i:s');
-				$data['created_by'] = session()->get('sys_user_id');
-				$data['updated_at'] = date('Y-m-d H:i:s');
-				$data['updated_by'] = session()->get('sys_user_id');
+				if (!empty($value)) {
+					$data['md_employee_id'] = $value;
+					$data['created_at'] = date('Y-m-d H:i:s');
+					$data['created_by'] = session()->get('sys_user_id');
+					$data['updated_at'] = date('Y-m-d H:i:s');
+					$data['updated_by'] = session()->get('sys_user_id');
 
-				$result = $this->builder->insert($data);
+					$result = $this->builder->insert($data);
+				}
 			endforeach;
 		} else {
 			$list = $this->where("sys_user_id", $sys_user_id)->findAll();
@@ -68,14 +71,16 @@ class M_EmpDelegation extends Model
 
 			// Add new data when update
 			foreach ($md_employee_id as $value) :
-				if (!in_array($value, $arr)) {
-					$data['md_employee_id'] = $value;
-					$data['created_at'] = date('Y-m-d H:i:s');
-					$data['created_by'] = session()->get('sys_user_id');
-					$data['updated_at'] = date('Y-m-d H:i:s');
-					$data['updated_by'] = session()->get('sys_user_id');
+				if (!empty($value)) {
+					if (!in_array($value, $arr)) {
+						$data['md_employee_id'] = $value;
+						$data['created_at'] = date('Y-m-d H:i:s');
+						$data['created_by'] = session()->get('sys_user_id');
+						$data['updated_at'] = date('Y-m-d H:i:s');
+						$data['updated_by'] = session()->get('sys_user_id');
 
-					$result = $this->builder->insert($data);
+						$result = $this->builder->insert($data);
+					}
 				}
 			endforeach;
 		}

@@ -730,23 +730,25 @@ class SickLeave extends BaseController
                     'validto >='        => $today
                 ])->orderBy('validfrom', 'ASC')->first();
 
-                $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND md_employee_work.md_employee_id = {$list->md_employee_id}";
-                $whereClause .= " AND md_work.md_work_id = {$workDay->md_work_id}";
-                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-                $daysOff = getDaysOff($workDetail);
-
-                $dateRange = getDatesFromRange($list->startdate, $list->enddate, $holiday, 'Y-m-d', 'all', $daysOff);
                 $listDate = [];
-                foreach ($dateRange as $date) {
-                    $nextDateIsDaysOff = in_array(date('w', strtotime("$date +1 day")), $daysOff);
-                    $lastDateIsDaysOff = in_array(date('w', strtotime("$date -1 day")), $daysOff);
-                    $nextDateIsHoliday = in_array(date('Y-m-d', strtotime("$date +1 day")), $holiday);
-                    $lastDateIsHoliday = in_array(date('Y-m-d', strtotime("$date -1 day")), $holiday);
+                if ($workDay) {
+                    $whereClause = "md_work_detail.isactive = 'Y'";
+                    $whereClause .= " AND md_employee_work.md_employee_id = {$list->md_employee_id}";
+                    $whereClause .= " AND md_work.md_work_id = {$workDay->md_work_id}";
+                    $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                    if (!$nextDateIsDaysOff && !$lastDateIsDaysOff && !$nextDateIsHoliday && !$lastDateIsHoliday) {
-                        $listDate[] = ['id' => $date, 'text' => format_dmy($date, '-')];
+                    $daysOff = getDaysOff($workDetail);
+
+                    $dateRange = getDatesFromRange($list->startdate, $list->enddate, $holiday, 'Y-m-d', 'all', $daysOff);
+                    foreach ($dateRange as $date) {
+                        $nextDateIsDaysOff = in_array(date('w', strtotime("$date +1 day")), $daysOff);
+                        $lastDateIsDaysOff = in_array(date('w', strtotime("$date -1 day")), $daysOff);
+                        $nextDateIsHoliday = in_array(date('Y-m-d', strtotime("$date +1 day")), $holiday);
+                        $lastDateIsHoliday = in_array(date('Y-m-d', strtotime("$date -1 day")), $holiday);
+
+                        if (!$nextDateIsDaysOff && !$lastDateIsDaysOff && !$nextDateIsHoliday && !$lastDateIsHoliday) {
+                            $listDate[] = ['id' => $date, 'text' => format_dmy($date, '-')];
+                        }
                     }
                 }
 
