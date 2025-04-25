@@ -205,7 +205,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('sakit/processIt', 'Backend\SickLeave::processIt');
     $routes->get('sakit/print/(:any)', 'Backend\SickLeave::exportPDF/$1');
     $routes->match(['get', 'post'], 'sakit/getList', 'Backend\SickLeave::getList');
-    $routes->match(['get', 'post'], 'sakit/getDetail', 'Backend\Sickleave::getDetail');
+    $routes->post('sakit/getDetail', 'Backend\SickLeave::getDetail');
 
     $routes->add('cuti', 'Backend\Leave::index');
     $routes->match(['get', 'post'], 'cuti/showAll', 'Backend\Leave::showAll');

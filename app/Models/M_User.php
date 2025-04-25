@@ -119,7 +119,7 @@ class M_User extends Model
 			$divAccess->create($post);
 		}
 
-		if (isset($post['sys_emp_delegation_id']) && !empty($post['sys_emp_delegation_id'])) {
+		if (isset($post['sys_emp_delegation_id'])) {
 			$empDelegation = new M_EmpDelegation($this->request);
 
 			$post['md_employee_id'] = explode(',', $post['sys_emp_delegation_id']);

@@ -206,7 +206,8 @@ class Leave extends BaseController
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
                         'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today
+                        'validfrom <='      => $today,
+                        'validto >='        => $today
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -389,7 +390,8 @@ class Leave extends BaseController
 
                         $workDay = $mEmpWork->where([
                             'md_employee_id'    => $row->md_employee_id,
-                            'validfrom <='      => $today
+                            'validfrom <='      => $today,
+                            'validto >='        => $today
                         ])->orderBy('validfrom', 'ASC')->first();
 
                         //TODO : Get Work Detail

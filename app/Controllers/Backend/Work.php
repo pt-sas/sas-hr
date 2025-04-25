@@ -250,7 +250,8 @@ class Work extends BaseController
 
                 $work = $mEmpWork->where([
                     'md_employee_id'    => $employeeId,
-                    'validfrom <='      => $today
+                    'validfrom <='      => $today,
+                    'validto >='        => $today
                 ])->orderBy('validfrom', 'ASC')->first();
 
                 if ($work) {
