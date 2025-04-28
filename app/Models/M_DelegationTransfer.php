@@ -146,6 +146,8 @@ class M_DelegationTransfer extends Model
     {
         $mEmpDelegation = new M_EmpDelegation($this->request);
         $mTransferDetail = new M_DelegationTransferDetail($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $changeLog = new M_ChangeLog($this->request);
         $mUser = new M_User($this->request);
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
@@ -160,8 +162,11 @@ class M_DelegationTransfer extends Model
                 $result = false;
 
                 $oldDelegation = $mEmpDelegation->where(['sys_user_id' => $user_from->sys_user_id, 'md_employee_id' => $value->md_employee_id])->first();
+                $employee = $mEmployee->where('md_employee_id', $value->md_employee_id)->first();
+
                 if ($oldDelegation) {
                     $mEmpDelegation->delete($oldDelegation->sys_emp_delegation_id);
+                    $changeLog->insertLog($mEmpDelegation->table, 'md_employee_id', $oldDelegation->sys_emp_delegation_id, $employee->value, null, 'D', $user_from->name);
                 }
 
                 $anotherDelegation = $mEmpDelegation->where(['md_employee_id' => $value->md_employee_id])->first();
@@ -170,6 +175,8 @@ class M_DelegationTransfer extends Model
                     $entity->sys_user_id = $user_to->sys_user_id;
                     $entity->md_employee_id = $value->md_employee_id;
                     $result = $mEmpDelegation->save($entity);
+
+                    $changeLog->insertLog($mEmpDelegation->table, 'md_employee_id', $mEmpDelegation->getInsertID(), null, $employee->value, 'I', $user_to->name);
                 }
 
                 $entity = new \App\Entities\DelegationTransferDetail();

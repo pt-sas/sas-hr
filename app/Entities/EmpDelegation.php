@@ -6,6 +6,7 @@ use CodeIgniter\Entity;
 
 class EmpDelegation extends Entity
 {
+	protected $sys_emp_delegation_id;
 	protected $sys_user_id;
 	protected $md_employee_id;
 	protected $isactive;
@@ -18,6 +19,15 @@ class EmpDelegation extends Entity
 		'deleted_at',
 	];
 
+	public function getEmpDelegationId()
+	{
+		return $this->attributes['sys_emp_delegation_id'];
+	}
+
+	public function setEmpDelegationId($sys_emp_delegation_id)
+	{
+		$this->attributes['sys_emp_delegation_id'] = $sys_emp_delegation_id;
+	}
 	public function getUserId()
 	{
 		return $this->attributes['sys_user_id'];
