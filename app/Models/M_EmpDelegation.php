@@ -49,14 +49,14 @@ class M_EmpDelegation extends Model
 
 				// Delete data when update
 				if (!in_array($row->md_employee_id, $md_employee_id)) {
-					$result = $this->delete($row->sys_emp_delegation_id);
+					$this->delete($row->sys_emp_delegation_id);
 
 					$changeLog->insertLog($this->table, 'md_employee_id', $row->sys_emp_delegation_id, $employee->value, null, 'D', $user->name);
 				} else {
 					$this->entity = new \App\Entities\EmpDelegation();
 					$this->entity->setEmpDelegationId($row->sys_emp_delegation_id);
 					$this->entity->setUpdatedBy(session()->get('sys_user_id'));
-					$result = $this->save($this->entity);
+					$this->save($this->entity);
 				}
 
 				// Get list data in this before update
@@ -88,8 +88,6 @@ class M_EmpDelegation extends Model
 				}
 			endforeach;
 		}
-
-		return $result;
 	}
 
 	// public function create($post)
