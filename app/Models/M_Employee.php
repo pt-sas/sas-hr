@@ -253,13 +253,17 @@ class M_Employee extends Model
 		return $employee;
 	}
 
-	public function getEmployeeBased($arrB, $arrD, $where = null)
+	public function getEmployeeBased($arrB = [], $arrD = [], $where = null)
 	{
 		$this->builder->select($this->table . '.md_employee_id');
 		$this->builder->join('md_employee_branch', 'md_employee_branch.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
 		$this->builder->join('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
-		$this->builder->whereIn('md_employee_branch.md_branch_id', $arrB);
-		$this->builder->whereIn('md_employee_division.md_division_id', $arrD);
+
+		if (!empty($arrB))
+			$this->builder->whereIn('md_employee_branch.md_branch_id', $arrB);
+
+		if (!empty($arrD))
+			$this->builder->whereIn('md_employee_division.md_division_id', $arrD);
 
 		if ($where) {
 			$this->builder->where($where);
@@ -319,15 +323,43 @@ class M_Employee extends Model
 	{
 		$mConfig = new M_Configuration($this->request);
 		$mUser = new M_User($this->request);
+		$mEmpBranch = new M_EmpBranch($this->request);
+		$mEmpDivision = new M_EmpDivision($this->request);
 
+		// Get Sys Config Checking Level Access
 		$lvlConfig = $mConfig->where('name', 'IS_DUTA_CHECK_LEVEL_ACCESS')->first();
 		$user = $mUser->where($mUser->primaryKey, $user_id)->first();
 
+		// If No User Data
+		if (empty($user->md_employee_id)) return [];
+
+		// Get Employee User Branch and Division
+		$arrB = array_column(
+			$mEmpBranch->select('md_branch_id')->where('md_employee_id', $user->md_employee_id)->findAll(),
+			'md_branch_id'
+		);
+
+		$arrD = array_column(
+			$mEmpDivision->select('md_division_id')->where('md_employee_id', $user->md_employee_id)->findAll(),
+			'md_division_id'
+		);
+
 		$result = [];
 
-		$this->builder->select($this->table . '.md_employee_id');
+		$this->builder->distinct();
+		$this->builder->select("{$this->table}.md_employee_id");
 		$this->builder->join('sys_emp_delegation ed', "ed.md_employee_id = {$this->table}.md_employee_id", 'left');
+		$this->builder->join('md_employee_branch eb', "{$this->table}.md_employee_id = eb.md_employee_id", 'left');
+		$this->builder->join('md_employee_division ediv', "{$this->table}.md_employee_id = ediv.md_employee_id", 'left');
 		$this->builder->where('ed.sys_user_id', $user_id);
+
+		if (!empty($arrB)) {
+			$this->builder->whereIn('eb.md_branch_id', $arrB);
+		}
+
+		if (!empty($arrD)) {
+			$this->builder->whereIn('ediv.md_division_id', $arrD);
+		}
 
 		if ($lvlConfig && $lvlConfig->value === "Y") {
 			$level = $user->md_levelling_id && $user->md_levelling_id != 0 ? $user->md_levelling_id : 1100000;
@@ -335,12 +367,8 @@ class M_Employee extends Model
 			$this->builder->where("md_employee.md_levelling_id >= {$level}");
 		}
 
-		$employeeId = $this->builder->get()->getResult();
+		$result = $this->builder->get()->getResult('array');
 
-		foreach ($employeeId as $val) {
-			$result[] = $val->md_employee_id;
-		}
-
-		return $result;
+		return array_column($result, 'md_employee_id');
 	}
 }

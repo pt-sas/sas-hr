@@ -18,6 +18,7 @@ use App\Models\M_Branch;
 use App\Models\M_Division;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
+use App\Models\M_Role;
 use App\Models\M_Status;
 use PHPExcel;
 use PHPExcel_IOFactory;
@@ -45,8 +46,8 @@ class Rpt_Employee extends BaseController
         $mEmpDivision = new M_EmpDivision($this->request);
         $mBranch = new M_Branch($this->request);
         $mDivision = new M_Division($this->request);
-        $mStatus = new M_Status($this->request);
 
+        $roleKACAB = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_KACAB');
         $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
         $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
 
@@ -55,25 +56,24 @@ class Rpt_Employee extends BaseController
         $empSession = $this->session->get('md_employee_id');
         $arrEmpStr = implode(" ,", $arrEmployee);
 
-        $BrchEmp = $mEmpBranch->where($this->model->primaryKey, $empSession)->findAll();
+        $BrchEmp = $mEmpBranch->select('md_branch_id')->where($this->model->primaryKey, $empSession)->findAll();
         $arrEmpBranch = [];
 
         if ($BrchEmp)
             foreach ($BrchEmp as $row) :
-                if (!empty($row->md_branch_id))
-                    $arrEmpBranch[] = $row->md_branch_id;
+                $arrEmpBranch[] = $row->md_branch_id;
             endforeach;
 
         $arrEmpBranchStr = implode(" ,", $arrEmpBranch);
 
-        $DivEmp = $mEmpDivision->where($this->model->primaryKey, $empSession)->findAll();
+        $DivEmp = $mEmpDivision->select('md_division_id')->where($this->model->primaryKey, $empSession)->findAll();
         $arrEmpDiv = [];
 
         if ($DivEmp)
             foreach ($DivEmp as $row) :
-                if (!empty($row->md_division_id))
-                    $arrEmpDiv[] = $row->md_division_id;
+                $arrEmpDiv[] = $row->md_division_id;
             endforeach;
+
         $arrEmpDivStr = implode(" ,", $arrEmpDiv);
 
         /** This for set WhereClause */
@@ -81,44 +81,59 @@ class Rpt_Employee extends BaseController
         $whereBranch = "";
         $whereDiv = "";
 
-        if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+        if ($roleKACAB) {
+            $empBranch = $this->model->getEmployeeBased($arrEmpBranch);
+
+            $whereEmp = "md_employee_id IN (" . implode(" ,", $empBranch) . ")";
+            $whereBranch = "md_branch_id IN ($arrEmpBranchStr)";
+
+            $allDiv = $mEmpDivision->select('md_division_id')->where('isactive', 'Y')->findAll();
+            $allDivEmp = [];
+
+            if ($allDiv)
+                foreach ($allDiv as $row) :
+                    $allDivEmp[] = $row->md_division_id;
+                endforeach;
+
+            $whereDiv = "md_division_id IN (" . implode(" ,", $allDivEmp) . ")";
+        } else if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
             $arrBranch = $arrAccess["branch"];
             $arrDiv = $arrAccess["division"];
 
-            $arrBrchStr = implode(" ,", $arrBranch);
-            $arrDivStr = implode(" ,", $arrDiv);
-
             $arrEmpBased = $this->model->getEmployeeBased($arrBranch, $arrDiv);
-            $arrEmpBasedStr = implode(" ,", $arrEmpBased);
 
             if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-                $arrBrchMerge = array_unique(array_merge($arrBranch, $arrEmpBranch));
-                $arrDivMerge = array_unique(array_merge($arrDiv, $arrEmpDiv));
+                $arrMerge = implode(" ,", array_unique(array_merge($arrEmpBased, $arrEmployee)));
+                $arrBrchMerge = implode(" ,", array_unique(array_merge($arrBranch, $arrEmpBranch)));
+                $arrDivMerge = implode(" ,", array_unique(array_merge($arrDiv, $arrEmpDiv)));
 
-                $arrEmpMergeStr = implode(" ,", $arrMerge);
-                $arrbrchMergeStr = implode(", ", $arrBrchMerge);
-                $arrDivMergeStr = implode(", ", $arrDivMerge);
-
-                $whereEmp = "md_employee_id IN ($arrEmpMergeStr)";
-                $whereBranch = "md_branch_id IN ($arrbrchMergeStr)";
-                $whereDiv = "md_division_id IN ($arrDivMergeStr)";
-            } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
-                $whereBranch = "md_branch_id IN ($arrBrchStr)";
-                $whereDiv = "md_division_id IN ($arrDivStr)";
-                $whereEmp = "md_employee_id IN ($arrEmpBasedStr)";
+                $whereEmp = "md_employee_id IN ($arrMerge)";
+                $whereBranch = "md_branch_id IN ($arrBrchMerge)";
+                $whereDiv = "md_division_id IN ($arrDivMerge)";
+            } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                $whereBranch = "md_branch_id IN (" . implode(" ,", $arrBranch) . ")";
+                $whereDiv = "md_division_id IN (" . implode(" ,", $arrDiv) . ")";
+                $whereEmp = "md_employee_id IN (" . implode(" ,", $arrEmpBased) . ")";
+            } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                $whereEmp = " md_employee_id IN ($arrEmpStr)";
+                $whereBranch = "md_branch_id IN ($arrEmpBranchStr)";
+                $whereDiv = "md_division_id IN ($arrEmpDivStr)";
             } else {
                 $whereEmp = "md_employee_id IN ($empSession)";
             }
         } else if (!empty($this->session->get('md_employee_id'))) {
-            $whereEmp = " md_employee_id IN ($arrEmpStr)";
+            $whereEmp = "md_employee_id IN ($arrEmpStr)";
             $whereBranch = "md_branch_id IN ($arrEmpBranchStr)";
             $whereDiv = "md_division_id IN ($arrEmpDivStr)";
         } else {
             $whereEmp = " md_employee_id IN ($empSession)";
         }
 
-        $data = ['ref_employee' => $this->model->getEmployeeValue($whereEmp)->getResult(), 'ref_branch' => $mBranch->where($whereBranch)->findAll(), 'ref_division' => $mDivision->where($whereDiv)->findAll(), 'ref_status' => $mStatus->where('isactive', 'Y')->findAll()];
+        $data = [
+            'ref_employee' => $this->model->getEmployeeValue($whereEmp)->getResult(),
+            'ref_branch' => $mBranch->select('md_branch_id, name')->where($whereBranch)->findAll(),
+            'ref_division' => $mDivision->select('md_division_id, name')->where($whereDiv)->findAll()
+        ];
 
         return $this->template->render('report/employee/v_employee', $data);
     }
@@ -138,6 +153,7 @@ class Rpt_Employee extends BaseController
         $mEmpCourses = new M_EmpCourse($this->request);
         $mEmpContact = new M_EmpContact($this->request);
         $mEmpLicense = new M_EmpLicense($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
 
         if (isset($post['md_branch_id']))
             $md_branch_id = implode(", ", $post['md_branch_id']);
@@ -205,9 +221,11 @@ class Rpt_Employee extends BaseController
         $test;
 
         /** Where clause for checking access*/
+        $roleKACAB = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_KACAB');
         $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
         $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
         $arrEmployee = $this->model->getChartEmployee($this->session->get('md_employee_id'));
+        $arrEmpStr = implode(" ,", $arrEmployee);
 
         $whereClause = "isactive = 'Y'";
 
@@ -223,26 +241,36 @@ class Rpt_Employee extends BaseController
             $whereClause .= " AND md_employee_id IN ($md_employee_id)";
         } else {
             // This if for set employee_id when user dont choose any of one employee
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+            if ($roleKACAB) {
+                $BrchEmp = $mEmpBranch->select('md_branch_id')->where($this->model->primaryKey, $this->session->get('md_employee_id'))->findAll();
+                $arrEmpBranch = [];
+
+                if ($BrchEmp)
+                    foreach ($BrchEmp as $row) :
+                        $arrEmpBranch[] = $row->md_branch_id;
+                    endforeach;
+
+                $empBranch = $this->model->getEmployeeBased($arrEmpBranch);
+                $whereClause .= " AND md_employee_id IN (" . implode(" ,", $empBranch) . ")";
+            } else if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
                 $arrBranch = $arrAccess["branch"];
                 $arrDiv = $arrAccess["division"];
 
                 $arrEmpBased = $this->model->getEmployeeBased($arrBranch, $arrDiv);
-                $arrEmpBasedStr = implode(" ,", $arrEmpBased);
 
                 if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-                    $arrMergeStr = implode(" ,", $arrMerge);
+                    $arrMerge = implode(" ,", array_unique(array_merge($arrEmpBased, $arrEmployee)));
 
-                    $whereClause .= " AND md_employee_id IN ($arrMergeStr)";
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id')) || $roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $whereClause .= " AND md_employee_id IN ($arrEmpBasedStr)";
+                    $whereClause .= " AND md_employee_id IN ($arrMerge)";
+                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                    $whereClause .= " AND md_employee_id IN (" . implode(" ,", $arrEmpBased) . ")";
+                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                    $whereClause .= " AND md_employee_id IN ($arrEmpStr)";
                 } else {
                     $whereClause .= " AND md_employee_id IN (" . $this->session->get('md_employee_id') . ")";
                 }
             } else if (!empty($this->session->get('md_employee_id'))) {
-                $arrEmployee = implode(" ,", $arrEmployee);
-                $whereClause .= " AND md_employee_id IN ($arrEmployee)";
+                $whereClause .= " AND md_employee_id IN ($arrEmpStr)";
             } else {
                 $whereClause .= " AND md_employee_id IN (" . $this->session->get('md_employee_id') . ")";
             }
