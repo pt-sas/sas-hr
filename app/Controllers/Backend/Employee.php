@@ -436,13 +436,19 @@ class Employee extends BaseController
                 $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
                 $arrEmployee = $this->model->getChartEmployee($this->session->get('md_employee_id'));
 
+                $status = ["Y"];
+
+                if (!empty($post["name"]) && $post['name'] === "AccessAll") {
+                    $status = ["Y", "N"];
+                }
+
                 if (!empty($empDelegation)) {
                     $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
                 }
 
                 if (isset($post['search'])) {
                     if (!empty($post['name'])) {
-                        if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"]) && $post['name'] === "Access") {
+                        if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"]) && ($post['name'] === "Access" || $post['name'] === "AccessAll")) {
                             $arrBranch = $arrAccess["branch"];
                             $arrDiv = $arrAccess["division"];
 
@@ -455,61 +461,59 @@ class Employee extends BaseController
                             if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                                 $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                                $list = $this->model->where([
-                                    'isactive'          => 'Y',
-                                ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                                $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                     ->whereIn('md_employee_id', $arrMerge)
+                                    ->whereIn('isactive', $status)
                                     ->like('value', $post['search'])
                                     ->orderBy('value', 'ASC')
                                     ->findAll();
                             } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                                $list = $this->model->where([
-                                    'isactive'          => 'Y',
-                                ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                                $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                     ->whereIn('md_employee_id', $arrEmployee)
+                                    ->whereIn('isactive', $status)
                                     ->like('value', $post['search'])
                                     ->orderBy('value', 'ASC')
                                     ->findAll();
                             } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                                $list = $this->model->where([
-                                    'isactive'          => 'Y',
-                                ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                                $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                     ->whereIn('md_employee_id', $arrEmpBased)
+                                    ->whereIn('isactive', $status)
                                     ->like('value', $post['search'])
                                     ->orderBy('value', 'ASC')
                                     ->findAll();
                             } else {
-                                $list = $this->model->where([
-                                    'isactive'          => 'Y',
-                                ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                                $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                     ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
+                                    ->whereIn('isactive', $status)
                                     ->like('value', $post['search'])
                                     ->orderBy('value', 'ASC')
                                     ->findAll();
                             }
-                        } else if (!empty($this->session->get('md_employee_id')) && $post['name'] === "Access") {
-                            $list = $this->model->where([
-                                'isactive'          => 'Y'
-                            ])->whereIn('md_employee_id', $arrEmployee)
+                        } else if (!empty($this->session->get('md_employee_id')) && ($post['name'] === "Access" || $post['name'] === "AccessAll")) {
+                            $list = $this->model->whereIn('md_employee_id', $arrEmployee)
                                 ->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                                ->whereIn('isactive', $status)
+                                ->like('value', $post['search'])
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         } else {
                             $list = $this->model->where([
-                                'isactive'          => 'Y',
                                 'md_employee_id'    => $this->session->get('md_employee_id')
                             ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                                ->whereIn('isactive', $status)
+                                ->like('value', $post['search'])
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         }
                     } else {
-                        $list = $this->model->where(['isactive' => 'Y'])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                        $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                            ->whereIn('isactive', $status)
                             ->like('value', $post['search'])
                             ->orderBy('value', 'ASC')
                             ->findAll();
                     }
                 } else if (!empty($post['name'])) {
-                    if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"]) && $post['name'] === "Access") {
+                    if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"]) && ($post['name'] === "Access" || $post['name'] === "AccessAll")) {
                         $arrBranch = $arrAccess["branch"];
                         $arrDiv = $arrAccess["division"];
 
@@ -521,46 +525,41 @@ class Employee extends BaseController
                         if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
                             $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
 
-                            $list = $this->model->where([
-                                'isactive'          => 'Y',
-                            ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                            $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                 ->whereIn('md_employee_id', $arrMerge)
+                                ->whereIn('isactive', $status)
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                            $list = $this->model->where([
-                                'isactive'          => 'Y',
-                            ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                            $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                 ->whereIn('md_employee_id', $arrEmployee)
+                                ->whereIn('isactive', $status)
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                            $list = $this->model->where([
-                                'isactive'          => 'Y',
-                            ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                            $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                 ->whereIn('md_employee_id', $arrEmpBased)
+                                ->whereIn('isactive', $status)
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         } else {
-                            $list = $this->model->where([
-                                'isactive'          => 'Y',
-                            ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                            $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                                 ->whereIn('md_employee_id', $this->session->get('md_employee_id'))
+                                ->whereIn('isactive', $status)
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         }
-                    } else if (!empty($this->session->get('md_employee_id')) && $post['name'] === "Access") {
-                        $list = $this->model->where([
-                            'isactive'          => 'Y'
-                        ])->whereIn('md_employee_id', $arrEmployee)
+                    } else if (!empty($this->session->get('md_employee_id')) && ($post['name'] === "Access" || $post['name'] === "AccessAll")) {
+                        $list = $this->model->whereIn('md_employee_id', $arrEmployee)
+                            ->whereIn('isactive', $status)
                             ->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                             ->orderBy('value', 'ASC')
                             ->findAll();
                     } else {
                         $list = $this->model->where([
-                            'isactive'          => 'Y',
                             'md_employee_id'    => $this->session->get('md_employee_id')
                         ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                            ->whereIn('isactive', $status)
                             ->orderBy('value', 'ASC')
                             ->findAll();
                     }
@@ -570,9 +569,8 @@ class Employee extends BaseController
                     ])->orderBy('value', 'ASC')
                         ->findAll();
                 } else {
-                    $list = $this->model->where([
-                        'isactive'          => 'Y'
-                    ])->orderBy('value', 'ASC')
+                    $list = $this->model->whereIn('isactive', $status)
+                        ->orderBy('value', 'ASC')
                         ->findAll();
                 }
 

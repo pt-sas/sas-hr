@@ -14,8 +14,10 @@ class DelegationTransfer extends Entity
     protected $md_division_id;
     protected $submissiontype;
     protected $submissiondate;
-    protected $date;
+    protected $startdate;
+    protected $enddate;
     protected $reason;
+    protected $ispermanent;
     protected $docstatus;
     protected $isapproved;
     protected $receiveddate;
@@ -110,14 +112,27 @@ class DelegationTransfer extends Entity
     {
         $this->attributes['submissiondate'] = $submissiondate;
     }
-    public function getDate()
+    public function getStartDate()
     {
-        return $this->attributes['date'];
+        return $this->attributes['startdate'];
     }
 
-    public function setDate($date)
+    public function setStartDate($startdate)
     {
-        $this->attributes['date'] = $date;
+        $this->attributes['startdate'] = $startdate;
+    }
+
+    public function getEndDate()
+    {
+        return $this->attributes['enddate'];
+    }
+
+    public function setEndDate($enddate)
+    {
+        // if (empty($this->attributes['enddate']))
+        //     return null;
+
+        $this->attributes['enddate'] = $enddate;
     }
 
     public function getReason()
@@ -129,6 +144,17 @@ class DelegationTransfer extends Entity
     {
         $this->attributes['reason'] = $reason;
     }
+
+    public function getIsPermanent()
+    {
+        return $this->attributes['ispermanent'];
+    }
+
+    public function setIsPermanent($ispermanent)
+    {
+        $this->attributes['ispermanent'] = $ispermanent;
+    }
+
 
     public function getDocStatus()
     {

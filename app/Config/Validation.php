@@ -3200,11 +3200,18 @@ class Validation
                 'required'      => 'Mohon pilih {field} dahulu'
             ]
         ],
-        'date'                 => [
-            'label'            => 'Tanggal',
+        'startdate'                 => [
+            'label'            => 'Tanggal Mulai Pengalihan',
             'rules'            =>    'required',
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'enddate'                 => [
+            'label'            => 'Tanggal Pengalihan Berakhir',
+            'rules'            => 'required_based_on_checkbox[ispermanent,N]',
+            'errors'        => [
+                'required_based_on_checkbox'    => 'Mohon mengisi {field} dahulu'
             ]
         ],
         'line'                  => [

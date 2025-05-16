@@ -6,7 +6,7 @@
                 <div class="form-group">
                     <label for="employee_from">Duta Awal <span class="required">*</span></label>
                     <select class="form-control select-data" id="employee_from" name="employee_from"
-                        data-url="employee/getList/$Access">
+                        data-url="employee/getList/$AccessAll">
                         <option value="">Pilih Pengguna</option>
                     </select>
                     <small class="form-text text-danger" id="error_employee_from"></small>
@@ -19,7 +19,7 @@
                         data-url="employee/getList/$Access">
                         <option value="">Pilih Pengguna</option>
                     </select>
-                    <small class="form-text text-danger" id="error_employee_to"></small>
+                    <small class=" form-text text-danger" id="error_employee_to"></small>
                 </div>
             </div>
             <div class="col-md-6">
@@ -64,17 +64,37 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="date">Tanggal Peralihan <span class="required">*</span></label>
+                    <label for="startdate">Tanggal Mulai Pengalihan <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepicker" name="date">
+                        <input type="text" class="form-control datepicker-start" name="startdate">
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
                     </div>
-                    <small class="form-text text-danger" id="error_date"></small>
+                    <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
             </div>
-            <div class="col-md-3"></div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="enddate">Tanggal Pengalihan Berakhir <span class="required">*</span></label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control datepicker-end" name="enddate">
+                        <span class="input-icon-addon">
+                            <i class="fa fa-calendar"></i>
+                        </span>
+                    </div>
+                    <small class="form-text text-danger" id="error_enddate"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input" id="ispermanent" name="ispermanent" checked
+                            hide-field="enddate">
+                        <span class="form-check-sign">Permanent</span>
+                    </label>
+                </div>
+            </div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="reason">Alasan</label>

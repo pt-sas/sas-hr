@@ -50,6 +50,8 @@ $routes->get('cron-send-absent-summary', 'Backend\Attendance::toDoSendAbsentSumm
 $routes->get('cron-delete-attendance-summary', 'Backend\Attendance::toDoDeleteAttSummary');
 $routes->get('cron-proxy-reguler', 'Backend\User::proxyReguler');
 $routes->get('cron-return-proxy', 'Backend\ProxySpecial::proxySwitching');
+$routes->get('cron-delegation-transfer', 'Backend\DelegationTransfer::delegationSwitching');
+$routes->get('cron-delegation-absent', 'Backend\User::sendEmailWhenDelegationAbsent');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
 

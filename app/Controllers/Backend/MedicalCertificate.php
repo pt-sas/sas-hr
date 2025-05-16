@@ -144,7 +144,7 @@ class MedicalCertificate extends BaseController
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $post["submissiontype"] = $this->model->Pengajuan_Surat_Keterangan_Sakit;
-                    $post["necessary"] = 'MC';
+                    $post["necessary"] = 'KS';
                     $this->entity->fill($post);
 
                     $trx = $this->model->where('trx_absent_id',  $post['trx_absent_id'])->whereIn('docstatus', ['CO', 'IP'])->first();

@@ -226,7 +226,7 @@ class M_Employee extends Model
 					FROM md_employee e
 					LEFT JOIN md_employee_division ed ON ed.md_employee_id = e.md_employee_id
 					LEFT JOIN md_employee_branch eb ON eb.md_employee_id = e.md_employee_id
-					WHERE e.isactive = 'Y'";
+					WHERE e.isactive IN ('Y', 'N')";
 
 			if ($row->getLevellingId() == 100004) {
 				$sql .= "AND (e.superior_id = " . $id . "

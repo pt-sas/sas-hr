@@ -17,6 +17,7 @@ use App\Models\M_UserRole;
 use App\Models\M_NotificationText;
 use Html2Text\Html2Text;
 use App\Models\M_Absent;
+use App\Models\M_Levelling;
 use App\Models\M_ProxySpecial;
 use Config\Services;
 
@@ -402,5 +403,79 @@ class User extends BaseController
 				}
 			}
 		}
+	}
+
+	public function sendEmailWhenDelegationAbsent()
+	{
+		$mEmpDelegation = new M_EmpDelegation($this->request);
+		$mAttendance = new M_Attendance($this->request);
+		$mNotifText = new M_NotificationText($this->request);
+		$mUser = new M_User($this->request);
+		$cMail = new Mail();
+
+		$today = date('Y-m-d');
+		$strDate = date('d/M/Y', strtotime($today));
+		$userList = $mEmpDelegation->select('sys_user_id')->distinct()->findAll();
+
+		$dataNotif = $mNotifText->where('name', 'Duta Tidak Hadir')->first();
+
+		foreach ($userList as $value) {
+			$user = $this->model->where('sys_user_id', $value->sys_user_id)->first();
+
+			if ($user->md_employee_id) {
+				$where = "md_employee.md_employee_id = {$user->md_employee_id}";
+				$where .= " AND v_attendance.date = '{$today}'";
+				$empAttendance = $mAttendance->getAttendance($where)->getRow();
+
+				if (!$empAttendance) {
+					$managerID = $this->getEmployeeManagerID($user->md_employee_id);
+					$emailManager = $mUser->select('email')->where(['md_employee_id' => $managerID, 'isactive' => 'Y'])->first();
+
+					$message = $dataNotif->getText();
+					$message = str_replace(['(Var1)', '(Var2)'], [$user->username, $strDate], $message);
+
+					$subject = $dataNotif->getSubject();
+					$message = new Html2Text($message);
+					$message = $message->getText();
+
+					if ($emailManager->email) {
+						$cMail->sendEmail($emailManager->email, $subject, $message, null, "SAS HR");
+					}
+				}
+			}
+		}
+	}
+
+	private function getEmployeeManagerID($employeeID)
+	{
+		$mEmployee = new M_Employee($this->request);
+		$mLevelling = new M_Levelling($this->request);
+
+		$employee = $mEmployee->where('md_employee_id', $employeeID)->first();
+		$lvlManager = $mLevelling->where('name', 'MANAGER')->first();
+
+		$superiorID = $employee->superior_id;
+		$level = $employee->md_levelling_id;
+		$result = 0;
+		$maxLoop = 6;
+
+		while ($level > $lvlManager->md_levelling_id && $maxLoop-- > 0) {
+			if (!$superiorID) break;
+
+			$superior = $mEmployee->where('md_employee_id', $superiorID)->first();
+
+			if ($superior) {
+				$superiorID = $superior->superior_id;
+				$level = $superior->md_levelling_id;
+
+				if ($level == $lvlManager->md_levelling_id) {
+					$result = $superior->md_employee_id;
+				}
+			} else {
+				break;
+			}
+		}
+
+		return $result;
 	}
 }

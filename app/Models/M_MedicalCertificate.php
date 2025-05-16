@@ -180,7 +180,7 @@ class M_MedicalCertificate extends Model
             $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera', 0, 0, 'L', false, '', 0, false);
             $pdf->Cell(50, 0, 'No Form : ' . $list->documentno, 0, 1, 'L', false, '', 0, false);
             $pdf->setFont('helvetica', 'B', 20);
-            $pdf->Cell(0, 25, 'FORM KETERANGAN SAKIT', 0, 1, 'C');
+            $pdf->Cell(0, 25, 'SURAT KETERANGAN SAKIT', 0, 1, 'C');
             $pdf->setFont('helvetica', '', 12);
             //Ini untuk bagian field nama dan tanggal pengajuan
             $pdf->Cell(30, 0, 'Nama ', 0, 0, 'L', false, '', 0, false);
