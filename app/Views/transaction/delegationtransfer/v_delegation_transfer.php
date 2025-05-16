@@ -15,9 +15,10 @@
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Tanggal Pengajuan</th>
-                <th>Tanggal Peralihan</th>
+                <th>Tanggal Pengalihan</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
+                <th>Permanent</th>
                 <th>Doc Status</th>
                 <th>Createdby</th>
                 <th>Actions</th>

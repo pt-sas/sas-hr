@@ -103,4 +103,28 @@ class SASRules
 
         return true; // Valid
     }
+
+    /**
+     * Check field data based on
+     * Example:
+     * required_based_on_checkbox[field,value]
+     * required_based_on_checkbox[ispermanent,N]
+     * 
+     * @param string|null $str
+     * @param string      $fields
+     * @param array       $data
+     *
+     * @return bool
+     */
+    public function required_based_on_checkbox(?string $str, string $field, array $data): bool
+    {
+        [$checkboxField, $checkboxValue] = array_pad(explode(',', $field), 2, null);
+
+        // Jika field checkbox tidak ada atau nilainya bukan "Y", maka enddate wajib
+        if (isset($data[$checkboxField]) && $data[$checkboxField] === $checkboxValue) {
+            return !empty($str);
+        }
+
+        return true;
+    }
 }

@@ -18,8 +18,10 @@ class M_DelegationTransfer extends Model
         'md_division_id',
         'submissiontype',
         'submissiondate',
-        'date',
+        'startdate',
+        'enddate',
         'reason',
+        'ispermanent',
         'docstatus',
         'isapproved',
         'approved_by',
@@ -47,9 +49,10 @@ class M_DelegationTransfer extends Model
         'mb.name',
         'dv.name',
         'trx_delegation_transfer.submissiondate',
-        'trx_delegation_transfer.date',
-        'trx_delegation_transfer.approveddate',
+        'trx_delegation_transfer.startdate',
+        'trx_delegation_transfer.receiveddate',
         'trx_delegation_transfer.reason',
+        'trx_delegation_transfer.ispermanent',
         'trx_delegation_transfer.docstatus',
         'uc.name'
     ];
@@ -60,9 +63,11 @@ class M_DelegationTransfer extends Model
         'mb.name',
         'dv.name',
         'trx_delegation_transfer.submissiondate',
-        'trx_delegation_transfer.date',
+        'trx_delegation_transfer.startdate',
+        'trx_delegation_transfer.enddate',
         'trx_delegation_transfer.approveddate',
         'trx_delegation_transfer.reason',
+        'trx_delegation_transfer.ispermanent',
         'trx_delegation_transfer.docstatus',
         'uc.name'
     ];
@@ -144,46 +149,74 @@ class M_DelegationTransfer extends Model
 
     public function doAfterUpdate(array $rows)
     {
-        $mEmpDelegation = new M_EmpDelegation($this->request);
         $mTransferDetail = new M_DelegationTransferDetail($this->request);
-        $mEmployee = new M_Employee($this->request);
-        $changeLog = new M_ChangeLog($this->request);
         $mUser = new M_User($this->request);
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
         $sql = $this->find($ID);
         $line = $mTransferDetail->where($this->primaryKey, $ID)->findAll();
 
-        if ($sql->docstatus === "CO" && !empty($line)) {
+        $today = date('Y-m-d');
+
+        if ($sql->docstatus === "CO" && !empty($line) && (date('Y-m-d', strtotime($sql->startdate)) <= $today)) {
             $user_from = $mUser->where('md_employee_id', $sql->employee_from)->first();
             $user_to = $mUser->where('md_employee_id', $sql->employee_to)->first();
 
             foreach ($line as $value) {
-                $result = false;
-
-                $oldDelegation = $mEmpDelegation->where(['sys_user_id' => $user_from->sys_user_id, 'md_employee_id' => $value->md_employee_id])->first();
-                $employee = $mEmployee->where('md_employee_id', $value->md_employee_id)->first();
-
-                if ($oldDelegation) {
-                    $mEmpDelegation->delete($oldDelegation->sys_emp_delegation_id);
-                    $changeLog->insertLog($mEmpDelegation->table, 'md_employee_id', $oldDelegation->sys_emp_delegation_id, $employee->value, null, 'D', $user_from->name);
-                }
-
-                $anotherDelegation = $mEmpDelegation->where(['md_employee_id' => $value->md_employee_id])->first();
-                if (!$anotherDelegation) {
-                    $entity = new \App\Entities\EmpDelegation();
-                    $entity->sys_user_id = $user_to->sys_user_id;
-                    $entity->md_employee_id = $value->md_employee_id;
-                    $result = $mEmpDelegation->save($entity);
-
-                    $changeLog->insertLog($mEmpDelegation->table, 'md_employee_id', $mEmpDelegation->getInsertID(), null, $employee->value, 'I', $user_to->name);
-                }
-
-                $entity = new \App\Entities\DelegationTransferDetail();
-                $entity->trx_delegation_transfer_detail_id = $value->trx_delegation_transfer_detail_id;
-                $entity->istransfered = $result ? 'Y' : 'N';
-                $mTransferDetail->save($entity);
+                $this->insertDelegation($user_from, $user_to, $value->md_employee_id, $sql->ispermanent, $value->trx_delegation_transfer_detail_id);
             }
+        }
+    }
+
+    public function insertDelegation(object $userFrom, object $userTo, int $employeeID, $isPermanent, $detailID)
+    {
+        $mEmpDelegation = new M_EmpDelegation($this->request);
+        $mTransferDetail = new M_DelegationTransferDetail($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $changeLog = new M_ChangeLog($this->request);
+
+        $result = false;
+
+        $employee = $mEmployee->where('md_employee_id', $employeeID)->first();
+        $oldDelegation = $mEmpDelegation->where(['sys_user_id' => $userFrom->sys_user_id, 'md_employee_id' => $employeeID])->first();
+
+        //TODO : Deleting Old Delegation
+        if ($oldDelegation) {
+            $mEmpDelegation->delete($oldDelegation->sys_emp_delegation_id);
+            $changeLog->insertLog($mEmpDelegation->table, 'md_employee_id', $oldDelegation->sys_emp_delegation_id, $employee->value, null, 'D', $userFrom->name);
+        }
+
+        $anotherDelegation = $mEmpDelegation->where(['md_employee_id' => $employeeID])->first();
+
+        //TODO : If there's no another Delegation, then inserting Emp Delegation to the new User
+        if (!$anotherDelegation) {
+            $entity = new \App\Entities\EmpDelegation();
+            $entity->sys_user_id = $userTo->sys_user_id;
+            $entity->md_employee_id = $employeeID;
+            $result = $mEmpDelegation->save($entity);
+
+            $changeLog->insertLog($mEmpDelegation->table, 'md_employee_id', $mEmpDelegation->getInsertID(), null, $employee->value, 'I', $userTo->name);
+        }
+
+        //TODO : Updating Delegation Transfer Detail Status
+        if ($isPermanent === "Y") {
+            $entity = new \App\Entities\DelegationTransferDetail();
+            $entity->trx_delegation_transfer_detail_id = $detailID;
+            $entity->istransfered = $result ? 'CO' : 'NP';
+            $mTransferDetail->save($entity);
+        } else {
+            $state = $mTransferDetail->where($mTransferDetail->primaryKey, $detailID)->first();
+
+            $entity = new \App\Entities\DelegationTransferDetail();
+            $entity->trx_delegation_transfer_detail_id = $detailID;
+
+            if ($state->istransfered === 'IP') {
+                $entity->istransfered = $result ? 'CO' : 'IP';
+            } else {
+                $entity->istransfered = $result ? 'IP' : 'NP';
+            }
+
+            $mTransferDetail->save($entity);
         }
     }
 }

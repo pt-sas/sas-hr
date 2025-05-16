@@ -182,6 +182,8 @@ function docStatus(string $str, string $type = null, ?int $total = 0, ?int $avai
         $msg = '<center><span class="badge badge-warning">Drafted</span></center>';
     } else if ($str === "RE") {
         $msg = '<center><span class="badge badge-primary">Requested</span></center>';
+    } else if ($str === "NP") {
+        $msg = '<center><span class="badge badge-black">Not Processed</span></center>';
     } else {
         if (strtoupper($type) === "TERIMA") {
             if ($total == 0 && $available == 0)
@@ -441,4 +443,9 @@ function viewImage(int $id, ?string $img)
     $img = '<button class="btn btn-icon btn-rounded btn-sm btn-info btn_view_image" id="' . $id . '" name="image" data-toggle="tooltip" title="Lihat Gambar" data-original-title="Lihat Gambar"><i class="fas fa-eye"></i></button>';
 
     return $img;
+}
+
+function logMessage($data)
+{
+    log_message('debug', json_encode($data));
 }

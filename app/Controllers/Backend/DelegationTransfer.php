@@ -11,10 +11,7 @@ use App\Models\M_Division;
 use App\Models\M_EmpDelegation;
 use App\Models\M_Employee;
 use Config\Services;
-use App\Models\M_Role;
-use App\Models\M_ProxySwitching;
 use App\Models\M_User;
-use App\Models\M_UserRole;
 
 class DelegationTransfer extends BaseController
 {
@@ -116,9 +113,10 @@ class DelegationTransfer extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = format_dmy($value->date, '-');
+                $row[] = $value->ispermanent === "Y" ? format_dmy($value->startdate, '-') : format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
                 $row[] = !is_null($value->approveddate) ? format_dmy($value->approveddate, '-') : "";
                 $row[] = $value->reason;
+                $row[] = active($value->ispermanent);
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus);
@@ -152,9 +150,6 @@ class DelegationTransfer extends BaseController
                 } else {
                     $post["submissiontype"] = $this->model->Pengajuan_Transfer_Duta;
                     $post["necessary"] = 'TD';
-                    $startDate = $post['date'];
-                    $today = date('Y-m-d');
-                    // $user_from = $mUser->where('md_employee_id', $post['employee_from'])->first();
                     $user_to = $mUser->where('md_employee_id', $post['employee_to'])->first();
 
                     if ($post['employee_from'] == $post['employee_to']) {
@@ -211,7 +206,11 @@ class DelegationTransfer extends BaseController
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmployeeFrom->getFullName();
 
                 //* Need to set data into date field in form
-                $list[0]->setDate(format_dmy($list[0]->date, "-"));
+                $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
+
+                if (!empty($list[0]->getEndDate()) && $list[0]->getEndDate() != "0000-00-00 00:00:00") {
+                    $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
+                }
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
@@ -341,7 +340,7 @@ class DelegationTransfer extends BaseController
                 $btnDelete->setValue($row->trx_delegation_transfer_detail_id);
 
                 if (!empty($row->istransfered)) {
-                    $status = active($row->istransfered);
+                    $status = docStatus($row->istransfered);
                 } else {
                     $status = '';
                 }
@@ -386,6 +385,49 @@ class DelegationTransfer extends BaseController
             }
 
             return $this->response->setJSON($response);
+        }
+    }
+
+    public function delegationSwitching()
+    {
+        $today = date('Y-m-d');
+        $tomorrow = date('Y-m-d', strtotime("+1 day"));
+        $mUser = new M_User($this->request);
+
+        $this->session->set([
+            'sys_user_id' => 100000
+        ]);
+
+        //TODO : Running Transfer Duta
+        $where = "DATE_FORMAT(startdate, '%Y-%m-%d') = '{$tomorrow}' AND docstatus = '{$this->DOCSTATUS_Completed}'";
+        $listDocNo = $this->model->where($where)->findAll();
+
+        if ($listDocNo) {
+            foreach ($listDocNo as $value) {
+                $user_from = $mUser->where('md_employee_id', $value->employee_from)->first();
+                $user_to = $mUser->where('md_employee_id', $value->employee_to)->first();
+                $line = $this->modelDetail->where('trx_delegation_transfer_id', $value->trx_delegation_transfer_id)->findAll();
+
+                foreach ($line as $val) {
+                    $this->model->insertDelegation($user_from, $user_to, $val->md_employee_id, $value->ispermanent, $val->trx_delegation_transfer_detail_id);
+                }
+            }
+        }
+
+        //TODO : Get All In Progress Delegation Transfer dan Return it back to original user
+        $where = "DATE_FORMAT(enddate, '%Y-%m-%d') = '{$today}' AND docstatus = '{$this->DOCSTATUS_Completed}' AND ispermanent = 'N' ";
+        $listReturn = $this->model->where($where)->findAll();
+
+        if ($listReturn) {
+            foreach ($listReturn as $value) {
+                $user_from = $mUser->where('md_employee_id', $value->employee_to)->first();
+                $user_to = $mUser->where('md_employee_id', $value->employee_from)->first();
+                $line = $this->modelDetail->where(['trx_delegation_transfer_id' => $value->trx_delegation_transfer_id, 'istransfered' => 'IP'])->findAll();
+
+                foreach ($line as $val) {
+                    $this->model->insertDelegation($user_from, $user_to, $val->md_employee_id, $value->ispermanent, $val->trx_delegation_transfer_detail_id);
+                }
+            }
         }
     }
 }
