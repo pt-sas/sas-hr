@@ -140,11 +140,11 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
         $schedule->url(env("app.baseURL") . "cron-delete-attendance-summary")->named("CronDeleteAttSummary")->sundays("11:40 pm");
 
         // Proxy
-        $schedule->url(env("app.baseURL") . "cron-proxy-reguler")->named("CronProxyReguler")->weekdays("10:00 am");
-        $schedule->url(env("app.baseURL") . "cron-return-proxy")->named("CronReturnProxy")->weekdays("11:50 pm");
+        $schedule->url(env("app.baseURL") . "cron-proxy-reguler")->named("CronProxyReguler")->daily("10:00 am");
+        $schedule->url(env("app.baseURL") . "cron-return-proxy")->named("CronReturnProxy")->daily("11:50 pm");
 
         // Emp Delegation
-        $schedule->url(env("app.baseURL") . "cron-delegation-absent")->named("CronDelegationAbsent")->weekdays("10:05 am");
+        $schedule->url(env("app.baseURL") . "cron-delegation-absent")->named("CronDelegationAbsent")->daily("10:05 am");
         $schedule->url(env("app.baseURL") . "cron-delegation-transfer")->named("CronDelegationTransfer")->daily("11:45 pm");
     }
 }

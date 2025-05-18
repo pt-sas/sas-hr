@@ -3103,9 +3103,9 @@ class Validation
         ],
         'enddate'                 => [
             'label'            => 'Tanggal Selesai',
-            'rules'            =>    'required',
+            'rules'            => 'required_based_on_checkbox[ispermanent,N]',
             'errors'        => [
-                'required'    => 'Mohon mengisi {field} dahulu'
+                'required_based_on_checkbox'    => 'Mohon mengisi {field} dahulu'
             ]
         ],
 

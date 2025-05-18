@@ -60,7 +60,7 @@ class ProxySpecial extends BaseController
                 $row[] = $value->user_from;
                 $row[] = $value->user_to;
                 $row[] = format_dmy($value->submissiondate, '-');
-                $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
+                $row[] = $value->ispermanent === "Y" ? format_dmy($value->startdate, '-') : format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
                 $row[] = !is_null($value->approveddate) ? format_dmy($value->approveddate, '-') : "";
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
@@ -139,7 +139,10 @@ class ProxySpecial extends BaseController
 
                 //* Need to set data into date field in form
                 $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
-                $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
+
+                if (!empty($list[0]->getEndDate()) && $list[0]->getEndDate() != "0000-00-00 00:00:00") {
+                    $list[0]->setEndDate(format_dmy($list[0]->enddate, "-"));
+                }
 
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
@@ -336,13 +339,13 @@ class ProxySpecial extends BaseController
             foreach ($listDocNo as $value) {
                 $line = $this->modelDetail->where('trx_proxy_special_id', $value->trx_proxy_special_id)->findAll();
                 foreach ($line as $val) {
-                    $this->model->insertProxy($value->sys_user_from, $value->sys_user_to, $val->sys_role_id, true, $val->trx_proxy_special_detail_id);
+                    $this->model->insertProxy($value->sys_user_from, $value->sys_user_to, $val->sys_role_id, true, $val->trx_proxy_special_detail_id, $value->ispermanent);
                 }
             }
         }
 
         //TODO : Get All In Progress Reguler Proxy dan Return it back to original user
-        $where = "(trx_proxy_switching.proxytype = 'reguler' OR (trx_proxy_switching.proxytype = 'special' AND DATE_FORMAT(ps.enddate, '%Y-%m-%d') = '{$today}')) AND trx_proxy_switching.state = 'IP'";
+        $where = "(trx_proxy_switching.proxytype = 'reguler' OR (trx_proxy_switching.proxytype = 'special' AND ps.ispermanent = 'N' AND DATE_FORMAT(ps.enddate, '%Y-%m-%d') = '{$today}')) AND trx_proxy_switching.state = 'IP'";
         $listProxy = $mProxySwitch->getProxyDetail($where)->getResult();
 
         if ($listProxy) {

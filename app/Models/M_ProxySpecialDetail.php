@@ -55,8 +55,6 @@ class M_ProxySpecialDetail extends Model
             $number++;
         endforeach;
 
-        log_message('debug', json_encode($result));
-
         return $result;
     }
 }
