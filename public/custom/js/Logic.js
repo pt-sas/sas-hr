@@ -2062,3 +2062,65 @@ $("#form_delegation_transfer, #form_proxy_special").on(
     }
   }
 );
+
+function initSelectMultipleData(
+  select,
+  field = null,
+  id = null,
+  employee_id = null
+) {
+  $.each(select, function (i, item) {
+    let url = $(item).attr("data-url");
+
+    let lastParam = "";
+
+    if (url.lastIndexOf("$") != -1) {
+      lastParam = url.substr(url.lastIndexOf("$") + 1);
+      url = url.substr(0, url.lastIndexOf("$") - 1);
+    }
+
+    if (typeof url !== "undefined" && url !== "") {
+      if (field !== null && id !== null)
+        url = ADMIN_URL + url + "?" + field + "=" + id;
+      else url = ADMIN_URL + url;
+
+      $(this).select2({
+        placeholder: "Select an option",
+        width: "100%",
+        theme: "bootstrap",
+        multiple: true,
+        // minimumInputLength: 3,
+        ajax: {
+          dataType: "JSON",
+          url: function () {
+            return url;
+          },
+          delay: 250,
+          data: function (params) {
+            return {
+              search: params.term,
+              ref_id: employee_id,
+            };
+          },
+          processResults: function (data, page) {
+            return {
+              results: data,
+            };
+          },
+          cache: true,
+        },
+      });
+    }
+  });
+}
+
+$("#form_user").on("change", "select[name=md_employee_id]", function (e) {
+  let _this = $(this);
+  const form = _this.closest("form");
+  const field = form.find("select[name=sys_emp_delegation_id]");
+  let employee_id = this.value;
+
+  form.find("select[name=sys_emp_delegation_id]").not(".line").empty();
+
+  initSelectMultipleData(field, null, null, employee_id);
+});

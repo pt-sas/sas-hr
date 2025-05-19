@@ -424,6 +424,8 @@ class Employee extends BaseController
     public function getList()
     {
         $mAccess = new M_AccessMenu($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
+        $mEmpDivision = new M_EmpDivision($this->request);
 
         if ($this->request->isAjax()) {
             $post = $this->request->getVar();
@@ -505,6 +507,26 @@ class Employee extends BaseController
                                 ->orderBy('value', 'ASC')
                                 ->findAll();
                         }
+                    } else if (isset($post['ref_id'])) {
+                        //TODO : This for getting employee for Delegation in User Menu
+                        $arrB = array_column(
+                            $mEmpBranch->select('md_branch_id')->where('md_employee_id', $post['ref_id'])->findAll(),
+                            'md_branch_id'
+                        );
+
+                        $arrD = array_column(
+                            $mEmpDivision->select('md_division_id')->where('md_employee_id', $post['ref_id'])->findAll(),
+                            'md_division_id'
+                        );
+
+                        $emp = $this->model->where('md_employee_id', $post['ref_id'])->first();
+                        $arrEmpBased = $this->model->getEmployeeBased($arrB, $arrD);
+
+                        $list = $this->model->whereIn('md_employee_id', $arrEmpBased)
+                            ->where("md_levelling_id >= {$emp->md_levelling_id}")
+                            ->like('value', $post['search'])
+                            ->orderBy('value', 'ASC')
+                            ->findAll();
                     } else {
                         $list = $this->model->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
                             ->whereIn('isactive', $status)
@@ -563,6 +585,25 @@ class Employee extends BaseController
                             ->orderBy('value', 'ASC')
                             ->findAll();
                     }
+                } else if (isset($post['ref_id'])) {
+                    //TODO : This for getting employee for Delegation in User Menu
+                    $arrB = array_column(
+                        $mEmpBranch->select('md_branch_id')->where('md_employee_id', $post['ref_id'])->findAll(),
+                        'md_branch_id'
+                    );
+
+                    $arrD = array_column(
+                        $mEmpDivision->select('md_division_id')->where('md_employee_id', $post['ref_id'])->findAll(),
+                        'md_division_id'
+                    );
+
+                    $emp = $this->model->where('md_employee_id', $post['ref_id'])->first();
+                    $arrEmpBased = $this->model->getEmployeeBased($arrB, $arrD);
+
+                    $list = $this->model->whereIn('md_employee_id', $arrEmpBased)
+                        ->where("md_levelling_id >= {$emp->md_levelling_id}")
+                        ->orderBy('value', 'ASC')
+                        ->findAll();
                 } else if (isset($post['md_employee_id'])) {
                     $list = $this->model->where([
                         'md_employee_id' => $post['md_employee_id']

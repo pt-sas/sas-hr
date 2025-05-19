@@ -1,5 +1,5 @@
 <div class="card-body card-form">
-    <form class="form-horizontal" id="form_menu">
+    <form class="form-horizontal" id="form_user">
         <?= csrf_field(); ?>
         <div class="row">
             <div class="col-md-6">
@@ -53,7 +53,7 @@
                         <select class="form-control multiple-select" id="sys_role_id" name="sys_role_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($role as $row) : ?>
-                            <option value="<?= $row->sys_role_id; ?>"><?= $row->name; ?></option>
+                                <option value="<?= $row->sys_role_id; ?>"><?= $row->name; ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -66,7 +66,7 @@
                         <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($branch as $row) : ?>
-                            <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
+                                <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <small class="form-text text-danger" id="error_md_branch_id"></small>
@@ -80,7 +80,7 @@
                         <select class="form-control multiple-select" id="md_division_id" name="md_division_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($division as $row) : ?>
-                            <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
+                                <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <small class="form-text text-danger" id="error_md_division_id"></small>
@@ -91,11 +91,9 @@
                 <div class="form-group">
                     <label for="sys_emp_delegation_id">Mewakili Karyawan <span class="required">*</span></label>
                     <div class="select2-input select2-primary">
-                        <select class="form-control multiple-select" id="sys_emp_delegation_id"
-                            name="sys_emp_delegation_id" multiple="multiple" style="width: 100%;">
-                            <?php foreach ($employee as $row) : ?>
-                            <option value="<?= $row['md_employee_id']; ?>"><?= $row['value']; ?></option>
-                            <?php endforeach; ?>
+                        <select class="form-control multiple-select-delegation" id="sys_emp_delegation_id"
+                            name="sys_emp_delegation_id" multiple="multiple" style="width: 100%;"
+                            data-url="employee/getList">
                         </select>
                         <small class="form-text text-danger" id="error_sys_emp_delegation_id"></small>
                     </div>

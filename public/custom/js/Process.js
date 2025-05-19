@@ -1687,7 +1687,6 @@ function Edit(id, status, last_url) {
             hideLoadingForm(form.prop("id"));
           },
           success: function (result) {
-            console.log(result);
             if (result[0].success) {
               let arrMsg = result[0].message;
 
@@ -5052,6 +5051,16 @@ function putFieldData(form, data, status = null) {
       initSelectData(select, data[1].field, data[1].label);
     }
 
+    if (form.find("select.multiple-select-delegation").length > 0) {
+      let selectMultiple = form.find("select.multiple-select-delegation");
+      initSelectMultipleData(
+        selectMultiple,
+        data[1].field,
+        data[1].label,
+        data[7].label.id
+      );
+    }
+
     if (modalTab.length) {
       const form = modalTab.find("form");
 
@@ -5180,16 +5189,38 @@ function putFieldData(form, data, status = null) {
           }
 
           if (field[i].type === "select-multiple" && label !== null) {
-            // array label explode into array
             if (typeof label === "object") {
-              let option_ID = label.id;
-              let option_Txt = label.name;
+              if (className.includes("multiple-select-delegation")) {
+                form
+                  .find("select[name=" + fieldName + "]")
+                  .not(".line")
+                  .empty();
 
-              form
-                .find("select[name=" + fieldName + "]")
-                .not(".line")
-                .val(option_ID)
-                .change();
+                if (label.id.length > 0) {
+                  $.each(label.id, function (i) {
+                    let optionSelected = $(
+                      "<option selected='selected'></option>"
+                    )
+                      .val(label.id[i].id)
+                      .text(label.id[i].text);
+
+                    form
+                      .find("select[name=" + fieldName + "]")
+                      .not(".line")
+                      .append(optionSelected)
+                      .change();
+                  });
+                }
+              } else {
+                // array label explode into array
+                let option_ID = label.id;
+                let option_Txt = label.name;
+                form
+                  .find("select[name=" + fieldName + "]")
+                  .not(".line")
+                  .val(option_ID)
+                  .change();
+              }
             }
 
             if (typeof label === "string") {
