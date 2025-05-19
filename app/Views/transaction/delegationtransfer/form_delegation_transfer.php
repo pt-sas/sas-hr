@@ -15,8 +15,7 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="employee_to">Duta Tujuan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="employee_to" name="employee_to"
-                        data-url="employee/getList/$Access">
+                    <select class="form-control select2" id="employee_to" name="employee_to">
                         <option value="">Pilih Pengguna</option>
                     </select>
                     <small class=" form-text text-danger" id="error_employee_to"></small>

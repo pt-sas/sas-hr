@@ -2124,3 +2124,96 @@ $("#form_user").on("change", "select[name=md_employee_id]", function (e) {
 
   initSelectMultipleData(field, null, null, employee_id);
 });
+
+$("#form_delegation_transfer").on("change", "#employee_from", function (e) {
+  let _this = $(this);
+  const form = _this.closest("form");
+  const field = form.find("select[name=employee_to]");
+  let employee_id = this.value;
+
+  getEmployeeTo(field, employee_id);
+});
+
+function getEmployeeTo(elem, employee) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  const field = form.find("select[name=employee_to]");
+  const id = employee;
+
+  let url = ADMIN_URL + "employee/getList";
+  formData.append("ref_id", id);
+
+  field.empty();
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+
+        let employee_to = 0;
+
+        if (option.length) {
+          $.each(option, function (i, item) {
+            if (item.fieldName == "employee_to") employee_to = item.label;
+          });
+        }
+
+        $.each(result, function (idx, item) {
+          if (id.length == 1 || employee_to == item.id) {
+            if (setSave === "detail")
+              field
+                .append(
+                  '<option value="' +
+                    item.id +
+                    '" selected>' +
+                    item.text +
+                    "</option>"
+                )
+                .prop("disabled", true);
+            else
+              field.append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              );
+          } else {
+            if (setSave === "detail")
+              field
+                .append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                )
+                .prop("disabled", true);
+            else
+              field
+                .append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                )
+                .removeAttr("disabled");
+          }
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
