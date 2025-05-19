@@ -1989,72 +1989,231 @@ function getEmployeeDetail(elem, employee_id) {
     });
 }
 
-$("#form_delegation_transfer").on("change", "#ispermanent", function (e) {
-  const _this = $(this);
-  const target = $(e.target);
-  const form = target.closest("form");
+$("#form_delegation_transfer, #form_proxy_special").on(
+  "change",
+  "#ispermanent",
+  function (e) {
+    const _this = $(this);
+    const target = $(e.target);
+    const form = target.closest("form");
 
-  const fields = _this
-    .attr("hide-field")
-    .split(",")
-    .map((element) => element.trim());
+    const fields = _this
+      .attr("hide-field")
+      .split(",")
+      .map((element) => element.trim());
 
-  if (_this.is(":checked")) {
-    for (let i = 0; i < fields.length; i++) {
-      form
-        .find(
-          "input[name=" +
-            fields[i] +
-            "], textarea[name=" +
-            fields[i] +
-            "], select[name=" +
-            fields[i] +
-            "]"
-        )
-        .not(".line")
-        .closest(".form-group")
-        .val(null)
-        .hide();
-
-      if (form.find("select[name=" + fields[i] + "]").length)
+    if (_this.is(":checked")) {
+      for (let i = 0; i < fields.length; i++) {
         form
-          .find("select[name=" + fields[i] + "]")
+          .find(
+            "input[name=" +
+              fields[i] +
+              "], textarea[name=" +
+              fields[i] +
+              "], select[name=" +
+              fields[i] +
+              "]"
+          )
+          .not(".line")
+          .closest(".form-group")
           .val(null)
-          .change();
+          .hide();
 
-      if (form.find("input[name=" + fields[i] + "]").length)
-        form
-          .find("input[name=" + fields[i] + "]")
-          .val(null)
-          .change();
-    }
-  } else {
-    for (let i = 0; i < fields.length; i++) {
-      form
-        .find(
-          "input[name=" +
-            fields[i] +
-            "], textarea[name=" +
-            fields[i] +
-            "], select[name=" +
-            fields[i] +
-            "]"
-        )
-        .not(".line")
-        .closest(".form-group")
-        .show();
+        if (form.find("select[name=" + fields[i] + "]").length)
+          form
+            .find("select[name=" + fields[i] + "]")
+            .val(null)
+            .change();
 
-      if (form.find("select[name=" + fields[i] + "]").length)
+        if (form.find("input[name=" + fields[i] + "]").length)
+          form
+            .find("input[name=" + fields[i] + "]")
+            .val(null)
+            .change();
+      }
+    } else {
+      for (let i = 0; i < fields.length; i++) {
         form
-          .find("select[name=" + fields[i] + "]")
-          .val(null)
-          .change();
+          .find(
+            "input[name=" +
+              fields[i] +
+              "], textarea[name=" +
+              fields[i] +
+              "], select[name=" +
+              fields[i] +
+              "]"
+          )
+          .not(".line")
+          .closest(".form-group")
+          .show();
 
-      if (form.find("input[name=" + fields[i] + "]").length)
-        form
-          .find("input[name=" + fields[i] + "]")
-          .val(null)
-          .change();
+        if (form.find("select[name=" + fields[i] + "]").length)
+          form
+            .find("select[name=" + fields[i] + "]")
+            .val(null)
+            .change();
+
+        if (form.find("input[name=" + fields[i] + "]").length)
+          form
+            .find("input[name=" + fields[i] + "]")
+            .val(null)
+            .change();
+      }
     }
   }
+);
+
+function initSelectMultipleData(
+  select,
+  field = null,
+  id = null,
+  employee_id = null
+) {
+  $.each(select, function (i, item) {
+    let url = $(item).attr("data-url");
+
+    let lastParam = "";
+
+    if (url.lastIndexOf("$") != -1) {
+      lastParam = url.substr(url.lastIndexOf("$") + 1);
+      url = url.substr(0, url.lastIndexOf("$") - 1);
+    }
+
+    if (typeof url !== "undefined" && url !== "") {
+      if (field !== null && id !== null)
+        url = ADMIN_URL + url + "?" + field + "=" + id;
+      else url = ADMIN_URL + url;
+
+      $(this).select2({
+        placeholder: "Select an option",
+        width: "100%",
+        theme: "bootstrap",
+        multiple: true,
+        // minimumInputLength: 3,
+        ajax: {
+          dataType: "JSON",
+          url: function () {
+            return url;
+          },
+          delay: 250,
+          data: function (params) {
+            return {
+              search: params.term,
+              ref_id: employee_id,
+            };
+          },
+          processResults: function (data, page) {
+            return {
+              results: data,
+            };
+          },
+          cache: true,
+        },
+      });
+    }
+  });
+}
+
+$("#form_user").on("change", "select[name=md_employee_id]", function (e) {
+  let _this = $(this);
+  const form = _this.closest("form");
+  const field = form.find("select[name=sys_emp_delegation_id]");
+  let employee_id = this.value;
+
+  form.find("select[name=sys_emp_delegation_id]").not(".line").empty();
+
+  initSelectMultipleData(field, null, null, employee_id);
 });
+
+$("#form_delegation_transfer").on("change", "#employee_from", function (e) {
+  let _this = $(this);
+  const form = _this.closest("form");
+  const field = form.find("select[name=employee_to]");
+  let employee_id = this.value;
+
+  getEmployeeTo(field, employee_id);
+});
+
+function getEmployeeTo(elem, employee) {
+  const form = elem.closest("form");
+  let formData = new FormData();
+  const field = form.find("select[name=employee_to]");
+  const id = employee;
+
+  let url = ADMIN_URL + "employee/getList";
+  formData.append("ref_id", id);
+
+  field.empty();
+
+  $.ajax({
+    url: url,
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      $(".x_form").prop("disabled", true);
+      $(".close_form").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      $(".x_form").removeAttr("disabled");
+      $(".close_form").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      if (result.length) {
+        field.append('<option value=""></option>');
+
+        let employee_to = 0;
+
+        if (option.length) {
+          $.each(option, function (i, item) {
+            if (item.fieldName == "employee_to") employee_to = item.label;
+          });
+        }
+
+        $.each(result, function (idx, item) {
+          if (id.length == 1 || employee_to == item.id) {
+            if (setSave === "detail")
+              field
+                .append(
+                  '<option value="' +
+                    item.id +
+                    '" selected>' +
+                    item.text +
+                    "</option>"
+                )
+                .prop("disabled", true);
+            else
+              field.append(
+                '<option value="' +
+                  item.id +
+                  '" selected>' +
+                  item.text +
+                  "</option>"
+              );
+          } else {
+            if (setSave === "detail")
+              field
+                .append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                )
+                .prop("disabled", true);
+            else
+              field
+                .append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                )
+                .removeAttr("disabled");
+          }
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}

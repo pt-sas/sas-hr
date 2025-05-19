@@ -305,14 +305,14 @@ class Field
      * @param [type] $text
      * @param array $array
      */
-    public function setDataSelect($table, $data, $field = 'id', $value, $text, array $array = [], $uniqueKey = null)
+    public function setDataSelect($table, $data, $field = 'id', $value, $text, array $array = [], $uniqueKey = null, $uniqueText = null)
     {
         if ($array) {
             $value = [];
 
             foreach ($array as $row) {
-                if ($uniqueKey)
-                    $value[] = $row->{$uniqueKey};
+                if ($uniqueKey && $uniqueText)
+                    $value[] = ['id' => $row->{$uniqueKey}, 'text' => $row->{$uniqueText}];
                 else
                     $value[] = $row->{$field};
             }

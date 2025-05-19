@@ -15,6 +15,7 @@ class ProxySpecial extends Entity
     protected $startdate;
     protected $enddate;
     protected $reason;
+    protected $ispermanent;
     protected $docstatus;
     protected $isapproved;
     protected $receiveddate;
@@ -116,6 +117,16 @@ class ProxySpecial extends Entity
     public function setReason($reason)
     {
         $this->attributes['reason'] = $reason;
+    }
+
+    public function getIsPermanent()
+    {
+        return $this->attributes['ispermanent'];
+    }
+
+    public function setIsPermanent($ispermanent)
+    {
+        $this->attributes['ispermanent'] = $ispermanent;
     }
 
     public function getDocStatus()
