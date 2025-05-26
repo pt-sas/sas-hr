@@ -340,7 +340,7 @@ class DelegationTransfer extends BaseController
                 $btnDelete->setValue($row->trx_delegation_transfer_detail_id);
 
                 if (!empty($row->istransfered)) {
-                    $status = docStatus($row->istransfered);
+                    $status = statusTransfered($row->istransfered);
                 } else {
                     $status = '';
                 }

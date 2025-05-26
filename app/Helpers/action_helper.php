@@ -449,3 +449,15 @@ function logMessage($data)
 {
     log_message('debug', json_encode($data));
 }
+
+function statusTransfered(string $str)
+{
+    switch ($str) {
+        case "IP":
+            return '<small class="badge badge-info">In Transition</small>';
+        case "CO":
+            return '<small class="badge badge-success">Fulfilled</small>';
+        case "NP":
+            return '<small class="badge badge-black">Not Processed</small>';
+    }
+}
