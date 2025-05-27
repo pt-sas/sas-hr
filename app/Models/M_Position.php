@@ -16,6 +16,7 @@ class M_Position extends Model
         'name',
         'description',
         'isactive',
+        'ismandatoryduta',
         'created_by',
         'updated_by',
         'md_division_id'
