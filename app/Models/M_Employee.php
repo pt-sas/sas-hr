@@ -166,6 +166,19 @@ class M_Employee extends Model
 
 			$empDiv->create($post);
 		}
+
+		if (isset($post['md_ambassador_id'])) {
+			$mEmpDelegation = new M_EmpDelegation($this->request);
+
+			if (empty($post['md_ambassador_id'])) {
+				$post['md_ambassador_id'] = null;
+			} else {
+				$post['md_ambassador_id'] = $post['md_ambassador_id'];
+			}
+			$post['md_employee_id'] = $rows['id'];
+
+			$mEmpDelegation->createFromEmployee($post);
+		}
 	}
 
 	public function deleteMultipleData(array $rows)

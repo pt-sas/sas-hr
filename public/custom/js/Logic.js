@@ -2217,3 +2217,65 @@ function getEmployeeTo(elem, employee) {
     },
   });
 }
+
+$("#form_employee").on(
+  "change",
+  "#md_branch_id, #md_division_id",
+  function (e) {
+    let _this = $(this);
+    const form = _this.closest("form");
+    const field = form.find("#md_ambassador_id");
+    let branch = form.find("#md_branch_id").val();
+    let division = form.find("#md_division_id").val();
+    let formData = new FormData();
+
+    formData.append("md_branch_id", branch);
+    formData.append("md_division_id", division);
+    field.empty();
+
+    if (branch.length > 0 && division.length > 0) {
+      $.ajax({
+        url: ADMIN_URL + "karyawan/empBranchDiv",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".x_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+          loadingForm(form.prop("id"), "facebook");
+        },
+        complete: function () {
+          $(".x_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+          hideLoadingForm(form.prop("id"));
+        },
+        success: function (result) {
+          if (result.length) {
+            field.append('<option value=""></option>');
+
+            $.each(result, function (idx, item) {
+              if (setSave === "detail")
+                field
+                  .append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  )
+                  .prop("disabled", true);
+              else
+                field
+                  .append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  )
+                  .removeAttr("disabled");
+            });
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
+  }
+);

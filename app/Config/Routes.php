@@ -268,6 +268,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'employee/getList', 'Backend\Employee::getList');
     $routes->match(['get', 'post'], 'karyawan/getList', 'Backend\Employee::getList');
     $routes->match(['get', 'post'], 'karyawan/superior', 'Backend\Employee::getSuperior');
+    $routes->match(['get', 'post'], 'karyawan/empBranchDiv', 'Backend\Employee::getBranchDivEmployee');
     $routes->get('karyawan/destroy/(:any)', 'Backend\Employee::destroy/$1');
     $routes->post('karyawan/create', 'Backend\Employee::create');
     $routes->get('karyawan/show/(:any)', 'Backend\Employee::show/$1');
