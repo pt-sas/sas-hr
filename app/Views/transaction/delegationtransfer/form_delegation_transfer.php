@@ -85,15 +85,15 @@
                     <small class="form-text text-danger" id="error_enddate"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <!-- <div class="col-md-3">
                 <div class="form-check">
                     <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" id="ispermanent" name="ispermanent" checked
+                        <input type="checkbox" class="form-check-input" id="ispermanent" name="ispermanent"
                             hide-field="enddate">
                         <span class="form-check-sign">Permanent</span>
                     </label>
                 </div>
-            </div>
+            </div> -->
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="reason">Alasan</label>

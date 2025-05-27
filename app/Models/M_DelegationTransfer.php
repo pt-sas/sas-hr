@@ -52,7 +52,6 @@ class M_DelegationTransfer extends Model
         'trx_delegation_transfer.startdate',
         'trx_delegation_transfer.receiveddate',
         'trx_delegation_transfer.reason',
-        'trx_delegation_transfer.ispermanent',
         'trx_delegation_transfer.docstatus',
         'uc.name'
     ];
@@ -67,7 +66,6 @@ class M_DelegationTransfer extends Model
         'trx_delegation_transfer.enddate',
         'trx_delegation_transfer.approveddate',
         'trx_delegation_transfer.reason',
-        'trx_delegation_transfer.ispermanent',
         'trx_delegation_transfer.docstatus',
         'uc.name'
     ];

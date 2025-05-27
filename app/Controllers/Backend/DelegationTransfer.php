@@ -116,7 +116,6 @@ class DelegationTransfer extends BaseController
                 $row[] = $value->ispermanent === "Y" ? format_dmy($value->startdate, '-') : format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
                 $row[] = !is_null($value->approveddate) ? format_dmy($value->approveddate, '-') : "";
                 $row[] = $value->reason;
-                $row[] = active($value->ispermanent);
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus);
