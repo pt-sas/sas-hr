@@ -429,4 +429,20 @@ class DelegationTransfer extends BaseController
             }
         }
     }
+
+    public function checkOnGoingTransfer()
+    {
+        if ($this->request->isAJAX()) {
+            $post = $this->request->getVar();
+            try {
+                $isOffDuty = $this->model->getInTransitionDelegation("employee_from = {$post['md_employee_id']}")->getRow() ? true : false;
+
+                $response = message('success', true, $isOffDuty);
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
 }

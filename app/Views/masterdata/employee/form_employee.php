@@ -405,7 +405,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="card_id">No KTP <span class="required">*</span></label>
-                <input type="text" class="form-control number" id="card_id" name="card_id" readonly>
+                <input type="text" class="form-control number" id="card_id" name="card_id" <?= $readonly ?>>
                 <small class="form-text text-danger" id="error_card_id"></small>
             </div>
         </div>
@@ -413,13 +413,13 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="npwp_id">No NPWP </label>
-                <input type="text" class="form-control npwp" id="npwp_id" name="npwp_id" readonly>
+                <input type="text" class="form-control npwp" id="npwp_id" name="npwp_id" <?= $readonly ?>>
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label for="ptkp_status">Status PTKP </label>
-                <select class="form-control select2" id="ptkp_status" name="ptkp_status" disabled>
+                <select class="form-control select2" id="ptkp_status" name="ptkp_status" <?= $disabled ?>>
                     <?php foreach ($ptkp_list as $row) : ?>
                         <option value="<?= $row->value ?>"><?= $row->name ?></option>
                     <?php endforeach; ?>
@@ -429,7 +429,7 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_kes_no">BPJS Kesehatan </label>
-                <input type="text" class="form-control number" id="bpjs_kes_no" name="bpjs_kes_no" readonly>
+                <input type="text" class="form-control number" id="bpjs_kes_no" name="bpjs_kes_no" <?= $readonly ?>>
             </div>
         </div>
         <div class="col-md-6">
@@ -437,7 +437,7 @@
                 <label for="bpjs_kes_periode">Periode </label>
                 <div class="input-group">
                     <input type="text" class="form-control datepicker" id="bpjs_kes_period" name="bpjs_kes_period"
-                        readonly>
+                        <?= $readonly ?>>
                     <div class="input-group-append">
                         <span class="input-group-text">
                             <i class="fa fa-calendar"></i>
@@ -449,7 +449,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="bpjs_tenaga_no">BPJS Tenaga Kerja </label>
-                <input type="text" class="form-control number" id="bpjs_tenaga_no" name="bpjs_tenaga_no" readonly>
+                <input type="text" class="form-control number" id="bpjs_tenaga_no" name="bpjs_tenaga_no"
+                    <?= $readonly ?>>
             </div>
         </div>
         <div class="col-md-6">
@@ -457,7 +458,7 @@
                 <label for="bpjs_tenaga_periode">Periode </label>
                 <div class="input-group">
                     <input type="text" class="form-control datepicker" id="bpjs_tenaga_period" name="bpjs_tenaga_period"
-                        readonly>
+                        <?= $readonly ?>>
                     <div class="input-group-append">
                         <span class="input-group-text">
                             <i class="fa fa-calendar"></i>

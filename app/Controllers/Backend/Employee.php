@@ -7,12 +7,14 @@ use App\Models\M_AccessMenu;
 use App\Models\M_BloodType;
 use App\Models\M_Branch;
 use App\Models\M_Country;
+use App\Models\M_DelegationTransfer;
 use App\Models\M_Division;
 use App\Models\M_Employee;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDelegation;
 use App\Models\M_EmpDivision;
 use App\Models\M_Levelling;
+use App\Models\M_NotificationText;
 use App\Models\M_Position;
 use App\Models\M_Reference;
 use App\Models\M_ReferenceDetail;
@@ -20,7 +22,7 @@ use App\Models\M_Religion;
 use App\Models\M_Role;
 use App\Models\M_Status;
 use App\Models\M_User;
-use App\Models\M_UserRole;
+use Html2Text\Html2Text;
 use Config\Services;
 
 class Employee extends BaseController
@@ -181,6 +183,10 @@ class Employee extends BaseController
             $post = $this->request->getVar();
             $file = $this->request->getFile('image');
             $mPosition = new M_Position($this->request);
+            $mDelegTransfer = new M_DelegationTransfer($this->request);
+            $mUser = new M_User($this->request);
+            $cMail = new Mail();
+            $mNotifText = new M_NotificationText($this->request);
 
             try {
                 $img_name = "";
@@ -236,6 +242,24 @@ class Employee extends BaseController
                             if ($this->isNew()) {
                                 $id = $this->insertID;
                                 $response[0]["foreignkey"] = $id;
+
+                                $delegationTransfer = $mDelegTransfer->getInTransitionDelegation("employee_from = {$post['md_ambassador_id']}")->getRow();
+                                if (!empty($post['md_ambassador_id']) && $delegationTransfer) {
+                                    $dataNotif = $mNotifText->where('name', 'Duta Sedang Tidak Bertugas')->first();
+                                    $user = $mUser->where('sys_user_id', $delegationTransfer->user_from)->first();
+                                    $managerID = $this->model->getEmployeeManagerID($id);
+                                    $emailManager = $mUser->select('email')->where(['md_employee_id' => $managerID, 'isactive' => 'Y'])->first();
+                                    $message = $dataNotif->getText();
+                                    $message = str_replace(['(Var1)', '(Var2)'], [$user->username, $post['value']], $message);
+
+                                    $subject = $dataNotif->getSubject();
+                                    $message = new Html2Text($message);
+                                    $message = $message->getText();
+
+                                    if ($emailManager->email) {
+                                        $cMail->sendEmail($emailManager->email, $subject, $message, null, "SAS HR");
+                                    }
+                                }
                             }
                         }
                     }

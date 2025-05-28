@@ -384,4 +384,36 @@ class M_Employee extends Model
 
 		return array_column($result, 'md_employee_id');
 	}
+
+	public function getEmployeeManagerID($employeeID)
+	{
+		$mLevelling = new M_Levelling($this->request);
+
+		$employee = $this->where('md_employee_id', $employeeID)->first();
+		$lvlManager = $mLevelling->where('name', 'MANAGER')->first();
+
+		$superiorID = $employee->superior_id;
+		$level = $employee->md_levelling_id;
+		$result = 0;
+		$maxLoop = 6;
+
+		while ($level > $lvlManager->md_levelling_id && $maxLoop-- > 0) {
+			if (!$superiorID) break;
+
+			$superior = $this->where('md_employee_id', $superiorID)->first();
+
+			if ($superior) {
+				$superiorID = $superior->superior_id;
+				$level = $superior->md_levelling_id;
+
+				if ($level == $lvlManager->md_levelling_id) {
+					$result = $superior->md_employee_id;
+				}
+			} else {
+				break;
+			}
+		}
+
+		return $result;
+	}
 }

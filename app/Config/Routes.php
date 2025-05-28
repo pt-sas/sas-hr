@@ -745,6 +745,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('transfer-duta/destroy/(:any)', 'Backend\DelegationTransfer::destroy/$1');
     $routes->get('transfer-duta/processIt', 'Backend\DelegationTransfer::processIt');
     $routes->post('transfer-duta/getEmployeeDelegation', 'Backend\DelegationTransfer::getEmployeeDelegation');
+    $routes->post('transfer-duta/checkOnGoingTransfer', 'Backend\DelegationTransfer::checkOnGoingTransfer');
 });
 
 /*

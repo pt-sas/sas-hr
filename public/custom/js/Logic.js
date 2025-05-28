@@ -2229,11 +2229,12 @@ $("#form_employee").on(
     let division = form.find("#md_division_id").val();
     let formData = new FormData();
 
-    formData.append("md_branch_id", branch);
-    formData.append("md_division_id", division);
     field.empty();
 
     if (branch.length > 0 && division.length > 0) {
+      formData.append("md_branch_id", branch);
+      formData.append("md_division_id", division);
+
       $.ajax({
         url: ADMIN_URL + "karyawan/empBranchDiv",
         type: "POST",
@@ -2243,12 +2244,12 @@ $("#form_employee").on(
         cache: false,
         dataType: "JSON",
         beforeSend: function () {
-          $(".x_form").prop("disabled", true);
+          $(".save_form").prop("disabled", true);
           $(".close_form").prop("disabled", true);
-          loadingForm(form.prop("id"), "facebook");
+          loadingForm(form.prop("id"), "ios");
         },
         complete: function () {
-          $(".x_form").removeAttr("disabled");
+          $(".save_form").removeAttr("disabled");
           $(".close_form").removeAttr("disabled");
           hideLoadingForm(form.prop("id"));
         },
@@ -2279,3 +2280,45 @@ $("#form_employee").on(
     }
   }
 );
+
+$("#form_employee").on("change", "#md_ambassador_id", function (evt) {
+  const form = $(this).closest("form");
+  let value = this.value;
+  let text = $("#md_ambassador_id option:selected").text();
+  let formData = new FormData();
+  formData.append("md_employee_id", value);
+
+  if (value != "") {
+    $.ajax({
+      url: ADMIN_URL + "transfer-duta/checkOnGoingTransfer",
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".save_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "ios");
+      },
+      complete: function () {
+        $(".save_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result[0].message == true) {
+          Swal.fire({
+            type: "warning",
+            title: `Duta ${text} sedang off duty`,
+            backdrop: false,
+          });
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+  }
+});

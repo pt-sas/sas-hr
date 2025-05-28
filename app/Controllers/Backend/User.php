@@ -406,7 +406,7 @@ class User extends BaseController
 		$mEmpDelegation = new M_EmpDelegation($this->request);
 		$mAttendance = new M_Attendance($this->request);
 		$mNotifText = new M_NotificationText($this->request);
-		$mUser = new M_User($this->request);
+		$mEmployee = new M_Employee($this->request);
 		$cMail = new Mail();
 
 		$today = date('Y-m-d');
@@ -424,8 +424,8 @@ class User extends BaseController
 				$empAttendance = $mAttendance->getAttendance($where)->getRow();
 
 				if (!$empAttendance) {
-					$managerID = $this->getEmployeeManagerID($user->md_employee_id);
-					$emailManager = $mUser->select('email')->where(['md_employee_id' => $managerID, 'isactive' => 'Y'])->first();
+					$managerID = $mEmployee->getEmployeeManagerID($user->md_employee_id);
+					$emailManager = $this->model->select('email')->where(['md_employee_id' => $managerID, 'isactive' => 'Y'])->first();
 
 					$message = $dataNotif->getText();
 					$message = str_replace(['(Var1)', '(Var2)'], [$user->username, $strDate], $message);
@@ -440,38 +440,5 @@ class User extends BaseController
 				}
 			}
 		}
-	}
-
-	private function getEmployeeManagerID($employeeID)
-	{
-		$mEmployee = new M_Employee($this->request);
-		$mLevelling = new M_Levelling($this->request);
-
-		$employee = $mEmployee->where('md_employee_id', $employeeID)->first();
-		$lvlManager = $mLevelling->where('name', 'MANAGER')->first();
-
-		$superiorID = $employee->superior_id;
-		$level = $employee->md_levelling_id;
-		$result = 0;
-		$maxLoop = 6;
-
-		while ($level > $lvlManager->md_levelling_id && $maxLoop-- > 0) {
-			if (!$superiorID) break;
-
-			$superior = $mEmployee->where('md_employee_id', $superiorID)->first();
-
-			if ($superior) {
-				$superiorID = $superior->superior_id;
-				$level = $superior->md_levelling_id;
-
-				if ($level == $lvlManager->md_levelling_id) {
-					$result = $superior->md_employee_id;
-				}
-			} else {
-				break;
-			}
-		}
-
-		return $result;
 	}
 }
