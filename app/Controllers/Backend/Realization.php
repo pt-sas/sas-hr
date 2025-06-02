@@ -556,7 +556,7 @@ class Realization extends BaseController
                             $post['submissiondate'] = $this->entity->getSubmissionDate();
                             $post['necessary'] = $necessary;
 
-                            $docNo = $this->model->getInvNumber("submissiontype", $submissionType, $post);
+                            $docNo = $this->model->getInvNumber("submissiontype", $submissionType, $post, $this->session->get('sys_user_id'));
                             $this->entity->setDocumentNo($docNo);
                             $this->isNewRecord = true;
 

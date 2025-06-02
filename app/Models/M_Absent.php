@@ -238,28 +238,31 @@ class M_Absent extends Model
         ];
     }
 
-    public function getInvNumber($field, $where, $post)
+    public function getInvNumber($field, $where, $post, $created_by)
     {
-        $year = date("Y", strtotime($post['submissiondate']));
-        $month = date("m", strtotime($post['submissiondate']));
+        $mDelegTransfer = new M_DelegationTransfer($this->request);
+        $submissionDate = new \DateTime($post['submissiondate']);
+        $year  = $submissionDate->format('Y');
+        $month = $submissionDate->format('m');
 
-        $this->builder->select('MAX(RIGHT(documentno,4)) AS documentno');
+        $this->builder->select("MAX(CAST(REPLACE(SUBSTRING_INDEX(documentno, '/', -1), '*', '') AS UNSIGNED)) AS documentno");
         $this->builder->where("DATE_FORMAT(submissiondate, '%m')", $month);
         $this->builder->where($field, $where);
-        $sql = $this->builder->get();
+        $sql = $this->builder->get()->getRow();
 
-        $code = "";
-        if ($sql->getNumRows() > 0) {
-            foreach ($sql->getResult() as $row) {
-                $doc = ((int)$row->documentno + 1);
-                $code = sprintf("%04s", $doc);
-            }
-        } else {
-            $code = "0001";
-        }
+        $lastNumber = isset($sql->documentno) ? (int) $sql->documentno : 0;
+        $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+
         $first = $post['necessary'];
 
-        $prefix = $first . "/" . $year . "/" . $month . "/" . $code;
+        $inTransition = $mDelegTransfer->getInTransitionDelegation("user_to = {$created_by} AND md_employee_id = {$post['md_employee_id']}")->getRow();
+
+        $prefix = "{$first}/{$year}/{$month}/{$nextNumber}";
+
+        // TODO : Add prefix * to documentno when created user is in transition
+        if ($inTransition) {
+            $prefix .= "*";
+        }
 
         return $prefix;
     }

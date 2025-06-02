@@ -4,6 +4,7 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 use CodeIgniter\HTTP\RequestInterface;
+use App\Models\M_DelegationTransfer;
 
 class M_SubmissionCancel extends Model
 {
@@ -117,160 +118,34 @@ class M_SubmissionCancel extends Model
         ];
     }
 
-    public function getInvNumber($field, $where, $post)
+    public function getInvNumber($field, $where, $post, $created_by)
     {
-        $year = date("Y", strtotime($post['submissiondate']));
-        $month = date("m", strtotime($post['submissiondate']));
+        $mDelegTransfer = new M_DelegationTransfer($this->request);
+        $submissionDate = new \DateTime($post['submissiondate']);
+        $year  = $submissionDate->format('Y');
+        $month = $submissionDate->format('m');
 
-        $this->builder->select('MAX(RIGHT(documentno,4)) AS documentno');
+        $this->builder->select("MAX(CAST(REPLACE(SUBSTRING_INDEX(documentno, '/', -1), '*', '') AS UNSIGNED)) AS documentno");
         $this->builder->where("DATE_FORMAT(submissiondate, '%m')", $month);
         $this->builder->where($field, $where);
-        $sql = $this->builder->get();
+        $sql = $this->builder->get()->getRow();
 
-        $code = "";
-        if ($sql->getNumRows() > 0) {
-            foreach ($sql->getResult() as $row) {
-                $doc = ((int)$row->documentno + 1);
-                $code = sprintf("%04s", $doc);
-            }
-        } else {
-            $code = "0001";
-        }
+        $lastNumber = isset($sql->documentno) ? (int) $sql->documentno : 0;
+        $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+
         $first = $post['necessary'];
 
-        $prefix = $first . "/" . $year . "/" . $month . "/" . $code;
+        $inTransition = $mDelegTransfer->getInTransitionDelegation("user_to = {$created_by} AND md_employee_id = {$post['md_employee_id']}")->getRow();
+
+        $prefix = "{$first}/{$year}/{$month}/{$nextNumber}";
+
+        // TODO : Add prefix * to documentno when created user is in transition
+        if ($inTransition) {
+            $prefix .= "*";
+        }
 
         return $prefix;
     }
-
-    // public function doAfterUpdate(array $rows)
-    // {
-    //     $mRule = new M_Rule($this->request);
-    //     $mRuleDetail = new M_RuleDetail($this->request);
-    //     $mAllowance = new M_AllowanceAtt($this->request);
-    //     $mAbsentDetail = new M_AbsentDetail($this->request);
-    //     $mLeaveBalance = new M_LeaveBalance($this->request);
-
-    //     $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-    //     $sql = $this->find($ID);
-    //     $line = $mAbsentDetail->where($this->primaryKey, $ID)->first();
-
-    //     $agree = 'Y';
-    //     $notAgree = 'N';
-    //     $holdAgree = 'H';
-    //     $rlzMgr = 'M';
-
-    //     $formAttendance = [$this->Pengajuan_Lupa_Absen_Masuk, $this->Pengajuan_Lupa_Absen_Pulang, $this->Pengajuan_Datang_Terlambat, $this->Pengajuan_Pulang_Cepat];
-    //     $isSubAttendance = in_array($sql->submissiontype, $formAttendance);
-
-    //     $updatedBy = $rows['data']['updated_by'] ?? session()->get('id');
-
-    //     if (($sql->getIsApproved() === 'Y' || $isSubAttendance) && ($sql->docstatus === "IP" || $sql->docstatus === "CO") && is_null($line)) {
-    //         if ($sql->docstatus === "CO")
-    //             $isAgree = $agree;
-
-    //         if ($sql->docstatus === "IP") {
-    //             if ($isSubAttendance) {
-    //                 $isAgree = $rlzMgr;
-    //             } else {
-    //                 $isAgree = $holdAgree;
-    //             }
-    //         }
-
-    //         $data = [
-    //             'id'         => $ID,
-    //             'created_by' => $updatedBy,
-    //             'updated_by' => $updatedBy,
-    //             'isagree'    => $isAgree
-    //         ];
-
-    //         $this->createAbsentDetail($data, $sql);
-    //     }
-
-    //     if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "VO" && !is_null($line)) {
-    //         $line = $mAbsentDetail->where($this->primaryKey, $ID)->findAll();
-
-    //         $data = [];
-    //         foreach ($line as $val) :
-    //             $row = [];
-    //             $row[$mAbsentDetail->primaryKey] = $val->{$mAbsentDetail->primaryKey};
-    //             $row['isagree'] = $notAgree;
-    //             $row['updated_by'] = $updatedBy;
-    //             $data[] = $row;
-
-    //             $refDetail = $mAbsentDetail->where('trx_absent_detail_id', $val->ref_absent_detail_id)->first();
-    //             $whereClause = "trx_absent.trx_absent_id = " . $refDetail->trx_absent_id;
-    //             $lineNo = $mAbsentDetail->getLineNo($whereClause);
-
-    //             /**
-    //              * Inserting New Absent Detail
-    //              */
-    //             $this->entity = new \App\Entities\AbsentDetail();
-    //             $this->entity->trx_absent_id = $refDetail->trx_absent_id;
-    //             $this->entity->isagree = $holdAgree;
-    //             $this->entity->lineno = $lineNo;
-    //             $this->entity->date = $refDetail->date;
-    //             $this->entity->created_by = $updatedBy;
-    //             $this->entity->updated_by = $updatedBy;
-    //             $mAbsentDetail->save($this->entity);
-
-    //             $this->entity = new \App\Entities\Absent();
-    //             $this->entity->setDocStatus("IP");
-    //             $this->entity->setAbsentId($refDetail->trx_absent_id);
-    //             $this->entity->setUpdatedBy($updatedBy);
-    //             $this->save($this->entity);
-    //         endforeach;
-
-    //         $mAbsentDetail->builder->updateBatch($data, $mAbsentDetail->primaryKey);
-
-    //         $whereParam = [
-    //             'table'             => $this->table,
-    //             'md_employee_id'    => $sql->md_employee_id,
-    //             'record_id'         => $ID
-    //         ];
-
-    //         $tkh = $mAllowance->where($whereParam)->findAll();
-
-    //         $saldo_cuti = $mLeaveBalance->where($whereParam)->findAll();
-
-    //         if ($tkh) {
-    //             $arr = [];
-
-    //             foreach ($tkh as $row) {
-    //                 $arr[] = [
-    //                     "record_id"         => $ID,
-    //                     "table"             => $this->table,
-    //                     "submissiontype"    => $row->submissiontype,
-    //                     "submissiondate"    => $row->submissiondate,
-    //                     "md_employee_id"    => $row->md_employee_id,
-    //                     "amount"            => - ($row->amount),
-    //                     "created_by"        => $updatedBy,
-    //                     "updated_by"        => $updatedBy
-    //                 ];
-    //             }
-
-    //             $mAllowance->builder->insertBatch($arr);
-    //         }
-
-    //         if ($saldo_cuti) {
-    //             $saldo = [];
-
-    //             foreach ($saldo_cuti as $row) {
-    //                 $saldo[] = [
-    //                     "record_id"         => $ID,
-    //                     "table"             => $this->table,
-    //                     "submissiondate"    => $row->submissiondate,
-    //                     "md_employee_id"    => $row->md_employee_id,
-    //                     "amount"            => abs($row->balance_amount),
-    //                     "created_by"        => $updatedBy,
-    //                     "updated_by"        => $updatedBy
-    //                 ];
-    //             }
-
-    //             $mLeaveBalance->builder->insertBatch($saldo);
-    //         }
-    //     }
-    // }
 
     public function getAllSubmission($where, $refSubCancel = null)
     {

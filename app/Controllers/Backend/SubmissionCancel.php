@@ -254,7 +254,7 @@ class SubmissionCancel extends BaseController
                         if ($this->isNew()) {
                             $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                            $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pembatalan, $post);
+                            $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pembatalan, $post, $this->session->get('sys_user_id'));
                             $this->entity->setDocumentNo($docNo);
                         }
 
