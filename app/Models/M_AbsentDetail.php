@@ -92,15 +92,12 @@ class M_AbsentDetail extends Model
         $mRuleDetail = new M_RuleDetail($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
         $mLeaveBalance = new M_LeaveBalance($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-        $mHoliday = new M_Holiday($this->request);
         $mTransaction = new M_Transaction($this->request);
 
         $amount = 0;
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-        $updated_by = $rows['data']['updated_by'] ?? session()->get('id');;
+        $updated_by = $rows['data']['updated_by'] ?? session()->get('id');
         $today = date('Y-m-d');
         $day = date('w');
         $entryTime = "08:00";
@@ -113,67 +110,65 @@ class M_AbsentDetail extends Model
             $year = date('Y', strtotime($line->date));
 
             if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti && $line->isagree === "Y") {
+                $rule = $mRule->where([
+                    'name'      => 'Cuti',
+                    'isactive'  => 'Y'
+                ])->first();
+
                 $balance = $mLeaveBalance->where([
                     'year'              => date("Y", strtotime($sql->startdate)),
                     'md_employee_id'    => $sql->md_employee_id
                 ])->first();
 
-                $saldo = $balance->balance_amount;
-                $carriedOverAmt = $balance->carried_over_amount;
                 $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
                 $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
 
                 $dataLeaveUsage = [];
-                if ($carryOverValid && $carriedOverAmt != 0) {
-                    $entityBal = new \App\Entities\LeaveBalance();
-                    $entityBal->md_employee_id = $sql->md_employee_id;
-                    $entityBal->carried_over_amount = $carriedOverAmt - 1;
-                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+                $updateField = null;
+                $oldValue = null;
+                $newValue = null;
 
-                    $mLeaveBalance->save($entityBal);
+                $entityBal = new \App\Entities\LeaveBalance();
+                $entityBal->md_employee_id = $sql->md_employee_id;
+                $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
-                    $dataLeaveUsage[] = [
-                        "record_id"         => $ID,
-                        "table"             => $this->table,
-                        "transactiondate"   => $line->date,
-                        "transactiontype"   => 'C-',
-                        "year"              => $year,
-                        "amount"            => -1,
-                        "md_employee_id"    => $sql->md_employee_id,
-                        "isprocessed"       => "N",
-                        "created_by"        => $updated_by,
-                        "updated_by"        => $updated_by
-                    ];
-                } else if ($mainLeaveValid && $saldo != 0) {
-                    $entityBal = new \App\Entities\LeaveBalance();
-                    $entityBal->md_employee_id = $sql->md_employee_id;
-                    $entityBal->balance_amount = $saldo - 1;
-                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                    $mLeaveBalance->save($entityBal);
-
-                    $dataLeaveUsage[] = [
-                        "record_id"         => $ID,
-                        "table"             => $this->table,
-                        "transactiondate"   => $line->date,
-                        "transactiontype"   => 'C-',
-                        "year"              => $year,
-                        "amount"            => -1,
-                        "md_employee_id"    => $sql->md_employee_id,
-                        "isprocessed"       => "N",
-                        "created_by"        => $updated_by,
-                        "updated_by"        => $updated_by
-                    ];
+                if ($carryOverValid && $balance->carried_over_amount > 0) {
+                    $updateField = 'carried_over_amount';
+                    $oldValue = $balance->carried_over_amount;
+                    $newValue = $oldValue - 1;
+                    $entityBal->$updateField = $newValue;
+                } else if ($mainLeaveValid && $balance->balance_amount > 0) {
+                    $updateField = 'balance_amount';
+                    $oldValue = $balance->balance_amount;
+                    $newValue = $oldValue - 1;
+                    $entityBal->$updateField = $newValue;
                 } else {
                     $entity = new \App\Entities\AbsentDetail();
                     $entity->isagree = "N";
                     $entity->updated_by = $updated_by;
                     $entity->{$this->primaryKey} = $ID;
                     $this->save($entity);
+                    return;
                 }
 
-                if ($dataLeaveUsage)
+                if ($mLeaveBalance->save($entityBal)) {
+                    $dataLeaveUsage[] = [
+                        'record_id'       => $ID,
+                        'table'           => $this->table,
+                        'transactiondate' => $line->date,
+                        'transactiontype' => 'C-',
+                        'year'            => $year,
+                        'amount'          => -1,
+                        'md_employee_id'  => $sql->md_employee_id,
+                        'isprocessed'     => 'N',
+                        'created_by'      => $updated_by,
+                        'updated_by'      => $updated_by
+                    ];
+
                     $mTransaction->builder->insertBatch($dataLeaveUsage);
+
+                    $amount = $rule->condition ?: $rule->value;
+                }
             }
 
             if ($sql->submissiontype == $mAbsent->Pengajuan_Sakit) {
@@ -220,45 +215,45 @@ class M_AbsentDetail extends Model
                                             $entityBal->balance_amount = $saldo - $tkh;
                                             $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
-                                            $mLeaveBalance->save($entityBal);
+                                            if ($mLeaveBalance->save($entityBal)) {
+                                                $dataLeaveUsage[] = [
+                                                    "record_id"         => $ID,
+                                                    "table"             => $this->table,
+                                                    "transactiondate"   => $line->date,
+                                                    "transactiontype"   => 'A-',
+                                                    "year"              => $year,
+                                                    "amount"            => $tkh,
+                                                    "md_employee_id"    => $sql->md_employee_id,
+                                                    "isprocessed"       => "N",
+                                                    "created_by"        => $updated_by,
+                                                    "updated_by"        => $updated_by
+                                                ];
+                                            }
 
                                             $amount = 0;
-
-                                            $dataLeaveUsage[] = [
-                                                "record_id"         => $ID,
-                                                "table"             => $this->table,
-                                                "transactiondate"   => $line->date,
-                                                "transactiontype"   => 'C-',
-                                                "year"              => $year,
-                                                "amount"            => $tkh,
-                                                "md_employee_id"    => $sql->md_employee_id,
-                                                "isprocessed"       => "N",
-                                                "created_by"        => $updated_by,
-                                                "updated_by"        => $updated_by
-                                            ];
                                         } else if ($saldo != 0) {
                                             $entityBal->md_employee_id = $sql->md_employee_id;
                                             $entityBal->balance_amount = $saldo - $saldo;
                                             $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
-                                            $mLeaveBalance->save($entityBal);
+                                            if ($mLeaveBalance->save($entityBal)) {
+                                                $dataLeaveUsage[] = [
+                                                    "record_id"         => $ID,
+                                                    "table"             => $this->table,
+                                                    "transactiondate"   => $line->date,
+                                                    "transactiontype"   => 'A-',
+                                                    "year"              => $year,
+                                                    "amount"            => - ($saldo),
+                                                    "md_employee_id"    => $sql->md_employee_id,
+                                                    "isprocessed"       => "N",
+                                                    "created_by"        => $updated_by,
+                                                    "updated_by"        => $updated_by
+                                                ];
+                                            }
 
                                             //? Cek perbandingan dari calculate variable 
                                             if ($calculate == 0)
                                                 $amount = 0;
-
-                                            $dataLeaveUsage[] = [
-                                                "record_id"         => $ID,
-                                                "table"             => $this->table,
-                                                "transactiondate"   => $line->date,
-                                                "transactiontype"   => 'C-',
-                                                "year"              => $year,
-                                                "amount"            => - ($saldo),
-                                                "md_employee_id"    => $sql->md_employee_id,
-                                                "isprocessed"       => "N",
-                                                "created_by"        => $updated_by,
-                                                "updated_by"        => $updated_by
-                                            ];
                                         }
 
                                         if ($calculate < 0) {
@@ -274,16 +269,7 @@ class M_AbsentDetail extends Model
                                             $hari -= $saldo;
                                             $tkh *= $hari;
 
-                                            $entity->record_id = $sql->{$mAbsent->primaryKey};
-                                            $entity->table = $mAbsent->table;
-                                            $entity->submissiontype = $sql->submissiontype;
-                                            $entity->submissiondate = $line->date;
-                                            $entity->md_employee_id = $sql->md_employee_id;
-                                            $entity->amount = $tkh;
-                                            $entity->created_by = $updated_by;
-                                            $entity->updated_by = $updated_by;
-
-                                            $mAllowance->save($entity);
+                                            $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, 'A-', $line->date, $sql->submissiontype, $sql->md_employee_id, $tkh, $updated_by);
                                         }
                                     }
                                 }
@@ -295,16 +281,7 @@ class M_AbsentDetail extends Model
                                     $tkh *= abs($detail->condition);
 
                                     if ($tkh != 0 && $line->isagree === 'Y') {
-                                        $entity->record_id = $sql->{$mAbsent->primaryKey};
-                                        $entity->table = $mAbsent->table;
-                                        $entity->submissiontype = $sql->submissiontype;
-                                        $entity->submissiondate = $line->date;
-                                        $entity->md_employee_id = $sql->md_employee_id;
-                                        $entity->amount = $tkh;
-                                        $entity->created_by = $updated_by;
-                                        $entity->updated_by = $updated_by;
-
-                                        $mAllowance->save($entity);
+                                        $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, 'A-', $line->date, $sql->submissiontype, $sql->md_employee_id, $tkh, $updated_by);
                                     }
                                 }
                             }
@@ -316,128 +293,78 @@ class M_AbsentDetail extends Model
                 }
             }
 
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Ijin) {
+            if ($sql->submissiontype == $mAbsent->Pengajuan_Ijin && $line->isagree === "Y") {
                 $rule = $mRule->where([
                     'name'      => 'Ijin',
                     'isactive'  => 'Y'
                 ])->first();
 
-                if ($rule) {
-                    $amount = $rule->condition ?: $rule->value;
+                $balance = $mLeaveBalance->where([
+                    'year'              => date("Y", strtotime($line->date)),
+                    'md_employee_id'    => $sql->md_employee_id
+                ])->first();
 
-                    $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+                if ($balance && ($balance->balance_amount > 0 || $balance->carried_over_amount > 0)) {
+                    $year = date('Y', strtotime($line->date));
+                    $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
+                    $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
+                    $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin Cuti"])->first();
+                    $conseq = $ruleDetail->value;
 
-                    if ($ruleDetail) {
-                        $balance = $mLeaveBalance->where([
-                            'year'              => date("Y", strtotime($sql->startdate)),
-                            'md_employee_id'    => $sql->md_employee_id
-                        ])->first();
-                        $saldo = $balance->balance_amount;
+                    $dataLeaveUsage = [];
+                    $updateField = null;
+                    $oldValue = null;
+                    $newValue = null;
 
-                        $dataLeaveUsage = [];
-                        foreach ($ruleDetail as $detail) {
-                            if ($saldo != 0) {
-                                if ($detail->name === "Sanksi Ijin Cuti") {
-                                    $entityBal = new \App\Entities\LeaveBalance();
-                                    $tkh = $detail->value;
+                    $entityBal = new \App\Entities\LeaveBalance();
+                    $entityBal->md_employee_id = $sql->md_employee_id;
+                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
-                                    $calculate = $saldo + $tkh;
-
-                                    if ($tkh != 0 && $line->isagree === 'Y') {
-                                        if ($calculate > 0) {
-                                            $entityBal->md_employee_id = $sql->md_employee_id;
-                                            $entityBal->balance_amount = $saldo - $tkh;
-                                            $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                                            $mLeaveBalance->save($entityBal);
-
-                                            $amount = 0;
-
-                                            $dataLeaveUsage[] = [
-                                                "record_id"         => $ID,
-                                                "table"             => $this->table,
-                                                "transactiondate"   => $line->date,
-                                                "transactiontype"   => 'C-',
-                                                "year"              => $year,
-                                                "amount"            => $tkh,
-                                                "md_employee_id"    => $sql->md_employee_id,
-                                                "isprocessed"       => "N",
-                                                "created_by"        => $updated_by,
-                                                "updated_by"        => $updated_by
-                                            ];
-                                        } else if ($saldo != 0) {
-                                            $entityBal->md_employee_id = $sql->md_employee_id;
-                                            $entityBal->balance_amount = $saldo - $saldo;
-                                            $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                                            $mLeaveBalance->save($entityBal);
-
-                                            //? Cek perbandingan dari calculate variable 
-                                            if ($calculate == 0)
-                                                $amount = 0;
-
-                                            $dataLeaveUsage[] = [
-                                                "record_id"         => $ID,
-                                                "table"             => $this->table,
-                                                "transactiondate"   => $line->date,
-                                                "transactiontype"   => 'C-',
-                                                "year"              => $year,
-                                                "amount"            => - ($saldo),
-                                                "md_employee_id"    => $sql->md_employee_id,
-                                                "isprocessed"       => "N",
-                                                "created_by"        => $updated_by,
-                                                "updated_by"        => $updated_by
-                                            ];
-                                        }
-
-                                        if ($calculate < 0) {
-                                            $entity = new \App\Entities\AllowanceAtt();
-
-                                            $rDetail = $mRuleDetail->where([
-                                                'md_rule_id' => $rule->md_rule_id,
-                                                'name'       => 'Sanksi Ijin No Cuti'
-                                            ])->first();
-
-                                            $tkh = $rDetail->value;
-
-                                            $entity->record_id = $sql->{$mAbsent->primaryKey};
-                                            $entity->table = $mAbsent->table;
-                                            $entity->submissiontype = $sql->submissiontype;
-                                            $entity->submissiondate = $line->date;
-                                            $entity->md_employee_id = $sql->md_employee_id;
-                                            $entity->amount = $tkh;
-                                            $entity->created_by = $updated_by;
-                                            $entity->updated_by = $updated_by;
-
-                                            $mAllowance->save($entity);
-                                        }
-                                    }
-                                }
-                            } else {
-                                $entity = new \App\Entities\AllowanceAtt();
-
-                                if ($detail->name === "Sanksi Ijin No Cuti") {
-                                    $tkh = $detail->value;
-
-                                    if ($tkh != 0 && $line->isagree === 'Y') {
-                                        $entity->record_id = $sql->{$mAbsent->primaryKey};
-                                        $entity->table = $mAbsent->table;
-                                        $entity->submissiontype = $sql->submissiontype;
-                                        $entity->submissiondate = $line->date;
-                                        $entity->md_employee_id = $sql->md_employee_id;
-                                        $entity->amount = $tkh;
-                                        $entity->created_by = $updated_by;
-                                        $entity->updated_by = $updated_by;
-
-                                        $mAllowance->save($entity);
-                                    }
-                                }
-                            }
-                        }
-
-                        if ($dataLeaveUsage)
-                            $mTransaction->builder->insertBatch($dataLeaveUsage);
+                    if ($carryOverValid && $balance->carried_over_amount > 0) {
+                        $updateField = 'carried_over_amount';
+                        $oldValue = $balance->carried_over_amount;
+                        $newValue = $oldValue + $conseq;
+                        $entityBal->$updateField = $newValue;
+                    } else if ($mainLeaveValid && $balance->balance_amount > 0) {
+                        $updateField = 'balance_amount';
+                        $oldValue = $balance->balance_amount;
+                        $newValue = $oldValue + $conseq;
+                        $entityBal->$updateField = $newValue;
                     }
+
+                    if ($mLeaveBalance->save($entityBal)) {
+                        $dataLeaveUsage[] = [
+                            'record_id'       => $ID,
+                            'table'           => $this->table,
+                            'transactiondate' => $line->date,
+                            'transactiontype' => 'I-',
+                            'year'            => $year,
+                            'amount'          => $conseq,
+                            'md_employee_id'  => $sql->md_employee_id,
+                            'isprocessed'     => 'N',
+                            'created_by'      => $updated_by,
+                            'updated_by'      => $updated_by
+                        ];
+
+                        $mTransaction->builder->insertBatch($dataLeaveUsage);
+                    }
+                } else {
+                    $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin No Cuti"])->first();
+                    $amount = $ruleDetail->value;
+                    // $entity = new \App\Entities\AllowanceAtt();
+
+                    // if ($conseq != 0) {
+                    //     $entity->record_id = $sql->{$mAbsent->primaryKey};
+                    //     $entity->table = $mAbsent->table;
+                    //     $entity->submissiontype = $sql->submissiontype;
+                    //     $entity->submissiondate = $line->date;
+                    //     $entity->md_employee_id = $sql->md_employee_id;
+                    //     $entity->amount = $conseq;
+                    //     $entity->created_by = $updated_by;
+                    //     $entity->updated_by = $updated_by;
+
+                    //     $mAllowance->save($entity);
+                    // }
                 }
             }
 
@@ -586,89 +513,8 @@ class M_AbsentDetail extends Model
             // }
 
             if ($amount != 0 && $line->isagree === 'Y') {
-                $entity = new \App\Entities\AllowanceAtt();
-
-                $entity->record_id = $sql->{$mAbsent->primaryKey};
-                $entity->table = $mAbsent->table;
-                $entity->submissiontype = $sql->submissiontype;
-                $entity->submissiondate = $line->date;
-                $entity->md_employee_id = $sql->md_employee_id;
-                $entity->amount = $amount;
-                $entity->created_by = $updated_by;
-                $entity->updated_by = $updated_by;
-
-                $mAllowance->save($entity);
-            }
-
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Pembatalan_Cuti && $line->isagree === "Y") {
-                $balance = $mLeaveBalance->where([
-                    'year'              => date("Y", strtotime($sql->startdate)),
-                    'md_employee_id'    => $sql->md_employee_id
-                ])->first();
-
-                $refLeave = $this->where([$mAbsent->primaryKey => $sql->reference_id, 'date' => $line->date, 'isagree' => 'Y'])->first();
-
-                $saldo = $balance->balance_amount;
-                $carriedOverAmt = $balance->carried_over_amount;
-                $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
-                $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
-                $year = date('Y', strtotime($line->date));
-
-                $dataLeaveUsage = [];
-                if ($carryOverValid) {
-                    $entityBal = new \App\Entities\LeaveBalance();
-                    $entityBal->md_employee_id = $sql->md_employee_id;
-                    $entityBal->carried_over_amount = $carriedOverAmt + 1;
-                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                    $mLeaveBalance->save($entityBal);
-
-                    $dataLeaveUsage[] = [
-                        "record_id"         => $ID,
-                        "table"             => $this->table,
-                        "transactiondate"   => $line->date,
-                        "transactiontype"   => 'C+',
-                        "year"              => $year,
-                        "amount"            => 1,
-                        "md_employee_id"    => $sql->md_employee_id,
-                        "isprocessed"       => "N",
-                        "created_by"        => $updated_by,
-                        "updated_by"        => $updated_by
-                    ];
-                } else if ($mainLeaveValid) {
-                    $entityBal = new \App\Entities\LeaveBalance();
-                    $entityBal->md_employee_id = $sql->md_employee_id;
-                    $entityBal->balance_amount = $saldo + 1;
-                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                    $mLeaveBalance->save($entityBal);
-
-                    $dataLeaveUsage[] = [
-                        "record_id"         => $ID,
-                        "table"             => $this->table,
-                        "transactiondate"   => $line->date,
-                        "transactiontype"   => 'C+',
-                        "year"              => $year,
-                        "amount"            => 1,
-                        "md_employee_id"    => $sql->md_employee_id,
-                        "isprocessed"       => "N",
-                        "created_by"        => $updated_by,
-                        "updated_by"        => $updated_by
-                    ];
-                }
-
-                if ($refLeave) {
-                    // Insert Reference LeaveCancel for Leave
-                    $entity = new \App\Entities\AbsentDetail();
-                    $entity->updated_by = $updated_by;
-                    $entity->{$this->primaryKey} = $refLeave->trx_absent_detail_id;
-                    $entity->isagree = "C";
-                    $entity->ref_absent_detail_id = $ID;
-                    $this->save($entity);
-                }
-
-                if ($dataLeaveUsage)
-                    $mTransaction->builder->insertBatch($dataLeaveUsage);
+                $transactiontype = $amount < 0 ? 'A-' : 'A+';
+                $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, $transactiontype, $line->date, $sql->submissiontype, $sql->md_employee_id, $amount, $updated_by);
             }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);

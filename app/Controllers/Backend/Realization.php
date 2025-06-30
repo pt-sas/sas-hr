@@ -17,6 +17,7 @@ use App\Models\M_AllowanceAtt;
 use App\Models\M_Assignment;
 use App\Models\M_AssignmentDate;
 use App\Models\M_AssignmentDetail;
+use App\Models\M_ChangeLog;
 use App\Models\M_Configuration;
 use App\Models\M_EmpBenefit;
 use App\Models\M_Employee;
@@ -1082,6 +1083,7 @@ class Realization extends BaseController
     {
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mConfig = new M_Configuration($this->request);
+        $changeLog = new M_ChangeLog($this->request);
 
         //TODO : Get Rule How Many Days to Auto Approve
         $rule = $mConfig->where(['name' => 'AUTO_APPROVE_REALIZATION', 'isactive' => 'Y'])->first();
@@ -1105,22 +1107,23 @@ class Realization extends BaseController
                 foreach ($listApproved as $row) {
                     //TODO : Update Detail Status to Approved
                     $this->modelDetail = $row->table === 'trx_absent' ? new M_AbsentDetail($this->request) : new M_AssignmentDate($this->request);
+                    $entity = $row->table === "trx_absent" ? new \App\Entities\AbsentDetail() : new \App\Entities\AssignmentDate();
 
-                    $data = [
-                        "isagree"               => "Y",
-                        "updated_at"            => $todayTime,
-                        "updated_by"            => $this->session->get('sys_user_id')
-                    ];
+                    $entity->isagree = 'Y';
+                    $entity->updated_at = $todayTime;
+                    $entity->updated_by = $this->session->get('sys_user_id');
+                    $entity->{$this->modelDetail->primaryKey} = $row->id;
 
-                    $this->modelDetail->builder->update($data, [$this->modelDetail->primaryKey => $row->id]);
-
-                    $where = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
-                    $where .= " AND isapproved = 'Y'";
-                    $where .= " AND isagree IN ('M','S')";
-                    $where .= " AND header_id = {$row->header_id}";
-                    $where .= " AND table = '{$row->table}'";
+                    if ($this->modelDetail->save($entity)) {
+                        $changeLog->insertLog($this->modelDetail->table, 'isagree', $row->id, $row->isagree, 'Y', $this->EVENTCHANGELOG_Update);
+                    };
 
                     //TODO : Update Header Status to Complete if There's No Another Line to Realization
+                    $where = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
+                    $where .= " AND isapproved = 'Y'";
+                    $where .= " AND isagree IN ('M','S','H')";
+                    $where .= " AND header_id = {$row->header_id}";
+                    $where .= " AND table = '{$row->table}'";
                     $remaining = $mAbsentDetail->getAllSubmission($where)->getRow();
 
                     if (!$remaining) {

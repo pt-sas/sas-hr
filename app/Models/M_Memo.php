@@ -239,18 +239,7 @@ class M_Memo extends Model
         }
 
         if ($amount != 0) {
-            $entity = new \App\Entities\AllowanceAtt();
-
-            $entity->record_id = $ID;
-            $entity->table = $this->table;
-            $entity->submissiontype = $this->Pengajuan_Memo_SDM;
-            $entity->submissiondate = $submissionDate;
-            $entity->md_employee_id = $employeeID;
-            $entity->amount = $amount;
-            $entity->created_by = $rows['data']['created_by'];
-            $entity->updated_by = $rows['data']['updated_by'];
-
-            $mAllowance->save($entity);
+            $mAllowance->insertAllowance($ID, $this->table, 'A-', $submissionDate, $this->Pengajuan_Memo_SDM, $employeeID, $amount, $rows['data']['created_by']);
         }
 
         return $rows;

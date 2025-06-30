@@ -173,40 +173,40 @@ class M_SubmissionCancelDetail extends Model
                     $entityBal->carried_over_amount = $carriedOverAmt + 1;
                     $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
-                    $mLeaveBalance->save($entityBal);
-
-                    $dataLeaveUsage[] = [
-                        "record_id"         => $ID,
-                        "table"             => $this->table,
-                        "transactiondate"   => $line->date,
-                        "transactiontype"   => 'C+',
-                        "year"              => $year,
-                        "amount"            => 1,
-                        "md_employee_id"    => $line->md_employee_id,
-                        "isprocessed"       => "N",
-                        "created_by"        => $updated_by,
-                        "updated_by"        => $updated_by
-                    ];
+                    if ($mLeaveBalance->save($entityBal)) {
+                        $dataLeaveUsage[] = [
+                            "record_id"         => $ID,
+                            "table"             => $this->table,
+                            "transactiondate"   => $line->date,
+                            "transactiontype"   => 'C+',
+                            "year"              => $year,
+                            "amount"            => 1,
+                            "md_employee_id"    => $line->md_employee_id,
+                            "isprocessed"       => "N",
+                            "created_by"        => $updated_by,
+                            "updated_by"        => $updated_by
+                        ];
+                    }
                 } else if ($leaveTransaction && $mainLeaveValid) {
                     $entityBal = new \App\Entities\LeaveBalance();
                     $entityBal->md_employee_id = $line->md_employee_id;
                     $entityBal->balance_amount = $saldo + 1;
                     $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
-                    $mLeaveBalance->save($entityBal);
-
-                    $dataLeaveUsage[] = [
-                        "record_id"         => $ID,
-                        "table"             => $this->table,
-                        "transactiondate"   => $line->date,
-                        "transactiontype"   => 'C+',
-                        "year"              => $year,
-                        "amount"            => 1,
-                        "md_employee_id"    => $line->md_employee_id,
-                        "isprocessed"       => "N",
-                        "created_by"        => $updated_by,
-                        "updated_by"        => $updated_by
-                    ];
+                    if ($mLeaveBalance->save($entityBal)) {
+                        $dataLeaveUsage[] = [
+                            "record_id"         => $ID,
+                            "table"             => $this->table,
+                            "transactiondate"   => $line->date,
+                            "transactiontype"   => 'C+',
+                            "year"              => $year,
+                            "amount"            => 1,
+                            "md_employee_id"    => $line->md_employee_id,
+                            "isprocessed"       => "N",
+                            "created_by"        => $updated_by,
+                            "updated_by"        => $updated_by
+                        ];
+                    }
                 }
 
                 if ($dataLeaveUsage)
