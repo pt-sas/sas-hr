@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\M_Absent;
+use App\Models\M_AbsentDetail;
 use CodeIgniter\RESTful\ResourceController;
 use App\Models\M_AllowanceAtt;
 use App\Models\M_Attendance;
@@ -52,25 +53,16 @@ STR;
     {
         $mEmployee = new M_Employee($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
-        $mRule = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
         $mAbsent = new M_Absent($this->request);
+        $mAbsentDetail = new M_AbsentDetail($this->request);
 
         $get = $this->request->getGet();
 
-        $today = date('Y-m-d');
-        // $prevDate = date('Y-m-d', strtotime('-1 days'));
-        $day = date('w');
-        $workHour = convertToMinutes("08:00");
-        $breakTime = "12:00";
-        $amount = 0;
-        $formType = 0;
-
         try {
-            $content = $this->request->getBody();
-            $arr = preg_split('/\\r\\n|\\r|,|\\n/', trim($content), -1, PREG_SPLIT_NO_EMPTY);
+            $content = trim($this->request->getBody());
+            $arr = preg_split('/\\r\\n|\\r|,|\\n/', $content, -1, PREG_SPLIT_NO_EMPTY);
             $jml = 0;
 
             if (isset($get['table']) && $get['table'] === "ATTLOG") {
@@ -92,92 +84,54 @@ STR;
                     $jml++;
                 }
 
-                $result = $this->model->builder->insertBatch($data);
+                if ($this->model->builder->insertBatch($data) > 0) {
+                    $ruleDetail = $mRuleDetail->where([
+                        "isactive"  => "Y",
+                        "name <>"   => null
+                    ])->findAll();
 
-                if ($result > 0) {
                     foreach ($data as $val) {
-                        $list = $mEmployee->where("nik", $val['nik'])->first();
+                        $emp = $mEmployee->where("nik", $val['nik'])->first();
 
-                        if ($list) {
-                            //TODO : Get work day employee
-                            $workDay = $mEmpWork->where([
-                                'md_employee_id'    => $list->md_employee_id,
-                                'validfrom <='      => $today,
-                                'validto >='        => $today
-                            ])->orderBy('validfrom', 'ASC')->first();
+                        if ($emp) {
+                            $date = date('Y-m-d', strtotime($val['checktime']));
 
                             $attToday = $this->model->getAttendance([
                                 'v_attendance.nik'        => $val['nik'],
-                                'v_attendance.date'       => date("Y-m-d", strtotime($val['checktime']))
+                                'v_attendance.date'       => $date
                             ])->getRow();
 
                             //TODO: Masukan data allowance hari sebelumnya jika tidak ada absen pulang 
-                            // if ($prevAtt && !empty($prevAtt->clock_in) && empty($prevAtt->clock_out)) {
-                            //     $day = date('w', strtotime($prevAtt->date));
-                            //     $day = strtoupper(formatDay_idn($day));
-
-                            //     $whereClause = "md_work_detail.isactive = 'Y'";
-                            //     $whereClause .= " AND md_employee_work.md_employee_id = $list->md_employee_id";
-                            //     $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                            //     $whereClause .= " AND md_day.name = '$day'";
-                            //     $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
-
-                            //     if ($work) {
-                            //         $rule = $mRule->where([
-                            //             "isactive"  => "Y",
-                            //             "name"      => "Lupa Absen Pulang"
-                            //         ])->first();
-
-                            //         $amount = $rule && $rule->condition ?: $rule->value;
-
-                            //         $allowOut = $mAllowance->where([
-                            //             'md_employee_id'                            => $list->md_employee_id,
-                            //             'date_format(submissiondate, "%Y-%m-%d")'   => $prevAtt->date,
-                            //             'submissiontype'                            => $mAbsent->Pengajuan_Lupa_Absen_Pulang,
-                            //             'table'                                     => $mAttend->table
-                            //         ])->first();
-
-                            //         if ($amount != 0 && is_null($allowOut)) {
-                            //             $entity = new \App\Entities\AllowanceAtt();
-
-                            //             // $entity->record_id = $prevAtt->trx_attend_id;
-                            //             $entity->table = $mAttend->table;
-                            //             $entity->submissiontype = $mAbsent->Pengajuan_Lupa_Absen_Pulang;
-                            //             $entity->submissiondate = $prevAtt->date;
-                            //             $entity->md_employee_id = $list->md_employee_id;
-                            //             $entity->amount = $amount;
-                            //             // $entity->created_by = $updated_by;
-                            //             // $entity->updated_by = $updated_by;
-
-                            //             $mAllowance->save($entity);
-                            //         }
-                            //     }
-                            // }
-
-                            //TODO: Masukan data allowance hari sebelumnya jika tidak ada absen pulang 
                             if ($attToday) {
-                                $day = date('w', strtotime($attToday->date));
-                                $day = strtoupper(formatDay_idn($day));
+                                $day = strtoupper(formatDay_idn(date('w', strtotime($attToday->date))));
 
                                 $whereClause = "md_work_detail.isactive = 'Y'";
-                                $whereClause .= " AND md_employee_work.md_employee_id = $list->md_employee_id";
-                                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                                $whereClause .= " AND md_employee_work.md_employee_id = $emp->md_employee_id";
+                                $whereClause .= " AND (md_employee_work.validfrom <= '{$date}' and md_employee_work.validto >= '{$date}')";
                                 $whereClause .= " AND md_day.name = '$day'";
-                                $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+                                $work = $mEmpWork->getEmpWorkDetail($whereClause)->getRow();
 
-                                if ($work) {
+                                $whereClause = "trx_absent.md_employee_id = $emp->md_employee_id";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'";
+                                $whereClause .= " AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Ijin}, {$mAbsent->Pengajuan_Sakit}, {$mAbsent->Pengajuan_Cuti}, {$mAbsent->Pengajuan_Tugas_Kantor}, {$mAbsent->Pengajuan_Ijin_Resmi})";
+                                $whereClause .= " AND trx_absent.docstatus IN ('CO', 'IP')";
+                                $whereClause .= " AND trx_absent_detail.isagree IN ('Y', 'M', 'S')";
+                                $trxPresentDay = $mAbsentDetail->getAbsentDetail($whereClause)->getRow();
+
+                                if ($work && !$trxPresentDay) {
+                                    //TODO : Insert beginning balance
+                                    $mAllowance->insertAllowance(null, 'trx_attendance', 'S+', $val['checktime'], null, $emp->md_employee_id, 1);
+
                                     $clockIn = $attToday->clock_in;
                                     $clockOut = $attToday->clock_out;
                                     $workInTime = convertToMinutes($clockIn);
                                     $workOutTime = convertToMinutes($clockOut);
                                     $workHour = convertToMinutes($work->startwork);
-                                    $endBreakHour = convertToMinutes($work->breakend);
-                                    $checkTime = date("Y-m-d H:i:s");
+                                    $workHourEnd = convertToMinutes($work->endwork);
+                                    $breakStart = convertToMinutes($work->breakstart);
 
-                                    $ruleDetail = $mRuleDetail->where([
-                                        "isactive"  => "Y",
-                                        "name <>"   => null
-                                    ])->findAll();
+                                    $amount = 0;
+                                    $formType = 0;
 
                                     foreach ($ruleDetail as $detail) {
                                         if (
@@ -185,12 +139,9 @@ STR;
                                             && getOperationResult($workInTime, ($workHour + $detail->condition), $detail->operation)
                                             && !empty($clockIn)
                                         ) {
-                                            $checkTime = $clockIn;
-                                            $dateTime = date("Y-m-d", strtotime($val['checktime'])) . " " . $checkTime;
-
                                             $allowIn = $mAllowance->where([
-                                                'md_employee_id'    => $list->md_employee_id,
-                                                'submissiondate'    => $dateTime,
+                                                'md_employee_id'    => $emp->md_employee_id,
+                                                'DATE(submissiondate) =' => $date,
                                                 'submissiontype'    => $mAbsent->Pengajuan_Datang_Terlambat,
                                                 'table'             => $this->model->table
                                             ])->first();
@@ -203,15 +154,12 @@ STR;
 
                                         if (
                                             $detail->name === "Terlambat"
-                                            && getOperationResult($workOutTime, ($workHour + $detail->condition), $detail->operation)
+                                            && getOperationResult($workOutTime, $breakStart, $detail->operation)
                                             && empty($clockIn) && !empty($clockOut)
                                         ) {
-                                            $checkTime = $clockOut;
-                                            $dateTime = date("Y-m-d", strtotime($val['checktime'])) . " " . $checkTime;
-
                                             $allowOut = $mAllowance->where([
-                                                'md_employee_id'    => $list->md_employee_id,
-                                                'submissiondate <'  => $dateTime,
+                                                'md_employee_id'    => $emp->md_employee_id,
+                                                'DATE(submissiondate) ='    => $date,
                                                 'submissiontype'    => $mAbsent->Pengajuan_Datang_Terlambat,
                                                 'table'             => $this->model->table
                                             ])->first();
@@ -224,15 +172,12 @@ STR;
 
                                         if (
                                             $detail->name === "Pulang Cepat 1/2 Hari"
-                                            && getOperationResult($workOutTime, ($workHour + $detail->condition), $detail->operation)
+                                            && getOperationResult($workOutTime, $workHourEnd, $detail->operation)
                                             && !empty($clockIn) && !empty($clockOut)
                                         ) {
-                                            $checkTime = $clockOut;
-                                            $dateTime = date("Y-m-d", strtotime($val['checktime'])) . " " . $checkTime;
-
                                             $allowOut = $mAllowance->where([
-                                                'md_employee_id'    => $list->md_employee_id,
-                                                'submissiondate <'  => $dateTime,
+                                                'md_employee_id'    => $emp->md_employee_id,
+                                                'DATE(submissiondate) ='  => $date,
                                                 'submissiontype'    => $mAbsent->Pengajuan_Pulang_Cepat,
                                                 'table'             => $this->model->table
                                             ])->first();
@@ -244,27 +189,9 @@ STR;
                                         }
                                     }
 
-                                    $allowSub = $mAllowance->where([
-                                        'md_employee_id'    => $list->md_employee_id,
-                                        'submissiondate'    => date("Y-m-d", strtotime($val['checktime'])),
-                                        'table'             => $this->model->table
-                                    ])->whereIn(
-                                        'submissiontype',
-                                        [$mAbsent->Pengajuan_Tugas_Khusus, $mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari]
-                                    )->first();
-
-                                    if ($amount != 0 && is_null($allowSub)) {
-                                        $entity = new \App\Entities\AllowanceAtt();
-
-                                        $entity->table = $this->model->table;
-                                        $entity->submissiontype = $formType;
-                                        $entity->submissiondate = $val['checktime'];
-                                        $entity->md_employee_id = $list->md_employee_id;
-                                        $entity->amount = $amount;
-                                        // $entity->created_by = $updated_by;
-                                        // $entity->updated_by = $updated_by;
-
-                                        $mAllowance->save($entity);
+                                    //TODO : Insert Allowance
+                                    if ($amount != 0) {
+                                        $mAllowance->insertAllowance(null, $this->model->table, 'A-', $val['checktime'], $formType, $emp->md_employee_id, $amount);
                                     }
                                 }
                             }
@@ -272,35 +199,6 @@ STR;
                     }
                 }
             }
-
-            // if (isset($get['table']) && $get['table'] === "OPERLOG") {
-            //     $data = [];
-
-            //     foreach ($arr as $key => $rey) {
-            //         // $row = [];
-            //         // $req = preg_split('/\\t\\n|\\t|,|\\n/', $rey);
-
-            //         // $row['nik'] = $req[0];
-            //         // $row['checktime'] = $req[1];
-            //         // $row['status'] = $req[2];
-            //         // $row['verify'] = $req[3];
-            //         // $row['reserved'] = $req[4];
-            //         // $row['reserved2'] = $req[5];
-            //         // $row['serialnumber'] = $get['SN'];
-            //         // $data[] = $row;
-
-            //         $row = [];
-            //         $row['pin'] = implode(" ", $arr);
-            //         $data[] = $row;
-
-            //         $jml++;
-            //     }
-
-
-            //     $db = db_connect();
-            //     $builder = $db->table('trx_att');
-            //     $builder->insertBatch($data);
-            // }
 
             $textResponse = "OK :" . $jml;
 
