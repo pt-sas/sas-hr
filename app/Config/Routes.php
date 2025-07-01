@@ -508,7 +508,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('list-absent/create', 'Backend\ListAbsent::create');
 
     $routes->add('laporan-saldo-tkh', 'Backend\AllowanceAtt::index');
-    $routes->match(['get', 'post'], 'laporan-saldo-tkh/reportAll', 'Backend\AllowanceAtt::reportAll');
+    $routes->match(['get', 'post'], 'laporan-saldo-tkh/reportAll', 'Backend\AllowanceAtt::reportAllNew');
 
     $routes->add('realisasi-lembur', 'Backend\Realization::indexOvertime');
     $routes->match(['get', 'post'], 'realisasi-lembur/showAll', 'Backend\Realization::showAllOvertime');
