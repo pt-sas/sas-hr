@@ -247,7 +247,7 @@ class PermissionLeaveOffice extends BaseController
                             if ($this->isNew()) {
                                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin_Keluar_Kantor, $post);
+                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin_Keluar_Kantor, $post, $this->session->get('sys_user_id'));
                                 $this->entity->setDocumentNo($docNo);
                             }
 

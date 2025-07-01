@@ -10,6 +10,7 @@ class Position extends Entity
     protected $value;
     protected $name;
     protected $description;
+    protected $ismandatoryduta;
     protected $isactive;
     protected $created_by;
     protected $updated_by;
@@ -108,5 +109,15 @@ class Position extends Entity
     public function setDivisionId($md_division_id)
     {
         $this->attributes['md_division_id'] = $md_division_id;
+    }
+
+    public function getIsMandatoryDuta()
+    {
+        return $this->attributes['ismandatoryduta'];
+    }
+
+    public function setIsMandatoryDuta($ismandatoryduta)
+    {
+        $this->attributes['ismandatoryduta'] = $ismandatoryduta;
     }
 }

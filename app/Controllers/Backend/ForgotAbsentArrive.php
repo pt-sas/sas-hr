@@ -289,7 +289,7 @@ class ForgotAbsentArrive extends BaseController
                                 if ($this->isNew()) {
                                     $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Lupa_Absen_Masuk, $post);
+                                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Lupa_Absen_Masuk, $post, $this->session->get('sys_user_id'));
                                     $this->entity->setDocumentNo($docNo);
                                 }
 

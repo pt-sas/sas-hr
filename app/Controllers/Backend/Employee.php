@@ -7,17 +7,22 @@ use App\Models\M_AccessMenu;
 use App\Models\M_BloodType;
 use App\Models\M_Branch;
 use App\Models\M_Country;
+use App\Models\M_DelegationTransfer;
 use App\Models\M_Division;
 use App\Models\M_Employee;
 use App\Models\M_EmpBranch;
+use App\Models\M_EmpDelegation;
 use App\Models\M_EmpDivision;
 use App\Models\M_Levelling;
+use App\Models\M_NotificationText;
 use App\Models\M_Position;
 use App\Models\M_Reference;
 use App\Models\M_ReferenceDetail;
 use App\Models\M_Religion;
 use App\Models\M_Role;
 use App\Models\M_Status;
+use App\Models\M_User;
+use Html2Text\Html2Text;
 use Config\Services;
 
 class Employee extends BaseController
@@ -177,6 +182,11 @@ class Employee extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
             $file = $this->request->getFile('image');
+            $mPosition = new M_Position($this->request);
+            $mDelegTransfer = new M_DelegationTransfer($this->request);
+            $mUser = new M_User($this->request);
+            $cMail = new Mail();
+            $mNotifText = new M_NotificationText($this->request);
 
             try {
                 $img_name = "";
@@ -219,14 +229,38 @@ class Employee extends BaseController
                         $this->entity->setPostalCode($this->entity->getPostalCodeDom());
                     }
 
-                    $response = $this->save();
+                    $position = $mPosition->where('md_position_id', $post['md_position_id'])->first();
 
-                    if (isset($response[0]["success"])) {
-                        $id = $this->getID();
+                    if ($position->getIsMandatoryDuta() === "Y" && empty($post['md_ambassador_id'])) {
+                        $response = message('success', false, 'Duta wajib diisi');
+                    } else {
+                        $response = $this->save();
 
-                        if ($this->isNew()) {
-                            $id = $this->insertID;
-                            $response[0]["foreignkey"] = $id;
+                        if (isset($response[0]["success"])) {
+                            $id = $this->getID();
+
+                            if ($this->isNew()) {
+                                $id = $this->insertID;
+                                $response[0]["foreignkey"] = $id;
+
+                                $delegationTransfer = $mDelegTransfer->getInTransitionDelegation("employee_from = {$post['md_ambassador_id']}")->getRow();
+                                if (!empty($post['md_ambassador_id']) && $delegationTransfer) {
+                                    $dataNotif = $mNotifText->where('name', 'Duta Sedang Tidak Bertugas')->first();
+                                    $user = $mUser->where('sys_user_id', $delegationTransfer->user_from)->first();
+                                    $managerID = $this->model->getEmployeeManagerID($id);
+                                    $emailManager = $mUser->select('email')->where(['md_employee_id' => $managerID, 'isactive' => 'Y'])->first();
+                                    $message = $dataNotif->getText();
+                                    $message = str_replace(['(Var1)', '(Var2)'], [$user->username, $post['value']], $message);
+
+                                    $subject = $dataNotif->getSubject();
+                                    $message = new Html2Text($message);
+                                    $message = $message->getText();
+
+                                    if ($emailManager->email) {
+                                        $cMail->sendEmail($emailManager->email, $subject, $message, null, "SAS HR");
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -251,6 +285,8 @@ class Employee extends BaseController
         $mEmpDiv = new M_EmpDivision($this->request);
         $mBranch = new M_Branch($this->request);
         $mDiv = new M_Division($this->request);
+        $mEmpDelegation = new M_EmpDelegation($this->request);
+        $mUser = new M_User($this->request);
 
         if ($this->request->isAJAX()) {
             try {
@@ -317,6 +353,7 @@ class Employee extends BaseController
 
                 $rowBranch = $mEmpBranch->where($this->model->primaryKey, $id)->findAll();
                 $rowDiv = $mEmpDiv->where($this->model->primaryKey, $id)->findAll();
+                $rowAmbassador = $mEmpDelegation->where($this->model->primaryKey, $id)->first();
 
                 if ($rowBranch) {
                     $list = $this->field->setDataSelect($mEmpBranch->table, $list, $mBranch->primaryKey, $mBranch->primaryKey, $mBranch->primaryKey, $rowBranch);
@@ -324,6 +361,12 @@ class Employee extends BaseController
 
                 if ($rowDiv) {
                     $list = $this->field->setDataSelect($mEmpDiv->table, $list, $mDiv->primaryKey, $mDiv->primaryKey, $mDiv->primaryKey, $rowDiv);
+                }
+
+                if ($rowAmbassador) {
+                    $userAmbassador = $mUser->where('sys_user_id', $rowAmbassador->sys_user_id)->first();
+                    $empAmbassador = $this->model->where('md_employee_id', $userAmbassador->md_employee_id)->first();
+                    $list = $this->field->setDataSelect($this->model->table, $list, 'md_ambassador_id', $empAmbassador->md_employee_id, $empAmbassador->value);
                 }
 
                 if (!empty($list[0]->getRhesus())) {
@@ -344,7 +387,7 @@ class Employee extends BaseController
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($list[0]->getFullName());
                 $fieldHeader->setTable($this->model->table);
-                $fieldHeader->setField([$mBranch->primaryKey, $mDiv->primaryKey]);
+                $fieldHeader->setField([$mBranch->primaryKey, $mDiv->primaryKey, 'md_ambassador_id']);
                 $fieldHeader->setList($list);
 
                 $result = [
@@ -673,6 +716,37 @@ class Employee extends BaseController
                     'value' => $nik,
                     'name'  => $nik,
                 ];
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    public function getBranchDivEmployee()
+    {
+        if ($this->request->isAjax()) {
+            $post = $this->request->getVar();
+            $mUser = new M_User($this->request);
+
+            try {
+                $branchID = explode(",", $post['md_branch_id']);
+                $divisionID = explode(",", $post['md_division_id']);
+                $arrEmpBased = $this->model->getEmployeeBased($branchID, $divisionID);
+
+                $userList = $mUser->where('isactive', 'Y')->whereIn('md_employee_id', $arrEmpBased)->findAll();
+                $empList = array_column($userList, 'md_employee_id');
+
+                $list = $this->model->whereIn('md_employee_id', $empList)
+                    ->where("isactive", 'Y')
+                    ->orderBy('value', 'ASC')
+                    ->findAll();
+
+                foreach ($list as $key => $row) :
+                    $response[$key]['id'] = $row->getEmployeeId();
+                    $response[$key]['text'] = $row->getValue();
+                endforeach;
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

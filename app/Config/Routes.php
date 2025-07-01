@@ -268,6 +268,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'employee/getList', 'Backend\Employee::getList');
     $routes->match(['get', 'post'], 'karyawan/getList', 'Backend\Employee::getList');
     $routes->match(['get', 'post'], 'karyawan/superior', 'Backend\Employee::getSuperior');
+    $routes->match(['get', 'post'], 'karyawan/empBranchDiv', 'Backend\Employee::getBranchDivEmployee');
     $routes->get('karyawan/destroy/(:any)', 'Backend\Employee::destroy/$1');
     $routes->post('karyawan/create', 'Backend\Employee::create');
     $routes->get('karyawan/show/(:any)', 'Backend\Employee::show/$1');
@@ -507,7 +508,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('list-absent/create', 'Backend\ListAbsent::create');
 
     $routes->add('laporan-saldo-tkh', 'Backend\AllowanceAtt::index');
-    $routes->match(['get', 'post'], 'laporan-saldo-tkh/reportAll', 'Backend\AllowanceAtt::reportAll');
+    $routes->match(['get', 'post'], 'laporan-saldo-tkh/reportAll', 'Backend\AllowanceAtt::reportAllNew');
 
     $routes->add('realisasi-lembur', 'Backend\Realization::indexOvertime');
     $routes->match(['get', 'post'], 'realisasi-lembur/showAll', 'Backend\Realization::showAllOvertime');
@@ -744,6 +745,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('transfer-duta/destroy/(:any)', 'Backend\DelegationTransfer::destroy/$1');
     $routes->get('transfer-duta/processIt', 'Backend\DelegationTransfer::processIt');
     $routes->post('transfer-duta/getEmployeeDelegation', 'Backend\DelegationTransfer::getEmployeeDelegation');
+    $routes->post('transfer-duta/checkOnGoingTransfer', 'Backend\DelegationTransfer::checkOnGoingTransfer');
 });
 
 /*

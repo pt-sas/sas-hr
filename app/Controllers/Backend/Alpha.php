@@ -257,7 +257,7 @@ class Alpha extends BaseController
                         if ($this->isNew()) {
                             $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                            $docNo = $this->model->getInvNumber("submissiontype", $post["submissiontype"], $post);
+                            $docNo = $this->model->getInvNumber("submissiontype", $post["submissiontype"], $post, $this->session->get('sys_user_id'));
                             $this->entity->setDocumentNo($docNo);
                         }
 
@@ -639,7 +639,7 @@ class Alpha extends BaseController
                     $this->entity->setEndDate($endDate);
                     $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Alpa, $post);
+                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Alpa, $post, $this->session->get('sys_user_id'));
                     $this->entity->setDocumentNo($docNo);
 
                     $this->save();

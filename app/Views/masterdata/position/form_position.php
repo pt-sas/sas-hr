@@ -19,7 +19,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="md_division_id">Divisi </label>
-                    <select class="form-control select-data" id="md_division_id" name="md_division_id" data-url="division/getList">
+                    <select class="form-control select-data" id="md_division_id" name="md_division_id"
+                        data-url="division/getList">
                         <option value="">Pilih Divisi</option>
                     </select>
                 </div>
@@ -33,6 +34,10 @@
                     <label class="form-check-label">
                         <input type="checkbox" class="form-check-input active" id="isactive" name="isactive">
                         <span class="form-check-sign">Aktif</span>
+                    </label>
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input" id="ismandatoryduta" name="ismandatoryduta">
+                        <span class="form-check-sign">Wajib Duta</span>
                     </label>
                 </div>
             </div>

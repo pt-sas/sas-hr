@@ -274,7 +274,7 @@ class ProxySpecial extends BaseController
                 $proxySwitch = $mProxySwitch->where($this->modelDetail->primaryKey, $row->trx_proxy_special_detail_id)->first();
 
                 if ($proxySwitch) {
-                    $status = docStatus($proxySwitch->state);
+                    $status = statusTransfered($proxySwitch->state);
                 } else {
                     $status = '';
                 }

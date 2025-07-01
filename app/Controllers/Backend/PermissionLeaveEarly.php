@@ -234,7 +234,7 @@ class PermissionLeaveEarly extends BaseController
                         $whereClause .= " AND trx_assignment.submissiontype IN ({$mAssignment->Pengajuan_Tugas_Kantor}, {$mAssignment->Pengajuan_Penugasan})";
                         $trx = $mAssignment->getDetailData($whereClause)->getRow();
 
-                        if ($startDate > $subDate && (is_null($work) || is_null($trx))) {
+                        if ($startDate > $subDate && (is_null($work) && is_null($trx))) {
                             $response = message('success', false, 'Tidak terdaftar pada hari kerja');
                         } else {
                             $daysOff = getDaysOff($workDetail);
@@ -289,7 +289,7 @@ class PermissionLeaveEarly extends BaseController
                                 if ($this->isNew()) {
                                     $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pulang_Cepat, $post);
+                                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Pulang_Cepat, $post, $this->session->get('sys_user_id'));
                                     $this->entity->setDocumentNo($docNo);
                                 }
 

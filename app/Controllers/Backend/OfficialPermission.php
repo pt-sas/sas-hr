@@ -198,7 +198,7 @@ class OfficialPermission extends BaseController
 
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin_Resmi, $post);
+                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin_Resmi, $post, $this->session->get('sys_user_id'));
                         $this->entity->setDocumentNo($docNo);
                     } else {
                         $row = $this->model->find($this->getID());

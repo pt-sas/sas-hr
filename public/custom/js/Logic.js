@@ -2217,3 +2217,108 @@ function getEmployeeTo(elem, employee) {
     },
   });
 }
+
+$("#form_employee").on(
+  "change",
+  "#md_branch_id, #md_division_id",
+  function (e) {
+    let _this = $(this);
+    const form = _this.closest("form");
+    const field = form.find("#md_ambassador_id");
+    let branch = form.find("#md_branch_id").val();
+    let division = form.find("#md_division_id").val();
+    let formData = new FormData();
+
+    field.empty();
+
+    if (branch.length > 0 && division.length > 0) {
+      formData.append("md_branch_id", branch);
+      formData.append("md_division_id", division);
+
+      $.ajax({
+        url: ADMIN_URL + "karyawan/empBranchDiv",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+          $(".save_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+          loadingForm(form.prop("id"), "ios");
+        },
+        complete: function () {
+          $(".save_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+          hideLoadingForm(form.prop("id"));
+        },
+        success: function (result) {
+          if (result.length) {
+            field.append('<option value=""></option>');
+
+            $.each(result, function (idx, item) {
+              if (setSave === "detail")
+                field
+                  .append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  )
+                  .prop("disabled", true);
+              else
+                field
+                  .append(
+                    '<option value="' + item.id + '">' + item.text + "</option>"
+                  )
+                  .removeAttr("disabled");
+            });
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
+  }
+);
+
+$("#form_employee").on("change", "#md_ambassador_id", function (evt) {
+  const form = $(this).closest("form");
+  let value = this.value;
+  let text = $("#md_ambassador_id option:selected").text();
+  let formData = new FormData();
+  formData.append("md_employee_id", value);
+
+  if (value != "") {
+    $.ajax({
+      url: ADMIN_URL + "transfer-duta/checkOnGoingTransfer",
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(".save_form").prop("disabled", true);
+        $(".close_form").prop("disabled", true);
+        loadingForm(form.prop("id"), "ios");
+      },
+      complete: function () {
+        $(".save_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result[0].message == true) {
+          Swal.fire({
+            type: "warning",
+            title: `Duta ${text} sedang off duty`,
+            backdrop: false,
+          });
+        }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+    });
+  }
+});

@@ -78,27 +78,13 @@ class M_AssignmentDate extends Model
         $amount = 0;
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-        $updated_by = $rows['data']['updated_by'] ?? session()->get('id');;
-        $today = date('Y-m-d');
-        $day = date('w');
-        $entryTime = "08:00";
+        $updated_by = $rows['data']['updated_by'] ?? session()->get('id');
 
         $subLine = $this->find(($ID));
         $line = $mAssignmentDetail->find($subLine->{$mAssignmentDetail->primaryKey});
         $sql = $mAssignment->where($mAssignment->primaryKey, $line->{$mAssignment->primaryKey})->first();
 
         try {
-            if ($sql->submissiontype == $mAssignment->Pengajuan_Tugas_Kantor) {
-                $rule = $mRule->where([
-                    'name'      => 'Tugas Kantor 1 Hari',
-                    'isactive'  => 'Y'
-                ])->first();
-
-                if ($rule) {
-                    $amount = $rule->condition ?: $rule->value;
-                }
-            }
-
             if ($sql->submissiontype == $mAssignment->Pengajuan_Penugasan) {
                 $rule = $mRule->where([
                     'name'      => 'Penugasan',
@@ -109,41 +95,34 @@ class M_AssignmentDate extends Model
                     $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => 'Sanksi', 'isactive' => 'Y'])->first();
 
                     //TODO : Get work day employee
-                    // $workDay = $mEmpWork->where([
-                    //     'md_employee_id'    => $line->md_employee_id,
-                    //     'validfrom <='      => $today
-                    // ])->orderBy('validfrom', 'ASC')->first();
+                    $date = date('Y-m-d', strtotime($subLine->date));
 
-                    // $whereClause = "md_work_detail.isactive = 'Y'";
-                    // $whereClause .= " AND md_employee_work.md_employee_id = $line->md_employee_id";
-                    // $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                    // $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                    $workDay = $mEmpWork->where([
+                        'md_employee_id'    => $line->md_employee_id,
+                        'validfrom <='      => $date,
+                        'validto >='      => $date
+                    ])->orderBy('validfrom', 'ASC')->first();
 
-                    // $daysOff = getDaysOff($workDetail);
-                    // $dateIndex = date('w', strtotime($subLine->date));
+                    $whereClause = "md_work_detail.isactive = 'Y'";
+                    $whereClause .= " AND md_employee_work.md_employee_id = $line->md_employee_id";
+                    $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                    $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                    // $holidays = $mHoliday->getHolidayDate();
+                    $daysOff = getDaysOff($workDetail);
+                    $dateIndex = date('w', strtotime($subLine->date));
 
-                    // if (in_array($dateIndex, $daysOff) || in_array(date('Y-m-d', strtotime($subLine->date)), $holidays)) {
-                    //     $amount = $rule->condition ?: $rule->value;
+                    $holidays = $mHoliday->getHolidayDate();
 
-                    // if ($amount != 0 && $subLine->isagree === 'Y') {
-                    //     $entity = new \App\Entities\AllowanceAtt();
+                    if (in_array($dateIndex, $daysOff) || in_array(date('Y-m-d', strtotime($subLine->date)), $holidays)) {
+                        $amount = $rule->condition ?: $rule->value;
 
-                    //     $entity->record_id = $sql->{$mAssignment->primaryKey};
-                    //     $entity->table = $mAssignment->table;
-                    //     $entity->submissiontype = $sql->submissiontype;
-                    //     $entity->submissiondate = $subLine->date;
-                    //     $entity->md_employee_id = $line->md_employee_id;
-                    //     $entity->amount = $amount;
-                    //     $entity->created_by = $updated_by;
-                    //     $entity->updated_by = $updated_by;
+                        if ($amount != 0 && $subLine->isagree === 'Y') {
+                            $transactiontype = $amount < 0 ? 'A-' : 'A+';
+                            $mAllowance->insertAllowance($sql->{$mAssignment->primaryKey}, $mAssignment->table, $transactiontype, $subLine->date, $sql->submissiontype, $line->md_employee_id, $amount, $updated_by);
 
-                    //     $mAllowance->save($entity);
-
-                    //     $amount = 0; // Reset amount for the next iteration
-                    // }
-                    // }
+                            $amount = 0; // Reset amount for the next iteration
+                        }
+                    }
 
                     $sanksi =  $mRuleValue->where(['md_rule_detail_id' => $ruleDetail->md_rule_detail_id])->findAll();
 
@@ -158,18 +137,8 @@ class M_AssignmentDate extends Model
             }
 
             if ($amount != 0 && $subLine->isagree === 'Y') {
-                $entity = new \App\Entities\AllowanceAtt();
-
-                $entity->record_id = $sql->{$mAssignment->primaryKey};
-                $entity->table = $mAssignment->table;
-                $entity->submissiontype = $sql->submissiontype;
-                $entity->submissiondate = $subLine->date;
-                $entity->md_employee_id = $line->md_employee_id;
-                $entity->amount = $amount;
-                $entity->created_by = $updated_by;
-                $entity->updated_by = $updated_by;
-
-                $mAllowance->save($entity);
+                $transactiontype = $amount < 0 ? 'A-' : 'A+';
+                $mAllowance->insertAllowance($sql->{$mAssignment->primaryKey}, $mAssignment->table, $transactiontype, $subLine->date, $sql->submissiontype, $line->md_employee_id, $amount, $updated_by);
             }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);

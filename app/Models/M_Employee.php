@@ -166,6 +166,19 @@ class M_Employee extends Model
 
 			$empDiv->create($post);
 		}
+
+		if (isset($post['md_ambassador_id'])) {
+			$mEmpDelegation = new M_EmpDelegation($this->request);
+
+			if (empty($post['md_ambassador_id'])) {
+				$post['md_ambassador_id'] = null;
+			} else {
+				$post['md_ambassador_id'] = $post['md_ambassador_id'];
+			}
+			$post['md_employee_id'] = $rows['id'];
+
+			$mEmpDelegation->createFromEmployee($post);
+		}
 	}
 
 	public function deleteMultipleData(array $rows)
@@ -370,5 +383,37 @@ class M_Employee extends Model
 		$result = $this->builder->get()->getResult('array');
 
 		return array_column($result, 'md_employee_id');
+	}
+
+	public function getEmployeeManagerID($employeeID)
+	{
+		$mLevelling = new M_Levelling($this->request);
+
+		$employee = $this->where('md_employee_id', $employeeID)->first();
+		$lvlManager = $mLevelling->where('name', 'MANAGER')->first();
+
+		$superiorID = $employee->superior_id;
+		$level = $employee->md_levelling_id;
+		$result = 0;
+		$maxLoop = 6;
+
+		while ($level > $lvlManager->md_levelling_id && $maxLoop-- > 0) {
+			if (!$superiorID) break;
+
+			$superior = $this->where('md_employee_id', $superiorID)->first();
+
+			if ($superior) {
+				$superiorID = $superior->superior_id;
+				$level = $superior->md_levelling_id;
+
+				if ($level == $lvlManager->md_levelling_id) {
+					$result = $superior->md_employee_id;
+				}
+			} else {
+				break;
+			}
+		}
+
+		return $result;
 	}
 }

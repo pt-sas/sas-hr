@@ -133,7 +133,7 @@ class OtherPermission extends BaseController
                 if ($this->isNew()) {
                     $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    $docNo = $this->model->getInvNumber("submissiontype", $this->Izin_Lain_Lain);
+                    $docNo = $this->model->getInvNumber("submissiontype", $this->Izin_Lain_Lain, $post, $this->session->get('sys_user_id'));
                     $this->entity->setDocumentNo($docNo);
                 }
 

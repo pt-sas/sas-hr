@@ -116,7 +116,6 @@ class DelegationTransfer extends BaseController
                 $row[] = $value->ispermanent === "Y" ? format_dmy($value->startdate, '-') : format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
                 $row[] = !is_null($value->approveddate) ? format_dmy($value->approveddate, '-') : "";
                 $row[] = $value->reason;
-                $row[] = active($value->ispermanent);
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus);
@@ -340,7 +339,7 @@ class DelegationTransfer extends BaseController
                 $btnDelete->setValue($row->trx_delegation_transfer_detail_id);
 
                 if (!empty($row->istransfered)) {
-                    $status = docStatus($row->istransfered);
+                    $status = statusTransfered($row->istransfered);
                 } else {
                     $status = '';
                 }
@@ -428,6 +427,22 @@ class DelegationTransfer extends BaseController
                     $this->model->insertDelegation($user_from, $user_to, $val->md_employee_id, $value->ispermanent, $val->trx_delegation_transfer_detail_id);
                 }
             }
+        }
+    }
+
+    public function checkOnGoingTransfer()
+    {
+        if ($this->request->isAJAX()) {
+            $post = $this->request->getVar();
+            try {
+                $isOffDuty = $this->model->getInTransitionDelegation("employee_from = {$post['md_employee_id']}")->getRow() ? true : false;
+
+                $response = message('success', true, $isOffDuty);
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
         }
     }
 }

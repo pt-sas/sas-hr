@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Controllers\Backend\EmpEducation;
 use CodeIgniter\Model;
 use CodeIgniter\HTTP\RequestInterface;
 
@@ -52,7 +51,6 @@ class M_DelegationTransfer extends Model
         'trx_delegation_transfer.startdate',
         'trx_delegation_transfer.receiveddate',
         'trx_delegation_transfer.reason',
-        'trx_delegation_transfer.ispermanent',
         'trx_delegation_transfer.docstatus',
         'uc.name'
     ];
@@ -67,7 +65,6 @@ class M_DelegationTransfer extends Model
         'trx_delegation_transfer.enddate',
         'trx_delegation_transfer.approveddate',
         'trx_delegation_transfer.reason',
-        'trx_delegation_transfer.ispermanent',
         'trx_delegation_transfer.docstatus',
         'uc.name'
     ];
@@ -218,5 +215,15 @@ class M_DelegationTransfer extends Model
 
             $mTransferDetail->save($entity);
         }
+    }
+
+    public function getInTransitionDelegation($where = null)
+    {
+        $builder = $this->db->table("v_intransition_delegation");
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
     }
 }
