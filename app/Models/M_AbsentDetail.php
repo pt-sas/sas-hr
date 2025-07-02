@@ -390,27 +390,27 @@ class M_AbsentDetail extends Model
                 }
             }
 
-            // if ($sql->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk) {
-            //     $rule = $mRule->where([
-            //         'name'      => 'Lupa Absen Masuk',
-            //         'isactive'  => 'Y'
-            //     ])->first();
+            if ($sql->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk) {
+                $rule = $mRule->where([
+                    'name'      => 'Lupa Absen Masuk',
+                    'isactive'  => 'Y'
+                ])->first();
 
-            //     if ($rule) {
-            //         $amount = $rule->condition ?: $rule->value;
-            //     }
-            // }
+                if ($rule) {
+                    $amount = $rule->condition ?: $rule->value;
+                }
+            }
 
-            // if ($sql->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang) {
-            //     $rule = $mRule->where([
-            //         'name'      => 'Lupa Absen Pulang',
-            //         'isactive'  => 'Y'
-            //     ])->first();
+            if ($sql->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang) {
+                $rule = $mRule->where([
+                    'name'      => 'Lupa Absen Pulang',
+                    'isactive'  => 'Y'
+                ])->first();
 
-            //     if ($rule) {
-            //         $amount = $rule->condition ?: $rule->value;
-            //     }
-            // }
+                if ($rule) {
+                    $amount = $rule->condition ?: $rule->value;
+                }
+            }
 
             // if ($sql->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat) {
             //     $rule = $mRule->where([
