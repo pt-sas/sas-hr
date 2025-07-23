@@ -135,71 +135,9 @@ class M_ProxySpecial extends Model
         return $prefix;
     }
 
-
-    public function insertProxy($userFrom, $userTo, $role, $isSpecial = false, $ref_id = null, $isPermanent = null)
-    {
-        $mUserRole = new M_UserRole($this->request);
-        $mProxySwitch = new M_ProxySwitching($this->request);
-        $mChangeLog = new M_ChangeLog($this->request);
-
-        $proxyType = $isSpecial ? 'special' : 'reguler';
-
-        $user_by = 100000;
-
-        //TODO : Checking is Role already exists in user switching
-        $isRoleExists = $mUserRole->where(['sys_user_id' => $userTo, 'sys_role_id' => $role])->first();
-
-        if (!$isRoleExists) {
-            //TODO : Inserting role into user switching
-            $entity = new \App\Entities\UserRole();
-
-            $entity->setRoleId($role);
-            $entity->setUserId($userTo);
-            $entity->setUpdatedBy($user_by);
-            $entity->setCreatedBy($user_by);
-            $result = $mUserRole->save($entity);
-
-            //TODO : if inserting success then inserting to table Proxy Switching
-            if ($result) {
-                $entity = new \App\Entities\ProxySwitching();
-
-                $entity->setProxyType($proxyType);
-                $entity->setRoleId($role);
-                $entity->setUserFrom($userFrom);
-                $entity->setUserTo($userTo);
-                $entity->setStartDate(date('Y-m-d H:i:s'));
-
-                if ($isPermanent === "Y") {
-                    $entity->setState('CO');
-                } else {
-                    $entity->setState('IP');
-                }
-
-                $entity->setUpdatedBy($user_by);
-                $entity->setCreatedBy($user_by);
-
-                if ($isSpecial === true) {
-                    $entity->setProxySpecialDetailId($ref_id);
-                }
-
-                $mProxySwitch->save($entity);
-            }
-        }
-
-        // TODO : if isPermanent is Y then delete Proxy from old user
-        if ($isPermanent === "Y") {
-            $oldUserRole = $mUserRole->where(['sys_user_id' => $userFrom, 'sys_role_id' => $role])->first();
-
-            if ($oldUserRole) {
-                $mUserRole->delete($oldUserRole->sys_user_role_id);
-                $mChangeLog->insertLog($mUserRole->table, $mUserRole->primaryKey, $oldUserRole->sys_user_role_id, $oldUserRole->sys_user_role_id, null, "D", "Delete Old User Proxy");
-            }
-        }
-    }
-
     public function doAfterUpdate(array $rows)
     {
-        $mProxySpecialDetail = new M_ProxySpecialDetail($this->request);
+        $mProxySwitch = new M_ProxySwitching($this->request);
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
         $sql = $this->find($ID);
@@ -210,7 +148,7 @@ class M_ProxySpecial extends Model
         if ($sql->docstatus === "CO" && !empty($line)) {
             if ($date === $today) {
                 foreach ($line as $value) {
-                    $this->insertProxy($sql->sys_user_from, $sql->sys_user_to, $value->sys_role_id, true, $value->trx_proxy_special_detail_id, $sql->ispermanent);
+                    $mProxySwitch->insertProxy($sql->sys_user_from, $sql->sys_user_to, $value->sys_role_id, true, $value->trx_proxy_special_detail_id, $sql->ispermanent);
                 }
             }
         }

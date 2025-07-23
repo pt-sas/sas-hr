@@ -339,7 +339,7 @@ class ProxySpecial extends BaseController
             foreach ($listDocNo as $value) {
                 $line = $this->modelDetail->where('trx_proxy_special_id', $value->trx_proxy_special_id)->findAll();
                 foreach ($line as $val) {
-                    $this->model->insertProxy($value->sys_user_from, $value->sys_user_to, $val->sys_role_id, true, $val->trx_proxy_special_detail_id, $value->ispermanent);
+                    $mProxySwitch->insertProxy($value->sys_user_from, $value->sys_user_to, $val->sys_role_id, true, $val->trx_proxy_special_detail_id, $value->ispermanent);
                 }
             }
         }

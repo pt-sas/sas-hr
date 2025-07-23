@@ -58,4 +58,67 @@ class M_ProxySwitching extends Model
 
 		return $this->builder->get();
 	}
+
+	public function insertProxy($userFrom, $userTo, $role, $isSpecial = false, $ref_id = null, $isPermanent = null)
+	{
+		$mUserRole = new M_UserRole($this->request);
+		$mChangeLog = new M_ChangeLog($this->request);
+
+		$proxyType = $isSpecial ? 'special' : 'reguler';
+
+		$user_by = 100000;
+		$result = false;
+
+		//TODO : Checking is Role already exists in user switching
+		$isRoleExists = $mUserRole->where(['sys_user_id' => $userTo, 'sys_role_id' => $role])->first();
+
+		if (!$isRoleExists) {
+			//TODO : Inserting role into user switching
+			$entity = new \App\Entities\UserRole();
+
+			$entity->setRoleId($role);
+			$entity->setUserId($userTo);
+			$entity->setUpdatedBy($user_by);
+			$entity->setCreatedBy($user_by);
+
+			//TODO : if inserting success then inserting to table Proxy Switching
+			if ($mUserRole->save($entity)) {
+				$entity = new \App\Entities\ProxySwitching();
+
+				$entity->setProxyType($proxyType);
+				$entity->setRoleId($role);
+				$entity->setUserFrom($userFrom);
+				$entity->setUserTo($userTo);
+				$entity->setStartDate(date('Y-m-d H:i:s'));
+
+				if ($isPermanent === "Y") {
+					$entity->setState('CO');
+				} else {
+					$entity->setState('IP');
+				}
+
+				$entity->setUpdatedBy($user_by);
+				$entity->setCreatedBy($user_by);
+
+				if ($isSpecial === true) {
+					$entity->setProxySpecialDetailId($ref_id);
+				}
+
+				$this->save($entity);
+				$result = true;
+			}
+		}
+
+		// TODO : if isPermanent is Y then delete Proxy from old user
+		if ($isPermanent === "Y") {
+			$oldUserRole = $mUserRole->where(['sys_user_id' => $userFrom, 'sys_role_id' => $role])->first();
+
+			if ($oldUserRole) {
+				$mUserRole->delete($oldUserRole->sys_user_role_id);
+				$mChangeLog->insertLog($mUserRole->table, $mUserRole->primaryKey, $oldUserRole->sys_user_role_id, $oldUserRole->sys_user_role_id, null, "D", "Delete Old User Proxy");
+			}
+		}
+
+		return $result;
+	}
 }

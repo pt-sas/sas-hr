@@ -328,74 +328,144 @@ class User extends BaseController
 		$mEmployee = new M_Employee($this->request);
 		$mUserRole = new M_UserRole($this->request);
 		$mNotifText = new M_NotificationText($this->request);
-		$mProxySwitch = new M_ProxySpecial($this->request);
+		$mProxySwitch = new M_ProxySwitching($this->request);
 		$cMail = new Mail();
+		$today = date('Y-m-d');
 
-		$dataNotif = $mNotifText->where('name', 'Tindakan Pengalihan Approval')->first();
-		$message = $dataNotif->getText();
+		// TODO : Get Manager and General Manager
+		$employees = $mEmployee->where("isactive = 'Y' AND md_levelling_id IN (100002, 100003)")->findAll();
+		if (!$employees) return;
 
-
+		// TODO : Get HR Role and Employee, then get Email Adrress each of HR Employee
 		$hrRole = $mUserRole->where('sys_role_id', 5)->findAll();
 		$listHrUser = array_column($hrRole, "sys_user_id");
-		$hrUser = $this->model->whereIn('sys_user_id', $listHrUser)->findAll();
+		$hrUsers = $this->model->whereIn('sys_user_id', $listHrUser)->findAll();
+		$hrEmails = array_column($hrUsers, "email");
 
-		$where = "isactive = 'Y'";
-		// 100002 GM, 100003 Manager
-		$where .= " AND md_levelling_id IN (100002, 100003)";
-		$employee = $mEmployee->where($where)->findAll();
+		// TODO : Preparing notification data
+		$notifTindakan = $mNotifText->where('name', 'Tindakan Pengalihan Approval')->first();
+		$notifPengalihan = $mNotifText->where('name', 'Pengalihan Approval')->first();
 
-		if ($employee) {
-			$today = date('Y-m-d');
-			foreach ($employee as $emp) {
+		// TODO : Get all attendance data for today and make it assosiatif multidimensional array
+		$attendanceData = $mAttendance->getAttendance("v_attendance.date = '{$today}'")->getResult();
+		$attendanceMap = [];
+		foreach ($attendanceData as $att) {
+			$attendanceMap[$att->md_employee_id] = $att;
+		}
 
-				$where = "md_employee.md_employee_id = {$emp->md_employee_id}";
-				$where .= " AND v_attendance.date = '{$today}'";
-				$empAttendance = $mAttendance->getAttendance($where)->getRow();
+		// TODO : Get all submission data for today and make it assosiatif multidimensional array
+		$submissionData = $mAbsent->getAllSubmission("date = '{$today}' AND isagree IN ('Y', 'M', 'H', 'S')")->getResult();
+		$submissionMap = [];
+		foreach ($submissionData as $sub) {
+			$submissionMap[$sub->employee_id] = $sub;
+		}
 
-				$where = "employee_id = {$emp->md_employee_id}";
-				$where .= " AND date = '{$today}'";
-				$where .= " AND isagree IN ('Y', 'M', 'H', 'S')";
-				$submission = $mAbsent->getAllSubmission($where)->getRow();
+		// TODO : Get All User List and make it assosiatif multidimensional array
+		$allUsers = $this->model->where('isactive', 'Y')->findAll();
+		$userMap = [];
+		foreach ($allUsers as $u) {
+			$userMap[$u->md_employee_id] = $u;
+		}
 
-				$user = $this->model->where(['md_employee_id' => $emp->md_employee_id, 'isactive' => 'Y'])->first();
+		// TODO : Process each employee
+		foreach ($employees as $emp) {
+			// TODO : Continoue loop if attendance or submission data is exist
+			if (isset($attendanceMap[$emp->md_employee_id]) || isset($submissionMap[$emp->md_employee_id])) {
+				continue;
+			}
 
-				if ((!$empAttendance && !$submission) && $user) {
-					//TODO : Get Superior data and do absent or submission check on superior
-					$superiorEmp = $mEmployee->where(['md_employee_id' => $emp->superior_id, 'isactive' => 'Y'])->first();
-					$superiorAtten = $superiorEmp ? $mAttendance->getAttendance("md_employee.md_employee_id = {$superiorEmp->md_employee_id} AND v_attendance.date = '{$today}'")->getRow() : null;
-					$superiorUser = $superiorEmp ? $this->model->where(['md_employee_id' => $superiorEmp->md_employee_id, 'isactive' => 'Y'])->first() : null;
+			// TODO : Continoue loop if user data is not exist
+			$user = $userMap[$emp->md_employee_id] ?? null;
+			if (!$user) continue;
 
-					$email = array_column($hrUser, "email");
+			// TODO : Get User Approval Roles
+			$userRoleWhere = "sys_user.sys_user_id = {$user->sys_user_id} AND sr.name LIKE 'W_App%'";
+			$userRoles = $this->model->detail([], null, $userRoleWhere)->getResult();
+			if (!$userRoles) continue;
 
-					if ($superiorAtten && $superiorUser) {
-						//TODO : Get All User Role Contains W_App
-						$where = "sys_user.sys_user_id = {$user->sys_user_id}";
-						$where .= " AND sr.name like 'W_App%'";
-						$userRole = $this->model->detail([], null, $where)->getResult();
+			$proxySuccess = false;
+			$proxyNames = [];
+			$proxyEmails = [];
 
-						//TODO : Switching Proxy 
-						foreach ($userRole as $role) {
-							$mProxySwitch->insertProxy($user->sys_user_id, $superiorUser->sys_user_id, $role->role);
+			if ($emp->md_levelling_id == 100002) {
+				// TODO : Handle GM Level
+				$otherGMs = $mEmployee->where([
+					'md_levelling_id' => 100002,
+					'isactive' => 'Y',
+					'md_employee_id != ' => $emp->md_employee_id
+				])->findAll();
+
+				foreach ($otherGMs as $gm) {
+					// TODO : Check if GM has attendance and user account
+					if (!isset($attendanceMap[$gm->md_employee_id]) || !isset($userMap[$gm->md_employee_id])) {
+						continue;
+					}
+
+					$gmUser = $userMap[$gm->md_employee_id];
+					$roleSuccess = false;
+
+					// TODO : Execute proxy switching for all roles
+					foreach ($userRoles as $role) {
+						if ($mProxySwitch->insertProxy($user->sys_user_id, $gmUser->sys_user_id, $role->role)) {
+							$roleSuccess = true;
 						}
-
-						// TODO : Set Email Recipient and get Data Notif Pengalihan Approval
-						$dataNotif = $mNotifText->where('name', 'Pengalihan Approval')->first();
-						$email = [$user->email, $superiorUser->email];
 					}
-					$message = $dataNotif->getText();
-					$message = str_replace(['(Var1)', '(Var2)'], [$user->username, $today], $message);
 
-					//TODO : Filter the data use array_unique remove duplicate value then array_filter and exclude null value 
-					$recipients = array_values(array_unique(array_filter($email)));
-
-					$subject = $dataNotif->getSubject();
-					$message = new Html2Text($message);
-					$message = $message->getText();
-
-					//TODO : Send Email
-					foreach ($recipients as $email) {
-						$cMail->sendEmail($email, $subject, $message, null, "SAS HR");
+					if ($roleSuccess) {
+						$proxySuccess = true;
+						$proxyNames[] = $gm->fullname;
+						$proxyEmails[] = $gmUser->email;
 					}
+				}
+
+				$proxyNames = implode(', ', $proxyNames);
+			} else {
+				// TODO Handle Manager Level
+				if (!$emp->superior_id || !isset($userMap[$emp->superior_id])) {
+					continue;
+				}
+
+				$superior = $mEmployee->where(['md_employee_id' => $emp->superior_id, 'isactive' => 'Y'])->first();
+				if (!$superior || !isset($attendanceMap[$superior->md_employee_id])) {
+					continue;
+				}
+
+				$superiorUser = $userMap[$superior->md_employee_id];
+				$roleSuccess = false;
+
+				// TODO : Execute proxy switching for all roles
+				foreach ($userRoles as $role) {
+					if ($mProxySwitch->insertProxy($user->sys_user_id, $superiorUser->sys_user_id, $role->role)) {
+						$roleSuccess = true;
+					}
+				}
+
+				if ($roleSuccess) {
+					$proxySuccess = true;
+					$proxyNames = $superior->fullname;
+					$proxyEmails = [$user->email, $superiorUser->email];
+				}
+			}
+
+			// TODO : Send notifications
+			if ($proxySuccess && $notifPengalihan) {
+				// TODO : Send successful proxy notification
+				$message = str_replace(['(Var1)', '(Var2)'], [$proxyNames, $today], $notifPengalihan->getText());
+				$subject = $notifPengalihan->getSubject();
+				$recipients = array_values(array_unique(array_filter(array_merge($proxyEmails, $hrEmails))));
+
+				$plainMessage = (new Html2Text($message))->getText();
+				foreach ($recipients as $email) {
+					$cMail->sendEmail($email, $subject, $plainMessage, null, "SAS HR");
+				}
+			} elseif (!$proxySuccess && $notifTindakan) {
+				// TODO : Send action required notification to HR
+				$message = str_replace(['(Var1)', '(Var2)'], [$emp->fullname, $today], $notifTindakan->getText());
+				$subject = $notifTindakan->getSubject();
+				$plainMessage = (new Html2Text($message))->getText();
+
+				foreach ($hrEmails as $email) {
+					$cMail->sendEmail($email, $subject, $plainMessage, null, "SAS HR");
 				}
 			}
 		}
