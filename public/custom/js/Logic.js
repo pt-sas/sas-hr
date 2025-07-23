@@ -37,85 +37,101 @@ $(".date-end").datetimepicker({
   useCurrent: false,
 });
 
+$(".date-leave-start").datetimepicker({
+  format: "DD-MMM-YYYY",
+  showTodayButton: true,
+  showClear: true,
+  showClose: true,
+  useCurrent: false,
+});
+
+$(".date-leave-end").datetimepicker({
+  format: "DD-MMM-YYYY",
+  showTodayButton: true,
+  showClear: true,
+  showClose: true,
+  useCurrent: false,
+});
+
 $("#form_official_permission").on(
   "change dp.change",
   "select[name=md_leavetype_id], input[name=startdate]",
   function (e) {
-    let _this = $(this);
-    const form = _this.closest("form");
+    const $this = $(this);
+    const form = $this.closest("form");
+    const fieldName = this.name;
+    const leaveTypeId = form.find("[name=md_leavetype_id]").val();
+    const startDate = form.find("[name=startdate]").val();
+    const startPicker = $(".date-leave-start").data("DateTimePicker");
+    const endPicker = $(".date-leave-end").data("DateTimePicker");
     let value = this.value;
-    let formData = new FormData();
 
-    let url = ADMIN_URL + "ijin-resmi/getEndDate";
-
-    if (option.length) {
-      $.each(option, function (i, item) {
-        if (typeof _this.find(":selected").val() === "undefined") {
-          if (
-            _this.attr("name") === "md_leavetype_id" &&
-            item.fieldName === "md_leavetype_id"
-          )
-            value = item.label;
-        }
-      });
+    if (
+      option.length &&
+      typeof $this.find(":selected").val() === "undefined" &&
+      fieldName === "md_leavetype_id"
+    ) {
+      const optionItem = option.find(
+        (item) => item.fieldName === "md_leavetype_id"
+      );
+      if (optionItem) value = optionItem.label;
     }
 
-    formData.append(this.name, value);
+    if (fieldName === "md_leavetype_id") {
+      if (startPicker) startPicker.destroy();
 
-    if (this.name === "md_leavetype_id") {
+      const baseConfig = {
+        format: "DD-MMM-YYYY",
+        showTodayButton: true,
+        showClear: true,
+        showClose: true,
+        useCurrent: false,
+      };
+
       if (value != 100003) {
-        $(".date-start").data("DateTimePicker").destroy();
-
-        $(".date-start").datetimepicker({
-          format: "DD-MMM-YYYY",
-          showTodayButton: true,
-          showClear: true,
-          showClose: true,
-          daysOfWeekDisabled: [0, 6],
-          disabledDates: getHolidayDate(),
-          useCurrent: false,
-        });
-      } else {
-        $(".date-start").data("DateTimePicker").destroy();
-
-        $(".date-start").datetimepicker({
-          format: "DD-MMM-YYYY",
-          showTodayButton: true,
-          showClear: true,
-          showClose: true,
-          useCurrent: false,
-        });
+        baseConfig.daysOfWeekDisabled = [0, 6];
+        baseConfig.disabledDates = getHolidayDate();
       }
 
-      formData.append("startdate", form.find("[name=startdate]").val());
+      $(".date-leave-start").datetimepicker(baseConfig);
     }
 
-    if (this.name === "startdate")
-      formData.append(
-        "md_leavetype_id",
-        form.find("[name=md_leavetype_id]").val()
-      );
+    const formData = new FormData();
+    formData.append(fieldName, value);
 
-    $.ajax({
-      url: url,
-      type: "POST",
-      data: formData,
-      processData: false,
-      contentType: false,
-      cache: false,
-      dataType: "JSON",
-      success: function (result) {
-        if (
-          form.find("[name=md_leavetype_id]").val() !== "" &&
-          form.find("[name=startdate]").val() !== ""
-        )
-          form.find("[name=enddate]").val(moment(result).format("DD-MMM-Y"));
-        else form.find("[name=enddate]").val(null);
-      },
-      error: function (jqXHR, exception) {
-        showError(jqXHR, exception);
-      },
-    });
+    if (fieldName === "md_leavetype_id") {
+      formData.append("startdate", startDate);
+    } else {
+      formData.append("md_leavetype_id", leaveTypeId);
+    }
+
+    if (isLoadingForm == false) {
+      endPicker.clear();
+      endPicker.minDate(false);
+      endPicker.maxDate(false);
+    }
+
+    if (leaveTypeId && startDate) {
+      $.ajax({
+        url: ADMIN_URL + "ijin-resmi/getEndDate",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        success: function (result) {
+          const minDate = moment(startDate, "DD-MMM-YYYY").startOf("day");
+          const maxDate = moment(result).endOf("day");
+
+          endPicker.minDate(minDate);
+          endPicker.maxDate(maxDate);
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
   }
 );
 

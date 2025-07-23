@@ -34,6 +34,9 @@ let clear = false;
 //* Field changeTab boolean value
 let changeTab = false;
 
+//* Field for waiting Loading form for Event Handler
+let isLoadingForm = false;
+
 // Data array from option
 let option = [];
 
@@ -1058,7 +1061,9 @@ $(".save_form").click(function (evt) {
           className.includes("datepick-start") ||
           className.includes("datepick-end") ||
           className.includes("date-start") ||
-          className.includes("date-end")
+          className.includes("date-end") ||
+          className.includes("date-leave-start") ||
+          className.includes("date-leave-end")
         ) {
           let date = field[i].value;
 
@@ -1689,7 +1694,6 @@ function Edit(id, status, last_url) {
           success: function (result) {
             if (result[0].success) {
               let arrMsg = result[0].message;
-
               // Show datatable line
               if (arrMsg.line) {
                 let arrLine = arrMsg.line;
@@ -2777,7 +2781,9 @@ $(".add_row").click(function (evt) {
           className.includes("datepick-start") ||
           className.includes("datepick-end") ||
           className.includes("date-start") ||
-          className.includes("date-end")
+          className.includes("date-end") ||
+          className.includes("date-leave-start") ||
+          className.includes("date-leave-end")
         ) {
           let date = field[i].value;
 
@@ -5043,6 +5049,9 @@ function showFormData(form) {
 function putFieldData(form, data, status = null) {
   const modalTab = form.closest(".modal-tab");
 
+  // TODO : Set Loading Form true so event handler don't run when loading data
+  isLoadingForm = true;
+
   if (data.length > 1) {
     const field = form.find("input, textarea, select").not(".line");
 
@@ -5272,12 +5281,14 @@ function putFieldData(form, data, status = null) {
               form
                 .find("input[name=" + fieldName + "]")
                 .not(".line")
-                .prop("checked", true);
+                .prop("checked", true)
+                .change();
             else if (label === "N")
               form
                 .find("input[name=" + fieldName + "]")
                 .not(".line")
-                .removeAttr("checked");
+                .removeAttr("checked")
+                .change();
 
             if (className.includes("active") && field[i].checked)
               readonly(form, false);
@@ -5443,6 +5454,9 @@ function putFieldData(form, data, status = null) {
         }
       }
     }
+
+    //TODO : Set Loading to False so Event Handler can run
+    isLoadingForm = false;
   }
 }
 

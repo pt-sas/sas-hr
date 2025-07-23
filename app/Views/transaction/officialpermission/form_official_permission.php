@@ -5,7 +5,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList/$Access">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
+                        data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -21,7 +22,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -45,7 +47,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?> readonly>
+                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                        value=<?= $today ?> readonly>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
@@ -58,7 +61,7 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="md_leavetype_id">Ijin Khusus </label>
+                    <label for="md_leavetype_id">Ijin Khusus <span class="required">*</span></label>
                     <select class="form-control select2" id="md_leavetype_id" name="md_leavetype_id">
                         <option value="">Pilih Ijin Khusus</option>
                     </select>
@@ -68,7 +71,7 @@
                 <div class="form-group">
                     <label for="date">Tanggal Mulai <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control date-start" name="startdate">
+                        <input type="text" class="form-control date-leave-start" name="startdate">
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -80,7 +83,7 @@
                 <div class="form-group">
                     <label for="date">Tanggal Selesai <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control date-end" name="enddate" readonly>
+                        <input type="text" class="form-control date-leave-end" name="enddate">
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -97,7 +100,7 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label>Foto <span class="required">*</span></label>
+                    <label>Foto</label>
                     <div class="form-upload-result">
                         <label class="col-md-4 form-result">
                             <button type="button" class="close-img" aria-label="Close">
@@ -108,7 +111,8 @@
                     </div>
                     <div class="form-upload">
                         <label class="col-md-4 form-upload-foto" id="image-upload">
-                            <input type="file" class="control-upload-image" id="image" name="image" onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
+                            <input type="file" class="control-upload-image" id="image" name="image"
+                                onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
                         <small class="form-text text-danger" id="error_image"></small>
