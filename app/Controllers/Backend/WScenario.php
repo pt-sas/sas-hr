@@ -374,6 +374,7 @@ class WScenario extends BaseController
                 $this->entity->setIsApproved("Y");
             } else {
                 $this->entity->setDocStatus($this->DOCSTATUS_Completed);
+                $this->entity->setIsApproved("Y");
             }
         } else if ($trx && $docStatus === $this->DOCSTATUS_Requested) {
             if ($table === 'trx_absent') {

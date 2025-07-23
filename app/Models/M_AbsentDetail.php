@@ -524,13 +524,14 @@ class M_AbsentDetail extends Model
     public function doAfterUpdate(array $rows)
     {
         $mAbsent = new M_Absent($this->request);
-        $entity = new \App\Entities\Absent();
+        $changeLog = new M_ChangeLog($this->request);
 
         try {
             $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
             $todayTime = date('Y-m-d H:i:s');
             $updatedBy = $rows['data']['updated_by'];
             $line = $this->find($ID);
+            $header = $mAbsent->find($line->trx_absent_id);
 
             // TODO : Update Header if there no pending line
             $list = $this->where(
@@ -539,11 +540,14 @@ class M_AbsentDetail extends Model
             )->whereIn('isagree', ['M', 'S', 'H'])->first();
 
             if (is_null($list)) {
-                $entity->setDocStatus("CO");
-                $entity->setReceivedDate($todayTime);
-                $entity->setAbsentId($line->trx_absent_id);
-                $entity->setUpdatedBy($updatedBy);
-                $mAbsent->save($entity);
+                $dataUpdate = [
+                    "docstatus"     => "CO",
+                    "receiveddate"  => $todayTime,
+                    "updated_by"    => $updatedBy
+                ];
+
+                $mAbsent->builder->update($dataUpdate, [$mAbsent->primaryKey => $header->trx_absent_id]);
+                $changeLog->insertLog($mAbsent->table, 'docstatus', $header->trx_absent_id, $header->docstatus, "CO", 'U');
             }
 
             //TODO : Update Isapproved if there's no line to Approved
@@ -553,14 +557,13 @@ class M_AbsentDetail extends Model
             ])->first();
 
             if (is_null($pendingLine)) {
-                $header = $mAbsent->find($line->trx_absent_id);
                 if (empty($header->getIsApproved())) {
-                    $approvedLine = $this->where(
+                    $hadApprovedLine = $this->where(
                         'trx_absent_id',
                         $line->{$mAbsent->primaryKey}
-                    )->whereIn('isagree', ['M', 'S', 'Y'])->first();
+                    )->whereIn('isagree', ['Y', 'M', 'S'])->first();
 
-                    if (!is_null($approvedLine)) {
+                    if (!empty($hadApprovedLine)) {
                         $dataUpdate = [
                             'updated_by'    => $updatedBy,
                             'approveddate'  => $todayTime,

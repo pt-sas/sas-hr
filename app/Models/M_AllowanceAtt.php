@@ -69,52 +69,6 @@ class M_AllowanceAtt extends Model
         ];
     }
 
-    public function createAllowance(array $data)
-    {
-        $mAbsent = new M_Absent($this->request);
-        $mRule = new M_Rule($this->request);
-        $mRuleDetail = new M_RuleDetail($this->request);
-        $mLeaveBalance = new M_LeaveBalance($this->request);
-
-        try {
-            $amount = 0;
-            $ruleDetail = null;
-
-            $array = [];
-            foreach ($data as $item) {
-                $row = [];
-
-                if ($item['submissiontype'] == $mAbsent->Pengajuan_Sakit) {
-                    $rule = $mRule->where([
-                        'name'      => 'Sakit',
-                        'isactive'  => 'Y'
-                    ])->first();
-
-                    if ($rule) {
-                        $amount = $rule->condition ?: $rule->value;
-                    }
-                }
-
-                if ($amount != 0 && $item['isagree'] === 'Y') {
-                    $row['record_id'] = $item[$mAbsent->primaryKey];
-                    $row['table'] = $mAbsent->table;
-                    $row['submissiontype'] = $item['submissiontype'];
-                    $row['submissiondate'] = $item['date'];
-                    $row['md_employee_id'] = $item['md_employee_id'];
-                    $row['amount'] = $amount;
-                    $row['created_by'] = $item['updated_by'];
-                    $row['updated_by'] = $item['updated_by'];
-                    $array[] = $row;
-                }
-            }
-
-            if ($array)
-                $this->builder->insertBatch($array);
-        } catch (\Exception $e) {
-            throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
-        }
-    }
-
     public function insertAllowance($record_id, $table, $type, $submissiondate, $submissiontype, $md_employee_id, $amount, $updatedBy = null)
     {
         $date = date('Y-m-d', strtotime($submissiondate));
