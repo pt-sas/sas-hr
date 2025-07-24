@@ -875,6 +875,38 @@ _tableNotification = $(".tb_notification")
   .columns.adjust();
 
 /**
+ * Table Unprocessed Document
+ */
+_tableUnprocessed = $(".table_unprocessed")
+  .DataTable({
+    processing: true,
+    serverSide: true,
+    ajax: {
+      url: CURRENT_URL + SHOWALL,
+      type: "POST",
+    },
+    columnDefs: [
+      {
+        targets: [0, 1, 2, 3, 4, 5],
+        orderable: false,
+      },
+      {
+        targets: [0, 5],
+        width: "5%",
+      },
+    ],
+    order: [],
+    lengthChange: false,
+    info: false,
+    searching: false,
+    paging: false,
+    autoWidth: false,
+    scrollY: "70vh",
+    scrollCollapse: true,
+  })
+  .columns.adjust();
+
+/**
  *
  * @returns check fixed column datatable
  */
@@ -5658,7 +5690,6 @@ $(".btn_record_info").click(function (evt) {
   let record_id = row[1];
   let table = row[2];
   let menu = row[3];
-
   let action = "view";
   let checkAccess = isAccess(action, menu);
 
@@ -6250,4 +6281,24 @@ $(".import_file").click(function (evt) {
       }
     },
   });
+});
+
+_tableUnprocessed.on("click", ".btn_record", function (e) {
+  const _this = $(this);
+
+  let record_id = _this.attr("id");
+  let menu = _this.attr("data-url");
+
+  let arrData = {
+    id: ID,
+    record_id: record_id,
+    menu: menu,
+  };
+
+  arrData = JSON.stringify(arrData);
+
+  sessionStorage.setItem("reloading", "true");
+  sessionStorage.setItem("data", arrData);
+
+  window.open(ADMIN_URL + menu);
 });

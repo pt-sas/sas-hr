@@ -746,6 +746,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('transfer-duta/processIt', 'Backend\DelegationTransfer::processIt');
     $routes->post('transfer-duta/getEmployeeDelegation', 'Backend\DelegationTransfer::getEmployeeDelegation');
     $routes->post('transfer-duta/checkOnGoingTransfer', 'Backend\DelegationTransfer::checkOnGoingTransfer');
+
+    $routes->add('dokumen-draft', 'Backend\UnprocessedDocuments::index');
+    $routes->match(['get', 'post'], 'dokumen-draft/showAll', 'Backend\UnprocessedDocuments::showAll');
 });
 
 /*
