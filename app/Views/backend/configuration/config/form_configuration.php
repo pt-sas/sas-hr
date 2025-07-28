@@ -36,6 +36,13 @@
                     <small class="form-text text-danger" id="error_day_cut_off_allowance"></small>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Token BOT Telegram</label>
+                    <input type="text" class="form-control" id="token_bot_telegram" name="token_bot_telegram">
+                    <small class="form-text text-danger" id="error_token_bot_telegram"></small>
+                </div>
+            </div>
         </div>
 </div>
 </form>
