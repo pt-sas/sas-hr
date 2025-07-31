@@ -12,7 +12,7 @@
                 <th>No Form</th>
                 <th>Pengguna</th>
                 <th>Di Wakilkan Oleh</th>
-                <th>Tanggal Pengajuan</th>
+                <th>Tanggal Pembuatan</th>
                 <th>Tanggal Peralihan</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>

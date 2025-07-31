@@ -273,7 +273,6 @@ class M_Absent extends Model
         $mHoliday = new M_Holiday($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
-        $mAllowance = new M_AllowanceAtt($this->request);
 
         $result = 0;
 
@@ -315,33 +314,23 @@ class M_Absent extends Model
                 }
             }
 
-            $data = [];
             $number = 0;
-            foreach ($date_range as $date) :
-                $row = [];
+            foreach ($date_range as $date) {
+                $entity = new \App\Entities\AbsentDetail();
 
                 $number++;
 
-                $row[$this->primaryKey] = $rows['id'];
-                $row['date'] = $date;
-                $row['lineno'] = $number;
-                $row['isagree'] = $rows['isagree'] ?? "H";
-                $row['created_by'] = $rows['created_by'];
-                $row['updated_by'] = $rows['updated_by'];
-                $data[] = $row;
-            endforeach;
+                $entity->{$this->primaryKey} = $rows['id'];
+                $entity->date = $date;
+                $entity->lineno = $number;
+                $entity->isagree = $rows['isagree'] ?? "H";
+                $entity->created_by = $rows['created_by'];
+                $entity->updated_by = $rows['updated_by'];
 
-            $result = $mAbsentDetail->builder->insertBatch($data);
+                $mAbsentDetail->save($entity);
+            }
 
-            $data = array_map(function ($item)
-            use ($submissionType, $md_employee_id) {
-                $item['submissiontype'] = $submissionType;
-                $item['md_employee_id'] = $md_employee_id;
-
-                return $item;
-            }, $data);
-
-            $mAllowance->createAllowance($data);
+            $result = $number;
 
             //TODO : Insert Total Days
             $entity = new \App\Entities\Absent();
@@ -357,8 +346,6 @@ class M_Absent extends Model
 
     public function doAfterUpdate(array $rows)
     {
-        $mRule = new M_Rule($this->request);
-        $mRuleDetail = new M_RuleDetail($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mLeaveBalance = new M_LeaveBalance($this->request);
@@ -406,24 +393,27 @@ class M_Absent extends Model
         }
 
         // TODO : If line is not null then update isagree on line
-        if (!empty($sql->getIsApproved()) && ($sql->docstatus === "NA" || $sql->docstatus === "IP") && !is_null($line)) {
-            $line = $mAbsentDetail->where($this->primaryKey, $ID)->findAll();
+        if (!empty($sql->getIsApproved()) && ($sql->docstatus === "NA" || $sql->docstatus === "IP" || $sql->docstatus === "CO") && !is_null($line)) {
+            $line = $mAbsentDetail->where($this->primaryKey, $ID)->whereIn('isagree', ['H', 'M', 'S'])->findAll();
 
             if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP") {
                 $isagree = $subType[$sql->getSubmissionType()];
-            } else {
+            } else if ($sql->getIsApproved() === 'N' && $sql->docstatus === "NA") {
                 // TODO : If is not approved then update isagree to Not Approved
                 $isagree = 'N';
+            } else if ($sql->getIsApproved() === "Y" && $sql->docstatus === "CO") {
+                $isagree = "Y";
             }
 
-            foreach ($line as $row) :
-                $entity = new \App\Entities\AbsentDetail();
+            if (!empty($isagree)) {
+                foreach ($line as $row) :
+                    $entity = new \App\Entities\AbsentDetail();
+                    $entity->{$mAbsentDetail->primaryKey} = $row->{$mAbsentDetail->primaryKey};
+                    $entity->isagree = $isagree;
 
-                $entity->{$mAbsentDetail->primaryKey} = $row->{$mAbsentDetail->primaryKey};
-                $entity->isagree = $isagree;
-
-                $mAbsentDetail->save($entity);
-            endforeach;
+                    $mAbsentDetail->save($entity);
+                endforeach;
+            }
         }
 
         if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "VO" && !is_null($line)) {

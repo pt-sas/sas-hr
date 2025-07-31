@@ -155,6 +155,7 @@ STR;
                                         if (
                                             $detail->name === "Terlambat"
                                             && getOperationResult($workOutTime, $breakStart, $detail->operation)
+                                            && getOperationResult($workOutTime, $workHourEnd, '<<')
                                             && empty($clockIn) && !empty($clockOut)
                                         ) {
                                             $allowOut = $mAllowance->where([

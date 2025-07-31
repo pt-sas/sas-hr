@@ -301,7 +301,7 @@ class OfficialPermission extends BaseController
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 
-                        if (is_null($line)) {
+                        if (empty($line)) {
                             // TODO : Create Line if not exist
                             $data = [
                                 'id'        => $_ID,

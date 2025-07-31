@@ -412,4 +412,15 @@ class Template
 
         return $allBtn;
     }
+
+    public function buttonRecordInfo($id, $menu)
+    {
+        $btnRecordInfo = "<div class='d-flex justify-content-between'>
+                            <button type='button' class='btn btn-icon btn-primary btn_record' data-toggle='tooltip' data-placement='top' title='Record Info' id = {$id} data-url = {$menu}>
+                                <i class='fas fa-search fa-lg'></i>
+                            </button>
+                            </div>";
+
+        return $btnRecordInfo;
+    }
 }

@@ -13,7 +13,7 @@
                 <th>Karyawan</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
-                <th>Tanggal Pengajuan</th>
+                <th>Tanggal Pembuatan</th>
                 <th>Tanggal Lembur</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>

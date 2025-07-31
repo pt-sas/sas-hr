@@ -34,6 +34,9 @@ let clear = false;
 //* Field changeTab boolean value
 let changeTab = false;
 
+//* Field for waiting Loading form for Event Handler
+let isLoadingForm = false;
+
 // Data array from option
 let option = [];
 
@@ -872,6 +875,38 @@ _tableNotification = $(".tb_notification")
   .columns.adjust();
 
 /**
+ * Table Unprocessed Document
+ */
+_tableUnprocessed = $(".table_unprocessed")
+  .DataTable({
+    processing: true,
+    serverSide: true,
+    ajax: {
+      url: CURRENT_URL + SHOWALL,
+      type: "POST",
+    },
+    columnDefs: [
+      {
+        targets: [0, 1, 2, 3, 4, 5],
+        orderable: false,
+      },
+      {
+        targets: [0, 5],
+        width: "5%",
+      },
+    ],
+    order: [],
+    lengthChange: false,
+    info: false,
+    searching: false,
+    paging: false,
+    autoWidth: false,
+    scrollY: "70vh",
+    scrollCollapse: true,
+  })
+  .columns.adjust();
+
+/**
  *
  * @returns check fixed column datatable
  */
@@ -1058,7 +1093,9 @@ $(".save_form").click(function (evt) {
           className.includes("datepick-start") ||
           className.includes("datepick-end") ||
           className.includes("date-start") ||
-          className.includes("date-end")
+          className.includes("date-end") ||
+          className.includes("date-leave-start") ||
+          className.includes("date-leave-end")
         ) {
           let date = field[i].value;
 
@@ -1689,7 +1726,6 @@ function Edit(id, status, last_url) {
           success: function (result) {
             if (result[0].success) {
               let arrMsg = result[0].message;
-
               // Show datatable line
               if (arrMsg.line) {
                 let arrLine = arrMsg.line;
@@ -2777,7 +2813,9 @@ $(".add_row").click(function (evt) {
           className.includes("datepick-start") ||
           className.includes("datepick-end") ||
           className.includes("date-start") ||
-          className.includes("date-end")
+          className.includes("date-end") ||
+          className.includes("date-leave-start") ||
+          className.includes("date-leave-end")
         ) {
           let date = field[i].value;
 
@@ -5043,6 +5081,9 @@ function showFormData(form) {
 function putFieldData(form, data, status = null) {
   const modalTab = form.closest(".modal-tab");
 
+  // TODO : Set Loading Form true so event handler don't run when loading data
+  isLoadingForm = true;
+
   if (data.length > 1) {
     const field = form.find("input, textarea, select").not(".line");
 
@@ -5272,12 +5313,14 @@ function putFieldData(form, data, status = null) {
               form
                 .find("input[name=" + fieldName + "]")
                 .not(".line")
-                .prop("checked", true);
+                .prop("checked", true)
+                .change();
             else if (label === "N")
               form
                 .find("input[name=" + fieldName + "]")
                 .not(".line")
-                .removeAttr("checked");
+                .removeAttr("checked")
+                .change();
 
             if (className.includes("active") && field[i].checked)
               readonly(form, false);
@@ -5443,6 +5486,9 @@ function putFieldData(form, data, status = null) {
         }
       }
     }
+
+    //TODO : Set Loading to False so Event Handler can run
+    isLoadingForm = false;
   }
 }
 
@@ -5644,7 +5690,6 @@ $(".btn_record_info").click(function (evt) {
   let record_id = row[1];
   let table = row[2];
   let menu = row[3];
-
   let action = "view";
   let checkAccess = isAccess(action, menu);
 
@@ -6236,4 +6281,24 @@ $(".import_file").click(function (evt) {
       }
     },
   });
+});
+
+_tableUnprocessed.on("click", ".btn_record", function (e) {
+  const _this = $(this);
+
+  let record_id = _this.attr("id");
+  let menu = _this.attr("data-url");
+
+  let arrData = {
+    id: ID,
+    record_id: record_id,
+    menu: menu,
+  };
+
+  arrData = JSON.stringify(arrData);
+
+  sessionStorage.setItem("reloading", "true");
+  sessionStorage.setItem("data", arrData);
+
+  window.open(ADMIN_URL + menu);
 });

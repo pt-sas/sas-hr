@@ -5,7 +5,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList/$Access">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
+                        data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -21,7 +22,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -44,8 +46,9 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?>>
+                    <label for="submissiondate">Tanggal Pembuatan <span class="required">*</span></label>
+                    <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                        value=<?= $today ?>>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
@@ -60,7 +63,8 @@
                 <div class="form-group">
                     <label for="datestart">Tanggal Mulai <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepick-start" name="datestart" placeholder="Tanggal Mulai">
+                        <input type="text" class="form-control datepick-start" name="datestart"
+                            placeholder="Tanggal Mulai">
                         <div class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </div>
@@ -72,7 +76,8 @@
                 <div class="form-group">
                     <label for="starttime">Jam Mulai <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control timepicker-start" name="starttime" placeholder="Jam Mulai">
+                        <input type="text" class="form-control timepicker-start" name="starttime"
+                            placeholder="Jam Mulai">
                         <div class="input-icon-addon">
                             <i class="fa fa-clock"></i>
                         </div>
@@ -84,7 +89,8 @@
                 <div class="form-group">
                     <label for="dateend">Tanggal Selesai <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepick-end" name="dateend" placeholder="Tanggal Selesai" readonly>
+                        <input type="text" class="form-control datepick-end" name="dateend"
+                            placeholder="Tanggal Selesai" readonly>
                         <div class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </div>
