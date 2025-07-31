@@ -21,7 +21,7 @@
                 <th>Level Tujuan</th>
                 <th>Jabatan Tujuan</th>
                 <th>Tipe Form</th>
-                <th>Tanggal Pengajuan</th>
+                <th>Tanggal Pembuatan</th>
                 <th>Tanggal Mutasi</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>

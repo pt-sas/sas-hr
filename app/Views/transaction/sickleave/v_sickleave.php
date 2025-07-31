@@ -14,7 +14,7 @@
                 <th>NIK</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
-                <th>Tanggal Pengajuan</th>
+                <th>Tanggal Pembuatan</th>
                 <th>Tanggal Sakit</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>

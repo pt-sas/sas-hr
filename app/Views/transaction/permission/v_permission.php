@@ -51,14 +51,15 @@
                         </div>
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label for="value">Tanggal Pengajuan <span class="required">*</span></label>
+                                <label for="value">Tanggal Pembuatan <span class="required">*</span></label>
                                 <input type="text" class="form-control datepicker" id="fullname" name="fullname">
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="form-group">
                                 <label for="value">Tanggal Diterima HRD <span class="required">*</span></label>
-                                <input type="text" class="form-control datepicker" id="fullname" name="fullname" readonly>
+                                <input type="text" class="form-control datepicker" id="fullname" name="fullname"
+                                    readonly>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -73,7 +74,8 @@
                                     <option value="B">Istri Pekerja Melahirkan/Keguguran (2 Hari)</option>
                                     <option value="B">Pekerja Melahirkan (90 Hari)</option>
                                     <option value="B">Pekerja Keguguran (45 Hari)</option>
-                                    <option value="B">Suami/Istri, Orang Tua/Mertua, Anak/Menantu Meninggal (3 Hari)</option>
+                                    <option value="B">Suami/Istri, Orang Tua/Mertua, Anak/Menantu Meninggal (3 Hari)
+                                    </option>
                                 </select>
                             </div>
                         </div>

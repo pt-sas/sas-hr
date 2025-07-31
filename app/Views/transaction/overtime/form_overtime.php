@@ -5,7 +5,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Pemohon <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id" data-url="employee/getList/$Spesific">
+                    <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
+                        data-url="employee/getList/$Spesific">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
@@ -15,7 +16,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]" readonly>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -38,9 +40,10 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
+                    <label for="submissiondate">Tanggal Pembuatan <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate" value=<?= $today ?>>
+                        <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
+                            value=<?= $today ?>>
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -52,7 +55,8 @@
                 <div class="form-group">
                     <label for="approveddate">Tanggal Disetujui </label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepicker" id="approveddate" name="approveddate" readonly>
+                        <input type="text" class="form-control datepicker" id="approveddate" name="approveddate"
+                            readonly>
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -80,7 +84,8 @@
                 </div>
                 <div class="form-check">
                     <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" name="isemployee" checked hide-field="md_supplier_id">
+                        <input type="checkbox" class="form-check-input" name="isemployee" checked
+                            hide-field="md_supplier_id">
                         <span class=" form-check-sign">Karyawan</span>
                     </label>
                 </div>
@@ -100,7 +105,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_supplier_id">Asal Outsourcing <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_supplier_id" name="md_supplier_id" data-url="supplier/getList">
+                    <select class="form-control select-data" id="md_supplier_id" name="md_supplier_id"
+                        data-url="supplier/getList">
                         <option value="">Select Supplier</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_supplier_id"></small>
@@ -111,7 +117,8 @@
             <div class="col-md-12">
                 <div class="form-group">
                     <div class="text-right">
-                        <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row" title="Tambah Baru"><i class="fa fa-plus fa-fw"></i> Tambah</button>
+                        <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row"
+                            title="Tambah Baru"><i class="fa fa-plus fa-fw"></i> Tambah</button>
                     </div>
                 </div>
             </div>

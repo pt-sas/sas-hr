@@ -48,7 +48,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
+                    <label for="submissiondate">Tanggal Pembuatan <span class="required">*</span></label>
                     <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
                         value=<?= $today ?>>
                     <small class="form-text text-danger" id="error_submissiondate"></small>

@@ -14,7 +14,7 @@
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Ref</th>
-                <th>Tanggal Pengajuan</th>
+                <th>Tanggal Pembuatan</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
                 <th>Doc Status</th>

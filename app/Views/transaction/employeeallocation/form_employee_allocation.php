@@ -15,7 +15,7 @@
                     <select class="form-control select2" id="submissiontype" name="submissiontype">
                         <option value="">Select Tipe Form</option>
                         <?php foreach ($type as $row) : ?>
-                            <option value="<?= $row->md_doctype_id ?>"><?= $row->name ?> </option>
+                        <option value="<?= $row->md_doctype_id ?>"><?= $row->name ?> </option>
                         <?php endforeach; ?>
                     </select>
                     <small class="form-text text-danger" id="error_submissiontype"></small>
@@ -40,7 +40,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="submissiondate">Tanggal Pengajuan <span class="required">*</span></label>
+                    <label for="submissiondate">Tanggal Pembuatan <span class="required">*</span></label>
                     <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
                         value=<?= $today ?>>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
@@ -124,7 +124,8 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="levelling_to">Level Tujuan <span class="required">*</span></label>
-                    <select class="form-control select-data" id="levelling_to" name="levelling_to" data-url="levelling/getList">
+                    <select class="form-control select-data" id="levelling_to" name="levelling_to"
+                        data-url="levelling/getList">
                         <option value="">Pilih Level Tujuan</option>
                     </select>
                     <small class="form-text text-danger" id="error_levelling_to"></small>

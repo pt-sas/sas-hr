@@ -13,7 +13,7 @@
                 <th>Pemohon</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
-                <th>Tanggal Pengajuan</th>
+                <th>Tanggal Pembuatan</th>
                 <th>Tanggal Penugasan</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>

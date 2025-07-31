@@ -11,7 +11,7 @@
                             <th>#</th>
                             <th>Tipe Pengajuan</th>
                             <th>DocumentNo</th>
-                            <th>Tanggal Pengajuan</th>
+                            <th>Tanggal Pembuatan</th>
                             <th>Dibuat Oleh</th>
                             <th class="text-center">Aksi</th>
                         </tr>
