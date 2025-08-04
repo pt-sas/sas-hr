@@ -21,7 +21,9 @@ use App\Models\M_ChangeLog;
 use App\Models\M_Configuration;
 use App\Models\M_EmpBenefit;
 use App\Models\M_Employee;
+use App\Models\M_NotificationText;
 use App\Models\M_RuleValue;
+use App\Models\M_User;
 use Config\Services;
 
 class Realization extends BaseController
@@ -386,6 +388,9 @@ class Realization extends BaseController
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $cMessage = new Message();
+            $mNotifText = new M_NotificationText($this->request);
+            $mUser = new M_User($this->request);
 
             $agree = 'Y';
             $notAgree = 'N';
@@ -491,6 +496,15 @@ class Realization extends BaseController
 
                             $this->model->builder->updateBatch($arr, $this->model->primaryKey);
                             $response = message('success', true, notification("updated"));
+                        }
+
+                        $user = $mUser->where('sys_user_id', $row->created_by)->findAll();
+                        $dataNotif = $mNotifText->where('name', 'Realisasi Disetujui HRD')->first();
+                        $subject = $dataNotif->getSubject();
+                        $message = str_replace(['(Var1)', '(Var2)'], [$submissionDate, $row->documentno], $dataNotif->getText());
+
+                        foreach ($user as $users) {
+                            $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
                         }
                     }
 
@@ -613,6 +627,15 @@ class Realization extends BaseController
                             $this->entity->isagree = $isAgree;
                             $this->entity->{$isAssignment ? 'trx_assignment_date_id' : 'trx_absent_detail_id'} = $post['foreignkey'];
                             $response = $this->save();
+                        }
+
+                        $user = $mUser->where('sys_user_id', $row->created_by)->findAll();
+                        $dataNotif = $mNotifText->where('name', 'Realisasi Tidak Disetujui HRD')->first();
+                        $subject = $dataNotif->getSubject();
+                        $message = str_replace(['(Var1)', '(Var2)'], [$submissionDate, $row->documentno], $dataNotif->getText());
+
+                        foreach ($user as $users) {
+                            $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
                         }
                     }
 

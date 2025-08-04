@@ -7,6 +7,7 @@ use App\Models\M_Message;
 use App\Models\M_User;
 use Pusher\Pusher;
 use CodeIgniter\Config\Services;
+use Html2Text\Html2Text;
 
 class Message extends BaseController
 {
@@ -220,5 +221,39 @@ class Message extends BaseController
         $this->entity->setBody($message);
 
         return $this->model->save($this->entity);
+    }
+
+    public function sendInformation($user_to, $subject, $message, $yourname = null, $attachment = null, $user_from = null, $sendEmail = false, $sendTelegram = false, $sendNotif = false)
+    {
+        $cMail = new Mail();
+        $cTelegram = new Telegram();
+
+        $plainMessage = (new Html2Text($message))->getText();
+
+        if ($sendNotif) {
+            $this->sendNotification($user_to->sys_user_id, $subject, $message, $user_from ? $user_from->sys_user_id : null);
+
+            $options = array(
+                'cluster' => 'ap1',
+                'useTLS' => true
+            );
+            $pusher = new Pusher(
+                '8ae4540d78a7d493226a',
+                '808c4eb78d03842672ca',
+                '1490113',
+                $options
+            );
+
+            $data['message'] = 'hello world';
+            $pusher->trigger('my-channel', 'my-event', $data);
+        }
+
+        if ($sendEmail && !empty($user_to->email)) {
+            $cMail->sendEmail($user_to->email, $subject, $plainMessage, $user_from ? $user_from->email : null, $yourname, $attachment);
+        }
+
+        if ($sendTelegram && !empty($user_to->telegram_id)) {
+            $cTelegram->sendMessage($user_to->telegram_id, $plainMessage);
+        }
     }
 }
