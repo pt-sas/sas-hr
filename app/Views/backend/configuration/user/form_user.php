@@ -36,7 +36,13 @@
                     <small class="form-text text-danger" id="error_password"></small>
                 </div>
             </div>
-            <div class="col-md-6"></div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="telegram_username">Username Telegram</label>
+                    <input type="text" class="form-control" id="telegram_username" name="telegram_username">
+                    <small class="form-text text-danger" id="error_telegram_username"></small>
+                </div>
+            </div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="md_employee_id">Nama Karyawan </label>
@@ -53,7 +59,7 @@
                         <select class="form-control multiple-select" id="sys_role_id" name="sys_role_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($role as $row) : ?>
-                                <option value="<?= $row->sys_role_id; ?>"><?= $row->name; ?></option>
+                            <option value="<?= $row->sys_role_id; ?>"><?= $row->name; ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -66,7 +72,7 @@
                         <select class="form-control multiple-select" id="md_branch_id" name="md_branch_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($branch as $row) : ?>
-                                <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
+                            <option value="<?= $row->getBranchId(); ?>"><?= $row->getName(); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <small class="form-text text-danger" id="error_md_branch_id"></small>
@@ -80,7 +86,7 @@
                         <select class="form-control multiple-select" id="md_division_id" name="md_division_id"
                             multiple="multiple" style="width: 100%;">
                             <?php foreach ($division as $row) : ?>
-                                <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
+                            <option value="<?= $row->getDivisionId(); ?>"><?= $row->getName(); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <small class="form-text text-danger" id="error_md_division_id"></small>

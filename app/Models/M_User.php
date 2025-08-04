@@ -23,7 +23,9 @@ class M_User extends Model
 		'created_by',
 		'updated_by',
 		'md_employee_id',
-		'md_levelling_id'
+		'md_levelling_id',
+		'telegram_username',
+		'telegram_id',
 	];
 	protected $useTimestamps        = true;
 	protected $returnType           = 'App\Entities\User';

@@ -21,6 +21,8 @@ class User extends Entity
 	protected $updated_by;
 	protected $md_employee_id;
 	protected $md_levelling_id;
+	protected $telegram_username;
+	protected $telegram_id;
 
 	protected $dates   = [
 		'created_at',
@@ -176,5 +178,25 @@ class User extends Entity
 	public function setLevellingId($md_levelling_id)
 	{
 		$this->attributes['md_levelling_id'] = $md_levelling_id;
+	}
+
+	public function getTelegramUsername()
+	{
+		return $this->attributes['telegram_username'];
+	}
+
+	public function setTelegramUsername($telegram_username)
+	{
+		$this->attributes['telegram_username'] = $telegram_username;
+	}
+
+	public function getTelegramID()
+	{
+		return $this->attributes['telegram_id'];
+	}
+
+	public function setTelegramID($telegram_id)
+	{
+		$this->attributes['telegram_id'] = $telegram_id;
 	}
 }
