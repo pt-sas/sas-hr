@@ -110,6 +110,7 @@ class WActivity extends BaseController
         $mNotifText = new M_NotificationText($this->request);
         $mDocType = new M_DocumentType($this->request);
         $cMail = new Mail();
+        $cMessage = new Message();
 
         $modelAct = new M_WActivity($this->request);
         $entityAct = new \App\Entities\WActivity();
@@ -329,11 +330,15 @@ class WActivity extends BaseController
             $subject .= " - " . $dataNotif->getSubject();
             $message .= "-----" . " " . ucwords($menuName) . " " . $trx->documentno;
 
-            $message = new Html2Text($message);
-            $message = $message->getText();
+            // $message = new Html2Text($message);
+            // $message = $message->getText();
 
-            foreach ($arr_email as $email) {
-                $cMail->sendEmail($email, $subject, $message, null, "SAS HR");
+            // foreach ($arr_email as $email) {
+            //     $cMail->sendEmail($email, $subject, $message, null, "SAS HR");
+            // }
+
+            foreach ($dataUser as $users) {
+                $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
             }
 
             $this->toForwardAlert('sys_wfresponsible', $sys_wfresponsible_id, $subject, $message);
