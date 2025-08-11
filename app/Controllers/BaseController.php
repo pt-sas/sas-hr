@@ -87,10 +87,6 @@ class BaseController extends Controller
 	protected $DOCSTATUS_Requested = "RE";
 	/** Aborted = XL */
 	protected $DOCSTATUS_Unlock = "XL";
-	/** Form Kelengkapan Absent */
-	protected $Form_Kelengkapan_Absent = 'FK';
-	/** Form Absent */
-	protected $Form_Absent = 'FA';
 	/** Status HIDUP*/
 	protected $Status_Hidup = 'HIDUP';
 	/** Status MENINGGAL */
@@ -111,6 +107,22 @@ class BaseController extends Controller
 	protected $Status_MAGANG = 100007;
 	/** Status KONTRAK */
 	protected $Status_KONTRAK = 100008;
+	/** Tipe Pengajuan Satu Hari */
+	protected $Form_Satu_Hari = [100001, 100002, 100003, 100004, 100005, 100007, 100008];
+	/** Tipe Pengajuan Setengah Hari */
+	protected $Form_Setengah_Hari = [100006, 100009, 100010, 100011, 100012, 100013];
+	/** Line Status Pengajuan Approval */
+	protected $LINESTATUS_Approval = 'H';
+	/** Line Status Pengajuan Realisasi Atasan */
+	protected $LINESTATUS_Realisasi_Atasan = 'M';
+	/** Line Status Pengajuan Realisasi HRD */
+	protected $LINESTATUS_Realisasi_HRD = 'S';
+	/** Line Status Pengajuan Disetujui */
+	protected $LINESTATUS_Disetujui = 'Y';
+	/** Line Status Pengajuan Ditolak */
+	protected $LINESTATUS_Ditolak = 'N';
+	/** Line Status Pengajuan Dibatalkan */
+	protected $LINESTATUS_Dibatalkan = 'C';
 
 	/**
 	 * The column used for primaryKey int

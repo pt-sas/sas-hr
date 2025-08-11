@@ -10,6 +10,10 @@ use App\Models\M_Employee;
 use App\Models\M_LeaveType;
 use App\Models\M_AccessMenu;
 use App\Models\M_Holiday;
+use App\Models\M_Attendance;
+use App\Models\M_Rule;
+use App\Models\M_EmpWorkDay;
+use App\Models\M_WorkDetail;
 
 class OfficialPermission extends BaseController
 {
@@ -161,6 +165,11 @@ class OfficialPermission extends BaseController
     public function create()
     {
         $mEmployee = new M_Employee($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mAttendance = new M_Attendance($this->request);
+        $mRule = new M_Rule($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -168,6 +177,8 @@ class OfficialPermission extends BaseController
 
             $post["submissiontype"] = $this->model->Pengajuan_Ijin_Resmi;
             $post["necessary"] = 'IR';
+            $employeeId = $post['md_employee_id'];
+            $day = date('w');
 
             try {
                 $img_name = "";
@@ -189,29 +200,140 @@ class OfficialPermission extends BaseController
                 if (!$this->validation->run($post, 'absent')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+                    $holidays = $mHoliday->getHolidayDate();
+                    $startDate = date('Y-m-d', strtotime($post['startdate']));
+                    $endDate = date('Y-m-d', strtotime($post['enddate']));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
 
-                    $this->entity->fill($post);
+                    $rule = $mRule->where([
+                        'name'      => 'Ijin Resmi',
+                        'isactive'  => 'Y'
+                    ])->first();
 
-                    if ($this->isNew()) {
-                        uploadFile($file, $path, $img_name);
+                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
+                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
 
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    //TODO : Get work day employee
+                    $workDay = $mEmpWork->where([
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $subDate,
+                        'validto >='        => $subDate
+                    ])->orderBy('validfrom', 'ASC')->first();
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin_Resmi, $post, $this->session->get('sys_user_id'));
-                        $this->entity->setDocumentNo($docNo);
+                    if (is_null($workDay)) {
+                        $response = message('success', false, 'Hari kerja belum ditentukan');
                     } else {
-                        $row = $this->model->find($this->getID());
+                        //TODO : Get Work Detail
+                        $whereClause = "md_work_detail.isactive = 'Y'";
+                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                        if (!empty($post['image']) && !empty($row->getImage()) && $post['image'] !== $row->getImage()) {
-                            if (file_exists($path . $row->getImage()))
-                                unlink($path . $row->getImage());
+                        $daysOff = getDaysOff($workDetail);
+                        $dateWorkRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
 
-                            uploadFile($file, $path, $img_name);
+                        $dayClause = [];
+                        $workClause = [];
+                        foreach ($dateWorkRange as $value) {
+                            $date = date('Y-m-d', strtotime($value));
+                            $day = strtoupper(formatDay_idn(date('w', strtotime($value))));
+
+                            $dayClause[] = "'{$day}'";
+                            $workClause[] = "'{$date}'";
+                        }
+
+                        $dayClause = implode(", ", $dayClause);
+                        $workClause = implode(", ", $workClause);
+
+                        //TODO: Get Work Detail by day
+                        $whereClause .= " AND md_day.name IN ({$dayClause})";
+                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+
+                        //TODO : Get attendance present employee
+                        $whereClause = "v_attendance.md_employee_id = '{$employeeId}'";
+                        $whereClause .= " AND v_attendance.date IN ({$workClause})";
+                        $attPresent = $mAttendance->getAttendance($whereClause)->getResult();
+
+                        //TODO : Get Max Last Date for Submission Past
+                        if ($startDate <= $subDate) {
+                            $lastDate = $endDate;
+                            $daysOff = implode(', ', $daysOff);
+                            for ($i = 0; $i < $minDays; $i++) {
+                                $whereClause = "v_attendance.md_employee_id = {$employeeId}";
+                                $whereClause .= " AND v_attendance.date > '{$lastDate}'";
+                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOff})";
+                                $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
+
+                                $whereClause = "trx_absent.md_employee_id = {$employeeId}";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '$lastDate'";
+                                $whereClause .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Tugas_Kantor}";
+                                $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOff})";
+                                $trxPresentNextDay =  $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+
+                                if (!$attPresentNextDay && $trxPresentNextDay) {
+                                    $lastDate = date('Y-m-d', strtotime($trxPresentNextDay->date));
+                                } elseif ($attPresentNextDay && !$trxPresentNextDay) {
+                                    $lastDate = date('Y-m-d', strtotime($attPresentNextDay->date));
+                                } elseif ($attPresentNextDay && $trxPresentNextDay) {
+                                    $attDate = strtotime($attPresentNextDay->date);
+                                    $trxDate = strtotime($trxPresentNextDay->date);
+                                    $lastDate = date('Y-m-d', min($attDate, $trxDate));
+                                }
+                            }
+                        }
+
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getResult();
+
+                        //* last index of array from variable addDays
+                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
+                        $addDays = end($addDays);
+
+                        if ($endDate > $addDays) {
+                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                        } else if (!empty($lastDate) && ($lastDate < $subDate) && $work) {
+                            $lastDate = format_dmy($lastDate, '-');
+
+                            $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
+                        } else if ($attPresent) {
+                            $date = implode(", ", array_map(function ($value) {
+                                return format_dmy($value->date, '-');
+                            }, $attPresent));
+
+                            $response = message('success', false, "Ada kehadiran, tidak bisa mengajukan pada tanggal : [{$date}]");
+                        } else if ($trx) {
+                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                        } else {
+                            $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                            $this->entity->fill($post);
+
+                            if ($this->isNew()) {
+                                uploadFile($file, $path, $img_name);
+
+                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Ijin_Resmi, $post, $this->session->get('sys_user_id'));
+                                $this->entity->setDocumentNo($docNo);
+                            } else {
+                                $row = $this->model->find($this->getID());
+
+                                if (!empty($post['image']) && !empty($row->getImage()) && $post['image'] !== $row->getImage()) {
+                                    if (file_exists($path . $row->getImage()))
+                                        unlink($path . $row->getImage());
+
+                                    uploadFile($file, $path, $img_name);
+                                }
+                            }
+
+                            $response = $this->save();
                         }
                     }
-
-                    $response = $this->save();
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

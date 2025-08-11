@@ -184,7 +184,6 @@ class SickLeave extends BaseController
 
             $post["submissiontype"] = $this->model->Pengajuan_Sakit;
             $post["necessary"] = 'SA';
-            $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
             $day = date('w');
 
@@ -194,8 +193,8 @@ class SickLeave extends BaseController
                 $img3_name = "";
                 $value = "";
 
-                if (!empty($post['md_employee_id'])) {
-                    $row = $mEmployee->find($post['md_employee_id']);
+                if (!empty($employeeId)) {
+                    $row = $mEmployee->find($employeeId);
                     $lenPos = strpos($row->getValue(), '-');
                     $value = substr_replace($row->getValue(), "", $lenPos);
                     $ymd = date('YmdHis');
@@ -225,9 +224,7 @@ class SickLeave extends BaseController
                     $holidays = $mHoliday->getHolidayDate();
                     $startDate = date('Y-m-d', strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $nik = $post['nik'];
-                    $submissionDate = $post['submissiondate'];
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
 
                     $rule = $mRule->where([
                         'name'      => 'Sakit',
@@ -239,9 +236,9 @@ class SickLeave extends BaseController
 
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today,
-                        'validto >='        => $today
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $subDate,
+                        'validto >='        => $subDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -274,63 +271,58 @@ class SickLeave extends BaseController
                         $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
                         //TODO : Get attendance present employee
-                        $whereClause = "v_attendance.nik = '{$nik}'";
+                        $whereClause = "v_attendance.md_employee_id = '{$employeeId}'";
                         $whereClause .= " AND v_attendance.date IN ({$workClause})";
                         $attPresent = $mAttendance->getAttendance($whereClause)->getResult();
 
-                        //TODO : Get attendance not present employee
-                        $whereClause = "v_attendance.nik = '{$nik}'";
-                        $whereClause .= " AND v_attendance.date = '{$startDate}'";
-                        $attNotPresent = $mAttendance->getAttendance($whereClause)->getRow();
-
-                        //TODO : Get next day attendance from enddate
-                        $presentNextDate = null;
-
+                        //TODO : Get Max Last Date for Submission Past
                         if ($startDate <= $subDate) {
-                            $whereClause = "trx_absent.nik = $nik";
-                            $whereClause .= " AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') > '$endDate'";
-                            $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                            $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                            if (is_null($trxPresentNextDay)) {
-                                $whereClause = "v_attendance.nik = '{$nik}'";
-                                $whereClause .= " AND v_attendance.date > '{$endDate}'";
+                            $lastDate = $endDate;
+                            $daysOff = implode(', ', $daysOff);
+                            for ($i = 0; $i < $minDays; $i++) {
+                                $whereClause = "v_attendance.md_employee_id = {$employeeId}";
+                                $whereClause .= " AND v_attendance.date > '{$lastDate}'";
+                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOff})";
                                 $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
 
-                                $presentNextDate = $attPresentNextDay ? $attPresentNextDay->date : $endDate;
-                            } else {
-                                $presentNextDate = $trxPresentNextDay->date;
+                                $whereClause = "trx_absent.md_employee_id = {$employeeId}";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '$lastDate'";
+                                $whereClause .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Tugas_Kantor}";
+                                $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOff})";
+                                $trxPresentNextDay =  $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+
+                                if (!$attPresentNextDay && $trxPresentNextDay) {
+                                    $lastDate = date('Y-m-d', strtotime($trxPresentNextDay->date));
+                                } elseif ($attPresentNextDay && !$trxPresentNextDay) {
+                                    $lastDate = date('Y-m-d', strtotime($attPresentNextDay->date));
+                                } elseif ($attPresentNextDay && $trxPresentNextDay) {
+                                    $attDate = strtotime($attPresentNextDay->date);
+                                    $trxDate = strtotime($trxPresentNextDay->date);
+                                    $lastDate = date('Y-m-d', min($attDate, $trxDate));
+                                }
                             }
-
-                            $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
-
-                            //* last index of array from variable nextDate
-                            $lastDate = end($nextDate);
                         }
 
-                        //TODO : Get submission
-                        $dateStartClause = date('Y-m-d', strtotime($startDate));
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getResult();
 
-                        $whereClause = "trx_absent.nik = '{$nik}'";
-                        $whereClause .= " AND DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') >= '{$dateStartClause}' AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') <= '{$endDate}'";
-                        $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                        $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                        $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
-
-                        //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                        //TODO : Get Max Days for Submission Future
+                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
                         //TODO : Get Medical Letter
                         $trxMedical = null;
                         if (!empty($post['id'])) {
-                            $trxMedical = $mMedical->where(['trx_absent_id' => $post['id']])->whereIn('docstatus', ['CO', 'DR', 'IP'])->first();
+                            $trxMedical = $mMedical->where(['trx_absent_id' => $post['id']])->whereIn('docstatus', [$this->DOCSTATUS_Completed, $this->DOCSTATUS_Drafted, $this->DOCSTATUS_Inprogress])->first();
                         }
-
                         if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if ($presentNextDate && !($lastDate >= $subDate) && $work && is_null($attNotPresent)) {
+                        } else if (!empty($lastDate) && ($lastDate < $subDate) && $work) {
                             $lastDate = format_dmy($lastDate, '-');
 
                             $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
@@ -348,8 +340,6 @@ class SickLeave extends BaseController
                             $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
 
                             if ($this->isNew()) {
-                                // uploadFile($file, $path, $img_name);
-
                                 if ($file && $file->isValid())
                                     uploadFile($file, $path, $img_name);
 
@@ -360,13 +350,6 @@ class SickLeave extends BaseController
                                     uploadFile($file3, $path, $img3_name);
                             } else {
                                 $row = $this->model->find($this->getID());
-
-                                // if (!empty($post['image']) && !empty($row->getImage()) && $post['image'] !== $row->getImage()) {
-                                //     if (file_exists($path . $row->getImage()))
-                                //         unlink($path . $row->getImage());
-
-                                //     uploadFile($file, $path, $img_name);
-                                // }
 
                                 if (empty($post['image']) && !empty($row->getImage()) && file_exists($path . $row->getImage())) {
                                     unlink($path . $row->getImage());
