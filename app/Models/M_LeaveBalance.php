@@ -107,4 +107,22 @@ class M_LeaveBalance extends Model
 
         return $this->db->query($sql, [$id, $year])->getRow();
     }
+
+    public function getTotalBalance($id, $year)
+    {
+        $sql = "SELECT tl.*,
+                tl.balance_amount - xt.reserved AS balance,
+                tl.carried_over_amount - xt.reserved AS balance_carried
+                FROM trx_leavebalance tl 
+                LEFT JOIN (SELECT SUM(t.reserved_amount) AS reserved,
+                t.year,
+                t.md_employee_id
+                FROM md_transaction t
+                GROUP BY t.year, t.md_employee_id) xt ON xt.md_employee_id = tl.md_employee_id AND xt.year = tl.`year`
+                WHERE 1=1
+                AND tl.md_employee_id = ?
+                AND tl.year = ?";
+
+        return $this->db->query($sql, [$id, $year])->getRow();
+    }
 }

@@ -178,9 +178,7 @@ class Leave extends BaseController
 
             $post["submissiontype"] = $this->model->Pengajuan_Cuti;
             $post["necessary"] = 'CT';
-            $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
-            $day = date('w');
 
             try {
                 $this->entity->fill($post);
@@ -189,11 +187,9 @@ class Leave extends BaseController
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $holidays = $mHoliday->getHolidayDate();
-                    $startDate = $post['startdate'];
-                    $endDate = $post['enddate'];
-                    $nik = $post['nik'];
-                    $submissionDate = $post['submissiondate'];
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
+                    $startDate = date("Y-m-d", strtotime($post['startdate']));
+                    $endDate = date('Y-m-d', strtotime($post['enddate']));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
 
                     $rule = $mRule->where([
                         'name'      => 'Cuti',
@@ -206,8 +202,8 @@ class Leave extends BaseController
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
                         'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today,
-                        'validto >='        => $today
+                        'validfrom <='      => $subDate,
+                        'validto >='        => $subDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -221,50 +217,27 @@ class Leave extends BaseController
 
                         $daysOff = getDaysOff($workDetail);
 
+                        // TODO : Get Minimum Dates for Submission Leave
                         $nextDate = lastWorkingDays($subDate, $holidays, $minDays, false, $daysOff);
-
-                        //* last index of array from variable nextDate
                         $lastDate = end($nextDate);
 
-                        //TODO : Get submission
-                        $docStatus = [
-                            $this->DOCSTATUS_Completed,
-                            $this->DOCSTATUS_Drafted
-                        ];
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getResult();
 
-                        // if (isset($post['id'])) {
-                        //     $trx = $this->model->where([
-                        //         'trx_absent.nik'            => $nik,
-                        //         'trx_absent.startdate >='   => $startDate,
-                        //         'trx_absent.enddate <='     => $endDate,
-                        //         'trx_absent.trx_absent_id <>' => $post['id']
-                        //     ])->whereIn('trx_absent.docstatus', $docStatus)->first();
-                        // } else {
-                        //     $trx = $this->model->where([
-                        //         'trx_absent.nik'            => $nik,
-                        //         'trx_absent.startdate >='   => $startDate,
-                        //         'trx_absent.enddate <='     => $endDate
-                        //     ])->whereIn('trx_absent.docstatus', $docStatus)->first();
-                        // }
-
-                        $whereClause = "trx_absent.nik = '{$nik}'";
-                        $whereClause .= " AND DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') >= '{$startDate}' AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') <= '{$endDate}'";
-                        $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Drafted}')";
-                        $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                        $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
-
+                        //TODO : Get Max Days for Submission Future
                         $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-
-                        //* last index of array from variable addDays
                         $addDays = end($addDays);
 
-                        $endDate = date('Y-m-d', strtotime($endDate));
-                        $startDate = date("Y-m-d", strtotime($startDate));
-
+                        // TODO : Calculate Total Days Leave
                         $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
                         $totalDays = count($dateRange);
 
-                        $leaveBalance = $mLeaveBalance->getSumBalanceAmount($employeeId, date("Y", strtotime($startDate)));
+                        // TODO : Get Leave Balance
+                        $leaveBalance = $mLeaveBalance->getTotalBalance($employeeId, date("Y", strtotime($startDate)));
 
                         if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
@@ -408,7 +381,7 @@ class Leave extends BaseController
                         $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
                         $totalDays = count($dateRange);
 
-                        $leaveBalance = $mLeaveBalance->getSumBalanceAmount($row->md_employee_id, date("Y", strtotime($startDate)));
+                        $leaveBalance = $mLeaveBalance->getTotalBalance($row->md_employee_id, date("Y", strtotime($startDate)));
 
                         if (is_null($leaveBalance)) {
                             $response = message('error', true, 'Saldo cuti tidak tersedia');
@@ -427,14 +400,20 @@ class Leave extends BaseController
                                 } else if ($leaveBalance->balance <= 0 || $totalDays > $leaveBalance->balance) {
                                     $response = message('error', true, 'Saldo utama tidak cukup atau sudah expired');
                                 } else {
-                                    $data = [
-                                        'id'        => $_ID,
-                                        'created_by' => $this->access->getSessionUser(),
-                                        'updated_by' => $this->access->getSessionUser()
-                                    ];
+                                    $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 
-                                    $this->model->createAbsentDetail($data, $row);
-                                    $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                                    if (empty($line)) {
+                                        // TODO : Create Line if not exist
+                                        $data = [
+                                            'id'        => $_ID,
+                                            'created_by' => $this->access->getSessionUser(),
+                                            'updated_by' => $this->access->getSessionUser()
+                                        ];
+
+                                        $this->model->createAbsentDetail($data, $row);
+                                    }
+
+                                    $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
                                     $response = message('success', true, true);
                                 }
                             }

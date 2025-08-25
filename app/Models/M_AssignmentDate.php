@@ -149,28 +149,37 @@ class M_AssignmentDate extends Model
     {
         $mAssignment = new M_Assignment($this->request);
         $mAssignmentDetail = new M_AssignmentDetail($this->request);
-        $entity = new \App\Entities\Assignment();
+        $changeLog = new M_ChangeLog($this->request);
 
         try {
             $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
 
             $subLine = $this->find($ID);
-            $list = $this->where(
+            $line = $mAssignmentDetail->where('trx_assignment_detail_id', $subLine->trx_assignment_detail_id)->findAll();
+            $header = $mAssignment->where('trx_assignment_id', $line[0]->trx_assignment_id)->first();
+            $lineID = array_column($line, 'trx_assignment_detail_id');
+
+            $pendingLine = $this->where(
                 $mAssignmentDetail->primaryKey,
                 $subLine->{$mAssignmentDetail->primaryKey}
-            )->whereIn('isagree', ['Y', 'H'])->first();
+            )->whereIn('isagree', ['H', 'S', 'M'])
+                ->whereIn('trx_assignment_detail_id', $lineID)->first();
 
-            if (is_null($list)) {
+            // TODO : Update Header DocStatus if There's No Pending Line
+            if (is_null($pendingLine)) {
                 $line = $mAssignmentDetail->find($subLine->{$mAssignmentDetail->primaryKey});
 
                 $todayTime = date('Y-m-d H:i:s');
                 $updatedBy = $rows['data']['updated_by'];
 
-                $entity->setDocStatus("CO");
-                $entity->setReceivedDate($todayTime);
-                $entity->setAssignmentId($line->{$mAssignment->primaryKey});
-                $entity->setUpdatedBy($updatedBy);
-                $mAssignment->save($entity);
+                $dataUpdate = [
+                    "docstatus"     => "CO",
+                    "receiveddate"  => $todayTime,
+                    "updated_by"    => $updatedBy
+                ];
+
+                $mAssignment->builder->update($dataUpdate, [$mAssignment->primaryKey => $header->trx_assignment_id]);
+                $changeLog->insertLog($mAssignment->table, 'docstatus', $header->trx_assignment_id, $header->docstatus, "CO", 'U');
             }
 
             if ($subLine->isagree === "Y")

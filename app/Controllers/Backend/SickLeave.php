@@ -492,15 +492,20 @@ class SickLeave extends BaseController
                         } else if ($docMedical) {
                             $response = message('error', true, "Pengajuan ini ada surat keterangan sakit yang masih pending dengan nomor : {$docMedical->documentno}");
                         } else {
-                            $data = [
-                                'id'        => $_ID,
-                                'created_by' => $this->access->getSessionUser(),
-                                'updated_by' => $this->access->getSessionUser()
-                            ];
+                            $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 
-                            $this->model->createAbsentDetail($data, $row);
+                            if (empty($line)) {
+                                // TODO : Create Line if not exist
+                                $data = [
+                                    'id'        => $_ID,
+                                    'created_by' => $this->access->getSessionUser(),
+                                    'updated_by' => $this->access->getSessionUser()
+                                ];
 
-                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                                $this->model->createAbsentDetail($data, $row);
+                            }
+
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
                             $response = message('success', true, true);
                         }
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {

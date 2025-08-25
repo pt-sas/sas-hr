@@ -140,6 +140,7 @@ class SubmissionCancel extends BaseController
         $mAttendance = new M_Attendance($this->request);
         $mEmployee = new M_Employee($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
+        $mAbsent = new M_Absent($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -177,8 +178,7 @@ class SubmissionCancel extends BaseController
                 if (!$this->validation->run($post, 'pembatalan_cuti')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $submissionDate = $post['submissiondate'];
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
 
                     $rule = $mRule->where([
                         'name'      => 'Pembatalan',
@@ -188,7 +188,7 @@ class SubmissionCancel extends BaseController
                     $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
 
                     //* last index of array from variable addDays
-                    $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                    $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                     $addDays = end($addDays);
 
                     // Property For Loop
@@ -213,17 +213,21 @@ class SubmissionCancel extends BaseController
                             $whereClause .= " AND v_attendance_serialnumber.date = '{$dateClause}'";
                             $whereClause .= " AND md_attendance_machines.md_branch_id = {$empBranch->md_branch_id}";
                             $attPresent = $mAttendance->getAttendanceBranch($whereClause)->getRow();
+
+                            //TODO : Get submission Office Duties
+                            $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                            $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') = '{$dateClause}'";
+                            $whereClause .= " AND v_all_submission.submissiontype IN ($mAbsent->Pengajuan_Tugas_Kantor)";
+                            $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                            $trx = $this->model->getAllSubmission($whereClause)->getResult();
                         }
 
                         $dateNow = format_dmy($value->date, '-');
 
-                        if ($dateClause > $addDays) {
-                            $response = message('success', false, "Tanggal {$dateNow} melewati tanggal ketentuan");
+                        if ($dateClause < $subDate) {
+                            $response = message('success', false, "Tanggal {$dateNow} tidak bisa dibatalkan karena sudah melebihi batas tanggal pembatalan");
                             break;
-                        } else if ($dateClause < $subDate) {
-                            $response = message('success', false, "Tanggal {$dateNow} tidak bisa dibatalkan karena kurang dari tanggal pengajuan");
-                            break;
-                        } else if (($dateClause == $subDate) && is_null($attPresent)) {
+                        } else if (($dateClause == $subDate) && is_null($attPresent) && is_null($trx)) {
                             $response = message('success', false, "Tidak ada kehadiran, tidak bisa mengajukan pembatalan pada tanggal : {$dateNow}");
                             break;
                         } else if ($trxSubmissionCancel) {
@@ -342,6 +346,7 @@ class SubmissionCancel extends BaseController
     {
         $cWfs = new WScenario();
         $mAttendance = new M_Attendance($this->request);
+        $mAbsent = new M_Absent($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -382,6 +387,13 @@ class SubmissionCancel extends BaseController
                                 $whereClause .= " AND v_attendance_serialnumber.date = '{$dateClause}'";
                                 $whereClause .= " AND md_attendance_machines.md_branch_id = {$empBranch->md_branch_id}";
                                 $attPresent = $mAttendance->getAttendanceBranch($whereClause)->getRow();
+
+                                //TODO : Get submission Office Duties
+                                $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                                $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') = '{$dateClause}'";
+                                $whereClause .= " AND v_all_submission.submissiontype IN ($mAbsent->Pengajuan_Tugas_Kantor)";
+                                $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                                $trxOfficeDuties = $this->model->getAllSubmission($whereClause)->getResult();
                             }
 
                             $dateNow = format_dmy($value->date, '-');
@@ -389,8 +401,7 @@ class SubmissionCancel extends BaseController
                             if ($dateClause < $today) {
                                 $response = message('error', true, "Tidak bisa proses dokumen, tanggal {$dateNow} sudah melewati batas pembatalan");
                                 break;
-                            } else 
-                            if (($dateClause == $today) && is_null($attPresent)) {
+                            } else if (($dateClause == $today) && is_null($attPresent) && is_null($trxOfficeDuties)) {
                                 $response = message('error', true, "Tidak bisa proses dokumen, tanggal {$dateNow} sudah tidak ada kehadiran");
                                 break;
                             } else if ($trxSubmissionCancel) {
@@ -403,15 +414,7 @@ class SubmissionCancel extends BaseController
                         }
 
                         if ($process) {
-                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-
-                            foreach ($rowDetail as $val) :
-                                $this->entity = new \App\Entities\AbsentDetail();
-                                $this->entity->trx_submission_cancel_detail_id = $val->trx_submission_cancel_detail_id;
-                                $this->entity->isagree = 'H';
-
-                                $this->modelDetail->save($this->entity);
-                            endforeach;
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
 
                             $response = message('success', true, true);
                         }
@@ -529,14 +532,13 @@ class SubmissionCancel extends BaseController
             $post = $this->request->getVar();
 
             try {
-
+                $today = date('Y-m-d');
                 $where = "v_all_submission.documentno = '{$post['document_no']}'";
                 $where .= " AND v_all_submission.docstatus IN ('CO','IP')";
-                $where .= " AND v_all_submission.isagree NOT IN ('C', 'N')";
+                $where .= " AND v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}')";
                 $where .= " AND (v_all_submission.ref_id IS NULL OR v_all_submission.ref_id = 0)";
                 $where .= " AND trx_submission_cancel_detail.trx_submission_cancel_id IS NULL";
-                // $where .= " AND date >= '{date('Y-m-d')}'";
-                // $where .= " AND trx_submission_cancel_detail.isagree NOT IN ('H','Y','')";
+                $where .= " AND v_all_submission.date >= '{$today}'";
 
                 $detail = $this->model->getAllSubmission($where, true)->getResult();
 
@@ -560,14 +562,14 @@ class SubmissionCancel extends BaseController
         if ($this->request->isAJAX()) {
 
             try {
+                $today = date('Y-m-d');
                 $where = "v_all_submission.employee_id = {$post['md_employee_id']}";
                 $where .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                 $where .= " AND v_all_submission.submissiontype = {$post['ref_submissiontype']}";
-                $where .= " AND v_all_submission.isagree NOT IN ('C', 'N')";
+                $where .= " AND v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}')";
                 $where .= " AND (v_all_submission.ref_id IS NULL OR v_all_submission.ref_id = 0)";
                 $where .= " AND trx_submission_cancel_detail.trx_submission_cancel_id IS NULL";
-                // $where .= " AND v_all_submission.date >= '{date('Y-m-d)}'";
-                // $where .= " AND trx_submission_cancel_detail.isagree NOT IN ('H','Y','')";
+                $where .= " AND v_all_submission.date >= '{$today}'";
 
                 $list_data = array_unique(array_map(fn($val) => [
                     'id' => $val->header_id,

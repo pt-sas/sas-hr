@@ -267,7 +267,9 @@ class WActivity extends BaseController
                                 100008 => 'M', // Penugasan
                                 100014 => 'M', // Lembur
                                 100010 => 'M', // Lupa Absen Masuk
-                                100011 => 'M'  // Lupa Absen Pulang
+                                100011 => 'M', // Lupa Absen Pulang
+                                100018 => 'S', // Pembatalan
+                                100013 => 'S'  // Pulang Cepat
                             ];
 
                             $this->entity->isagree = $subType[$docType->getDocTypeId()];

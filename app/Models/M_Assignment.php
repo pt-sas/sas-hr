@@ -184,74 +184,32 @@ class M_Assignment extends Model
     public function createAssignmentDate($rows, $line)
     {
         $mAssignmentDate = new M_AssignmentDate($this->request);
-        $mHoliday = new M_Holiday($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
 
         try {
             $header = $this->where($this->primaryKey, $line->trx_assignment_id)->first();
-            $today = date('Y-m-d');
-            $holiday = $mHoliday->getHolidayDate();
 
             $startDate = $header->startdate;
             $endDate = $header->enddate;
-            $isSingleDay = in_array($header->submissiontype, [$this->Pengajuan_Tugas_Kantor_setengah_Hari]);
 
-            $workDay = $mEmpWork->where([
-                'md_employee_id' => $line->md_employee_id,
-                'validfrom <=' => $today
-            ])->orderBy('validfrom', 'ASC')->first();
-
-            $daysOff = [];
-
-            if ($workDay) {
-                $whereClause = "md_work_detail.isactive = 'Y' AND md_employee_work.md_employee_id = {$line->md_employee_id} AND md_work.md_work_id = $workDay->md_work_id";
-                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-                $daysOff = getDaysOff($workDetail);
-            }
-
-            if ($header->submissiontype == $this->Pengajuan_Penugasan) {
-                $date_range = getDatesFromRange(
-                    $isSingleDay ? $endDate : $startDate,
-                    $endDate,
-                    $holiday,
-                    'Y-m-d H:i:s',
-                    'all',
-                    []
-                );
-            } else {
-                $date_range = getDatesFromRange(
-                    $isSingleDay ? $endDate : $startDate,
-                    $endDate,
-                    $holiday,
-                    'Y-m-d H:i:s',
-                    'all',
-                    $daysOff
-                );
-            }
-
+            $date_range = getDatesFromRange(
+                $startDate,
+                $endDate,
+                [],
+                'Y-m-d H:i:s',
+                'all',
+                []
+            );
 
             $data = array_map(function ($date) use ($rows, $header) {
-                if ($header->submissiontype == $this->Pengajuan_Penugasan) {
-                    return [
-                        'trx_assignment_detail_id' => $rows['id'],
-                        'date' => $date,
-                        'isagree' => $rows['isagree'] ?? "H",
-                        'branch_in' => $header->branch_in,
-                        'branch_out' => $header->branch_out,
-                        'created_by' => $rows['created_by'],
-                        'updated_by' => $rows['updated_by'],
-                    ];
-                } else {
-                    return [
-                        'trx_assignment_detail_id' => $rows['id'],
-                        'date' => $date,
-                        'isagree' => $rows['isagree'] ?? "H",
-                        'created_by' => $rows['created_by'],
-                        'updated_by' => $rows['updated_by'],
-
-                    ];
-                }
+                return [
+                    'trx_assignment_detail_id' => $rows['id'],
+                    'date' => $date,
+                    'isagree' => $rows['isagree'] ?? "",
+                    'branch_in' => $header->branch_in,
+                    'branch_out' => $header->branch_out,
+                    'created_by' => $rows['created_by'],
+                    'updated_by' => $rows['updated_by'],
+                ];
             }, $date_range);
 
             $result = $mAssignmentDate->builder->insertBatch($data);
@@ -272,33 +230,22 @@ class M_Assignment extends Model
 
         $sql = $this->find($ID);
         $line = $mAssignmentDetail->where($this->primaryKey, $ID)->findAll();
-
-        $agree = 'Y';
-        $rlzManager = 'M';
-
         $updatedBy = $rows['data']['updated_by'] ?? session()->get('id');
 
         if (
             $sql->getIsApproved() === 'Y' && ($sql->docstatus === "IP" || $sql->docstatus === "CO") && !is_null($line)
         ) {
-
             foreach ($line as $detail) {
                 $listDate = $mAssignmentDate->where($mAssignmentDetail->primaryKey, $detail->trx_assignment_detail_id)->findAll();
 
-                if (!$listDate) {
-                    if ($sql->docstatus === "CO")
-                        $isAgree = $agree;
+                foreach ($listDate as $row) {
+                    $entity = new \App\Entities\AssignmentDate();
 
-                    if ($sql->docstatus === "IP")
-                        $isAgree = $rlzManager;
+                    $entity->trx_assignment_date_id = $row->trx_assignment_date_id;
+                    $entity->updated_by = $updatedBy;
+                    $entity->isagree = $sql->docstatus === "IP" ? 'M' : 'Y';
 
-                    $data = [
-                        'id'         => $detail->trx_assignment_detail_id,
-                        'created_by' => $updatedBy,
-                        'updated_by' => $updatedBy,
-                        'isagree'    => $isAgree
-                    ];
-                    $this->createAssignmentDate($data, $detail);
+                    $mAssignmentDate->save($entity);
                 }
             }
         }

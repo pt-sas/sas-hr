@@ -100,7 +100,6 @@ class M_SubmissionCancelDetail extends Model
                 // }
 
                 $ref = $mSubmissionCancel->getAllSubmission($where)->getRow();
-                log_message('debug', json_encode($ref));
 
                 $row->reference_id = $ref->id;
                 $row->ref_table = $ref->table_detail;
@@ -117,7 +116,6 @@ class M_SubmissionCancelDetail extends Model
     {
         $mSubmissionCancel = new M_SubmissionCancel($this->request);
         $mTransaction = new M_Transaction($this->request);
-        $mLeaveBalance = new M_LeaveBalance($this->request);
         $mWActivity = new M_WActivity($this->request);
         $mWEvent = new M_WEvent($this->request);
 
@@ -150,71 +148,29 @@ class M_SubmissionCancelDetail extends Model
 
             $refData = $mSubmissionCancel->getAllSubmission($where)->getRow();
 
-            if ($sql->getRefSubmissionType() == $docSubmission['Cuti'] && $line->isagree === "Y") {
-                $balance = $mLeaveBalance->where([
-                    'year'              => date("Y", strtotime($line->date)),
-                    'md_employee_id'    => $line->md_employee_id
-                ])->first();
+            if (($sql->getRefSubmissionType() == $docSubmission['Cuti'] || $sql->getRefSubmissionType() == $docSubmission['Ijin']) && $line->isagree === "Y") {
+                $rsvdTransaction = $mTransaction->where(['record_id' => $refData->id, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
 
-                $where = "transactiondate = '" . date('Y-m-d', strtotime($line->date)) . "'";
-                $where .= " AND record_id = {$line->reference_id}";
-                $where .= " AND table = '{$line->ref_table}'";
-                $where .= " AND transactiontype = 'C-'";
-                $leaveTransaction = $mTransaction->where($where)->first();
+                if ($rsvdTransaction) {
+                    $dataLeaveUsage = [
+                        "record_id"         => $ID,
+                        "table"             => $this->table,
+                        "transactiondate"   => $line->date,
+                        "transactiontype"   => 'R-',
+                        "year"              => $year,
+                        "reserved_amount"   => -$rsvdTransaction->reserved_amount,
+                        "md_employee_id"    => $rsvdTransaction->md_employee_id,
+                        "isprocessed"       => "N",
+                        "created_by"        => $updated_by,
+                        "updated_by"        => $updated_by
+                    ];
 
-                $saldo = $balance->balance_amount;
-                $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
-                $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
-
-                $dataLeaveUsage = [];
-                if ($leaveTransaction && $carryOverValid) {
-                    $entityBal = new \App\Entities\LeaveBalance();
-                    $entityBal->md_employee_id = $line->md_employee_id;
-                    $entityBal->carried_over_amount = $carriedOverAmt + 1;
-                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                    if ($mLeaveBalance->save($entityBal)) {
-                        $dataLeaveUsage[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "transactiondate"   => $line->date,
-                            "transactiontype"   => 'C+',
-                            "year"              => $year,
-                            "amount"            => 1,
-                            "md_employee_id"    => $line->md_employee_id,
-                            "isprocessed"       => "N",
-                            "created_by"        => $updated_by,
-                            "updated_by"        => $updated_by
-                        ];
-                    }
-                } else if ($leaveTransaction && $mainLeaveValid) {
-                    $entityBal = new \App\Entities\LeaveBalance();
-                    $entityBal->md_employee_id = $line->md_employee_id;
-                    $entityBal->balance_amount = $saldo + 1;
-                    $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                    if ($mLeaveBalance->save($entityBal)) {
-                        $dataLeaveUsage[] = [
-                            "record_id"         => $ID,
-                            "table"             => $this->table,
-                            "transactiondate"   => $line->date,
-                            "transactiontype"   => 'C+',
-                            "year"              => $year,
-                            "amount"            => 1,
-                            "md_employee_id"    => $line->md_employee_id,
-                            "isprocessed"       => "N",
-                            "created_by"        => $updated_by,
-                            "updated_by"        => $updated_by
-                        ];
-                    }
+                    $mTransaction->builder->insert($dataLeaveUsage);
                 }
-
-                if ($dataLeaveUsage)
-                    $mTransaction->builder->insertBatch($dataLeaveUsage);
             }
 
             //TODO : Update Reference Data
-            if ($refData) {
+            if ($line->isagree == "Y" && $refData) {
                 $entity = $line->ref_table === "trx_absent_detail" ? new \App\Entities\AbsentDetail() : new \App\Entities\AssignmentDate();
                 $entity->updated_by = $updated_by;
                 $entity->{$model->primaryKey} = $refData->id;
@@ -248,7 +204,7 @@ class M_SubmissionCancelDetail extends Model
                 //TODO : Update Reference Header Doc Status if There no Another Line To Process Approve or Realization
                 $where = "header_id = {$refData->header_id}";
                 $where .= " AND table = '{$refData->table}'";
-                $where .= " AND isagree NOT IN ('C', 'Y')";
+                $where .= " AND isagree NOT IN ('C', 'Y', 'N')";
                 $anotherLine = $mSubmissionCancel->getAllSubmission($where)->getRow();
 
                 if (!$anotherLine) {

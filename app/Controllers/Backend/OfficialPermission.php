@@ -432,19 +432,9 @@ class OfficialPermission extends BaseController
                             ];
 
                             $this->model->createAbsentDetail($data, $row);
-                        } else {
-                            //TODO : Update line if line exist
-                            foreach ($line as $row) :
-                                $entity = new \App\Entities\AbsentDetail();
-
-                                $entity->trx_absent_detail_id = $row->trx_absent_detail_id;
-                                $entity->isagree = 'H';
-
-                                $this->modelDetail->save($entity);
-                            endforeach;
                         }
 
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
                         $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
