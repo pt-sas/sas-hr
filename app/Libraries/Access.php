@@ -119,6 +119,7 @@ class Access
                 if ($setmenu === 'parent') {
                     $access = $role->detail([
                         'am.sys_menu_id'        => $menu_id,
+                        'am.sys_submenu_id'     => 0,
                         'am.sys_role_id'        => $this->getSessionRole()
                     ])->getRow();
 

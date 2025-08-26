@@ -382,11 +382,13 @@ function statusRealize($str)
         case "C":
             return '<small class="badge badge-danger">Anulir</small>';
         case "M":
-            return '<small class="badge badge-dark">Menunggu Persetujuan Atasan</small>';
+            return '<small class="badge badge-dark">Menunggu Realisasi Atasan</small>';
         case "S":
-            return '<small class="badge badge-dark">Menunggu Persetujuan HRD</small>';
-        default:
+            return '<small class="badge badge-dark">Menunggu Realisasi HRD</small>';
+        case 'H':
             return '<small class="badge badge-dark">Menunggu Persetujuan</small>';
+        default:
+            return "";
     }
 }
 

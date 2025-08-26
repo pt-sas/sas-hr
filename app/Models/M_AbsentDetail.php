@@ -98,9 +98,6 @@ class M_AbsentDetail extends Model
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
         $updated_by = $rows['data']['updated_by'] ?? session()->get('id');
-        $today = date('Y-m-d');
-        $day = date('w');
-        $entryTime = "08:00";
 
         $line = $this->find($ID);
         $sql = $mAbsent->where($mAbsent->primaryKey, $line->{$mAbsent->primaryKey})->first();
@@ -109,207 +106,20 @@ class M_AbsentDetail extends Model
             $ruleDetail = null;
             $year = date('Y', strtotime($line->date));
 
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti && $line->isagree === "Y") {
-                $rule = $mRule->where([
-                    'name'      => 'Cuti',
-                    'isactive'  => 'Y'
-                ])->first();
+            if ($line->isagree === "Y") {
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti) {
+                    $rule = $mRule->where([
+                        'name'      => 'Cuti',
+                        'isactive'  => 'Y'
+                    ])->first();
 
-                $balance = $mLeaveBalance->where([
-                    'year'              => date("Y", strtotime($sql->startdate)),
-                    'md_employee_id'    => $sql->md_employee_id
-                ])->first();
+                    $balance = $mLeaveBalance->where([
+                        'year'              => date("Y", strtotime($sql->startdate)),
+                        'md_employee_id'    => $sql->md_employee_id
+                    ])->first();
 
-                $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
-                $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
-
-                $dataLeaveUsage = [];
-                $updateField = null;
-                $oldValue = null;
-                $newValue = null;
-
-                $entityBal = new \App\Entities\LeaveBalance();
-                $entityBal->md_employee_id = $sql->md_employee_id;
-                $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                if ($carryOverValid && $balance->carried_over_amount > 0) {
-                    $updateField = 'carried_over_amount';
-                    $oldValue = $balance->carried_over_amount;
-                    $newValue = $oldValue - 1;
-                    $entityBal->$updateField = $newValue;
-                } else if ($mainLeaveValid && $balance->balance_amount > 0) {
-                    $updateField = 'balance_amount';
-                    $oldValue = $balance->balance_amount;
-                    $newValue = $oldValue - 1;
-                    $entityBal->$updateField = $newValue;
-                } else {
-                    $entity = new \App\Entities\AbsentDetail();
-                    $entity->isagree = "N";
-                    $entity->updated_by = $updated_by;
-                    $entity->{$this->primaryKey} = $ID;
-                    $this->save($entity);
-                    return;
-                }
-
-                if ($mLeaveBalance->save($entityBal)) {
-                    $dataLeaveUsage[] = [
-                        'record_id'       => $ID,
-                        'table'           => $this->table,
-                        'transactiondate' => $line->date,
-                        'transactiontype' => 'C-',
-                        'year'            => $year,
-                        'amount'          => -1,
-                        'md_employee_id'  => $sql->md_employee_id,
-                        'isprocessed'     => 'N',
-                        'created_by'      => $updated_by,
-                        'updated_by'      => $updated_by
-                    ];
-
-                    $mTransaction->builder->insertBatch($dataLeaveUsage);
-
-                    $amount = $rule->condition ?: $rule->value;
-                }
-            }
-
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Sakit) {
-                $rule = $mRule->where([
-                    'name'      => 'Sakit',
-                    'isactive'  => 'Y'
-                ])->first();
-
-                if ($rule) {
-                    $amount = $rule->condition ?: $rule->value;
-                }
-            }
-
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Alpa) {
-                $rule = $mRule->where([
-                    'name'      => 'Alpa',
-                    'isactive'  => 'Y'
-                ])->first();
-
-                if ($rule) {
-                    $amount = $rule->condition ?: $rule->value;
-
-                    $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
-
-                    if ($ruleDetail) {
-                        $balance = $mLeaveBalance->where([
-                            'year'              => date("Y", strtotime($sql->startdate)),
-                            'md_employee_id'    => $sql->md_employee_id
-                        ])->first();
-                        $saldo = $balance->balance_amount;
-
-                        $dataLeaveUsage = [];
-                        foreach ($ruleDetail as $detail) {
-                            if ($saldo != 0) {
-                                if ($detail->name === "Sanksi Alpa Cuti") {
-                                    $entityBal = new \App\Entities\LeaveBalance();
-                                    $tkh = $detail->value;
-
-                                    $calculate = $saldo + $tkh;
-
-                                    if ($tkh != 0 && $line->isagree === 'Y') {
-                                        if ($calculate > 0) {
-                                            $entityBal->md_employee_id = $sql->md_employee_id;
-                                            $entityBal->balance_amount = $saldo - $tkh;
-                                            $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                                            if ($mLeaveBalance->save($entityBal)) {
-                                                $dataLeaveUsage[] = [
-                                                    "record_id"         => $ID,
-                                                    "table"             => $this->table,
-                                                    "transactiondate"   => $line->date,
-                                                    "transactiontype"   => 'A-',
-                                                    "year"              => $year,
-                                                    "amount"            => $tkh,
-                                                    "md_employee_id"    => $sql->md_employee_id,
-                                                    "isprocessed"       => "N",
-                                                    "created_by"        => $updated_by,
-                                                    "updated_by"        => $updated_by
-                                                ];
-                                            }
-
-                                            $amount = 0;
-                                        } else if ($saldo != 0) {
-                                            $entityBal->md_employee_id = $sql->md_employee_id;
-                                            $entityBal->balance_amount = $saldo - $saldo;
-                                            $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
-
-                                            if ($mLeaveBalance->save($entityBal)) {
-                                                $dataLeaveUsage[] = [
-                                                    "record_id"         => $ID,
-                                                    "table"             => $this->table,
-                                                    "transactiondate"   => $line->date,
-                                                    "transactiontype"   => 'A-',
-                                                    "year"              => $year,
-                                                    "amount"            => - ($saldo),
-                                                    "md_employee_id"    => $sql->md_employee_id,
-                                                    "isprocessed"       => "N",
-                                                    "created_by"        => $updated_by,
-                                                    "updated_by"        => $updated_by
-                                                ];
-                                            }
-
-                                            //? Cek perbandingan dari calculate variable 
-                                            if ($calculate == 0)
-                                                $amount = 0;
-                                        }
-
-                                        if ($calculate < 0) {
-                                            $entity = new \App\Entities\AllowanceAtt();
-
-                                            $rDetail = $mRuleDetail->where([
-                                                'md_rule_id' => $rule->md_rule_id,
-                                                'name'       => 'Sanksi Alpa No Cuti'
-                                            ])->first();
-
-                                            $tkh = $rDetail->value;
-                                            $hari = abs($rDetail->condition);
-                                            $hari -= $saldo;
-                                            $tkh *= $hari;
-
-                                            $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, 'A-', $line->date, $sql->submissiontype, $sql->md_employee_id, $tkh, $updated_by);
-                                        }
-                                    }
-                                }
-                            } else {
-                                $entity = new \App\Entities\AllowanceAtt();
-
-                                if ($detail->name === "Sanksi Alpa No Cuti") {
-                                    $tkh = $detail->value;
-                                    $tkh *= abs($detail->condition);
-
-                                    if ($tkh != 0 && $line->isagree === 'Y') {
-                                        $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, 'A-', $line->date, $sql->submissiontype, $sql->md_employee_id, $tkh, $updated_by);
-                                    }
-                                }
-                            }
-                        }
-
-                        if ($dataLeaveUsage)
-                            $mTransaction->builder->insertBatch($dataLeaveUsage);
-                    }
-                }
-            }
-
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Ijin && $line->isagree === "Y") {
-                $rule = $mRule->where([
-                    'name'      => 'Ijin',
-                    'isactive'  => 'Y'
-                ])->first();
-
-                $balance = $mLeaveBalance->where([
-                    'year'              => date("Y", strtotime($line->date)),
-                    'md_employee_id'    => $sql->md_employee_id
-                ])->first();
-
-                if ($balance && ($balance->balance_amount > 0 || $balance->carried_over_amount > 0)) {
-                    $year = date('Y', strtotime($line->date));
                     $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
                     $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
-                    $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin Cuti"])->first();
-                    $conseq = $ruleDetail->value;
 
                     $dataLeaveUsage = [];
                     $updateField = null;
@@ -320,201 +130,460 @@ class M_AbsentDetail extends Model
                     $entityBal->md_employee_id = $sql->md_employee_id;
                     $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
+                    $rsvdTransaction = $mTransaction->where(['record_id' => $ID, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
+
                     if ($carryOverValid && $balance->carried_over_amount > 0) {
                         $updateField = 'carried_over_amount';
                         $oldValue = $balance->carried_over_amount;
-                        $newValue = $oldValue + $conseq;
+                        $newValue = $oldValue - 1;
                         $entityBal->$updateField = $newValue;
                     } else if ($mainLeaveValid && $balance->balance_amount > 0) {
                         $updateField = 'balance_amount';
                         $oldValue = $balance->balance_amount;
-                        $newValue = $oldValue + $conseq;
+                        $newValue = $oldValue - 1;
                         $entityBal->$updateField = $newValue;
+                    } else {
+                        $entity = new \App\Entities\AbsentDetail();
+                        $entity->isagree = "N";
+                        $entity->updated_by = $updated_by;
+                        $entity->{$this->primaryKey} = $ID;
+                        $this->save($entity);
+                        return;
                     }
 
                     if ($mLeaveBalance->save($entityBal)) {
-                        $dataLeaveUsage[] = [
+                        if ($rsvdTransaction) {
+                            $dataLeaveUsage[] = [
+                                'record_id'       => $ID,
+                                'table'           => $this->table,
+                                'transactiondate' => $line->date,
+                                'transactiontype' => 'C-',
+                                'year'            => $year,
+                                'amount'          => -$rsvdTransaction->reserved_amount,
+                                'reserved_amount' => -$rsvdTransaction->reserved_amount,
+                                'md_employee_id'  => $sql->md_employee_id,
+                                'isprocessed'     => 'N',
+                                'created_by'      => $updated_by,
+                                'updated_by'      => $updated_by
+                            ];
+                        } else {
+                            $dataLeaveUsage[] = [
+                                'record_id'       => $ID,
+                                'table'           => $this->table,
+                                'transactiondate' => $line->date,
+                                'transactiontype' => 'C-',
+                                'year'            => $year,
+                                'amount'          => -1,
+                                'md_employee_id'  => $sql->md_employee_id,
+                                'isprocessed'     => 'N',
+                                'created_by'      => $updated_by,
+                                'updated_by'      => $updated_by
+                            ];
+                        }
+
+                        $mTransaction->builder->insertBatch($dataLeaveUsage);
+
+                        $amount = $rule->condition ?: $rule->value;
+                    }
+                }
+
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Sakit) {
+                    $rule = $mRule->where([
+                        'name'      => 'Sakit',
+                        'isactive'  => 'Y'
+                    ])->first();
+
+                    if ($rule) {
+                        $amount = $rule->condition ?: $rule->value;
+                    }
+                }
+
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Alpa) {
+                    $rule = $mRule->where([
+                        'name'      => 'Alpa',
+                        'isactive'  => 'Y'
+                    ])->first();
+
+                    if ($rule) {
+                        $amount = $rule->condition ?: $rule->value;
+
+                        $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+
+                        if ($ruleDetail) {
+                            $balance = $mLeaveBalance->where([
+                                'year'              => date("Y", strtotime($sql->startdate)),
+                                'md_employee_id'    => $sql->md_employee_id
+                            ])->first();
+                            $saldo = $balance->balance_amount;
+
+                            $dataLeaveUsage = [];
+                            foreach ($ruleDetail as $detail) {
+                                if ($saldo != 0) {
+                                    if ($detail->name === "Sanksi Alpa Cuti") {
+                                        $entityBal = new \App\Entities\LeaveBalance();
+                                        $tkh = $detail->value;
+
+                                        $calculate = $saldo + $tkh;
+
+                                        if ($tkh != 0) {
+                                            if ($calculate > 0) {
+                                                $entityBal->md_employee_id = $sql->md_employee_id;
+                                                $entityBal->balance_amount = $saldo - $tkh;
+                                                $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+
+                                                if ($mLeaveBalance->save($entityBal)) {
+                                                    $dataLeaveUsage[] = [
+                                                        "record_id"         => $ID,
+                                                        "table"             => $this->table,
+                                                        "transactiondate"   => $line->date,
+                                                        "transactiontype"   => 'A-',
+                                                        "year"              => $year,
+                                                        "amount"            => $tkh,
+                                                        "md_employee_id"    => $sql->md_employee_id,
+                                                        "isprocessed"       => "N",
+                                                        "created_by"        => $updated_by,
+                                                        "updated_by"        => $updated_by
+                                                    ];
+                                                }
+
+                                                $amount = 0;
+                                            } else if ($saldo != 0) {
+                                                $entityBal->md_employee_id = $sql->md_employee_id;
+                                                $entityBal->balance_amount = $saldo - $saldo;
+                                                $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+
+                                                if ($mLeaveBalance->save($entityBal)) {
+                                                    $dataLeaveUsage[] = [
+                                                        "record_id"         => $ID,
+                                                        "table"             => $this->table,
+                                                        "transactiondate"   => $line->date,
+                                                        "transactiontype"   => 'A-',
+                                                        "year"              => $year,
+                                                        "amount"            => - ($saldo),
+                                                        "md_employee_id"    => $sql->md_employee_id,
+                                                        "isprocessed"       => "N",
+                                                        "created_by"        => $updated_by,
+                                                        "updated_by"        => $updated_by
+                                                    ];
+                                                }
+
+                                                //? Cek perbandingan dari calculate variable 
+                                                if ($calculate == 0)
+                                                    $amount = 0;
+                                            }
+
+                                            if ($calculate < 0) {
+                                                $entity = new \App\Entities\AllowanceAtt();
+
+                                                $rDetail = $mRuleDetail->where([
+                                                    'md_rule_id' => $rule->md_rule_id,
+                                                    'name'       => 'Sanksi Alpa No Cuti'
+                                                ])->first();
+
+                                                $tkh = $rDetail->value;
+                                                $hari = abs($rDetail->condition);
+                                                $hari -= $saldo;
+                                                $tkh *= $hari;
+
+                                                $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, 'A-', $line->date, $sql->submissiontype, $sql->md_employee_id, $tkh, $updated_by);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    $entity = new \App\Entities\AllowanceAtt();
+
+                                    if ($detail->name === "Sanksi Alpa No Cuti") {
+                                        $tkh = $detail->value;
+                                        $tkh *= abs($detail->condition);
+
+                                        if ($tkh != 0) {
+                                            $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, 'A-', $line->date, $sql->submissiontype, $sql->md_employee_id, $tkh, $updated_by);
+                                        }
+                                    }
+                                }
+                            }
+
+                            if ($dataLeaveUsage)
+                                $mTransaction->builder->insertBatch($dataLeaveUsage);
+                        }
+                    }
+                }
+
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Ijin) {
+                    $rule = $mRule->where([
+                        'name'      => 'Ijin',
+                        'isactive'  => 'Y'
+                    ])->first();
+
+                    $balance = $mLeaveBalance->where([
+                        'year'              => date("Y", strtotime($line->date)),
+                        'md_employee_id'    => $sql->md_employee_id
+                    ])->first();
+
+                    $rsvdTransaction = $mTransaction->where(['record_id' => $ID, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
+
+                    if ($balance && ($balance->balance_amount > 0 || $balance->carried_over_amount > 0)) {
+                        $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
+                        $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
+                        $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin Cuti"])->first();
+                        $conseq = $ruleDetail->value;
+
+                        $dataLeaveUsage = [];
+                        $updateField = null;
+                        $oldValue = null;
+                        $newValue = null;
+
+                        $entityBal = new \App\Entities\LeaveBalance();
+                        $entityBal->md_employee_id = $sql->md_employee_id;
+                        $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
+
+                        $rsvdTransaction = $mTransaction->where(['record_id' => $ID, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
+
+                        if ($carryOverValid && $balance->carried_over_amount > 0) {
+                            $updateField = 'carried_over_amount';
+                            $oldValue = $balance->carried_over_amount;
+                            $newValue = $oldValue + $conseq;
+                            $entityBal->$updateField = $newValue;
+                        } else if ($mainLeaveValid && $balance->balance_amount > 0) {
+                            $updateField = 'balance_amount';
+                            $oldValue = $balance->balance_amount;
+                            $newValue = $oldValue + $conseq;
+                            $entityBal->$updateField = $newValue;
+                        }
+
+                        if ($mLeaveBalance->save($entityBal)) {
+                            if ($rsvdTransaction) {
+                                $dataLeaveUsage = [
+                                    'record_id'       => $ID,
+                                    'table'           => $this->table,
+                                    'transactiondate' => $line->date,
+                                    'transactiontype' => 'I-',
+                                    'year'            => $year,
+                                    'amount'          => -$rsvdTransaction->reserved_amount,
+                                    'reserved_amount' => -$rsvdTransaction->reserved_amount,
+                                    'md_employee_id'  => $sql->md_employee_id,
+                                    'isprocessed'     => 'N',
+                                    'created_by'      => $updated_by,
+                                    'updated_by'      => $updated_by
+                                ];
+                            } else {
+                                $dataLeaveUsage = [
+                                    'record_id'       => $ID,
+                                    'table'           => $this->table,
+                                    'transactiondate' => $line->date,
+                                    'transactiontype' => 'I-',
+                                    'year'            => $year,
+                                    'amount'          => $conseq,
+                                    'md_employee_id'  => $sql->md_employee_id,
+                                    'isprocessed'     => 'N',
+                                    'created_by'      => $updated_by,
+                                    'updated_by'      => $updated_by
+                                ];
+                            }
+
+                            $mTransaction->builder->insert($dataLeaveUsage);
+                        }
+                    } else {
+                        $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin No Cuti"])->first();
+                        $amount = $ruleDetail->value;
+                    }
+                }
+
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Tugas_Kantor) {
+                    $rule = $mRule->where([
+                        'name'      => 'Tugas Kantor 1 Hari',
+                        'isactive'  => 'Y'
+                    ])->first();
+
+                    if ($rule) {
+                        $amount = $rule->condition ?: $rule->value;
+                    }
+                }
+
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari) {
+                    $rule = $mRule->where([
+                        'name'      => 'Tugas Kantor Setengah Hari',
+                        'isactive'  => 'Y'
+                    ])->first();
+
+                    if ($rule) {
+                        $amount = $rule->condition ?: $rule->value;
+                    }
+                }
+
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk) {
+                    $rule = $mRule->where([
+                        'name'      => 'Lupa Absen Masuk',
+                        'isactive'  => 'Y'
+                    ])->first();
+
+                    if ($rule) {
+                        $amount = $rule->condition ?: $rule->value;
+                    }
+                }
+
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang) {
+                    $rule = $mRule->where([
+                        'name'      => 'Lupa Absen Pulang',
+                        'isactive'  => 'Y'
+                    ])->first();
+
+                    if ($rule) {
+                        $amount = $rule->condition ?: $rule->value;
+                    }
+                }
+
+                // if ($sql->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat) {
+                //     $rule = $mRule->where([
+                //         'name'      => 'Datang Terlambat',
+                //         'isactive'  => 'Y'
+                //     ])->first();
+
+                //     if ($rule) {
+                //         $amount = $rule->condition ?: $rule->value;
+
+                //         $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+
+                //         if ($ruleDetail) {
+                //             //TODO : Get work day employee
+                //             $workDay = $mEmpWork->where([
+                //                 'md_employee_id'    => $sql->md_employee_id,
+                //                 'validfrom <='      => $today
+                //             ])->orderBy('validfrom', 'ASC')->first();
+
+                //             if (is_null($workDay)) {
+                //                 $workHour = convertToMinutes($entryTime);
+                //             } else {
+                //                 $day = strtoupper(formatDay_idn($day));
+
+                //                 //TODO: Get Work Detail by day 
+                //                 $work = null;
+
+                //                 $whereClause = "md_work_detail.isactive = 'Y'";
+                //                 $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
+                //                 $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                //                 $whereClause .= " AND md_day.name = '$day'";
+                //                 $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+
+                //                 if (is_null($work)) {
+                //                     $workHour = convertToMinutes($entryTime);
+                //                 } else {
+                //                     $workHour = convertToMinutes($work->startwork);
+                //                 }
+                //             }
+
+                //             $workTime = convertToMinutes($sql->startdate);
+
+                //             foreach ($ruleDetail as $detail) {
+                //                 if (($detail->name === "Terlambat 1/2 Hari" || $detail->name === "Terlambat") && getOperationResult($workTime, ($workHour + $detail->condition), $detail->operation)) {
+                //                     $amount = $detail->value;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+
+                // if ($sql->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat) {
+                //     $rule = $mRule->where([
+                //         'name'      => 'Pulang Cepat',
+                //         'isactive'  => 'Y'
+                //     ])->first();
+
+                //     if ($rule) {
+                //         $amount = $rule->condition ?: $rule->value;
+
+                //         $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+
+                //         if ($ruleDetail) {
+                //             //TODO : Get work day employee
+                //             $workDay = $mEmpWork->where([
+                //                 'md_employee_id'    => $sql->md_employee_id,
+                //                 'validfrom <='      => $today
+                //             ])->orderBy('validfrom', 'ASC')->first();
+
+                //             if (is_null($workDay)) {
+                //                 $workHour = convertToMinutes($entryTime);
+                //             } else {
+                //                 $day = strtoupper(formatDay_idn($day));
+
+                //                 //TODO: Get Work Detail by day 
+                //                 $work = null;
+
+                //                 $whereClause = "md_work_detail.isactive = 'Y'";
+                //                 $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
+                //                 $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                //                 $whereClause .= " AND md_day.name = '$day'";
+                //                 $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+
+                //                 if (is_null($work)) {
+                //                     $workHour = convertToMinutes($entryTime);
+                //                 } else {
+                //                     $workHour = convertToMinutes($work->startwork);
+                //                 }
+                //             }
+
+                //             $workTime = convertToMinutes($sql->startdate);
+
+                //             foreach ($ruleDetail as $detail) {
+                //                 if (($detail->name === "Pulang Cepat 1/2 Hari" || $detail->name === "Pulang Cepat") && getOperationResult($workTime, ($workHour + $detail->condition), $detail->operation)) {
+                //                     $amount = $detail->value;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+
+                if ($amount != 0) {
+                    $transactiontype = $amount < 0 ? 'A-' : 'A+';
+                    $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, $transactiontype, $line->date, $sql->submissiontype, $sql->md_employee_id, $amount, $updated_by);
+                }
+            }
+
+            if ($line->isagree === "N") {
+                // TODO : Returning Reserved Leave Balance
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti || $sql->submissiontype == $mAbsent->Pengajuan_Ijin) {
+                    $rsvdTransaction = $mTransaction->where(['record_id' => $ID, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
+
+                    if ($rsvdTransaction) {
+                        $dataLeaveUsage = [
                             'record_id'       => $ID,
                             'table'           => $this->table,
                             'transactiondate' => $line->date,
-                            'transactiontype' => 'I-',
+                            'transactiontype' => 'R-',
                             'year'            => $year,
-                            'amount'          => $conseq,
+                            'amount'          => 0,
+                            'reserved_amount' => -$rsvdTransaction->reserved_amount,
                             'md_employee_id'  => $sql->md_employee_id,
                             'isprocessed'     => 'N',
                             'created_by'      => $updated_by,
-                            'updated_by'      => $updated_by
+                            'updated_by'      => $updated_by,
+                            'description'     => 'Not Approved'
                         ];
 
-                        $mTransaction->builder->insertBatch($dataLeaveUsage);
+                        $mTransaction->builder->insert($dataLeaveUsage);
                     }
-                } else {
-                    $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin No Cuti"])->first();
-                    $amount = $ruleDetail->value;
-                    // $entity = new \App\Entities\AllowanceAtt();
-
-                    // if ($conseq != 0) {
-                    //     $entity->record_id = $sql->{$mAbsent->primaryKey};
-                    //     $entity->table = $mAbsent->table;
-                    //     $entity->submissiontype = $sql->submissiontype;
-                    //     $entity->submissiondate = $line->date;
-                    //     $entity->md_employee_id = $sql->md_employee_id;
-                    //     $entity->amount = $conseq;
-                    //     $entity->created_by = $updated_by;
-                    //     $entity->updated_by = $updated_by;
-
-                    //     $mAllowance->save($entity);
-                    // }
                 }
             }
 
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Tugas_Kantor) {
-                $rule = $mRule->where([
-                    'name'      => 'Tugas Kantor 1 Hari',
-                    'isactive'  => 'Y'
-                ])->first();
+            if ($line->isagree === "H") {
+                if ($sql->submissionType == $mAbsent->Pengajuan_Cuti || ($sql->submissionType == $mAbsent->Pengajuan_Ijin && $sql->submissiondate < $sql->startdate)) {
 
-                if ($rule) {
-                    $amount = $rule->condition ?: $rule->value;
+                    $rule = $mRule->where(['name' => 'Ijin', 'isactive' => 'Y'])->first();
+                    $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin Cuti"])->first();
+
+                    $entity = new \App\Entities\Transaction();
+                    $entity->table = $this->table;
+                    $entity->transactiondate = $line->date;
+                    $entity->transactiontype = 'R+';
+                    $entity->year = date('Y', strtotime($line->date));
+                    $entity->record_id = $line->trx_absent_detail_id;
+                    $entity->amount = 0;
+                    $entity->reserved_amount = $sql->submissionType == $mAbsent->Pengajuan_Ijin ? $ruleDetail->value : 1;
+                    $entity->md_employee_id = $sql->md_employee_id;
+                    $entity->isprocessed = 'N';
+
+                    $mTransaction->save($entity);
                 }
-            }
-
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari) {
-                $rule = $mRule->where([
-                    'name'      => 'Tugas Kantor Setengah Hari',
-                    'isactive'  => 'Y'
-                ])->first();
-
-                if ($rule) {
-                    $amount = $rule->condition ?: $rule->value;
-                }
-            }
-
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk) {
-                $rule = $mRule->where([
-                    'name'      => 'Lupa Absen Masuk',
-                    'isactive'  => 'Y'
-                ])->first();
-
-                if ($rule) {
-                    $amount = $rule->condition ?: $rule->value;
-                }
-            }
-
-            if ($sql->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang) {
-                $rule = $mRule->where([
-                    'name'      => 'Lupa Absen Pulang',
-                    'isactive'  => 'Y'
-                ])->first();
-
-                if ($rule) {
-                    $amount = $rule->condition ?: $rule->value;
-                }
-            }
-
-            // if ($sql->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat) {
-            //     $rule = $mRule->where([
-            //         'name'      => 'Datang Terlambat',
-            //         'isactive'  => 'Y'
-            //     ])->first();
-
-            //     if ($rule) {
-            //         $amount = $rule->condition ?: $rule->value;
-
-            //         $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
-
-            //         if ($ruleDetail) {
-            //             //TODO : Get work day employee
-            //             $workDay = $mEmpWork->where([
-            //                 'md_employee_id'    => $sql->md_employee_id,
-            //                 'validfrom <='      => $today
-            //             ])->orderBy('validfrom', 'ASC')->first();
-
-            //             if (is_null($workDay)) {
-            //                 $workHour = convertToMinutes($entryTime);
-            //             } else {
-            //                 $day = strtoupper(formatDay_idn($day));
-
-            //                 //TODO: Get Work Detail by day 
-            //                 $work = null;
-
-            //                 $whereClause = "md_work_detail.isactive = 'Y'";
-            //                 $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
-            //                 $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-            //                 $whereClause .= " AND md_day.name = '$day'";
-            //                 $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
-
-            //                 if (is_null($work)) {
-            //                     $workHour = convertToMinutes($entryTime);
-            //                 } else {
-            //                     $workHour = convertToMinutes($work->startwork);
-            //                 }
-            //             }
-
-            //             $workTime = convertToMinutes($sql->startdate);
-
-            //             foreach ($ruleDetail as $detail) {
-            //                 if (($detail->name === "Terlambat 1/2 Hari" || $detail->name === "Terlambat") && getOperationResult($workTime, ($workHour + $detail->condition), $detail->operation)) {
-            //                     $amount = $detail->value;
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
-
-            // if ($sql->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat) {
-            //     $rule = $mRule->where([
-            //         'name'      => 'Pulang Cepat',
-            //         'isactive'  => 'Y'
-            //     ])->first();
-
-            //     if ($rule) {
-            //         $amount = $rule->condition ?: $rule->value;
-
-            //         $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
-
-            //         if ($ruleDetail) {
-            //             //TODO : Get work day employee
-            //             $workDay = $mEmpWork->where([
-            //                 'md_employee_id'    => $sql->md_employee_id,
-            //                 'validfrom <='      => $today
-            //             ])->orderBy('validfrom', 'ASC')->first();
-
-            //             if (is_null($workDay)) {
-            //                 $workHour = convertToMinutes($entryTime);
-            //             } else {
-            //                 $day = strtoupper(formatDay_idn($day));
-
-            //                 //TODO: Get Work Detail by day 
-            //                 $work = null;
-
-            //                 $whereClause = "md_work_detail.isactive = 'Y'";
-            //                 $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
-            //                 $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-            //                 $whereClause .= " AND md_day.name = '$day'";
-            //                 $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
-
-            //                 if (is_null($work)) {
-            //                     $workHour = convertToMinutes($entryTime);
-            //                 } else {
-            //                     $workHour = convertToMinutes($work->startwork);
-            //                 }
-            //             }
-
-            //             $workTime = convertToMinutes($sql->startdate);
-
-            //             foreach ($ruleDetail as $detail) {
-            //                 if (($detail->name === "Pulang Cepat 1/2 Hari" || $detail->name === "Pulang Cepat") && getOperationResult($workTime, ($workHour + $detail->condition), $detail->operation)) {
-            //                     $amount = $detail->value;
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
-
-            if ($amount != 0 && $line->isagree === 'Y') {
-                $transactiontype = $amount < 0 ? 'A-' : 'A+';
-                $mAllowance->insertAllowance($sql->{$mAbsent->primaryKey}, $mAbsent->table, $transactiontype, $line->date, $sql->submissiontype, $sql->md_employee_id, $amount, $updated_by);
             }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
@@ -581,9 +650,9 @@ class M_AbsentDetail extends Model
                 }
             }
 
-            // TODO : Create Allowance when line is Aggreed
-            if ($line->isagree === "Y")
-                $this->createAllowance($rows);
+            // TODO : Create Allowance
+            // if ($line->isagree === "Y")
+            $this->createAllowance($rows);
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

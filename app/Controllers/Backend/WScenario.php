@@ -3,6 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Absent;
 use App\Models\M_WScenario;
 use App\Models\M_WScenarioDetail;
 use App\Models\M_Menu;
@@ -297,12 +298,13 @@ class WScenario extends BaseController
         return json_encode($table);
     }
 
-    public function setScenario($entity, $model, $modelDetail = null, $trxID, $docStatus, $menu, $session)
+    public function setScenario($entity, $model, $modelDetail = null, $trxID, $docStatus, $menu, $session, $modelSubDetail = null, $isSubmission = false)
     {
         $mWfs = new M_WScenario($this->request);
         $cWfa = new WActivity();
         $mDocType = new M_DocumentType($this->request);
         $mEmployee = new M_Employee($this->request);
+        $mAbsent = new M_Absent($this->request);
 
         $this->model = $model;
         $this->entity = $entity;
@@ -318,6 +320,12 @@ class WScenario extends BaseController
         if (!is_null($modelDetail)) {
             $this->modelDetail = $modelDetail;
             $trxLine = $this->modelDetail->where($primaryKey, $trxID)->findAll();
+
+            if (!is_null($modelSubDetail)) {
+                $this->modelSubDetail = $modelSubDetail;
+                $lineID = array_column($trxLine, $this->modelDetail->primaryKey);
+                $trxSubLine = $this->modelSubDetail->whereIn($this->modelDetail->primaryKey, $lineID)->findAll();
+            }
         }
 
         $docType = $mDocType->find($trx->submissiontype);
@@ -345,7 +353,9 @@ class WScenario extends BaseController
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, $totalDays, $trx->ref_submissiontype);
             } else if ($table === "trx_submission_cancel") {
                 if ($trx->ref_submissiontype == 100003) {
-                    $totalDays = count($trxLine);
+                    // TODO : Get Total Days from reference transaction Leave
+                    $ref_doc = $mAbsent->find($trx->reference_id);
+                    $totalDays = $ref_doc->totaldays;
 
                     if ($totalDays <= 3)
                         $totalDays = 3; //Set GT sesuai scenario
@@ -408,6 +418,21 @@ class WScenario extends BaseController
                 }
             } else {
                 $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);
+            }
+
+            // TODO : Update line status to Waiting Approval
+            if ($isSubmission) {
+                $data = [];
+                $mDetail = !is_null($modelSubDetail) ? $modelSubDetail : $modelDetail;
+                $lineData = !is_null($modelSubDetail) ? $trxSubLine : $trxLine;
+
+                foreach ($lineData as $line) {
+                    $data = [
+                        'isagree' => 'H'
+                    ];
+
+                    $mDetail->update($line->{$mDetail->primaryKey}, $data);
+                }
             }
         }
 

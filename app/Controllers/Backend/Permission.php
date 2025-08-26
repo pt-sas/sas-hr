@@ -15,6 +15,7 @@ use App\Models\M_Rule;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_Division;
+use App\Models\M_LeaveBalance;
 use App\Models\M_SubmissionCancelDetail;
 use TCPDF;
 
@@ -172,13 +173,13 @@ class Permission extends BaseController
         $mRule = new M_Rule($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mLeaveBalance = new M_LeaveBalance($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
             $post["submissiontype"] = $this->model->Pengajuan_Ijin;
             $post["necessary"] = 'IJ';
-            $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
             $day = date('w');
 
@@ -189,9 +190,8 @@ class Permission extends BaseController
                     $holidays = $mHoliday->getHolidayDate();
                     $startDate = date('Y-m-d', strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $nik = $post['nik'];
-                    $submissionDate = $post['submissiondate'];
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
+                    $isFuture = $startDate > $subDate ? true : false;
 
                     $rule = $mRule->where([
                         'name'      => 'Ijin',
@@ -203,9 +203,9 @@ class Permission extends BaseController
 
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today,
-                        'validto >='        => $today
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $subDate,
+                        'validto >='        => $subDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -238,57 +238,59 @@ class Permission extends BaseController
                         $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
                         //TODO : Get attendance present employee
-                        $whereClause = "v_attendance.nik = '{$nik}'";
+                        $whereClause = "v_attendance.md_employee_id = '{$employeeId}'";
                         $whereClause .= " AND v_attendance.date IN ({$workClause})";
                         $attPresent = $mAttendance->getAttendance($whereClause)->getResult();
 
-                        //TODO : Get attendance not present employee
-                        $whereClause = "v_attendance.nik = '{$nik}'";
-                        $whereClause .= " AND v_attendance.date = '{$startDate}'";
-                        $attNotPresent = $mAttendance->getAttendance($whereClause)->getRow();
-
-                        //TODO : Get next day attendance from enddate
-                        $presentNextDate = null;
-
+                        //TODO : Get Max Last Date for Submission Past
                         if ($startDate <= $subDate) {
-                            $whereClause = "trx_absent.nik = $nik";
-                            $whereClause .= " AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') > '$endDate'";
-                            $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                            $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                            $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                            if (is_null($trxPresentNextDay)) {
-                                $whereClause = "v_attendance.nik = '{$nik}'";
-                                $whereClause .= " AND v_attendance.date > '{$endDate}'";
+                            $lastDate = $endDate;
+                            $daysOffStr = implode(', ', $daysOff);
+                            for ($i = 0; $i < $minDays; $i++) {
+                                $whereClause = "v_attendance.md_employee_id = {$employeeId}";
+                                $whereClause .= " AND v_attendance.date > '{$lastDate}'";
+                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
                                 $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
 
-                                $presentNextDate = $attPresentNextDay ? $attPresentNextDay->date : $endDate;
-                            } else {
-                                $presentNextDate = $trxPresentNextDay->date;
+                                $whereClause = "trx_absent.md_employee_id = {$employeeId}";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '$lastDate'";
+                                $whereClause .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Tugas_Kantor}";
+                                $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOffStr})";
+                                $trxPresentNextDay =  $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+
+                                if (!$attPresentNextDay && $trxPresentNextDay) {
+                                    $lastDate = date('Y-m-d', strtotime($trxPresentNextDay->date));
+                                } elseif ($attPresentNextDay && !$trxPresentNextDay) {
+                                    $lastDate = date('Y-m-d', strtotime($attPresentNextDay->date));
+                                } elseif ($attPresentNextDay && $trxPresentNextDay) {
+                                    $attDate = strtotime($attPresentNextDay->date);
+                                    $trxDate = strtotime($trxPresentNextDay->date);
+                                    $lastDate = date('Y-m-d', min($attDate, $trxDate));
+                                }
                             }
-
-                            $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
-
-                            //* last index of array from variable nextDate
-                            $lastDate = end($nextDate);
                         }
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getResult();
 
-                        //TODO : Get submission
-                        $dateStartClause = date('Y-m-d', strtotime($startDate));
-
-                        $whereClause = "trx_absent.nik = '{$nik}'";
-                        $whereClause .= " AND DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') >= '{$dateStartClause}' AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') <= '{$endDate}'";
-                        $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                        $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                        $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
-
-                        //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                        //TODO : Get Max Days for Submission Future
+                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
+
+                        // TODO : Calculate Total Days Permission
+                        $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
+                        $totalDays = count($dateRange);
+
+                        // TODO : Get Leave Balance
+                        $leaveBalance = $mLeaveBalance->getTotalBalance($employeeId, date("Y", strtotime($startDate)));
 
                         if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if ($presentNextDate && !($lastDate >= $subDate) && $work && is_null($attNotPresent)) {
+                        } else if (!empty($lastDate) && ($lastDate < $subDate) && $work) {
                             $lastDate = format_dmy($lastDate, '-');
 
                             $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
@@ -300,6 +302,8 @@ class Permission extends BaseController
                             $response = message('success', false, 'Ada kehadiran, tidak bisa mengajukan pada tanggal : [' . $date . ']');
                         } else if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                        } else if (is_null($leaveBalance)) {
+                            $response = message('success', false, 'Saldo cuti tidak tersedia');
                         } else {
                             $this->entity->fill($post);
 
@@ -310,7 +314,23 @@ class Permission extends BaseController
                                 $this->entity->setDocumentNo($docNo);
                             }
 
-                            $response = $this->save();
+                            // Cek apakah saldo carry over ada dan belum expired
+                            $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+
+                            // Cek apakah saldo cuti utama ada dan belum expired
+                            $mainLeaveValid = ($leaveBalance->enddate && $endDate <= date('Y-m-d', strtotime($leaveBalance->enddate)));
+
+                            if ($isFuture && $carryOverValid && ($leaveBalance->balance_carried <= 0 || $totalDays > $leaveBalance->balance_carried)) {
+                                $response = message('success', false, 'Saldo carry over tidak cukup atau sudah expired');
+                            } else {
+                                if ($isFuture && !$mainLeaveValid) {
+                                    $response = message('success', false, 'Belum bisa mengajukan sudah expired');
+                                } else if ($isFuture && ($leaveBalance->balance <= 0 || $totalDays > $leaveBalance->balance)) {
+                                    $response = message('success', false, 'Saldo utama tidak cukup atau sudah expired');
+                                } else {
+                                    $response = $this->save();
+                                }
+                            }
                         }
                     }
                 }
@@ -402,19 +422,9 @@ class Permission extends BaseController
                             ];
 
                             $this->model->createAbsentDetail($data, $row);
-                        } else {
-                            //TODO : Update line if line exist
-                            foreach ($line as $row) :
-                                $entity = new \App\Entities\AbsentDetail();
-
-                                $entity->trx_absent_detail_id = $row->trx_absent_detail_id;
-                                $entity->isagree = 'H';
-
-                                $this->modelDetail->save($entity);
-                            endforeach;
                         }
 
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
                         $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);

@@ -323,7 +323,7 @@ class M_Absent extends Model
                 $entity->{$this->primaryKey} = $rows['id'];
                 $entity->date = $date;
                 $entity->lineno = $number;
-                $entity->isagree = $rows['isagree'] ?? "H";
+                $entity->isagree = $rows['isagree'] ?? "";
                 $entity->created_by = $rows['created_by'];
                 $entity->updated_by = $rows['updated_by'];
 
@@ -364,9 +364,12 @@ class M_Absent extends Model
             100003 => 'S', // Cuti
             100004 => 'S', // Ijin
             100005 => 'S', // Ijin Resmi
-            100007 => 'M', // Tugas Kantor
+            100007 => 'S', // Tugas Kantor 1 Hari
+            100009 => 'S', // Tugas Kantor 1/2 Hari
             100010 => 'M', // Lupa Absen Masuk
-            100011 => 'M'  // Lupa Absen Pulang
+            100011 => 'M', // Lupa Absen Pulang
+            100013 => 'M', // Pulang Cepat
+
         ];
 
         $formAttendance = [$this->Pengajuan_Lupa_Absen_Masuk, $this->Pengajuan_Lupa_Absen_Pulang, $this->Pengajuan_Datang_Terlambat, $this->Pengajuan_Pulang_Cepat];
@@ -376,7 +379,7 @@ class M_Absent extends Model
 
         if (($sql->getIsApproved() === 'Y' || $isSubAttendance) && ($sql->docstatus === "IP" || $sql->docstatus === "CO") && is_null($line)) {
             if ($sql->docstatus === "CO")
-                $isAgree = $agree;
+                $isagree = $agree;
 
             if ($sql->docstatus === "IP") {
                 $isagree = $subType[$sql->getSubmissionType()];
@@ -386,7 +389,7 @@ class M_Absent extends Model
                 'id'         => $ID,
                 'created_by' => $updatedBy,
                 'updated_by' => $updatedBy,
-                'isagree'    => $isAgree
+                'isagree'    => $isagree
             ];
 
             $this->createAbsentDetail($data, $sql);
@@ -394,7 +397,7 @@ class M_Absent extends Model
 
         // TODO : If line is not null then update isagree on line
         if (!empty($sql->getIsApproved()) && ($sql->docstatus === "NA" || $sql->docstatus === "IP" || $sql->docstatus === "CO") && !is_null($line)) {
-            $line = $mAbsentDetail->where($this->primaryKey, $ID)->whereIn('isagree', ['H', 'M', 'S'])->findAll();
+            $line = $mAbsentDetail->where($this->primaryKey, $ID)->whereIn('isagree', ['H', 'M', 'S', ''])->findAll();
 
             if ($sql->getIsApproved() === 'Y' && $sql->docstatus === "IP") {
                 $isagree = $subType[$sql->getSubmissionType()];

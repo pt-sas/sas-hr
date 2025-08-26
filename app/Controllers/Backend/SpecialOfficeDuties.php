@@ -363,7 +363,22 @@ class SpecialOfficeDuties extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                        $line = $this->modelDetail->where('trx_assignment_id', $_ID)->findAll();
+                        $assignmentDate = $this->modelSubDetail->where("trx_assignment_detail_id", $line[0]->trx_assignment_detail_id)->first();
+
+                        // TODO : Create Assignment Date if There's no one
+                        if (empty($assignmentDate)) {
+                            foreach ($line as $row) {
+                                $data = [
+                                    'id'         => $row->trx_assignment_detail_id,
+                                    'created_by' => $this->access->getSessionUser(),
+                                    'updated_by' => $this->access->getSessionUser()
+                                ];
+                                $this->model->createAssignmentDate($data, $row);
+                            }
+                        }
+
+                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, $this->modelSubDetail, true);
                         $response = message('success', true, true);
                     } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Drafted);

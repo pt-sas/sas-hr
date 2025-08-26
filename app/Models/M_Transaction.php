@@ -16,6 +16,7 @@ class M_Transaction extends Model
         'record_id',
         'table',
         'amount',
+        'reserved_amount',
         'md_employee_id',
         'isprocessed',
         'description',
@@ -67,6 +68,27 @@ class M_Transaction extends Model
             "columnJoin" => $columnJoin,
             "typeJoin" => $typeJoin
         ];
+    }
+
+    public function getSelectDetail()
+    {
+        $sql = "{$this->table}.*,
+                md_employee.value as employee,
+                md_employee.fullname as employee_fullname,
+                trx_absent.documentno";
+
+        return $sql;
+    }
+
+    public function getJoinDetail()
+    {
+        $sql = [
+            $this->setDataJoin('md_employee', "md_employee.md_employee_id = {$this->table}.md_employee_id", 'left'),
+            $this->setDataJoin('trx_absent_detail', "trx_absent_detail.trx_absent_detail_id = {$this->table}.record_id", 'left'),
+            $this->setDataJoin('trx_absent', "trx_absent.trx_absent_id = trx_absent_detail.trx_absent_id", 'left')
+        ];
+
+        return $sql;
     }
 
     public function getBalance($where)
