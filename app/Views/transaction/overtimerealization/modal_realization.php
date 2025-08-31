@@ -9,7 +9,7 @@
                     <div class="row">
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label for="starttime">Jam Masuk<span class="required">*</span></label>
+                                <label for="starttime">Jam Mulai Lembur<span class="required">*</span></label>
                                 <div class="input-icon">
                                     <input type="text" class="form-control timepicker" name="starttime" id="starttime">
                                     <span class=" input-icon-addon">

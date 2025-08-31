@@ -165,11 +165,10 @@ class Overtime extends BaseController
                 if (!$this->validation->run($post, 'lembur')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $holidays = $mHoliday->getHolidayDate();
+                    // $holidays = $mHoliday->getHolidayDate();
                     $startDate = date('Y-m-d', strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $submissionDate = $post['submissiondate'];
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
 
                     $rule = $mRule->where([
                         'name'      => 'Lembur',
@@ -181,27 +180,28 @@ class Overtime extends BaseController
 
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'                           => $post['md_employee_id'],
-                        'date_format(validto, "%Y-%m-%d") >='      => $today
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $endDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
                         $response = message('success', false, 'Hari kerja belum ditentukan');
                     } else {
                         //TODO : Get Work Detail
-                        $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                        // $whereClause = "md_work_detail.isactive = 'Y'";
+                        // $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                        // $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                        // $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                        $daysOff = getDaysOff($workDetail);
+                        // $daysOff = getDaysOff($workDetail);
 
                         //* last index of array from variable nextDate
-                        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+                        $nextDate = lastWorkingDays($startDate, [], $minDays, false, [], true);
                         $lastDate = end($nextDate);
 
                         //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
                         $operation = null;
@@ -224,30 +224,38 @@ class Overtime extends BaseController
                             return $value->md_employee_id;
                         }, $table);
 
-                        $empWork = $mEmployee
-                            ->whereIn("md_employee_id", $arrEmpId)
-                            ->where("NOT EXISTS (SELECT 1 
-                                                FROM md_employee_work mew
-						                        WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
-                                                AND date_format(validto, '%Y-%m-%d') >= '{$startDate}'
-                                                AND (SELECT mwd.md_day_id
-                                                    FROM md_work_detail mwd
-                                                    WHERE mwd.md_work_id = mew.md_work_id
-                                                    AND mwd.md_day_id = {$day}))")
-                            ->findAll();
+                        // $empWork = $mEmployee
+                        //     ->whereIn("md_employee_id", $arrEmpId)
+                        //     ->where("NOT EXISTS (SELECT 1 
+                        //                         FROM md_employee_work mew
+                        //                         WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
+                        //                         AND (date_format(validto, '%Y-%m-%d') >= '{$startDate}' AND date_format(validfrom, '%Y-%m-%d') <= '{$endDate}')
+                        //                         AND (SELECT mwd.md_day_id
+                        //                             FROM md_work_detail mwd
+                        //                             WHERE mwd.md_work_id = mew.md_work_id
+                        //                             AND mwd.md_day_id = {$day}))")
+                        //     ->findAll();
 
-                        if ($endDate > $addDays) {
+                        //TODO : Get submission one day
+                        $whereClause = "md_employee_id IN (" . implode(" ,", $arrEmpId) . ")";
+                        $whereClause .= " AND DATE_FORMAT(startdate, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->modelDetail->where($whereClause)->first();
+
+                        if ($trx) {
+                            $response = message('success', false, "Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain");
+                        } else if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                         } else if ($lastDate < $subDate) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
                         } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $startDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
                             $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
-                        } else if ($empWork) {
-                            $value = implode(", ", array_map(function ($row) {
-                                return $row->value;
-                            }, $empWork));
+                            // } else if ($empWork) {
+                            //     $value = implode(", ", array_map(function ($row) {
+                            //         return $row->value;
+                            //     }, $empWork));
 
-                            $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
+                            //     $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
                         } else {
                             $this->entity->fill($post);
 
@@ -267,7 +275,6 @@ class Overtime extends BaseController
             }
 
             return $this->response->setJSON($response);
-            // return json_encode($response);
         }
     }
 
@@ -331,7 +338,7 @@ class Overtime extends BaseController
             $_DocAction = $post['docaction'];
 
             $row = $this->model->find($_ID);
-            $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->first();
+            $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
             $menu = $this->request->uri->getSegment(2);
 
             try {
@@ -339,28 +346,31 @@ class Overtime extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        if ($line) {
-                            $this->message = $cWfs->setScenario($this->entity, $this->model, null, $_ID, $_DocAction, $menu, $this->session);
+                        $startDate = date('Y-m-d', strtotime($row->startdate));
+                        $endDate = date('Y-m-d', strtotime($row->enddate));
 
+                        $arrEmpId = array_map(function ($value) {
+                            return $value->md_employee_id;
+                        }, $line);
 
-                            // This for set status to Hold in Overtime Detail
-                            $ovt_line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+                        //TODO : Get submission one day
+                        $whereClause = "md_employee_id IN (" . implode(" ,", $arrEmpId) . ")";
+                        $whereClause .= " AND DATE_FORMAT(startdate, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->modelDetail->where($whereClause)->first();
 
-                            foreach ($ovt_line as $key => $value) {
-                                $value->status = 'M';
-                                $this->modelDetail->save($value);
-                            }
-                            // 
+                        if ($trx) {
+                            $response = message('error', true, 'Tidak bisa proses pengajuan, karena sudah ada pengajuan lain');
+                        } else if (empty($line)) {
+                            $response = message('error', true, 'Line Kosong');
+                        } else {
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
 
                             $response = message('success', true, true);
-                        } else {
-                            $response = message('error', true, 'Line Kosong');
                         }
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-                        $response = $this->save();
                     } else if ($_DocAction === $this->DOCSTATUS_Voided) {
-                        $response = message('error', true, 'Tidak bisa diproses');
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
+                        $response = $this->save();
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();
@@ -506,7 +516,7 @@ class Overtime extends BaseController
                     $header->docstatus === $this->DOCSTATUS_Inprogress ||
                     $header->docstatus === $this->DOCSTATUS_Completed
                 )
-                    $status = statusRealize($row->status);
+                    $status = statusRealize($row->isagree);
                 else
                     $status = '';
 

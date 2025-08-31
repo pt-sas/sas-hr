@@ -151,15 +151,16 @@ class MedicalCertificate extends BaseController
 
                     if ($trx) {
                         $response = message('error', true, 'Sudah ada pengajuan lain untuk pengajuan Sakit ini');
-                    }
-                    if ($this->isNew()) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    } else {
+                        if ($this->isNew()) {
+                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Surat_Keterangan_Sakit, $post);
-                        $this->entity->setDocumentNo($docNo);
-                    }
+                            $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Surat_Keterangan_Sakit, $post);
+                            $this->entity->setDocumentNo($docNo);
+                        }
 
-                    $response = $this->save();
+                        $response = $this->save();
+                    }
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -234,13 +235,16 @@ class MedicalCertificate extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                        $response = message('success', true, true);
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                        $trx = $this->model->where('trx_absent_id',  $post['trx_absent_id'])->whereIn('docstatus', ['CO', 'IP'])->first();
+                        if ($trx) {
+                            $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
+                        } else {
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                            $response = message('success', true, true);
+                        }
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();

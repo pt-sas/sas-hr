@@ -172,29 +172,35 @@ class OfficeDuties extends BaseController
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $file = $this->request->getFile('image');
 
-            $table = json_decode($post['table']);
-            //! Mandatory property for detail validation
-            $post['line'] = countLine($table);
-            $post['detail'] = [
-                'table' => arrTableLine($table)
-            ];
+            $post["submissiontype"] = $this->model->Pengajuan_Tugas_Kantor;
+            $post["necessary"] = 'TK';
+            $employeeId = $post['md_employee_id'];
 
             try {
+                $img_name = "";
+
+                if (!empty($employeeId)) {
+                    $row = $mEmployee->find($employeeId);
+                    $lenPos = strpos($row->getValue(), '-');
+                    $value = substr_replace($row->getValue(), "", $lenPos);
+                    $ymd = date('YmdHis');
+                }
+
+                if ($file && $file->isValid()) {
+                    $ext = $file->getClientExtension();
+                    $img_name = $this->model->Pengajuan_Tugas_Kantor . '_' . $value . '_' . $ymd . '.' . $ext;
+                    $post['image'] = $img_name;
+                }
+
                 if (!$this->validation->run($post, 'tugasKantor')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $post["submissiontype"] = $this->model->Pengajuan_Tugas_Kantor;
-                    $post["necessary"] = 'TK';
-                    $startDate = $post['startdate'];
-                    $endDate = $post['enddate'];
-                    $submissionDate = $post['submissiondate'];
-                    $today = date('H:i');
-                    $dateToday = date('Y-m-d');
-                    $dateReq = date('Y-m-d', strtotime($startDate));
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
-                    $day = date('w', strtotime($post['startdate']));
                     $holidays = $mHoliday->getHolidayDate();
+                    $startDate = date('Y-m-d', strtotime($post['startdate']));
+                    $endDate = date('Y-m-d', strtotime($post['enddate']));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
 
                     $rule = $mRule->where([
                         'name'      => 'Tugas Kantor 1 Hari',
@@ -206,8 +212,9 @@ class OfficeDuties extends BaseController
 
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'                           => $post['md_employee_id'],
-                        'date_format(validto, "%Y-%m-%d") >='      => $dateToday
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $endDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -215,7 +222,7 @@ class OfficeDuties extends BaseController
                     } else {
                         //TODO : Get Work Detail
                         $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = {$post['md_employee_id']}";
+                        $whereClause .= " AND md_employee_work.md_employee_id = {$employeeId}";
                         $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
                         $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
@@ -226,39 +233,47 @@ class OfficeDuties extends BaseController
                         $lastDate = end($nextDate);
 
                         //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
                         //* For Validation Same Day but Checking Max Time
                         $ruleDetail = $rule ? $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'isactive' => 'Y'])->first() : null;
-                        $todayMinutes = convertToMinutes($today);
+                        $todayMinutes = convertToMinutes(date('H:i'));
                         $maxMinutes = $ruleDetail ? convertToMinutes(date("H:i", strtotime($ruleDetail->condition))) : null;
 
-                        //TODO : Get submission
-                        $date_range = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d H:i:s', 'all', $daysOff);
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
 
-                        foreach ($date_range as $date) {
-                            $whereClause = "trx_absent.md_employee_id = {$post['md_employee_id']}";
-                            $whereClause .= " AND trx_absent_detail.date = '$date'";
-                            $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
-                            $whereClause .= " AND trx_absent_detail.isagree IN ('H','M','S','Y')";
-                            $trx = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                            if (!empty($trx)) {
-                                break;
-                            }
-                        }
-
-                        if ($endDate > $addDays) {
+                        if ($trx) {
+                            $date = format_dmy($trx->date, '-');
+                            $response = message('success', false, "Tidak bisa mengajukan pada tanggal : {$date}, karena sudah ada pengajuan lain dengan no : {$trx->documentno}");
+                        } else if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                         } else if ($lastDate < $subDate) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
-                        } else if ($dateReq === $subDate && ($maxMinutes && ($todayMinutes > $maxMinutes))) {
+                        } else if ($startDate == $subDate && ($maxMinutes && ($todayMinutes > $maxMinutes))) {
                             $response = message('success', false, 'Maksimal jam pengajuan ' . $ruleDetail->condition);
-                        } else if ($trx) {
-                            $date = format_dmy($trx->date, '-');
-                            $response = message('success', false, "Tidak bisa mengajukan pada tanggal : {$date}, karena sudah ada pengajuan lain dengan no : {$trx->documentno}");
                         } else {
+                            $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                            if ($this->isNew()) {
+                                if ($file && $file->isValid())
+                                    uploadFile($file, $path, $img_name);
+                            } else {
+                                $row = $this->model->find($this->getID());
+
+                                if (empty($post['image']) && !empty($row->getImage()) && file_exists($path . $row->getImage())) {
+                                    unlink($path . $row->getImage());
+                                } else {
+                                    uploadFile($file, $path, $img_name);
+                                }
+                            }
+
                             $this->entity->fill($post);
 
                             if ($this->isNew()) {
@@ -289,6 +304,15 @@ class OfficeDuties extends BaseController
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
                 $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
+
+                $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                if (file_exists($path . $list[0]->getImage())) {
+                    $path = 'uploads/' . $this->PATH_Pengajuan . '/';
+                    $list[0]->setImage($path . $list[0]->getImage());
+                } else {
+                    $list[0]->setImage(null);
+                }
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 
@@ -343,32 +367,44 @@ class OfficeDuties extends BaseController
 
             $row = $this->model->find($_ID);
             $menu = $this->request->uri->getSegment(2);
+            $startDate = date('Y-m-d', strtotime($row->startdate));
+            $endDate = date('Y-m-d', strtotime($row->enddate));
 
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
 
-                        if (empty($line)) {
-                            // TODO : Create Line if not exist
-                            $data = [
-                                'id'        => $_ID,
-                                'created_by' => $this->access->getSessionUser(),
-                                'updated_by' => $this->access->getSessionUser()
-                            ];
+                        if ($trx) {
+                            $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
+                        } else {
+                            $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 
-                            $this->model->createAbsentDetail($data, $row);
+                            if (empty($line)) {
+                                // TODO : Create Line if not exist
+                                $data = [
+                                    'id'        => $_ID,
+                                    'created_by' => $this->access->getSessionUser(),
+                                    'updated_by' => $this->access->getSessionUser()
+                                ];
+
+                                $this->model->createAbsentDetail($data, $row, true, true);
+                            }
+
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
+                            $response = message('success', true, true);
                         }
-
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
-                        $response = message('success', true, true);
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();

@@ -33,6 +33,7 @@ class M_Absent extends Model
         'image2',
         'image3',
         'comment',
+        'startdate_realization',
         'enddate_realization',
         'isbranch',
         'branch_to',
@@ -238,7 +239,7 @@ class M_Absent extends Model
         ];
     }
 
-    public function getInvNumber($field, $where, $post, $created_by)
+    public function getInvNumber($field, $where, $post, $created_by, $checkDelegation = true)
     {
         $mDelegTransfer = new M_DelegationTransfer($this->request);
         $submissionDate = new \DateTime($post['submissiondate']);
@@ -255,19 +256,20 @@ class M_Absent extends Model
 
         $first = $post['necessary'];
 
-        $inTransition = $mDelegTransfer->getInTransitionDelegation("user_to = {$created_by} AND md_employee_id = {$post['md_employee_id']}")->getRow();
+        if ($checkDelegation)
+            $inTransition = $mDelegTransfer->getInTransitionDelegation("user_to = {$created_by} AND md_employee_id = {$post['md_employee_id']}")->getRow();
 
         $prefix = "{$first}/{$year}/{$month}/{$nextNumber}";
 
         // TODO : Add prefix * to documentno when created user is in transition
-        if ($inTransition) {
+        if (!empty($inTransition)) {
             $prefix .= "*";
         }
 
         return $prefix;
     }
 
-    public function createAbsentDetail($rows, $header)
+    public function createAbsentDetail($rows, $header, $exclHoliday = false, $exclDaysoff = false)
     {
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
@@ -277,8 +279,7 @@ class M_Absent extends Model
         $result = 0;
 
         try {
-            $holiday = $mHoliday->getHolidayDate();
-            $today = date('Y-m-d');
+            $holiday = $exclHoliday ? [] : $mHoliday->getHolidayDate();
 
             $submissionType = $header->submissiontype;
             $md_employee_id = $header->md_employee_id;
@@ -288,8 +289,8 @@ class M_Absent extends Model
             //TODO : Get work day employee
             $workDay = $mEmpWork->where([
                 'md_employee_id'    => $md_employee_id,
-                'validfrom <='      => $today,
-                'validto >='        => $today
+                'validfrom <='      => $startDate,
+                'validto >='        => $endDate
             ])->orderBy('validfrom', 'ASC')->first();
 
             if (is_null($workDay)) {
@@ -305,7 +306,7 @@ class M_Absent extends Model
                 $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
                 $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                $daysOff = getDaysOff($workDetail);
+                $daysOff = $exclDaysoff ? [] : getDaysOff($workDetail);
 
                 if ($submissionType == $this->Pengajuan_Tugas_Kantor_setengah_Hari || $submissionType == $this->Pengajuan_Ijin_Keluar_Kantor) {
                     $date_range = getDatesFromRange($endDate, $endDate, $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
@@ -364,8 +365,8 @@ class M_Absent extends Model
             100003 => 'S', // Cuti
             100004 => 'S', // Ijin
             100005 => 'S', // Ijin Resmi
-            100007 => 'S', // Tugas Kantor 1 Hari
-            100009 => 'S', // Tugas Kantor 1/2 Hari
+            100007 => 'M', // Tugas Kantor 1 Hari
+            100009 => 'M', // Tugas Kantor 1/2 Hari
             100010 => 'M', // Lupa Absen Masuk
             100011 => 'M', // Lupa Absen Pulang
             100013 => 'M', // Pulang Cepat

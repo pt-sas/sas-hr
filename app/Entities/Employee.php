@@ -64,6 +64,8 @@ class Employee extends Entity
 	protected $updated_by;
 	protected $md_supplier_id;
 	protected $resigndate;
+	protected $telegram_username;
+	protected $telegram_id;
 
 	protected $dates   = [
 		'created_at',
@@ -674,5 +676,25 @@ class Employee extends Entity
 			$this->attributes['resigndate'] = null;
 		else
 			$this->attributes['resigndate'] = $resigndate;
+	}
+
+	public function getTelegramUsername()
+	{
+		return $this->attributes['telegram_username'];
+	}
+
+	public function setTelegramUsername($telegram_username)
+	{
+		$this->attributes['telegram_username'] = $telegram_username;
+	}
+
+	public function getTelegramID()
+	{
+		return $this->attributes['telegram_id'];
+	}
+
+	public function setTelegramID($telegram_id)
+	{
+		$this->attributes['telegram_id'] = $telegram_id;
 	}
 }

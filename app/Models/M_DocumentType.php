@@ -16,7 +16,12 @@ class M_DocumentType extends Model
         'created_by',
         'updated_by',
         'isrealization',
-        'isapprovedline'
+        'isapprovedline',
+        'is_realization_mgr',
+        'days_realization_mgr',
+        'is_realization_hrd',
+        'days_realization_hrd',
+        'auto_not_approve_days'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\DocumentType';

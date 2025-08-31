@@ -43,7 +43,7 @@
                     <label for="submissiondate">Tanggal Pembuatan <span class="required">*</span></label>
                     <div class="input-icon">
                         <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
-                            value=<?= $today ?>>
+                            value=<?= $today ?> readonly>
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -92,7 +92,7 @@
             </div>
             <div class="col-md-4">
                 <div class="form-group">
-                    <label>Foto <span class="required">*</span></label>
+                    <label>Foto</label>
                     <div class="form-upload-result">
                         <label class="col-md-4 form-result">
                             <button type="button" class="close-img" aria-label="Close">

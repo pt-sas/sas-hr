@@ -54,7 +54,7 @@ $routes->get('cron-delegation-transfer', 'Backend\DelegationTransfer::delegation
 $routes->get('cron-delegation-absent', 'Backend\User::sendEmailWhenDelegationAbsent');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
-$routes->post('telegramHook', 'Backend\Telegram::telegramHook');
+$routes->post('/telegramHook', 'Backend\Telegram::telegramHook');
 
 $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('/', 'Backend\Dashboard::index');
@@ -355,6 +355,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('tugas-kantor-fka/destroy/(:any)', 'Backend\HalfDayOfficeDuties::destroy/$1');
     $routes->get('tugas-kantor-fka/processIt', 'Backend\HalfDayOfficeDuties::processIt');
     $routes->get('tugas-kantor-fka/print/(:any)', 'Backend\HalfDayOfficeDuties::exportPDF/$1');
+    $routes->post('tugas-kantor-fka/getRealizationData', 'Backend\HalfDayOfficeDuties::getRealizationData');
 
     $routes->add('izin-resmi', 'Backend\OfficialPermission::index');
     $routes->match(['get', 'post'], 'izin-resmi/showAll', 'Backend\OfficialPermission::showAll');
@@ -518,6 +519,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('realisasi-kehadiran', 'Backend\Realization::indexAttendance');
     $routes->match(['get', 'post'], 'realisasi-kehadiran/showAll', 'Backend\Realization::showAllAttendance');
     $routes->post('realisasi-kehadiran/create', 'Backend\Realization::createAttendance');
+    $routes->get('realisasi-kehadiran/show-image/(:any)', 'Backend\Realization::getImage/$1');
 
     $routes->add('hari-kerja', 'Backend\Work::index');
     $routes->match(['get', 'post'], 'hari-kerja/showAll', 'Backend\Work::showAll');

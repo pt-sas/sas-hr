@@ -30,6 +30,7 @@ class Absent extends Entity
     protected $md_leavetype_id;
     protected $image2;
     protected $image3;
+    protected $startdate_realization;
     protected $enddate_realization;
     protected $isbranch;
     protected $branch_to;
@@ -306,6 +307,16 @@ class Absent extends Entity
     public function setImage3($image3)
     {
         $this->attributes['image3'] = $image3;
+    }
+
+    public function getStartDateRealization()
+    {
+        return $this->attributes['startdate_realization'];
+    }
+
+    public function setStartDateRealization($startdate_realization)
+    {
+        $this->attributes['startdate_realization'] = $startdate_realization;
     }
 
     public function getEndDateRealization()

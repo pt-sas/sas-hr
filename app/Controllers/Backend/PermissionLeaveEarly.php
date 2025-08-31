@@ -206,9 +206,9 @@ class PermissionLeaveEarly extends BaseController
 
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today,
-                        'validto >='        => $today
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $endDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -227,11 +227,11 @@ class PermissionLeaveEarly extends BaseController
                         $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
                         //TODO : Get submission Tugas Kantor
-                        $whereClause = "trx_assignment_detail.md_employee_id = {$post['md_employee_id']}";
+                        $whereClause = "trx_assignment_detail.md_employee_id = {$employeeId}";
                         $whereClause .= " AND DATE_FORMAT(trx_assignment_date.date, '%Y-%m-%d') = '{$startDate}'";
                         $whereClause .= " AND trx_assignment.docstatus = '{$this->DOCSTATUS_Completed}'";
                         $whereClause .= " AND trx_assignment_date.isagree = 'Y'";
-                        $whereClause .= " AND trx_assignment.submissiontype IN ({$mAssignment->Pengajuan_Tugas_Kantor}, {$mAssignment->Pengajuan_Penugasan})";
+                        $whereClause .= " AND trx_assignment.submissiontype IN ({$mAssignment->Pengajuan_Penugasan})";
                         $trx = $mAssignment->getDetailData($whereClause)->getRow();
 
                         if ($startDate > $subDate && (is_null($work) && is_null($trx))) {
@@ -244,17 +244,21 @@ class PermissionLeaveEarly extends BaseController
                             $presentNextDate = null;
 
                             if ($startDate <= $subDate) {
-                                $whereClause = "v_attendance.nik = '{$nik}'";
+                                $daysOffStr = implode(', ', $daysOff);
+
+                                $whereClause = "v_attendance.md_employee_id = {$employeeId}";
                                 $whereClause .= " AND v_attendance.date > '{$endDate}'";
+                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
                                 $attPresentNextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
 
                                 if (is_null($attPresentNextDay)) {
-                                    $whereClause = "trx_assignment_detail.md_employee_id = {$post['md_employee_id']}";
-                                    $whereClause .= " AND DATE_FORMAT(trx_assignment_date.date, '%Y-%m-%d') > '{$endDate}'";
-                                    $whereClause .= " AND trx_assignment.docstatus = '{$this->DOCSTATUS_Completed}'";
-                                    $whereClause .= " AND trx_assignment_date.isagree = 'Y'";
-                                    $whereClause .= " AND trx_assignment.submissiontype IN ({$mAssignment->Pengajuan_Tugas_Kantor}, {$mAssignment->Pengajuan_Penugasan})";
-                                    $trxPresentNextDay = $mAssignment->getDetailData($whereClause)->getRow();
+                                    $whereClause = "trx_absent.md_employee_id = {$employeeId}";
+                                    $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '{$endDate}'";
+                                    $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
+                                    $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                                    $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
+                                    $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOffStr})";
+                                    $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
 
                                     $presentNextDate = $trxPresentNextDay ? $trxPresentNextDay->date : $endDate;
                                 } else {
@@ -267,15 +271,26 @@ class PermissionLeaveEarly extends BaseController
                                 $lastDate = end($nextDate);
                             }
 
+                            //TODO : Get submission Half day
+                            $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                            $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                            $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
+                            $whereClause .= " AND v_all_submission.submissiontype IN ({$this->model->Pengajuan_Pulang_Cepat})";
+                            $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                            $trx = $this->model->getAllSubmission($whereClause)->getRow();
+
                             //* End Work Hour
                             $endWork = $work ? $work->endwork : $endWork;
                             $endWorkHour = convertToMinutes($endWork);
 
                             //* last index of array from variable addDays
-                            $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                            $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                             $addDays = end($addDays);
 
-                            if ($endDate > $addDays) {
+                            if ($trx) {
+                                $date = format_dmy($trx->date, '-');
+                                $response = message('success', false, "Tidak bisa mengajukan pada tanggal : {$date}, karena sudah ada pengajuan lain dengan no : {$trx->documentno}");
+                            } else if ($endDate > $addDays) {
                                 $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                             } else if ($presentNextDate && !($lastDate >= $subDate) && $work) {
                                 $lastDate = format_dmy($lastDate, '-');
@@ -370,19 +385,31 @@ class PermissionLeaveEarly extends BaseController
 
             $row = $this->model->find($_ID);
             $menu = $this->request->uri->getSegment(2);
+            $startDate = date('Y-m-d', strtotime($row->startdate));
+            $endDate = date('Y-m-d', strtotime($row->enddate));
 
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                        $response = message('success', true, true);
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                        //TODO : Get submission Half day
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
+                        $whereClause .= " AND v_all_submission.submissiontype IN ({$this->model->Pengajuan_Pulang_Cepat})";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
+
+                        if ($trx) {
+                            $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
+                        } else {
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                            $response = message('success', true, true);
+                        }
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();

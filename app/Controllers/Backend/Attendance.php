@@ -149,99 +149,94 @@ class Attendance extends BaseController
         $mAbsent = new M_Absent($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $cMessage = new Message();
-        $cMail = new Mail();
+        $cTelegram = new Telegram();
 
         $today = date("Y-m-d");
         $yesterday = date("Y-m-d", strtotime("-1 day"));
 
         $dataNotifIn = $mNotifText->where('name', 'Belum Absen Masuk')->first();
+        $subjectIn = $dataNotifIn->getSubject();
+        $messageIn = str_replace(['(Var1)'], [$today], $dataNotifIn->getText());
         $dataNotifOut = $mNotifText->where('name', 'Belum Absen Pulang')->first();
+        $subjectOut = $dataNotifOut->getSubject();
+        $messageOut = str_replace(['(Var1)'], [$yesterday], $dataNotifOut->getText());
         $employee = $mEmployee->where('isactive', 'Y')->findAll();
 
         foreach ($employee as $value) {
             $user = $mUser->where('md_employee_id', $value->md_employee_id)->first();
 
-            if ($user) {
-                //** This Section for checking Today Absent In */
+            //** This Section for checking Today Absent In */
 
-                $day = strtoupper(formatDay_idn(date('w')));
+            $day = strtoupper(formatDay_idn(date('w')));
 
-                // TODO : Get Workday Employee
-                $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND md_employee_work.md_employee_id = {$value->md_employee_id}";
-                $whereClause .= " AND md_employee_work.validfrom <= '{$today}'";
-                $whereClause .= " AND md_employee_work.validto >= '{$today}'";
-                $whereClause .= " AND md_day.name = '{$day}'";
-                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+            // TODO : Get Workday Employee
+            $whereClause = "md_work_detail.isactive = 'Y'";
+            $whereClause .= " AND md_employee_work.md_employee_id = {$value->md_employee_id}";
+            $whereClause .= " AND md_employee_work.validfrom <= '{$today}'";
+            $whereClause .= " AND md_employee_work.validto >= '{$today}'";
+            $whereClause .= " AND md_day.name = '{$day}'";
+            $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
-                // TODO : Get Attendance In Today
-                $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
-                $whereClause .= " AND v_attendance.date = '{$today}'";
-                $whereClause .= " AND v_attendance.clock_in is NOT NULL";
-                $absentIn = $this->model->getAttendance($whereClause)->getRow();
+            // TODO : Get Attendance In Today
+            $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
+            $whereClause .= " AND v_attendance.date = '{$today}'";
+            $whereClause .= " AND v_attendance.clock_in is NOT NULL";
+            $absentIn = $this->model->getAttendance($whereClause)->getRow();
 
-                // TODO : Get Submission Today
-                $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
-                $whereClause .= " AND v_realization.date = {$today}";
-                $whereClause .= " AND v_realization.isagree = 'Y'";
-                $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}')";
-                $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
-                $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
+            // TODO : Get Submission Today
+            $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
+            $whereClause .= " AND v_realization.date = {$today}";
+            $whereClause .= " AND v_realization.isagree = 'Y'";
+            $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}')";
+            $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+            $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
-                if (!$absentIn && $workDetail && !$submission && $dataNotifIn) {
-                    $text = $dataNotifIn->text . date('d F Y');
-
-                    $cMessage->sendNotification($user->sys_user_id, $dataNotifIn->subject, $text);
-
-                    if ($user->email) {
-                        $text = new Html2Text($text);
-                        $text = $text->getText();
-                        $cMail->sendEmail($user->email, $dataNotifIn->subject, $text);
-                    }
+            if (!$absentIn && $workDetail && !$submission && $dataNotifIn) {
+                if ($user) {
+                    $cMessage->sendInformation($user, $subjectIn, $messageIn, 'SAS HRD', null, null, true, true, true);
+                } else if (!empty($value->telegram_id)) {
+                    $cTelegram->sendMessage($value->telegram_id, $messageIn);
                 }
+            }
 
-                //** This Section for checking Yesterday Absent Out*/
-                $day = strtoupper(formatDay_idn(date('w', strtotime($yesterday))));
+            //** This Section for checking Yesterday Absent Out*/
+            $day = strtoupper(formatDay_idn(date('w', strtotime($yesterday))));
 
-                // TODO : Get Workday Employee
-                $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND md_employee_work.md_employee_id = {$value->md_employee_id}";
-                $whereClause .= " AND md_employee_work.validfrom <= '{$yesterday}'";
-                $whereClause .= " AND md_employee_work.validto >= '{$yesterday}'";
-                $whereClause .= " AND md_day.name = '{$day}'";
-                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+            // TODO : Get Workday Employee
+            $whereClause = "md_work_detail.isactive = 'Y'";
+            $whereClause .= " AND md_employee_work.md_employee_id = {$value->md_employee_id}";
+            $whereClause .= " AND md_employee_work.validfrom <= '{$yesterday}'";
+            $whereClause .= " AND md_employee_work.validto >= '{$yesterday}'";
+            $whereClause .= " AND md_day.name = '{$day}'";
+            $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
-                // TODO : Get Assignment Yesterday
-                $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
-                $whereClause .= " AND v_realization.date = {$yesterday}";
-                $whereClause .= " AND v_realization.isagree = 'Y'";
-                $whereClause .= " AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Penugasan})";
-                $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
-                $assignment = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
+            // TODO : Get Assignment Yesterday
+            $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
+            $whereClause .= " AND v_realization.date = {$yesterday}";
+            $whereClause .= " AND v_realization.isagree IN ('Y', 'S', 'M')";
+            $whereClause .= " AND v_realization.submissiontype IN (100008)";
+            $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+            $assignment = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
-                // TODO : Get Attendance Out Yesterday
-                $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id} ";
-                $whereClause .= " AND v_attendance.date = '{$yesterday}'";
-                $whereClause .= " AND v_attendance.clock_out IS NOT NULL";
-                $absentOut = $this->model->getAttendance($whereClause)->getRow();
+            // TODO : Get Attendance Out Yesterday
+            $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id} ";
+            $whereClause .= " AND v_attendance.date = '{$yesterday}'";
+            $whereClause .= " AND v_attendance.clock_out IS NOT NULL";
+            $absentOut = $this->model->getAttendance($whereClause)->getRow();
 
-                // TODO : Get Submission Forget Absent Leave Yesterday
-                $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
-                $whereClause .= " AND v_realization.date = {$yesterday}";
-                $whereClause .= " AND v_realization.isagree = 'Y'";
-                $whereClause .= " AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang})";
-                $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}')";
-                $forgotAbsentLeave = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
+            // TODO : Get Submission Forget Absent Leave Yesterday
+            $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
+            $whereClause .= " AND v_realization.date = {$yesterday}";
+            $whereClause .= " AND v_realization.isagree = 'Y'";
+            $whereClause .= " AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang})";
+            $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}')";
+            $forgotAbsentLeave = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
-                if (($workDetail || $assignment) && !$absentOut && !$forgotAbsentLeave && $dataNotifOut) {
-                    $text = $dataNotifOut->text . date('d F Y', strtotime($yesterday));
-                    $cMessage->sendNotification($user->sys_user_id, $dataNotifOut->subject, $text);
-
-                    if ($user->email) {
-                        $text = new Html2Text($text);
-                        $text = $text->getText();
-                        $cMail->sendEmail($user->email, $dataNotifOut->subject, $text);
-                    }
+            if (($workDetail || $assignment) && !$absentOut && !$forgotAbsentLeave && $dataNotifOut) {
+                if ($user) {
+                    $cMessage->sendInformation($user, $subjectOut, $messageOut, 'SAS HRD', null, null, true, true, true);
+                } else if (!empty($value->telegram_id)) {
+                    $cTelegram->sendMessage($value->telegram_id, $messageOut);
                 }
             }
         }

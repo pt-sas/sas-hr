@@ -237,8 +237,8 @@ class SickLeave extends BaseController
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
                         'md_employee_id'    => $employeeId,
-                        'validfrom <='      => $subDate,
-                        'validto >='        => $subDate
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $endDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -277,31 +277,36 @@ class SickLeave extends BaseController
 
                         //TODO : Get Max Last Date for Submission Past
                         if ($startDate <= $subDate) {
-                            $lastDate = $endDate;
-                            $daysOff = implode(', ', $daysOff);
-                            for ($i = 0; $i < $minDays; $i++) {
+                            $attDate = [];
+                            $lastDate = [];
+                            $daysOffStr = implode(', ', $daysOff);
+
+                            $date_range = getDatesFromRange($startDate, $subDate, [], 'Y-m-d', 'all', []);
+
+                            foreach ($date_range as $date) {
                                 $whereClause = "v_attendance.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND v_attendance.date > '{$lastDate}'";
-                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOff})";
+                                $whereClause .= " AND v_attendance.date = '{$date}'";
+                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
                                 $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
 
                                 $whereClause = "trx_absent.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '$lastDate'";
-                                $whereClause .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Tugas_Kantor}";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '$date'";
+                                $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
                                 $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
-                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOff})";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOffStr})";
                                 $trxPresentNextDay =  $this->modelDetail->getAbsentDetail($whereClause)->getRow();
 
-                                if (!$attPresentNextDay && $trxPresentNextDay) {
-                                    $lastDate = date('Y-m-d', strtotime($trxPresentNextDay->date));
-                                } elseif ($attPresentNextDay && !$trxPresentNextDay) {
-                                    $lastDate = date('Y-m-d', strtotime($attPresentNextDay->date));
-                                } elseif ($attPresentNextDay && $trxPresentNextDay) {
-                                    $attDate = strtotime($attPresentNextDay->date);
-                                    $trxDate = strtotime($trxPresentNextDay->date);
-                                    $lastDate = date('Y-m-d', min($attDate, $trxDate));
+                                if ($attPresentNextDay || $trxPresentNextDay) {
+                                    $attDate[] = $date;
+                                }
+
+                                $lastDate[] = $date;
+
+                                if (count($attDate) == $minDays) {
+                                    break;
                                 }
                             }
+                            $lastDate = end($lastDate);
                         }
 
                         //TODO : Get submission one day
@@ -309,7 +314,7 @@ class SickLeave extends BaseController
                         $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
                         $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
                         $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                        $trx = $this->model->getAllSubmission($whereClause)->getResult();
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
 
                         //TODO : Get Max Days for Submission Future
                         $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
@@ -320,7 +325,10 @@ class SickLeave extends BaseController
                         if (!empty($post['id'])) {
                             $trxMedical = $mMedical->where(['trx_absent_id' => $post['id']])->whereIn('docstatus', [$this->DOCSTATUS_Completed, $this->DOCSTATUS_Drafted, $this->DOCSTATUS_Inprogress])->first();
                         }
-                        if ($endDate > $addDays) {
+
+                        if ($trx) {
+                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                        } else if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                         } else if (!empty($lastDate) && ($lastDate < $subDate) && $work) {
                             $lastDate = format_dmy($lastDate, '-');
@@ -332,8 +340,6 @@ class SickLeave extends BaseController
                             }, $attPresent));
 
                             $response = message('success', false, "Ada kehadiran, tidak bisa mengajukan pada tanggal : [{$date}]");
-                        } else if ($trx) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
                         } else if ($trxMedical) {
                             $response = message('success', false, 'Tidak bisa mengedit pengajuan ini, dikarenakan sudah ada pengajuan Surat Keterangan Sakit');
                         } else {
@@ -477,6 +483,8 @@ class SickLeave extends BaseController
 
             $row = $this->model->find($_ID);
             $menu = $this->request->uri->getSegment(2);
+            $startDate = date('Y-m-d', strtotime($row->startdate));
+            $endDate = date('Y-m-d', strtotime($row->enddate));
 
             try {
                 if (!empty($_DocAction)) {
@@ -486,8 +494,17 @@ class SickLeave extends BaseController
                         // TODO : Get Document Medical Status In Progress And Draft
                         $docMedical = $mMedical->where('trx_absent_id', $row->trx_absent_id)->whereIn('docstatus', ['DR', 'IP'])->first();
 
-                        // TODO : Check if this submission have Sick Letter
-                        if (empty($row->image) && empty($row->image2) && empty($row->image3) && empty($row->img_medical)) {
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
+
+                        if ($trx) {
+                            $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
+                        } else if (empty($row->image) && empty($row->image2) && empty($row->image3) && empty($row->img_medical)) {
+                            // TODO : Check if this submission have Sick Letter
                             $response = message('error', true, 'Pengajuan ini belum ada Foto Surat Sakit maupun Keterangan Surat Sakit');
                         } else if ($docMedical) {
                             $response = message('error', true, "Pengajuan ini ada surat keterangan sakit yang masih pending dengan nomor : {$docMedical->documentno}");
@@ -508,11 +525,9 @@ class SickLeave extends BaseController
                             $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
                             $response = message('success', true, true);
                         }
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();
@@ -673,7 +688,7 @@ class SickLeave extends BaseController
                 $where .= " AND trx_absent.md_employee_id != {$this->session->get('md_employee_id')}";
                 $where .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Sakit}";
                 $where .= " AND trx_absent.docstatus = 'DR'";
-                $where .= " AND trx_medical_certificate.trx_medical_certificate_id IS NULL";
+                $where .= " AND (trx_medical_certificate.trx_medical_certificate_id IS NULL OR trx_medical_certificate.docstatus NOT IN ('CO','IP','DR'))";
                 $where .= " AND trx_absent.startdate = trx_absent.enddate";
 
                 if (isset($post['search'])) {

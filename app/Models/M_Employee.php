@@ -67,7 +67,9 @@ class M_Employee extends Model
 		'created_by',
 		'updated_by',
 		'md_supplier_id',
-		'resigndate'
+		'resigndate',
+		'telegram_username',
+		'telegram_id'
 	];
 	protected $useTimestamps        = true;
 	protected $returnType 			= 'App\Entities\Employee';

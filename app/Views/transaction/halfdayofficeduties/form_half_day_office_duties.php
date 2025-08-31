@@ -48,7 +48,7 @@
                 <div class="form-group">
                     <label for="submissiondate">Tanggal Pembuatan <span class="required">*</span></label>
                     <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
-                        value=<?= $today ?>>
+                        value=<?= $today ?> disabled>
                     <small class="form-text text-danger" id="error_submissiondate"></small>
                 </div>
             </div>
@@ -59,7 +59,7 @@
                     <small class="form-text text-danger" id="error_receiveddate"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="form-group">
                     <label for="datestart">Tanggal Mulai <span class="required">*</span></label>
                     <div class="input-icon">
@@ -72,7 +72,7 @@
                     <small class="form-text text-danger" id="error_datestart"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="form-group">
                     <label for="starttime">Jam Mulai <span class="required">*</span></label>
                     <div class="input-icon">
@@ -85,7 +85,16 @@
                     <small class="form-text text-danger" id="error_starttime"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="starttime_realization">Jam Mulai Realisasi</label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control" name="starttime_realization"
+                            placeholder="Jam Mulai Realisasi" disabled>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
                 <div class="form-group">
                     <label for="dateend">Tanggal Selesai <span class="required">*</span></label>
                     <div class="input-icon">
@@ -98,7 +107,7 @@
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="form-group">
                     <label for="endtime">Jam Selesai <span class="required">*</span></label>
                     <div class="input-icon">
@@ -110,11 +119,41 @@
                     <small class="form-text text-danger" id="error_endtime"></small>
                 </div>
             </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="endtime_realization">Jam Selesai</label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control" name="endtime_realization"
+                            placeholder="Jam Selesai Realisasi" disabled>
+                    </div>
+                </div>
+            </div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="reason">Alasan <span class="required">*</span></label>
                     <textarea type="text" class="form-control" name="reason" rows="4"></textarea>
                     <small class="form-text text-danger" id="error_reason"></small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>Foto</label>
+                    <div class="form-upload-result">
+                        <label class="col-md-4 form-result">
+                            <button type="button" class="close-img" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <img class="img-result">
+                        </label>
+                    </div>
+                    <div class="form-upload">
+                        <label class="col-md-4 form-upload-foto" id="image-upload">
+                            <input type="file" class="control-upload-image" id="image" name="image"
+                                onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
+                            <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
+                        </label>
+                        <small class="form-text text-danger" id="error_image"></small>
+                    </div>
                 </div>
             </div>
         </div>

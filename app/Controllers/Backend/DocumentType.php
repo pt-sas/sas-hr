@@ -143,7 +143,7 @@ class DocumentType extends BaseController
                 if (isset($post['search'])) {
                     if (isset($post['isinternal']) && $post['isinternal'] === "Y") {
                         $list = $this->model->where('isactive', 'Y')
-                            ->whereIn('md_doctype_id', [100010, 100011, 100012, 100013])
+                            ->whereIn('md_doctype_id', [100007, 100008, 100009, 100010, 100011, 100012, 100013])
                             ->like('name', $post['search'])
                             ->orderBy('name', 'ASC')
                             ->findAll();
@@ -168,7 +168,7 @@ class DocumentType extends BaseController
                 } else {
                     if (isset($post['isinternal']) && $post['isinternal'] === "Y") {
                         $list = $this->model->where('isactive', 'Y')
-                            ->whereIn('md_doctype_id', [100010, 100011, 100012, 100013])
+                            ->whereIn('md_doctype_id', [100007, 100008, 100009, 100010, 100011, 100012, 100013])
                             ->orderBy('name', 'ASC')
                             ->findAll();
                     } else {

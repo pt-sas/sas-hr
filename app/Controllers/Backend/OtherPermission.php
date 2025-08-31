@@ -35,7 +35,7 @@ class OtherPermission extends BaseController
                 'field'     => 'sys_ref_detail.value',
                 'option'    => 'ASC'
             ])->getResult(),
-            'ref_default' => $this->Form_Kelengkapan_Absent
+            'ref_default' => 'FKA'
         ];
 
         return $this->template->render('transaction/permission/other/v_other_permission', $data);

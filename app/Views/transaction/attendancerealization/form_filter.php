@@ -7,7 +7,7 @@
                         <div class="col-md-3">
                             <div class="form-group">
                                 <div class="input-icon">
-                                    <input type="text" class="form-control daterange" name="date"
+                                    <input type="text" class="form-control daterange" name="realization_mgr"
                                         value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
                                     <span class="input-icon-addon">
                                         <i class="fas fa-calendar-alt"></i>

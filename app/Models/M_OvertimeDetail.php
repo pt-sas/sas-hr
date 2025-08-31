@@ -19,7 +19,7 @@ class M_OvertimeDetail extends Model
         'overtime_expense',
         'enddate_realization',
         'total',
-        'status',
+        'isagree',
         'created_by',
         'updated_by',
     ];
@@ -62,5 +62,15 @@ class M_OvertimeDetail extends Model
         endforeach;
 
         return $result;
+    }
+
+    public function getRealizationOvertime($where)
+    {
+        $builder = $this->db->table("v_realization_overtime");
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
     }
 }

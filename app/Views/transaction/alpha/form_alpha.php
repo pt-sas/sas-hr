@@ -49,7 +49,7 @@
                     <label for="submissiondate">Tanggal Pembuatan <span class="required">*</span></label>
                     <div class="input-icon">
                         <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
-                            value=<?= $today ?>>
+                            value=<?= $today ?> disabled>
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>

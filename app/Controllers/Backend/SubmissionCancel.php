@@ -242,16 +242,19 @@ class SubmissionCancel extends BaseController
                     if ($insert) {
                         $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
 
-                        if ($this->isNew() && $file && $file->isValid()) {
-                            uploadFile($file, $path, $img_name);
+                        if ($this->isNew()) {
+                            if ($file && $file->isValid())
+                                uploadFile($file, $path, $img_name);
                         } else {
                             $row = $this->model->find($this->getID());
-                            if (!empty($row->getImage()) && $post['image'] !== $row->getImage() && file_exists($path . $row->getImage()))
-                                unlink($path . $row->getImage());
 
-                            if ($post['image'] !== $row->getImage() && $file && $file->isValid())
+                            if (empty($post['image']) && !empty($row->getImage()) && file_exists($path . $row->getImage())) {
+                                unlink($path . $row->getImage());
+                            } else {
                                 uploadFile($file, $path, $img_name);
+                            }
                         }
+
 
                         $this->entity->fill($post);
 
@@ -418,11 +421,9 @@ class SubmissionCancel extends BaseController
 
                             $response = message('success', true, true);
                         }
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();
@@ -535,7 +536,7 @@ class SubmissionCancel extends BaseController
                 $today = date('Y-m-d');
                 $where = "v_all_submission.documentno = '{$post['document_no']}'";
                 $where .= " AND v_all_submission.docstatus IN ('CO','IP')";
-                $where .= " AND v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}')";
+                $where .= " AND v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Approval}')";
                 $where .= " AND (v_all_submission.ref_id IS NULL OR v_all_submission.ref_id = 0)";
                 $where .= " AND trx_submission_cancel_detail.trx_submission_cancel_id IS NULL";
                 $where .= " AND v_all_submission.date >= '{$today}'";
@@ -566,7 +567,7 @@ class SubmissionCancel extends BaseController
                 $where = "v_all_submission.employee_id = {$post['md_employee_id']}";
                 $where .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                 $where .= " AND v_all_submission.submissiontype = {$post['ref_submissiontype']}";
-                $where .= " AND v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}')";
+                $where .= " AND v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Approval}')";
                 $where .= " AND (v_all_submission.ref_id IS NULL OR v_all_submission.ref_id = 0)";
                 $where .= " AND trx_submission_cancel_detail.trx_submission_cancel_id IS NULL";
                 $where .= " AND v_all_submission.date >= '{$today}'";

@@ -566,11 +566,7 @@ class M_AbsentDetail extends Model
             }
 
             if ($line->isagree === "H") {
-                if ($sql->submissionType == $mAbsent->Pengajuan_Cuti || ($sql->submissionType == $mAbsent->Pengajuan_Ijin && $sql->submissiondate < $sql->startdate)) {
-
-                    $rule = $mRule->where(['name' => 'Ijin', 'isactive' => 'Y'])->first();
-                    $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin Cuti"])->first();
-
+                if ($sql->submissionType == $mAbsent->Pengajuan_Cuti) {
                     $entity = new \App\Entities\Transaction();
                     $entity->table = $this->table;
                     $entity->transactiondate = $line->date;
@@ -578,11 +574,41 @@ class M_AbsentDetail extends Model
                     $entity->year = date('Y', strtotime($line->date));
                     $entity->record_id = $line->trx_absent_detail_id;
                     $entity->amount = 0;
-                    $entity->reserved_amount = $sql->submissionType == $mAbsent->Pengajuan_Ijin ? $ruleDetail->value : 1;
+                    $entity->reserved_amount = 1;
                     $entity->md_employee_id = $sql->md_employee_id;
                     $entity->isprocessed = 'N';
 
                     $mTransaction->save($entity);
+                }
+
+                if ($sql->submissionType == $mAbsent->Pengajuan_Ijin) {
+                    $leaveBalance = $mLeaveBalance->getTotalBalance($sql->md_employee_id, date("Y", strtotime($line->date)));
+
+                    if ($leaveBalance) {
+                        // Cek apakah saldo carry over ada dan belum expired
+                        $carryOverValid = ($leaveBalance->carry_over_expiry_date && date('Y-m-d', strtotime($line->date)) <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+
+                        // Cek apakah saldo cuti utama ada dan belum expired
+                        $mainLeaveValid = ($leaveBalance->enddate && date('Y-m-d', strtotime($line->date)) <= date('Y-m-d', strtotime($leaveBalance->enddate)));
+
+                        if (($carryOverValid && $leaveBalance->balance_carried > 0) || ($mainLeaveValid && $leaveBalance->balance > 0)) {
+                            $rule = $mRule->where(['name' => 'Ijin', 'isactive' => 'Y'])->first();
+                            $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin Cuti"])->first();
+
+                            $entity = new \App\Entities\Transaction();
+                            $entity->table = $this->table;
+                            $entity->transactiondate = $line->date;
+                            $entity->transactiontype = 'R+';
+                            $entity->year = date('Y', strtotime($line->date));
+                            $entity->record_id = $line->trx_absent_detail_id;
+                            $entity->amount = 0;
+                            $entity->reserved_amount = abs($ruleDetail->value);
+                            $entity->md_employee_id = $sql->md_employee_id;
+                            $entity->isprocessed = 'N';
+
+                            $mTransaction->save($entity);
+                        }
+                    }
                 }
             }
         } catch (\Exception $e) {
