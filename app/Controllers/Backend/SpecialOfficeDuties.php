@@ -3,6 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Absent;
 use Config\Services;
 use App\Models\M_Assignment;
 use App\Models\M_AssignmentDetail;
@@ -174,6 +175,7 @@ class SpecialOfficeDuties extends BaseController
         $mRuleDetail = new M_RuleDetail($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mAbsent = new M_Absent($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -191,14 +193,12 @@ class SpecialOfficeDuties extends BaseController
                 } else {
                     $post["submissiontype"] = $this->model->Pengajuan_Penugasan;
                     $post["necessary"] = 'PG';
-                    $startDate = $post['startdate'];
-                    $endDate = $post['enddate'];
-                    $submissionDate = $post['submissiondate'];
+                    $employeeId = $post['md_employee_id'];
+                    $startDate = date('Y-m-d', strtotime($post['startdate']));
+                    $endDate = date('Y-m-d', strtotime($post['enddate']));
                     $today = date('H:i');
-                    $dateToday = date('Y-m-d');
                     $dateReq = date('Y-m-d', strtotime($startDate));
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
-                    $day = date('w', strtotime($post['startdate']));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
                     $holidays = $mHoliday->getHolidayDate();
 
                     $rule = $mRule->where([
@@ -211,8 +211,9 @@ class SpecialOfficeDuties extends BaseController
 
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'                           => $post['md_employee_id'],
-                        'date_format(validto, "%Y-%m-%d") >='      => $dateToday
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $endDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -220,7 +221,7 @@ class SpecialOfficeDuties extends BaseController
                     } else {
                         //TODO : Get Work Detail
                         $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = {$post['md_employee_id']}";
+                        $whereClause .= " AND md_employee_work.md_employee_id = {$employeeId}";
                         $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
                         $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
@@ -231,7 +232,7 @@ class SpecialOfficeDuties extends BaseController
                         $lastDate = end($nextDate);
 
                         //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
                         //* For Validation Same Day but Checking Max Time
@@ -247,12 +248,9 @@ class SpecialOfficeDuties extends BaseController
                             ->whereIn("md_employee_id", $arrEmpId)
                             ->where("NOT EXISTS (SELECT 1 
                                                 FROM md_employee_work mew
-						                        WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
+                                                WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
                                                 AND date_format(validto, '%Y-%m-%d') >= '{$startDate}'
-                                                AND (SELECT mwd.md_day_id
-                                                    FROM md_work_detail mwd
-                                                    WHERE mwd.md_work_id = mew.md_work_id
-                                                    AND mwd.md_day_id = {$day}))")
+                                                AND date_format(validfrom, '%Y-%m-%d') <= '{$endDate}')")
                             ->findAll();
 
                         if ($endDate > $addDays) {
@@ -261,12 +259,12 @@ class SpecialOfficeDuties extends BaseController
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
                         } else if ($dateReq === $subDate && ($maxMinutes && ($todayMinutes > $maxMinutes))) {
                             $response = message('success', false, 'Maksimal jam pengajuan ' . $ruleDetail->condition);
-                            // } else if ($empWork) {
-                            //     $value = implode(", ", array_map(function ($row) {
-                            //         return $row->value;
-                            //     }, $empWork));
+                        } else if ($empWork) {
+                            $value = implode(", ", array_map(function ($row) {
+                                return $row->value;
+                            }, $empWork));
 
-                            //     $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
+                            $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
                         } else {
                             $this->entity->fill($post);
 
@@ -380,11 +378,9 @@ class SpecialOfficeDuties extends BaseController
 
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, $this->modelSubDetail, true);
                         $response = message('success', true, true);
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();

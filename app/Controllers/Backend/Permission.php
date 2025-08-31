@@ -15,7 +15,6 @@ use App\Models\M_Rule;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_Division;
-use App\Models\M_LeaveBalance;
 use App\Models\M_SubmissionCancelDetail;
 use TCPDF;
 
@@ -173,7 +172,6 @@ class Permission extends BaseController
         $mRule = new M_Rule($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
-        $mLeaveBalance = new M_LeaveBalance($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -191,7 +189,6 @@ class Permission extends BaseController
                     $startDate = date('Y-m-d', strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
                     $subDate = date('Y-m-d', strtotime($post['submissiondate']));
-                    $isFuture = $startDate > $subDate ? true : false;
 
                     $rule = $mRule->where([
                         'name'      => 'Ijin',
@@ -204,8 +201,8 @@ class Permission extends BaseController
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
                         'md_employee_id'    => $employeeId,
-                        'validfrom <='      => $subDate,
-                        'validto >='        => $subDate
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $endDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -244,66 +241,63 @@ class Permission extends BaseController
 
                         //TODO : Get Max Last Date for Submission Past
                         if ($startDate <= $subDate) {
-                            $lastDate = $endDate;
+                            $attDate = [];
+                            $lastDate = [];
                             $daysOffStr = implode(', ', $daysOff);
-                            for ($i = 0; $i < $minDays; $i++) {
+
+                            $date_range = getDatesFromRange($startDate, $subDate, [], 'Y-m-d', 'all', []);
+
+                            foreach ($date_range as $date) {
                                 $whereClause = "v_attendance.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND v_attendance.date > '{$lastDate}'";
+                                $whereClause .= " AND v_attendance.date = '{$date}'";
                                 $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
                                 $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
 
                                 $whereClause = "trx_absent.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '$lastDate'";
-                                $whereClause .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Tugas_Kantor}";
+                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '$date'";
+                                $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
                                 $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
                                 $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOffStr})";
                                 $trxPresentNextDay =  $this->modelDetail->getAbsentDetail($whereClause)->getRow();
 
-                                if (!$attPresentNextDay && $trxPresentNextDay) {
-                                    $lastDate = date('Y-m-d', strtotime($trxPresentNextDay->date));
-                                } elseif ($attPresentNextDay && !$trxPresentNextDay) {
-                                    $lastDate = date('Y-m-d', strtotime($attPresentNextDay->date));
-                                } elseif ($attPresentNextDay && $trxPresentNextDay) {
-                                    $attDate = strtotime($attPresentNextDay->date);
-                                    $trxDate = strtotime($trxPresentNextDay->date);
-                                    $lastDate = date('Y-m-d', min($attDate, $trxDate));
+                                if ($attPresentNextDay || $trxPresentNextDay) {
+                                    $attDate[] = $date;
+                                }
+
+                                $lastDate[] = $date;
+
+                                if (count($attDate) == $minDays) {
+                                    break;
                                 }
                             }
+                            $lastDate = end($lastDate);
                         }
+
                         //TODO : Get submission one day
                         $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
                         $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
                         $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
                         $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                        $trx = $this->model->getAllSubmission($whereClause)->getResult();
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
 
                         //TODO : Get Max Days for Submission Future
                         $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
-                        // TODO : Calculate Total Days Permission
-                        $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
-                        $totalDays = count($dateRange);
-
-                        // TODO : Get Leave Balance
-                        $leaveBalance = $mLeaveBalance->getTotalBalance($employeeId, date("Y", strtotime($startDate)));
-
-                        if ($endDate > $addDays) {
+                        if ($trx) {
+                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                        } else if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if (!empty($lastDate) && ($lastDate < $subDate) && $work) {
-                            $lastDate = format_dmy($lastDate, '-');
-
-                            $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
                         } else if ($attPresent) {
                             $date = implode(", ", array_map(function ($value) {
                                 return format_dmy($value->date, '-');
                             }, $attPresent));
 
                             $response = message('success', false, 'Ada kehadiran, tidak bisa mengajukan pada tanggal : [' . $date . ']');
-                        } else if ($trx) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
-                        } else if (is_null($leaveBalance)) {
-                            $response = message('success', false, 'Saldo cuti tidak tersedia');
+                        } else if (!empty($lastDate) && ($lastDate < $subDate) && $work) {
+                            $lastDate = format_dmy($lastDate, '-');
+
+                            $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
                         } else {
                             $this->entity->fill($post);
 
@@ -314,23 +308,7 @@ class Permission extends BaseController
                                 $this->entity->setDocumentNo($docNo);
                             }
 
-                            // Cek apakah saldo carry over ada dan belum expired
-                            $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
-
-                            // Cek apakah saldo cuti utama ada dan belum expired
-                            $mainLeaveValid = ($leaveBalance->enddate && $endDate <= date('Y-m-d', strtotime($leaveBalance->enddate)));
-
-                            if ($isFuture && $carryOverValid && ($leaveBalance->balance_carried <= 0 || $totalDays > $leaveBalance->balance_carried)) {
-                                $response = message('success', false, 'Saldo carry over tidak cukup atau sudah expired');
-                            } else {
-                                if ($isFuture && !$mainLeaveValid) {
-                                    $response = message('success', false, 'Belum bisa mengajukan sudah expired');
-                                } else if ($isFuture && ($leaveBalance->balance <= 0 || $totalDays > $leaveBalance->balance)) {
-                                    $response = message('success', false, 'Saldo utama tidak cukup atau sudah expired');
-                                } else {
-                                    $response = $this->save();
-                                }
-                            }
+                            $response = $this->save();
                         }
                     }
                 }
@@ -405,32 +383,43 @@ class Permission extends BaseController
 
             $row = $this->model->find($_ID);
             $menu = $this->request->uri->getSegment(2);
+            $startDate = date('Y-m-d', strtotime($row->startdate));
+            $endDate = date('Y-m-d', strtotime($row->enddate));
 
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
 
-                        if (empty($line)) {
-                            // TODO : Create Line if not exist
-                            $data = [
-                                'id'        => $_ID,
-                                'created_by' => $this->access->getSessionUser(),
-                                'updated_by' => $this->access->getSessionUser()
-                            ];
+                        if ($trx) {
+                            $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
+                        } else {
+                            $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 
-                            $this->model->createAbsentDetail($data, $row);
+                            if (empty($line)) {
+                                // TODO : Create Line if not exist
+                                $data = [
+                                    'id'        => $_ID,
+                                    'created_by' => $this->access->getSessionUser(),
+                                    'updated_by' => $this->access->getSessionUser()
+                                ];
+
+                                $this->model->createAbsentDetail($data, $row);
+                            }
+
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
+                            $response = message('success', true, true);
                         }
-
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
-                        $response = message('success', true, true);
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();

@@ -168,9 +168,11 @@ class HalfDayOfficeDuties extends BaseController
         $mRule = new M_Rule($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mEmployee = new M_Employee($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $file = $this->request->getFile('image');
 
             $post["submissiontype"] = $this->model->Pengajuan_Tugas_Kantor_setengah_Hari;
             $post["necessary"] = 'TH';
@@ -178,18 +180,30 @@ class HalfDayOfficeDuties extends BaseController
             $post["enddate"] = date('Y-m-d', strtotime($post["dateend"])) . " " . $post['endtime'];
             $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
-            $day = date('w');
 
             try {
+                $img_name = "";
+
+                if (!empty($employeeId)) {
+                    $row = $mEmployee->find($employeeId);
+                    $lenPos = strpos($row->getValue(), '-');
+                    $value = substr_replace($row->getValue(), "", $lenPos);
+                    $ymd = date('YmdHis');
+                }
+
+                if ($file && $file->isValid()) {
+                    $ext = $file->getClientExtension();
+                    $img_name = $this->model->Pengajuan_Tugas_Kantor_setengah_Hari . '_' . $value . '_' . $ymd . '.' . $ext;
+                    $post['image'] = $img_name;
+                }
+
                 if (!$this->validation->run($post, 'pengajuantugas')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $holidays = $mHoliday->getHolidayDate();
                     $startDate = date('Y-m-d', strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $nik = $post['nik'];
-                    $submissionDate = $post['submissiondate'];
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
+                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
 
                     $rule = $mRule->where([
                         'name'      => 'Tugas Kantor Setengah Hari',
@@ -201,9 +215,9 @@ class HalfDayOfficeDuties extends BaseController
 
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today,
-                        'validto >='        => $today
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $startDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -221,26 +235,39 @@ class HalfDayOfficeDuties extends BaseController
                         //* last index of array from variable nextDate
                         $lastDate = end($nextDate);
 
-                        //TODO : Get submission
-                        $dateStartClause = date('Y-m-d', strtotime($startDate));
-
-                        $whereClause = "trx_absent.nik = '{$nik}'";
-                        $whereClause .= " AND DATE_FORMAT(trx_absent.startdate, '%Y-%m-%d') >= '{$dateStartClause}' AND DATE_FORMAT(trx_absent.enddate, '%Y-%m-%d') <= '{$endDate}'";
-                        $whereClause .= " AND trx_absent.docstatus = '{$this->DOCSTATUS_Completed}'";
-                        $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
-                        $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
+                        //TODO : Get submission Half Day Office
+                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
 
                         //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($submissionDate, [], $maxDays, false, [], true);
+                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
                         $addDays = end($addDays);
 
-                        if ($endDate > $addDays) {
-                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if ($lastDate < $subDate) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
-                        } else if ($trx) {
+                        if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                        } else if ($endDate > $addDays) {
+                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                        } else if (!empty($lastDate) && ($lastDate < $subDate)) {
+                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
                         } else {
+                            $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                            if ($this->isNew()) {
+                                if ($file && $file->isValid())
+                                    uploadFile($file, $path, $img_name);
+                            } else {
+                                $row = $this->model->find($this->getID());
+
+                                if (empty($post['image']) && !empty($row->getImage()) && file_exists($path . $row->getImage())) {
+                                    unlink($path . $row->getImage());
+                                } else {
+                                    uploadFile($file, $path, $img_name);
+                                }
+                            }
+
                             $this->entity->fill($post);
 
                             if ($this->isNew()) {
@@ -272,6 +299,15 @@ class HalfDayOfficeDuties extends BaseController
                 $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
+                $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                if (file_exists($path . $list[0]->getImage())) {
+                    $path = 'uploads/' . $this->PATH_Pengajuan . '/';
+                    $list[0]->setImage($path . $list[0]->getImage());
+                } else {
+                    $list[0]->setImage(null);
+                }
+
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
@@ -282,10 +318,13 @@ class HalfDayOfficeDuties extends BaseController
                 $list[0]->datestart = format_dmy($list[0]->startdate, "-");
                 $list[0]->dateend = format_dmy($list[0]->enddate, "-");
 
+                $list[0]->starttime_realization = $list[0]->startdate_realization != "0000-00-00 00:00:00" ? format_time($list[0]->startdate_realization) : '';
+                $list[0]->endtime_realization = $list[0]->enddate_realization != "0000-00-00 00:00:00" ? format_time($list[0]->enddate_realization) : '';
+
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
-                $fieldHeader->setField(["starttime", "endtime", "datestart", "dateend"]);
+                $fieldHeader->setField(["starttime", "endtime", "datestart", "dateend", 'starttime_realization', 'endtime_realization']);
                 $fieldHeader->setList($list);
 
                 $result = [
@@ -328,19 +367,30 @@ class HalfDayOfficeDuties extends BaseController
 
             $row = $this->model->find($_ID);
             $menu = $this->request->uri->getSegment(2);
+            $startDate = date('Y-m-d', strtotime($row->startdate));
+            $endDate = date('Y-m-d', strtotime($row->enddate));
 
             try {
                 if (!empty($_DocAction)) {
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                        $response = message('success', true, true);
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                        //TODO : Get submission Half Day Office
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
+
+                        if ($trx) {
+                            $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
+                        } else {
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                            $response = message('success', true, true);
+                        }
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();
@@ -382,6 +432,27 @@ class HalfDayOfficeDuties extends BaseController
         }
 
         return json_encode($table);
+    }
+
+    public function getRealizationData()
+    {
+        if ($this->request->isAJAX()) {
+            $post = $this->request->getVar();
+
+            try {
+                $line = $this->modelDetail->find($post['id']);
+                $row = $this->model->find($line->trx_absent_id);
+
+                $response = [
+                    'starttime' => format_time($row->startdate),
+                    'endtime' => format_time($row->enddate)
+                ];
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
     }
 
     public function exportPDF($id)

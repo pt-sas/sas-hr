@@ -202,8 +202,8 @@ class Leave extends BaseController
                     //TODO : Get work day employee
                     $workDay = $mEmpWork->where([
                         'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $subDate,
-                        'validto >='        => $subDate
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $endDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     if (is_null($workDay)) {
@@ -226,7 +226,7 @@ class Leave extends BaseController
                         $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
                         $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
                         $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                        $trx = $this->model->getAllSubmission($whereClause)->getResult();
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
 
                         //TODO : Get Max Days for Submission Future
                         $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
@@ -239,14 +239,14 @@ class Leave extends BaseController
                         // TODO : Get Leave Balance
                         $leaveBalance = $mLeaveBalance->getTotalBalance($employeeId, date("Y", strtotime($startDate)));
 
-                        if ($endDate > $addDays) {
-                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if ($startDate <= $lastDate) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada tanggal ' . format_dmy($startDate, "-") . ', karena tidak sesuai dengan batas pengajuan');
-                        } else if ($trx) {
+                        if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
                         } else if (is_null($leaveBalance)) {
                             $response = message('success', false, 'Saldo cuti tidak tersedia');
+                        } else if ($endDate > $addDays) {
+                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                        } else if ($startDate <= $lastDate) {
+                            $response = message('success', false, 'Tidak bisa mengajukan pada tanggal ' . format_dmy($startDate, "-") . ', karena tidak sesuai dengan batas pengajuan');
                         } else {
                             $this->entity->fill($post);
 
@@ -352,7 +352,9 @@ class Leave extends BaseController
 
             $row = $this->model->find($_ID);
             $menu = $this->request->uri->getSegment(2);
-            $today = date("Y-m-d");
+
+            $endDate = date('Y-m-d', strtotime($row->enddate));
+            $startDate = date("Y-m-d", strtotime($row->startdate));
 
             try {
                 if (!empty($_DocAction)) {
@@ -363,8 +365,8 @@ class Leave extends BaseController
 
                         $workDay = $mEmpWork->where([
                             'md_employee_id'    => $row->md_employee_id,
-                            'validfrom <='      => $today,
-                            'validto >='        => $today
+                            'validfrom <='      => $startDate,
+                            'validto >='        => $endDate
                         ])->orderBy('validfrom', 'ASC')->first();
 
                         //TODO : Get Work Detail
@@ -375,15 +377,21 @@ class Leave extends BaseController
 
                         $daysOff = getDaysOff($workDetail);
 
-                        $endDate = date('Y-m-d', strtotime($row->enddate));
-                        $startDate = date("Y-m-d", strtotime($row->startdate));
-
                         $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
                         $totalDays = count($dateRange);
 
+                        //TODO : Get submission one day
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
+
                         $leaveBalance = $mLeaveBalance->getTotalBalance($row->md_employee_id, date("Y", strtotime($startDate)));
 
-                        if (is_null($leaveBalance)) {
+                        if ($trx) {
+                            $response = message('success', false, 'Tidak bisa proses pengajuan, karena sudah ada pengajuan lain');
+                        } else if (is_null($leaveBalance)) {
                             $response = message('error', true, 'Saldo cuti tidak tersedia');
                         } else {
                             // Cek apakah saldo carry over ada dan belum expired
@@ -418,11 +426,9 @@ class Leave extends BaseController
                                 }
                             }
                         }
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();

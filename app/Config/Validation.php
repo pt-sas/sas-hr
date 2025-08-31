@@ -2517,7 +2517,7 @@ class Validation
     public $pembatalan_cuti = [
         'image'                 => [
             'label'             => 'foto',
-            'rules'             => 'required|max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
                 'required'      => 'Mohon pilih {field} dahulu',
                 'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',

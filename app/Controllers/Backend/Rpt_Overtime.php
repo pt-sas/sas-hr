@@ -146,7 +146,7 @@ class Rpt_Overtime extends BaseController
         $excel->getActiveSheet()->getStyle("A3:{$jumlahCol}3")->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER); // Set text center untuk kolom A1
 
         $whereClause = "trx_overtime.startdate BETWEEN '{$firstDate} 00:00:00' AND '{$lastDate} 23:59:59'";
-        $whereClause .= " AND trx_overtime_detail.status = 'Y'";
+        $whereClause .= " AND trx_overtime_detail.isagree = 'Y'";
         $whereClause .= " AND trx_overtime.docstatus = 'CO'";
 
         if (isset($md_branch_id)) {
@@ -382,7 +382,7 @@ class Rpt_Overtime extends BaseController
         $excel->getActiveSheet()->getStyle('I5')->applyFromArray($style_col); // Set Merge Cell
 
         $whereClause = "trx_overtime.startdate BETWEEN '{$date} 00:00:00' AND '{$date} 23:59:59'";
-        $whereClause .= " AND trx_overtime_detail.status = 'Y'";
+        $whereClause .= " AND trx_overtime_detail.isagree = 'Y'";
         $whereClause .= " AND trx_overtime.docstatus = 'CO'";
 
         if (isset($md_branch_id)) {
@@ -573,7 +573,7 @@ class Rpt_Overtime extends BaseController
         $excel->getActiveSheet()->getStyle("{$saldoCol}5:{$jumlahCol}5")->applyFromArray($style_col);
 
         $whereClause = "trx_overtime.startdate BETWEEN '{$firstDate} 00:00:00' AND '{$lastDate} 23:59:59'";
-        $whereClause .= " AND trx_overtime_detail.status = 'Y'";
+        $whereClause .= " AND trx_overtime_detail.isagree = 'Y'";
         $whereClause .= " AND trx_overtime.docstatus = 'CO'";
 
         if (isset($md_branch_id)) {

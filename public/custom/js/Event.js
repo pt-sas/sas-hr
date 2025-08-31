@@ -1730,7 +1730,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
   if (parent.hasClass("table_hrd")) {
     formType = tr.find("td:eq(2)").text();
     submissionDate = tr.find("td:eq(1)").text();
-    description = tr.find("td:eq(6)");
+    description = tr.find("td:eq(7)");
     if (description.find("span").length)
       leaveTypeID = description.find("span").attr("id");
 
@@ -1821,7 +1821,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
 
     if (this.name === "agree") {
       const form = $(
-        "#form_attendance_realization_sup_agree, #form_assignment_realization_sup_agree_officeduties, #form_assignment_realization_sup_agree"
+        "#form_attendance_realization_sup_agree, #form_assignment_realization_sup_agree_officeduties, #form_assignment_realization_sup_agree, #form_assignment_realization_sup_agree_halfdayofficeduties"
       );
 
       if (formType == "Tugas Kantor") {
@@ -1831,6 +1831,11 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
         });
       } else if (formType == "Penugasan") {
         $("#modal_assignment_realization_sup_agree").modal({
+          backdrop: "static",
+          keyboard: false,
+        });
+      } else if (formType == "Tugas Kantor Setengah Hari") {
+        $("#modal_assignment_realization_sup_agree_halfdayofficeduties").modal({
           backdrop: "static",
           keyboard: false,
         });
@@ -1889,6 +1894,23 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
               .change();
             form.find("input[name=starttime_att]").val(result.clock_in);
             form.find("input[name=endtime_att]").val(result.clock_out);
+          },
+          error: function (jqXHR, exception) {
+            showError(jqXHR, exception);
+          },
+        });
+      }
+
+      if (formType == "Tugas Kantor Setengah Hari") {
+        $.ajax({
+          url: ADMIN_URL + "tugas-kantor-fka/getRealizationData",
+          type: "POST",
+          data: { id: ID },
+          caches: false,
+          dataType: "JSON",
+          success: function (result) {
+            form.find("input[name=starttime_att]").val(result.starttime);
+            form.find("input[name=endtime_att]").val(result.endtime);
           },
           error: function (jqXHR, exception) {
             showError(jqXHR, exception);
@@ -2212,9 +2234,20 @@ $(".btn_ok_anulir").on("click", function (evt) {
 
 _tableRealization.on("click", ".btn_view_image", function (e) {
   const tr = $(this).closest("tr");
+  const table = $(this).closest("table");
+
   let submissionDate = tr.find("td:eq(1)").text();
-  let formType = tr.find("td:eq(2)").text();
-  let employee = tr.find("td:eq(5)").text();
+  let formType;
+  let employee;
+
+  if (table.hasClass("table_superior")) {
+    formType = tr.find("td:eq(4)").text();
+    employee = tr.find("td:eq(7)").text();
+  } else {
+    formType = tr.find("td:eq(2)").text();
+    employee = tr.find("td:eq(5)").text();
+  }
+
   let id = this.id;
 
   const modal = $("#modal_image_slide");
@@ -2310,7 +2343,7 @@ $(".form-half-day").on(
     let url = ADMIN_URL + "Kehadiran/getJamAbsen";
 
     if (
-      new Date($("#startdate").val()).getTime() <=
+      new Date($("#startdate").val()).getTime() <
       new Date($("#submissiondate").val()).getTime()
     ) {
       $("#starttime").prop("disabled", true);

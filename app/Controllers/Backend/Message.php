@@ -3,6 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Employee;
 use App\Models\M_Message;
 use App\Models\M_User;
 use Pusher\Pusher;
@@ -227,6 +228,7 @@ class Message extends BaseController
     {
         $cMail = new Mail();
         $cTelegram = new Telegram();
+        $mEmployee = new M_Employee($this->request);
 
         $plainMessage = (new Html2Text($message))->getText();
 
@@ -252,8 +254,9 @@ class Message extends BaseController
             $cMail->sendEmail($user_to->email, $subject, $plainMessage, $user_from ? $user_from->email : null, $yourname, $attachment);
         }
 
-        if ($sendTelegram && !empty($user_to->telegram_id)) {
-            $cTelegram->sendMessage($user_to->telegram_id, $plainMessage);
+        if ($sendTelegram && !empty($user_to->md_employee_id)) {
+            $employee = $mEmployee->find($user_to->md_employee_id);
+            $cTelegram->sendMessage($employee->telegram_id, $plainMessage);
         }
     }
 }

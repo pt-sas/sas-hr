@@ -15,6 +15,11 @@ class DocumentType extends Entity
     protected $created_by;
     protected $updated_by;
     protected $leader_id;
+    protected $is_realization_mgr;
+    protected $days_realization_mgr;
+    protected $is_realization_hrd;
+    protected $days_realization_hrd;
+    protected $auto_not_approve_days;
 
     protected $dates   = [
         'created_at',
@@ -120,5 +125,55 @@ class DocumentType extends Entity
     public function setUpdatedBy($updated_by)
     {
         $this->attributes['updated_by'] = $updated_by;
+    }
+
+    public function getIsRealizationMgr()
+    {
+        return $this->attributes['is_realization_mgr'];
+    }
+
+    public function setIsRealizationMgr($is_realization_mgr)
+    {
+        $this->attributes['is_realization_mgr'] = $is_realization_mgr;
+    }
+
+    public function getDaysRealizationMgr()
+    {
+        return $this->attributes['days_realization_mgr'];
+    }
+
+    public function setDaysRealizationMgr($days_realization_mgr)
+    {
+        $this->attributes['days_realization_mgr'] = $days_realization_mgr;
+    }
+
+    public function getIsRealizationHrd()
+    {
+        return $this->attributes['is_realization_hrd'];
+    }
+
+    public function setIsRealizationHrd($is_realization_hrd)
+    {
+        $this->attributes['is_realization_hrd'] = $is_realization_hrd;
+    }
+
+    public function getDaysRealizationHrd()
+    {
+        return $this->attributes['days_realization_hrd'];
+    }
+
+    public function setDaysRealizationHrd($days_realization_hrd)
+    {
+        $this->attributes['days_realization_hrd'] = $days_realization_hrd;
+    }
+
+    public function getAutoNotApproveDays()
+    {
+        return $this->attributes['auto_not_approve_days'];
+    }
+
+    public function setAutoNotApproveDays($auto_not_approve_days)
+    {
+        $this->attributes['auto_not_approve_days'] = $auto_not_approve_days;
     }
 }

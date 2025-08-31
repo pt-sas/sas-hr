@@ -27,7 +27,7 @@ class M_SubmissionCancelDetail extends Model
     protected $beforeInsert         = [];
     protected $afterInsert          = [];
     protected $beforeUpdate         = [];
-    protected $afterUpdate          = [];
+    protected $afterUpdate          = ['createAllowance'];
     protected $beforeDelete         = [];
     protected $afterDelete          = [];
     protected $request;
@@ -79,12 +79,18 @@ class M_SubmissionCancelDetail extends Model
         $result = [];
 
         $number = 1;
+        if (isset($dataHeader->trx_submission_cancel_id))
+            $header = $mSubmissionCancel->find($dataHeader->trx_submission_cancel_id);
+
+        $reference_id = empty($header) ? $dataHeader->reference_id : $header->reference_id;
+        $ref_submissiontype = empty($header) ? $dataHeader->ref_submissiontype : $header->ref_submissiontype;
 
         foreach ($data as $row) :
             if (property_exists($row, "lineno"))
                 $row->lineno = $number;
 
             if (!property_exists($row, "reference_id")) {
+
                 // if (isset($dataHeader->trx_submission_cancel_id)) {
                 //     $header = $mSubmissionCancel->find($dataHeader->trx_submission_cancel_id);
 
@@ -93,8 +99,8 @@ class M_SubmissionCancelDetail extends Model
                 //     $where .= " AND date = '{$row->date}'";
                 //     $where .= " AND md_employee_id = {$row->md_employee_id}";
                 // } else {
-                $where = "header_id = {$dataHeader->reference_id}";
-                $where .= " AND submissiontype = {$dataHeader->ref_submissiontype}";
+                $where = "header_id = {$reference_id}";
+                $where .= " AND submissiontype = {$ref_submissiontype}";
                 $where .= " AND date = '{$row->date}'";
                 $where .= " AND md_employee_id = {$row->md_employee_id}";
                 // }

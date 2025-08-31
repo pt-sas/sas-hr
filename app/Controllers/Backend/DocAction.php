@@ -39,7 +39,7 @@ class DocAction extends BaseController
                         'menu'      => $post['url'],
                         'isactive'  => 'Y',
                         'sys_role_id'   => $this->access->getSessionRole()
-                    ])->whereNotIn('ref_list', [$this->DOCSTATUS_Completed])->findAll();
+                    ])->whereNotIn('ref_list', [$this->DOCSTATUS_Completed, $this->DOCSTATUS_Voided])->findAll();
                 }
 
                 foreach ($list as $key => $row) :

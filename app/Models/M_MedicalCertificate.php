@@ -185,7 +185,7 @@ class M_MedicalCertificate extends Model
             //Ini untuk bagian field nama dan tanggal pengajuan
             $pdf->Cell(30, 0, 'Nama ', 0, 0, 'L', false, '', 0, false);
             $pdf->Cell(90, 0, ': ' . $employee->fullname, 0, 0, 'L', false, '', 0, false);
-            $pdf->Cell(40, 0, 'Tanggal Pengajuan', 0, 0, 'L', false, '', 0, false);
+            $pdf->Cell(40, 0, 'Tanggal Pembuatan', 0, 0, 'L', false, '', 0, false);
             $pdf->Cell(30, 0, ': ' . format_dmy($list->submissiondate, '-'), 0, 1, 'L', false, '', 0, false);
             $pdf->Ln(2);
             //Ini untuk bagian field divisi dan Tanggal diterima

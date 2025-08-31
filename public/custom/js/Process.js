@@ -159,7 +159,7 @@ $(document).ready(function (e) {
       showClear: true,
       showClose: true,
       useCurrent: false,
-      minDate: Date(),
+      // minDate: Date(),
     });
 
     $(".datepick").datetimepicker({

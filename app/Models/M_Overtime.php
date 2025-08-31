@@ -96,7 +96,7 @@ class M_Overtime extends Model
         trx_overtime_detail.overtime_balance,
         trx_overtime_detail.overtime_expense,
         trx_overtime_detail.total,
-        trx_overtime_detail.status,
+        trx_overtime_detail.isagree,
         md_branch.name as branch_name,
         md_division.name as division_name';
 
@@ -176,7 +176,7 @@ class M_Overtime extends Model
         trx_overtime_detail.overtime_balance,
         trx_overtime_detail.overtime_expense,
         trx_overtime_detail.total,
-        trx_overtime_detail.status,
+        trx_overtime_detail.isagree,
         md_branch.name as branch_name,
         md_division.name as division_name');
 
@@ -194,5 +194,30 @@ class M_Overtime extends Model
         $this->builder->orderBy('trx_overtime_detail.startdate', 'ASC');
 
         return $this->builder->get();
+    }
+
+    public function doAfterUpdate(array $rows)
+    {
+        $mOvertimeDetail = new M_OvertimeDetail($this->request);
+
+        $ID = $rows['id'][0] ?? $rows['id'];
+
+        $sql = $this->find($ID);
+        $line = $mOvertimeDetail->where($this->primaryKey, $ID)->findAll();
+        $updatedBy = $rows['data']['updated_by'] ?? session()->get('id');
+
+        if (
+            $sql->getIsApproved() === 'Y' && ($sql->docstatus === "IP" || $sql->docstatus === "CO") && !is_null($line)
+        ) {
+            foreach ($line as $row) {
+                $entity = new \App\Entities\OvertimeDetail();
+
+                $entity->trx_overtime_detail_id = $row->trx_overtime_detail_id;
+                $entity->updated_by = $updatedBy;
+                $entity->isagree = $sql->docstatus === "IP" ? 'M' : 'Y';
+
+                $mOvertimeDetail->save($entity);
+            }
+        }
     }
 }

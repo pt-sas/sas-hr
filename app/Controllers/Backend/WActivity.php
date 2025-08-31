@@ -14,6 +14,7 @@ use App\Models\M_Menu;
 use App\Models\M_Datatable;
 use App\Models\M_NotificationText;
 use App\Models\M_DocumentType;
+use App\Models\M_Employee;
 use Config\Services;
 use Pusher\Pusher;
 use Html2Text\Html2Text;
@@ -70,7 +71,12 @@ class WActivity extends BaseController
                         }
                     } else if ($trx && $tableLine) {
                         $created_at = format_dmytime($trx->created_at, "-");
-                        $date = format_dmy($trx->date, "-");
+
+                        if ($value->table == "trx_overtime") {
+                            $date = format_dmy($trx->startdate, "-");
+                        } else {
+                            $date = format_dmy($trx->date, "-");
+                        }
                         $summary = "{$menuName} {$trx->documentno} [$trx->value / {$date}] : {$trx->usercreated_by}";
                     } else {
                         $summary = "{$menuName} {$record_id}";
@@ -109,7 +115,8 @@ class WActivity extends BaseController
         $mWfsD = new M_WScenarioDetail($this->request);
         $mNotifText = new M_NotificationText($this->request);
         $mDocType = new M_DocumentType($this->request);
-        $cMail = new Mail();
+        $mEmployee = new M_Employee($this->request);
+        $cTelegram = new Telegram();
         $cMessage = new Message();
 
         $modelAct = new M_WActivity($this->request);
@@ -144,8 +151,7 @@ class WActivity extends BaseController
                 'isactive'                => 'Y'
             ])->orderBy('lineno', 'DESC')->first();
 
-            //TODO : Get data Notification Text Template
-            $dataNotif = $mNotifText->find($dataScenLine->getNotifTextId());
+            $employee = null;
 
             if ($tableLine) {
                 $model = new M_Datatable($this->request);
@@ -188,8 +194,18 @@ class WActivity extends BaseController
                 $this->entity->approveddate = date("Y-m-d H:i:s");
             }
 
-            //* Get data text from notification text template 
-            $message = $dataNotif->getText();
+
+            //TODO : Get Approval Notification Text Template
+            if ($docType->isapprovedline == 'Y' && $table == "trx_absent") {
+                $emp = $mEmployee->find($trx->md_employee_id);
+                $dataNotif = $mNotifText->where('name', 'Email Approval Line')->first();
+                $subject = $dataNotif->getSubject();
+                $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date)), $emp->fullname], $dataNotif->getText());
+            } else {
+                $dataNotif = $mNotifText->where('name', 'Email Approval')->first();
+                $subject = $dataNotif->getSubject();
+                $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
+            }
 
             if (empty($sys_wfactivity_id)) {
                 $entityAct->setWfResponsibleId($sys_wfresponsible_id);
@@ -246,7 +262,16 @@ class WActivity extends BaseController
                         $this->entity->isapproved = "N";
 
                         //TODO : Get data Notification Not Approved Text Template
-                        $dataNotif = $mNotifText->find($this->Notif_NotApproved);
+                        if ($docType->isapprovedline == 'Y' && $table == "trx_absent") {
+                            $employee = $mEmployee->find($trx->md_employee_id);
+                            $dataNotif = $mNotifText->where('name', 'Email Not Approved Line')->first();
+                            $subject = $dataNotif->getSubject();
+                            $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date))], $dataNotif->getText());
+                        } else {
+                            $dataNotif = $mNotifText->where('name', 'Email Not Approved')->first();
+                            $subject = $dataNotif->getSubject();
+                            $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, $submissionDate], $dataNotif->getText());
+                        }
                     } else {
                         $state = $this->DOCSTATUS_Completed;
                         $processed = true;
@@ -269,7 +294,8 @@ class WActivity extends BaseController
                                 100010 => 'M', // Lupa Absen Masuk
                                 100011 => 'M', // Lupa Absen Pulang
                                 100018 => 'S', // Pembatalan
-                                100013 => 'S'  // Pulang Cepat
+                                100013 => 'M', // Pulang Cepat
+                                100009 => 'M'  // Tugas Kantor 1/2 Hari
                             ];
 
                             $this->entity->isagree = $subType[$docType->getDocTypeId()];
@@ -289,7 +315,16 @@ class WActivity extends BaseController
                         }
 
                         //TODO : Get data Notification Approved Text Template
-                        $dataNotif = $mNotifText->find($this->Notif_Approved);
+                        if ($docType->isapprovedline == 'Y' && $table == "trx_absent") {
+                            $employee = $mEmployee->find($trx->md_employee_id);
+                            $dataNotif = $mNotifText->where('name', 'Email Approved Line')->first();
+                            $subject = $dataNotif->getSubject();
+                            $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date))], $dataNotif->getText());
+                        } else {
+                            $dataNotif = $mNotifText->where('name', 'Email Approved')->first();
+                            $subject = $dataNotif->getSubject();
+                            $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
+                        }
                     }
 
                     //TODO: Save data update 
@@ -298,9 +333,6 @@ class WActivity extends BaseController
 
                     //TODO : Get data user based on createdby
                     $dataUser = $mUser->where($mUser->primaryKey, $trx->created_by)->findAll();
-
-                    //* Get data text from notification text template
-                    $message = $dataNotif->getText();
                 }
 
                 $entityAct->setWfResponsibleId($sys_wfresponsible_id);
@@ -312,38 +344,21 @@ class WActivity extends BaseController
                 $result = $modelAct->save($entityAct);
             }
 
-            //TODO : Get data from field email 
-            $email = array_column($dataUser, "email");
-
-            //TODO : Filter the data use array_unique remove duplicate value then array_filter and exclude null value 
-            $filtered_email = array_unique(array_filter($email));
-
-            //TODO : Get data by value only
-            $arr_email = array_values($filtered_email);
-
             /**
-             * TODO: Send Email information
+             * TODO: Send information
              */
-            if (isset($trx->documentno))
-                $subject = "[" . ucwords($menuName) . "_" . $trx->documentno . "]";
-            else
-                $subject = "[" . ucwords($menuName) . "]";
-
-            $subject .= " - " . $dataNotif->getSubject();
-            $message .= "-----" . " " . ucwords($menuName) . " " . $trx->documentno;
-
-            // $message = new Html2Text($message);
-            // $message = $message->getText();
-
-            // foreach ($arr_email as $email) {
-            //     $cMail->sendEmail($email, $subject, $message, null, "SAS HR");
-            // }
 
             foreach ($dataUser as $users) {
-                $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
+                if (!empty($employee) && !empty($employee->telegram_id)) {
+                    $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, false, true);
+                } else {
+                    $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
+                }
             }
 
-            $this->toForwardAlert('sys_wfresponsible', $sys_wfresponsible_id, $subject, $message);
+            if (!empty($employee) && !empty($employee->telegram_id)) {
+                $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
+            }
 
             $options = array(
                 'cluster' => 'ap1',
