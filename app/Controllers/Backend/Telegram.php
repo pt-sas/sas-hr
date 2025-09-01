@@ -69,7 +69,7 @@ class Telegram extends BaseController
                 $row = ['telegram_id' => $data['id']];
                 $mEmployee->builder->update($row, [$mEmployee->primaryKey => $emp->md_employee_id]);
 
-                $message = "Halo {$emp->fullname}, Telegram ID sudah diset ke Harmony {$data['id']}.";
+                $message = "Halo {$emp->fullname}, Telegram ID sudah diset ke Harmony dengan id : {$data['id']}.";
                 $this->sendMessage($data['id'], $message);
             }
         }
