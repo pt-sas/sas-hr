@@ -54,6 +54,9 @@ $routes->get('cron-delegation-transfer', 'Backend\DelegationTransfer::delegation
 $routes->get('cron-delegation-absent', 'Backend\User::sendEmailWhenDelegationAbsent');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
+$routes->post('/iclock/ldata', 'IclockApi::receiveLocal');
+$routes->get('/iclock/lastlog', 'IclockApi::lastLogMachine');
+$routes->post('/iclock/updatelastlog', 'IclockApi::updateLastLog');
 $routes->post('/telegramHook', 'Backend\Telegram::telegramHook');
 
 $routes->group('sas', ['filter' => 'auth'], function ($routes) {
