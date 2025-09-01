@@ -577,6 +577,8 @@ class M_AbsentDetail extends Model
                     $entity->reserved_amount = 1;
                     $entity->md_employee_id = $sql->md_employee_id;
                     $entity->isprocessed = 'N';
+                    $entity->created_by = $updated_by;
+                    $entity->updated_by = $updated_by;
 
                     $mTransaction->save($entity);
                 }
@@ -605,6 +607,9 @@ class M_AbsentDetail extends Model
                             $entity->reserved_amount = abs($ruleDetail->value);
                             $entity->md_employee_id = $sql->md_employee_id;
                             $entity->isprocessed = 'N';
+                            $entity->created_by = $updated_by;
+                            $entity->updated_by = $updated_by;
+
 
                             $mTransaction->save($entity);
                         }
