@@ -3,8 +3,12 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Employee;
 use App\Models\M_LeaveBalance;
+use App\Models\M_AccessMenu;
 use App\Models\M_Transaction;
+use App\Models\M_EmpBranch;
+use App\Models\M_EmpDivision;
 use Config\Services;
 
 class Rpt_LeaveBalance extends BaseController
@@ -17,10 +21,8 @@ class Rpt_LeaveBalance extends BaseController
 
     public function index()
     {
-        $date = format_dmy(date('Y-m-d'), "-");
-
         $data = [
-            'date_range' => $date . ' - ' . $date
+            'year'          => date('Y')
         ];
 
         return $this->template->render('report/leavebalance/v_leavebalance', $data);
@@ -37,27 +39,60 @@ class Rpt_LeaveBalance extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             if (isset($post['form']) && $post['clear'] === 'false') {
                 $table = $this->model->table;
-                $select = $this->model->getSelect();
-                $join = $this->model->getJoin();
+                $select = $this->model->getSelectDetail();
+                $join = $this->model->getJoinDetail();
                 $order = $this->request->getPost('columns');
-                $sort = ['md_employee.fullname' => 'ASC', 'trx_leavebalance.submissiondate' => 'ASC'];
+                $sort = ['md_transaction.created_at' => 'ASC'];
                 $search = $this->request->getPost('search');
+
+                foreach ($post['form'] as $value) {
+                    if (!empty($value['value'])) {
+                        if ($value['name'] === "year") {
+                            $year = $value['value'];
+                        }
+
+                        if ($value['name'] === "md_employee_id") {
+                            $md_employee_id = $value['value'];
+                        }
+                    }
+                }
+
+                $where['md_transaction.md_employee_id'] = $md_employee_id;
+                $where['md_transaction.year'] = $year;
 
                 $number = $this->request->getPost('start');
                 $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
 
+                // $beginingBalance = $this->model->where(['md_employee_id' => $md_employee_id, 'year' => $year, 'transactiontype' => 'C+', 'isprocessed' => 'Y'])->first();
+                // logMessage($beginingBalance);
+
+                $available = 0;
+                $saldo = 0;
                 foreach ($list as $value) :
                     $row = [];
 
                     $number++;
 
+                    if ($value->amount != 0) {
+                        $saldo += $value->amount;
+                    }
+
+                    if ($value->reserved_amount != 0 && $value->amount == 0) {
+                        $available -= $value->reserved_amount;
+                    }
+
+                    if ($value->reserved_amount == 0 && $value->amount != 0) {
+                        $available += $value->amount;
+                    }
+
                     $row[] = $number;
                     $row[] = $value->employee_fullname;
-                    $row[] = format_dmy($value->submissiondate, "-");
-                    $row[] = $value->amount;
                     $row[] = $value->documentno;
-                    $row[] = "";
-                    $row[] = $value->description;
+                    $row[] = format_dmy($value->transactiondate, "-");
+                    $row[] = intval($value->amount);
+                    $row[] = intval($value->reserved_amount);
+                    $row[] = $available;
+                    $row[] = $saldo;
                     $data[] = $row;
 
                 endforeach;
@@ -79,8 +114,58 @@ class Rpt_LeaveBalance extends BaseController
 
     public function indexSummary()
     {
+        $mAccess      = new M_AccessMenu($this->request);
+        $mEmpBranch   = new M_EmpBranch($this->request);
+        $mEmployee    = new M_Employee($this->request);
+
+        $userId = $this->session->get('sys_user_id');
+        $empId  = $this->session->get('md_employee_id');
+
+        $roleKACAB = $this->access->getUserRoleName($userId, 'W_Emp_KACAB');
+        $roleEmp   = $this->access->getUserRoleName($userId, 'W_Emp_All_Data');
+
+        $arrAccess     = $mAccess->getAccess($userId);
+        $empDelegation = $mEmployee->getEmpDelegation($userId);
+
+        $arrEmployee = array_unique(array_merge(
+            $mEmployee->getChartEmployee($empId),
+            $empDelegation ?? []
+        ));
+        $arrEmpStr = implode(',', $arrEmployee);
+
+        $arrEmpBranch = array_column(
+            $mEmpBranch->select('md_branch_id')->where($mEmployee->primaryKey, $empId)->findAll(),
+            'md_branch_id'
+        );
+
+        $whereEmp = "md_employee_id IN ($empId)";
+
+        if ($roleKACAB) {
+            $empBranch = $mEmployee->getEmployeeBased($arrEmpBranch);
+            $whereEmp  = "md_employee_id IN (" . implode(',', $empBranch) . ")";
+        } elseif ($arrAccess && isset($arrAccess['branch'], $arrAccess['division'])) {
+            $arrEmpBased = $mEmployee->getEmployeeBased($arrAccess['branch'], $arrAccess['division']);
+            if (!empty($empDelegation)) {
+                $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
+            }
+
+            if ($roleEmp && !empty($empId)) {
+                $arrMerge  = implode(',', array_unique(array_merge($arrEmpBased, $arrEmployee)));
+                $whereEmp  = "md_employee_id IN ($arrMerge)";
+            } elseif ($roleEmp && empty($empId)) {
+                $whereEmp  = "md_employee_id IN (" . implode(',', $arrEmpBased) . ")";
+            } elseif (!$roleEmp && !empty($empId)) {
+                $whereEmp  = "md_employee_id IN ($arrEmpStr)";
+            }
+        } elseif (!empty($empId)) {
+            $whereEmp = "md_employee_id IN ($arrEmpStr)";
+        }
+
+        $whereEmp .= " AND md_status_id NOT IN (100002,100003,100004,100005,100006,100007,100008)";
+
         $data = [
-            'year'          => date('Y')
+            'year'          => date('Y'),
+            'ref_employee' =>  $mEmployee->getEmployeeValue($whereEmp)->getResult(),
         ];
 
         return $this->template->render('report/leavebalancesummary/v_leavebalancesummary', $data);
@@ -89,6 +174,8 @@ class Rpt_LeaveBalance extends BaseController
     public function showAllSummary()
     {
         $mLeaveBalance = new M_LeaveBalance($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $mAccess = new M_AccessMenu($this->request);
 
         $post = $this->request->getVar();
         $data = [];
@@ -105,10 +192,65 @@ class Rpt_LeaveBalance extends BaseController
                 $sort = ['md_employee.fullname' => 'ASC'];
                 $search = $this->request->getPost('search');
 
+                /**
+                 * Mendapatkan Hak Akses Karyawan
+                 */
+                $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
+                $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
+                $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
+                $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+
+                if (!empty($empDelegation)) {
+                    $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
+                }
+
+                if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+                    $arrBranch = $arrAccess["branch"];
+                    $arrDiv = $arrAccess["division"];
+
+                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
+
+                    if (!empty($empDelegation)) {
+                        $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
+                    }
+
+                    if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
+                        $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                        $where['v_summary_leavebalance.md_employee_id'] = [
+                            'value'     => $arrMerge
+                        ];
+                    } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
+                        $where['v_summary_leavebalance.md_employee_id'] = [
+                            'value'     => $arrEmployee
+                        ];
+                    } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
+                        $where['v_summary_leavebalance.md_employee_id'] = [
+                            'value'     => $arrEmpBased
+                        ];
+                    } else {
+                        $where['v_summary_leavebalance.md_employee_id'] = $this->session->get('md_employee_id');
+                    }
+                } else if (!empty($this->session->get('md_employee_id'))) {
+                    $where['v_summary_leavebalance.md_employee_id'] = [
+                        'value'     => $arrEmployee
+                    ];
+                } else {
+                    $where['v_summary_leavebalance.md_employee_id'] = $this->session->get('md_employee_id');
+                }
+
                 foreach ($post['form'] as $value) {
                     if (!empty($value['value'])) {
                         if ($value['name'] === "year") {
                             $year = $value['value'];
+                        }
+
+                        if ($value['name'] === "md_employee_id") {
+                            $emp_id = $value['value'];
+
+                            $where['v_summary_leavebalance.md_employee_id'] = [
+                                'value'     => $emp_id
+                            ];
                         }
                     }
                 }
@@ -116,7 +258,7 @@ class Rpt_LeaveBalance extends BaseController
                 $prevYear = $year - 1;
 
                 $number = $this->request->getPost('start');
-                $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
+                $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
 
                 foreach ($list as $value) :
                     $row = [];
