@@ -187,12 +187,12 @@ STR;
         
         if ($machine) {
             try {
-                $lastSeen = $machine->last_seen
-                    ? (new \DateTime($machine->last_seen))->format('Y-m-d H:i:s')
+                $lastSent = $machine->last_sent
+                    ? (new \DateTime($machine->last_sent))->format('Y-m-d H:i:s')
                     : '1970-01-01 00:00:00';
 
                 return $this->response->setStatusCode(200)->setJSON([
-                    'last_sent' => $lastSeen
+                    'last_sent' => $lastSent
                 ]);
             } catch (\Exception $e) {
                 return $this->response->setStatusCode(400)->setJSON([
