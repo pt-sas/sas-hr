@@ -2281,11 +2281,9 @@ $("#form_employee").on(
                   )
                   .prop("disabled", true);
               else
-                field
-                  .append(
-                    '<option value="' + item.id + '">' + item.text + "</option>"
-                  )
-                  .removeAttr("disabled");
+                field.append(
+                  '<option value="' + item.id + '">' + item.text + "</option>"
+                );
             });
           }
         },
