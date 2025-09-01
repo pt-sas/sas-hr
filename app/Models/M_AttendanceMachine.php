@@ -29,7 +29,8 @@ class M_AttendanceMachine extends Model
         'description',
         'isactive',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'last_sent'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\AttendanceMachine';
