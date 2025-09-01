@@ -5,7 +5,6 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Configuration;
 use App\Models\M_Employee;
-use App\Models\M_User;
 use Config\Services;
 
 
@@ -69,6 +68,9 @@ class Telegram extends BaseController
             if ((empty($emp->telegram_id) || $emp->telegram_id != $data['id'])) {
                 $row = ['telegram_id' => $data['id']];
                 $mEmployee->builder->update($row, [$mEmployee->primaryKey => $emp->md_employee_id]);
+
+                $message = "Halo {$emp->fullname}, Telegram ID sudah diset ke Harmony dengan id : {$data['id']}.";
+                $this->sendMessage($data['id'], $message);
             }
         }
     }
