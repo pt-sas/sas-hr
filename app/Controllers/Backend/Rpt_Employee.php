@@ -126,8 +126,10 @@ class Rpt_Employee extends BaseController
             $whereBranch = "md_branch_id IN ($arrEmpBranchStr)";
             $whereDiv = "md_division_id IN ($arrEmpDivStr)";
         } else {
-            $whereEmp = " md_employee_id IN ($empSession)";
+            $whereEmp = "md_employee_id IN ($empSession)";
         }
+
+        $whereEmp .= " AND md_status_id NOT IN (100003, 100004, 100005, 100006, 100007, 100008)";
 
         $data = [
             'ref_employee' => $this->model->getEmployeeValue($whereEmp)->getResult(),
@@ -276,6 +278,8 @@ class Rpt_Employee extends BaseController
             }
         }
 
+        $dataEmpNotMarried = [];
+
         // For creating sheet based on title variable
         foreach ($title as $value) {
             if ($index > 0) {
@@ -295,6 +299,15 @@ class Rpt_Employee extends BaseController
 
             // For set header and remove col md_employee_id, md_branch_id and md_division_id
             if ($data) {
+                // For getting data employee not married
+                if ($value[0] === "Data Diri") {
+                    foreach ($data as $val) {
+                        if ($val->{"Status Menikah"} == 'Belum Kawin') {
+                            $dataEmpNotMarried[] = $val->md_employee_id;
+                        }
+                    }
+                }
+
                 $header = array_keys((array)$data[0]);
                 $header = array_slice($header, 0, count($header) - 5);
 
@@ -308,9 +321,11 @@ class Rpt_Employee extends BaseController
                 $row = 2;
 
                 // For insert cell data
-                foreach ($data as $value) {
+                foreach ($data as $val) {
+                    if ($value[0] == "Keluarga Setelah Menikah" && in_array($val->md_employee_id, $dataEmpNotMarried))
+                        continue;
 
-                    $colData = array_slice((array) $value, 0, count((array)$value) - 5);
+                    $colData = array_slice((array) $val, 0, count((array)$val) - 5);
                     $col = 'A';
 
                     foreach ($colData as $item) {
