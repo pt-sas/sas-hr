@@ -93,11 +93,13 @@ class M_AbsentDetail extends Model
         $mAllowance = new M_AllowanceAtt($this->request);
         $mLeaveBalance = new M_LeaveBalance($this->request);
         $mTransaction = new M_Transaction($this->request);
+        $mEmpWork = new M_EmpWorkDay($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         $amount = 0;
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-        $updated_by = $rows['data']['updated_by'] ?? session()->get('id');
+        $updated_by = !empty($rows['data']['updated_by']) ?? session()->get('sys_user_id');
 
         $line = $this->find($ID);
         $sql = $mAbsent->where($mAbsent->primaryKey, $line->{$mAbsent->primaryKey})->first();
@@ -483,55 +485,60 @@ class M_AbsentDetail extends Model
                 //     }
                 // }
 
-                // if ($sql->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat) {
-                //     $rule = $mRule->where([
-                //         'name'      => 'Pulang Cepat',
-                //         'isactive'  => 'Y'
-                //     ])->first();
+                if ($sql->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat) {
+                    $rule = $mRule->where([
+                        'name'      => 'Pulang Cepat',
+                        'isactive'  => 'Y'
+                    ])->first();
 
-                //     if ($rule) {
-                //         $amount = $rule->condition ?: $rule->value;
+                    if ($rule) {
+                        $amount = $rule->condition ?: $rule->value;
 
-                //         $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+                        $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
-                //         if ($ruleDetail) {
-                //             //TODO : Get work day employee
-                //             $workDay = $mEmpWork->where([
-                //                 'md_employee_id'    => $sql->md_employee_id,
-                //                 'validfrom <='      => $today
-                //             ])->orderBy('validfrom', 'ASC')->first();
+                        if ($ruleDetail) {
+                            //TODO : Get work day employee
+                            $workDay = $mEmpWork->where([
+                                'md_employee_id'    => $sql->md_employee_id,
+                                'validfrom <='      => $line->date,
+                                'validto   >='      => $line->date
+                            ])->orderBy('validfrom', 'ASC')->first();
 
-                //             if (is_null($workDay)) {
-                //                 $workHour = convertToMinutes($entryTime);
-                //             } else {
-                //                 $day = strtoupper(formatDay_idn($day));
+                            if (is_null($workDay)) {
+                                $workHour = convertToMinutes('08:00');
+                                $breakStart =  $workHour + $ruleDetail[1]->condition;
+                                $workEndHour = $workHour + $ruleDetail[0]->condition;
+                            } else {
+                                $day = strtoupper(formatDay_idn(date('W', strtotime($line->date))));
 
-                //                 //TODO: Get Work Detail by day 
-                //                 $work = null;
+                                //TODO: Get Work Detail by day 
+                                $work = null;
 
-                //                 $whereClause = "md_work_detail.isactive = 'Y'";
-                //                 $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
-                //                 $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                //                 $whereClause .= " AND md_day.name = '$day'";
-                //                 $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
+                                $whereClause = "md_work_detail.isactive = 'Y'";
+                                $whereClause .= " AND md_employee_work.md_employee_id = $sql->md_employee_id";
+                                $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                                $whereClause .= " AND md_day.name = '$day'";
+                                $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
-                //                 if (is_null($work)) {
-                //                     $workHour = convertToMinutes($entryTime);
-                //                 } else {
-                //                     $workHour = convertToMinutes($work->startwork);
-                //                 }
-                //             }
+                                $workHour = empty($work) ? convertToMinutes("08:00") : convertToMinutes($work->startwork);
+                                $breakStart =  empty($work) ? $workHour + $ruleDetail[1]->condition : convertToMinutes($work->breakstart);
+                                $workEndHour = empty($work) ? $workHour + $ruleDetail[0]->condition : convertToMinutes($work->endwork);
+                            }
 
-                //             $workTime = convertToMinutes($sql->startdate);
+                            $workTime = convertToMinutes($sql->startdate);
 
-                //             foreach ($ruleDetail as $detail) {
-                //                 if (($detail->name === "Pulang Cepat 1/2 Hari" || $detail->name === "Pulang Cepat") && getOperationResult($workTime, ($workHour + $detail->condition), $detail->operation)) {
-                //                     $amount = $detail->value;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
+                            foreach ($ruleDetail as $detail) {
+                                if ($detail->name === "Pulang Cepat" && getOperationResult($workTime, $breakStart, $detail->operation)) {
+                                    $amount = $detail->value;
+                                    break;
+                                } else if ($detail->name === "Pulang Cepat 1/2 Hari" && getOperationResult($workTime, $workEndHour, $detail->operation)) {
+                                    $amount = $detail->value;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if ($amount != 0) {
                     $transactiontype = $amount < 0 ? 'A-' : 'A+';
