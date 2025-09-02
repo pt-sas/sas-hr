@@ -5112,7 +5112,6 @@ function putFieldData(form, data, status = null) {
           //? Retrieve field name default is readonly/disabled in the attribute field
           if (
             (field[i].readOnly || field[i].disabled) &&
-            field[i].type !== "radio" &&
             !changeTab &&
             field[i].name
           )

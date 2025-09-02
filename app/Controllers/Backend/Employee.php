@@ -738,10 +738,18 @@ class Employee extends BaseController
                 $userList = $mUser->where('isactive', 'Y')->whereIn('md_employee_id', $arrEmpBased)->findAll();
                 $empList = array_column($userList, 'md_employee_id');
 
-                $list = $this->model->whereIn('md_employee_id', $empList)
-                    ->where("isactive", 'Y')
-                    ->orderBy('value', 'ASC')
-                    ->findAll();
+                if (isset($post['search'])) {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->whereIn('md_employee_id', $empList)
+                        ->like('value', $post['search'])
+                        ->orderBy('value', 'ASC')
+                        ->findAll();
+                } else {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->whereIn('md_employee_id', $empList)
+                        ->orderBy('value', 'ASC')
+                        ->findAll();
+                }
 
                 foreach ($list as $key => $row) :
                     $response[$key]['id'] = $row->getEmployeeId();

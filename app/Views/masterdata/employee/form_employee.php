@@ -174,7 +174,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label for="telegram_username">Username Telegram</label>
-                <input type="text" class="form-control" id="telegram_username" name="telegram_username">
+                <input type="text" class="form-control" id="telegram_username" name="telegram_username"
+                    <?= $readonly ?>>
                 <small class="form-text text-danger" id="error_telegram_username"></small>
             </div>
         </div>
@@ -245,7 +246,7 @@
         <div class="col-md-3">
             <div class="form-group">
                 <label for="sys_emp_delegation_id">Duta</label>
-                <select class="form-control select2" id="md_ambassador_id" name="md_ambassador_id">
+                <select class="form-control select2" id="md_ambassador_id" name="md_ambassador_id" <?= $disabled ?>>
                     <option value="">Pilih Duta</option>
                 </select>
                 <small class=" form-text text-danger" id="error_md_ambassador_id"></small>
@@ -346,7 +347,7 @@
                 <label class="form-check-label">
                     <input type="checkbox" class="form-check-input" id="issameaddress" name="issameaddress" checked
                         hide-field="address,md_country_id,md_province_id,md_city_id,md_district_id,md_subdistrict_id,postalcode"
-                        <?= $readonly ?>>
+                        <?= $disabled ?>>
                     <span class=" form-check-sign">Sama dengan alamat domisili</span>
                 </label>
             </div>

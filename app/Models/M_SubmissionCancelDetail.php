@@ -164,6 +164,7 @@ class M_SubmissionCancelDetail extends Model
                         "transactiondate"   => $line->date,
                         "transactiontype"   => 'R-',
                         "year"              => $year,
+                        "amount"            => 0,
                         "reserved_amount"   => -$rsvdTransaction->reserved_amount,
                         "md_employee_id"    => $rsvdTransaction->md_employee_id,
                         "isprocessed"       => "N",
