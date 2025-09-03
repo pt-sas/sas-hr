@@ -403,7 +403,20 @@ class ForgotAbsentArrive extends BaseController
                         if ($trx) {
                             $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
                         } else {
-                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                            $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+
+                            if (empty($line)) {
+                                // TODO : Create Line if not exist
+                                $data = [
+                                    'id'        => $_ID,
+                                    'created_by' => $this->access->getSessionUser(),
+                                    'updated_by' => $this->access->getSessionUser()
+                                ];
+
+                                $this->model->createAbsentDetail($data, $row, true, true);
+                            }
+
+                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
                             $response = message('success', true, true);
                         }
                     } else if ($_DocAction === $this->DOCSTATUS_Voided) {
