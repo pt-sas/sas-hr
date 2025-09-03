@@ -42,6 +42,7 @@ class Employee extends BaseController
         $mRole = new M_Role($this->request);
         $mBranch = new M_Branch($this->request);
         $mDiv = new M_Division($this->request);
+        $mStatus = new M_Status($this->request);
 
         $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
         $readOnly = "";
@@ -83,6 +84,10 @@ class Employee extends BaseController
             ])->getResult(),
             'readonly'  => $readOnly,
             'disabled'  => $disabled,
+            'status'    => $mStatus->where('isactive', 'Y')
+                ->whereNotIn('md_status_id', [100003, 100006, 100007, 100008]) // Exclude Status OUTSOURCING FREELANCE MAGANG KONTRAK
+                ->orderBy('name', 'ASC')
+                ->findAll(),
         ];
 
         return $this->template->render('masterdata/employee/v_employee', $data);
@@ -148,8 +153,7 @@ class Employee extends BaseController
                 $fullName = $value->fullname;
 
                 $number++;
-                // $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
-                $path = $path = 'uploads/' . $this->PATH_Karyawan . '/';
+                $path = 'uploads/' . $this->PATH_Karyawan . '/';
 
                 $row[] = $ID;
                 $row[] = $number;
