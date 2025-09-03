@@ -349,15 +349,11 @@ class WActivity extends BaseController
              */
 
             foreach ($dataUser as $users) {
-                if (!empty($employee) && !empty($employee->telegram_id)) {
-                    $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, false, true);
-                } else {
-                    $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
-                }
-            }
+                $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
 
-            if (!empty($employee) && !empty($employee->telegram_id)) {
-                $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
+                if (!empty($employee) && !empty($employee->telegram_id) && $users->md_employee_id != $employee->md_employee_id) {
+                    $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
+                }
             }
 
             $options = array(

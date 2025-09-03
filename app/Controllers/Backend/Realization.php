@@ -637,14 +637,12 @@ class Realization extends BaseController
 
                     // TODO Send Notification to Created User
                     $row = $model->find($trx->header_id);
-                    $user = $mUser->where('sys_user_id', $row->created_by)->findAll();
+                    $user = $mUser->where('sys_user_id', $row->created_by)->first();
 
-                    foreach ($user as $users) {
-                        $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
-                    }
+                    $cMessage->sendInformation($user, $subject, $message, 'SAS HRD', null, null, true, true, true);
 
                     // TODO : Send Telegram Message to Employee
-                    if (!empty($employee->telegram_id))
+                    if (($user->md_employee_id != $employee->md_employee_id) && !empty($employee->telegram_id))
                         $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
 
                     // TODO : Update Header if There's no pending line
@@ -836,14 +834,13 @@ class Realization extends BaseController
 
                     // TODO Send Notification to Created User
                     $row = $model->find($trx->header_id);
-                    $user = $mUser->where('sys_user_id', $row->created_by)->findAll();
+                    $user = $mUser->where('sys_user_id', $row->created_by)->first();
 
-                    foreach ($user as $users) {
-                        $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
-                    }
+                    $cMessage->sendInformation($user, $subject, $message, 'SAS HRD', null, null, true, true, true);
+
 
                     // TODO : Send Telegram Message to Employee
-                    if (!empty($employee->telegram_id))
+                    if (($user->md_employee_id != $employee->md_employee_id) && !empty($employee->telegram_id))
                         $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
 
                     $where = "v_realization.header_id = {$trx->header_id}";
