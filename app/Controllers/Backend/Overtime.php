@@ -456,6 +456,7 @@ class Overtime extends BaseController
                     $whereClause = "md_employee.isactive = 'Y'";
                     $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
                     $whereClause .= " AND md_benefit_detail.status = 'Y'";
+                    $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}";
                     $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
                     $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
                     $whereClause .= " OR md_employee.superior_id = $empId)";
@@ -494,6 +495,7 @@ class Overtime extends BaseController
                 $whereClause = "md_employee.isactive = 'Y'";
                 $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
                 $whereClause .= " AND md_benefit_detail.status = 'Y'";
+                $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}";
                 $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
                 $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
                 $whereClause .= " OR md_employee.superior_id = $empId)";
