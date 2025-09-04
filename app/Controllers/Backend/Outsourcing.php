@@ -37,6 +37,15 @@ class Outsourcing extends BaseController
         $mBranch = new M_Branch($this->request);
         $mDiv = new M_Division($this->request);
 
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
+        $readOnly = "";
+        $disabled = "";
+
+        if (is_null($roleEmpAdm)) {
+            $readOnly = "readonly";
+            $disabled = "disabled";
+        }
+
         $data = [
             'ref_list' => $mReference->findBy([
                 'sys_reference.name'              => 'Gender',
@@ -55,7 +64,9 @@ class Outsourcing extends BaseController
                 ->findAll(),
             'division'    => $mDiv->where('isactive', 'Y')
                 ->orderBy('name', 'ASC')
-                ->findAll()
+                ->findAll(),
+            'readonly'  => $readOnly,
+            'disabled'  => $disabled,
         ];
 
         return $this->template->render('masterdata/outsourcing/v_outsourcing', $data);
@@ -108,7 +119,7 @@ class Outsourcing extends BaseController
                 $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
             }
 
-            $where['md_employee.md_supplier_id <>'] = 0;
+            $where['md_employee.md_status_id'] = ['value' => [$this->Status_FREELANCE, $this->Status_KONTRAK, $this->Status_MAGANG, $this->Status_OUTSOURCING]];
 
             $data = [];
 

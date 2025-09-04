@@ -64,6 +64,7 @@ class M_AbsentDetail extends Model
             trx_absent.startdate,
             trx_absent.enddate,
             trx_absent.submissiontype,
+            trx_absent.startdate_realization,
             trx_absent.enddate_realization');
 
         $this->builder->join('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.trx_absent_id', 'left');

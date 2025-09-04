@@ -165,3 +165,21 @@ function calculateTime($date)
         return $differenceInDays . ' hari yang lalu';
     }
 }
+
+function addBusinessDays($startDate, $daysToAdd, $holidays = [])
+{
+    $date = new DateTime($startDate);
+    $addedDays = 0;
+
+    while ($addedDays < $daysToAdd) {
+        $date->modify('+1 day');
+        $dayOfWeek = $date->format('N');
+
+        // TODO : Check Apakah Hari Weekend atau Hari Libur
+        if ($dayOfWeek < 6 && !in_array($date->format('Y-m-d'), $holidays)) {
+            $addedDays++;
+        }
+    }
+
+    return $date->format('Y-m-d');
+}
