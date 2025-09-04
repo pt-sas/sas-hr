@@ -51,14 +51,16 @@ class ModifyAddRealizationDateViewRealization extends Migration
         a.md_division_id,
         e.md_employee_id,
         'trx_absent' AS 'table',
-        CASE 
-        WHEN DATE_FORMAT(a.submissiondate, '%Y-%m-%d') < DATE_FORMAT(a.startdate, '%Y-%m-%d') THEN DATE_ADD(adetail.date, INTERVAL dt.`days_realization_mgr` DAY)
-        ELSE adetail.date
-        END AS realization_mgr,
-        CASE 
-        WHEN DATE_FORMAT(a.submissiondate, '%Y-%m-%d') < DATE_FORMAT(a.startdate, '%Y-%m-%d') THEN DATE_ADD(adetail.date, INTERVAL dt.`days_realization_hrd` DAY) 
-        ELSE adetail.date
-        END AS realization_hrd
+        -- CASE 
+        -- WHEN DATE_FORMAT(a.submissiondate, '%Y-%m-%d') < DATE_FORMAT(a.startdate, '%Y-%m-%d') THEN 
+        DATE_ADD(adetail.date, INTERVAL dt.`days_realization_mgr` DAY) AS realization_mgr,
+        -- ELSE adetail.date
+        -- END AS realization_mgr,
+        -- CASE 
+        -- WHEN DATE_FORMAT(a.submissiondate, '%Y-%m-%d') < DATE_FORMAT(a.startdate, '%Y-%m-%d') THEN 
+        DATE_ADD(adetail.date, INTERVAL dt.`days_realization_hrd` DAY) AS realization_hrd
+        -- ELSE adetail.date
+        -- END AS realization_hrd
         FROM trx_absent a
         LEFT JOIN trx_absent_detail adetail ON a.`trx_absent_id` = adetail.`trx_absent_id`
         LEFT JOIN md_employee e ON a.`md_employee_id` = e.`md_employee_id`
@@ -93,14 +95,16 @@ class ModifyAddRealizationDateViewRealization extends Migration
         a.md_division_id,
         e.md_employee_id,
         'trx_assignment' AS 'table',
-        CASE 
-        WHEN DATE_FORMAT(a.submissiondate, '%Y-%m-%d') < DATE_FORMAT(a.startdate, '%Y-%m-%d') THEN DATE_ADD(adate.date, INTERVAL dt.`days_realization_mgr` DAY) 
-        ELSE adate.date 
-        END AS realization_mgr,
-        CASE
-        WHEN DATE_FORMAT(a.submissiondate, '%Y-%m-%d') < DATE_FORMAT(a.startdate, '%Y-%m-%d') THEN DATE_ADD(adate.date, INTERVAL dt.`days_realization_hrd` DAY)
-        ELSE adate.date
-        END AS realization_hrd
+        -- CASE 
+        -- WHEN DATE_FORMAT(a.submissiondate, '%Y-%m-%d') < DATE_FORMAT(a.startdate, '%Y-%m-%d') THEN 
+        DATE_ADD(adate.date, INTERVAL dt.`days_realization_mgr` DAY) AS realization_mgr,
+        -- ELSE adate.date 
+        -- END AS realization_mgr,
+        -- CASE
+        -- WHEN DATE_FORMAT(a.submissiondate, '%Y-%m-%d') < DATE_FORMAT(a.startdate, '%Y-%m-%d') THEN 
+        DATE_ADD(adate.date, INTERVAL dt.`days_realization_hrd` DAY) AS realization_hrd
+        -- ELSE adate.date
+        -- END AS realization_hrd
         FROM trx_assignment a
         LEFT JOIN trx_assignment_detail adetail ON a.trx_assignment_id = adetail.trx_assignment_id
         LEFT JOIN trx_assignment_date adate ON adetail.trx_assignment_detail_id = adate.trx_assignment_detail_id
