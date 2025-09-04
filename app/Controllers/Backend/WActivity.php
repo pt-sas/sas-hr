@@ -15,6 +15,7 @@ use App\Models\M_Datatable;
 use App\Models\M_NotificationText;
 use App\Models\M_DocumentType;
 use App\Models\M_Employee;
+use App\Models\M_Holiday;
 use Config\Services;
 use Pusher\Pusher;
 use Html2Text\Html2Text;
@@ -136,20 +137,12 @@ class WActivity extends BaseController
             $entityAct->setRecordLineId($recordLine_id);
 
             $user_id = $mWResponsible->getUserByResponsible($sys_wfresponsible_id);
-            $menuName = $mMenu->getMenuBy($menu);
 
             //TODO : Get data responsible 
             $dataResp = $mWResponsible->find($sys_wfresponsible_id);
 
             //TODO : Get data user based on role from responsible 
             $dataUser = $mUser->detail(['sr.sys_role_id' => $dataResp->getRoleId()])->getResult();
-
-            //TODO : Get data scenario line 
-            $dataScenLine = $mWfsD->where([
-                'sys_wfscenario_id'       => $sys_wfscenario_id,
-                'sys_wfresponsible_id'    => $sys_wfresponsible_id,
-                'isactive'                => 'Y'
-            ])->orderBy('lineno', 'DESC')->first();
 
             $employee = null;
 
@@ -242,6 +235,9 @@ class WActivity extends BaseController
 
                     $entityAct->setTextMsg($msg);
 
+                    //TODO : For getting user new reponsible
+                    $dataUser = $mUser->detail(['sr.sys_role_id' => $dataResp->getRoleId()])->getResult();
+
                     if ($state === $this->DOCSTATUS_Completed && $processed) {
                         $state = $this->DOCSTATUS_Suspended;
                         $processed = false;
@@ -270,7 +266,7 @@ class WActivity extends BaseController
                         } else {
                             $dataNotif = $mNotifText->where('name', 'Email Not Approved')->first();
                             $subject = $dataNotif->getSubject();
-                            $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, $submissionDate], $dataNotif->getText());
+                            $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
                         }
                     } else {
                         $state = $this->DOCSTATUS_Completed;
@@ -349,11 +345,16 @@ class WActivity extends BaseController
              */
 
             foreach ($dataUser as $users) {
-                $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
+                $sendTelegram = true;
 
-                if (!empty($employee) && !empty($employee->telegram_id) && $users->md_employee_id != $employee->md_employee_id) {
-                    $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
-                }
+                if (!empty($employee) && $users->md_employee_id == $employee->md_employee_id)
+                    $sendTelegram = false;
+
+                $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, $sendTelegram, true);
+            }
+
+            if (!empty($employee) && !empty($employee->telegram_id)) {
+                $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
             }
 
             $options = array(
@@ -421,24 +422,41 @@ class WActivity extends BaseController
 
     public function doNotApproved()
     {
-        $mConfig = new M_Configuration($this->request);
+        $mDocType = new M_DocumentType($this->request);
+        $mHoliday = new M_Holiday($this->request);
 
         $this->session->set([
             'sys_user_id'       => 100000,
         ]);
 
-        //TODO : Get Rule for Not Approve Approval
-        $rule = $mConfig->where(['name' => 'AUTO_REJECT_APPROVAL', 'isactive' => 'Y'])->first();
+        $today = date('Y-m-d');
+        $holiday = $mHoliday->getHolidayDate();
 
-        //TODO : If configuration is equal or under 0 then Cron will not run
-        if ($rule->value > 0) {
-            $where = "ADDDATE(sys_wfactivity.created_at, INTERVAL {$rule->value} DAY) <= NOW()";
+        $docType = $mDocType->where('isactive', 'Y')->findAll();
+        $docType = array_column($docType, null, 'md_doctype_id');
 
-            $list = $this->model->getActivity(null, $where);
+        $list = $this->model->getActivity(null, null);
 
-            if ($list) {
-                foreach ($list as $row) {
-                    $this->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, session()->get('sys_user_id'), $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu);
+        if ($list) {
+            foreach ($list as $row) {
+                $trx = $this->model
+                    ->builder($row->table)
+                    ->where($row->table . '_id', $row->record_id)
+                    ->get()
+                    ->getRow();
+
+                if (!empty($trx)) {
+                    $dateNotApproved = addBusinessDays(
+                        $row->updated_at,
+                        $docType[$trx->submissiontype]->auto_not_approve_days,
+                        $holiday
+                    );
+
+                    if ($dateNotApproved <= $today) {
+                        $this->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, session()->get('sys_user_id'), $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu);
+                    }
+                } else {
+                    log_message('info', "Data transaction not found for sys_wactivity_id: {$row->sys_wfactivity_id}");
                 }
             }
         }
