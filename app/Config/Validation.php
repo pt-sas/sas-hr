@@ -1782,7 +1782,7 @@ class Validation
         ],
         'image'                 => [
             'label'             => 'foto',
-            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 3072]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
                 // 'uploaded'      => 'Mohon upload {field} dahulu',
                 'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
@@ -1792,7 +1792,7 @@ class Validation
         ],
         'image2'                 => [
             'label'             => 'foto 2',
-            'rules'             => 'max_size[image2, 1024]|is_image[image2]|mime_in[image3,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image2, 3072]|is_image[image2]|mime_in[image3,image/jpg,image/jpeg,image/png]',
             'errors'            => [
                 'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
@@ -1801,7 +1801,7 @@ class Validation
         ],
         'image3'                 => [
             'label'             => 'foto 3',
-            'rules'             => 'max_size[image3, 1024]|is_image[image3]|mime_in[image3,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image3, 3072]|is_image[image3]|mime_in[image3,image/jpg,image/jpeg,image/png]',
             'errors'            => [
                 'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
                 'is_image'      => 'Format file {field} salah',
@@ -2122,13 +2122,13 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'md_supplier_id'        => [
-            'label'             => 'vendor',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
-            ]
-        ],
+        // 'md_supplier_id'        => [
+        //     'label'             => 'vendor',
+        //     'rules'             => 'required',
+        //     'errors'            => [
+        //         'required'      => 'Mohon mengisi {field} dahulu'
+        //     ]
+        // ],
         'resigndate'            => [
             'label'             => 'tanggal berhenti',
             'rules'             => 'required_based_field_value[md_status_id, 100004]',
@@ -2517,7 +2517,7 @@ class Validation
     public $pembatalan_cuti = [
         'image'                 => [
             'label'             => 'foto',
-            'rules'             => 'max_size[image, 1024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 3072]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
                 'required'      => 'Mohon pilih {field} dahulu',
                 'max_size'      => 'Data {field} melebihi batas maksimum 1 Mb',
