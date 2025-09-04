@@ -18,7 +18,10 @@ class Telegram extends BaseController
     public function telegramHook()
     {
         $input = $this->request->getJSON(true);
-        $this->setUserID($input['message']['from']);
+
+        if (isset($input['message'])) {
+            $this->setUserID($input['message']['from']);
+        }
 
         // TODO : Need to send response to telegram so Telegram did'nt repeat sending data to HARMONY
         return $this->response->setJSON(['status' => 'ok']);
