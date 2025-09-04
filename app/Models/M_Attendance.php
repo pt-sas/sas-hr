@@ -129,4 +129,24 @@ class M_Attendance extends Model
 
         return $builder->get();
     }
+
+    public function getAttBranch($where, $order = null)
+    {
+        $builder = $this->db->table("v_attendance_branch");
+
+        $sql = 'v_attendance_branch.*';
+
+        $builder->select($sql);
+
+        if ($order === 'ASC') {
+            $builder->orderBy('v_attendance_branch.date', 'ASC');
+        } else if ($order === 'DESC') {
+            $builder->orderBy('v_attendance_branch.date', 'DESC');
+        }
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
+    }
 }

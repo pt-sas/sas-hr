@@ -577,19 +577,19 @@ class SpecialOfficeDuties extends BaseController
                 $branch_in = $mBranch->find($subDetail->branch_in);
                 $branch_out = $mBranch->find($subDetail->branch_out);
 
-                $whereIn = " v_attendance_serialnumber.md_employee_id = {$line->md_employee_id}";
-                $whereIn .= " AND v_attendance_serialnumber.date = '{$date}'";
-                $whereIn .= " AND md_attendance_machines.md_branch_id = {$subDetail->branch_in}";
-                $clock_in = $mAttendance->getAttendanceBranch($whereIn)->getRow();
+                $whereIn = " md_attendance_branch.md_employee_id = {$line->md_employee_id}";
+                $whereIn .= " AND md_attendance_branch.date = '{$date}'";
+                $whereIn .= " AND md_attendance_branch.md_branch_id = {$subDetail->branch_in}";
+                $clock_in = $mAttendance->getAttBranch($whereIn)->getRow();
 
                 if ($clock_in && $clock_in->clock_in) {
                     $time_in = format_time($clock_in->clock_in);
                 }
 
-                $whereOut = " v_attendance_serialnumber.md_employee_id = {$line->md_employee_id}";
-                $whereOut .= " AND v_attendance_serialnumber.date = '{$date}'";
-                $whereOut .= " AND md_attendance_machines.md_branch_id = {$subDetail->branch_out}";
-                $clock_out = $mAttendance->getAttendanceBranch($whereOut)->getRow();
+                $whereOut = " md_attendance_branch.md_employee_id = {$line->md_employee_id}";
+                $whereOut .= " AND md_attendance_branch.date = '{$date}'";
+                $whereOut .= " AND md_attendance_branch.md_branch_id = {$subDetail->branch_out}";
+                $clock_out = $mAttendance->getAttBranch($whereOut)->getRow();
 
                 if ($clock_out && $clock_out->clock_out) {
                     $time_out = format_time($clock_out->clock_out);
