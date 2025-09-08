@@ -9,9 +9,11 @@ use App\Models\M_Assignment;
 use App\Models\M_AssignmentDate;
 use App\Models\M_AssignmentDetail;
 use App\Models\M_Attendance;
+use App\Models\M_Configuration;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
+use App\Models\M_Holiday;
 use App\Models\M_WorkDetail;
 use App\Models\M_NotificationText;
 use App\Models\M_User;
@@ -108,10 +110,10 @@ class Attendance extends BaseController
                     $subDetail = $mAssignmentDate->find($post['id']);
                     $detail = $mAssignmentDetail->find($subDetail->{$mAssignmentDetail->primaryKey});
 
-                    $att = $this->model->getAttendanceBranch([
-                        'v_attendance_serialnumber.md_employee_id' => $detail->md_employee_id,
-                        'v_attendance_serialnumber.date' => date("Y-m-d", strtotime($subDetail->date)),
-                        'md_attendance_machines.md_branch_id' => $post['md_branch_id']
+                    $att = $this->model->getAttBranch([
+                        'v_attendance_branch.md_employee_id' => $detail->md_employee_id,
+                        'v_attendance_branch.date' => date("Y-m-d", strtotime($subDetail->date)),
+                        'v_attendance_branch.md_branch_id' => $post['md_branch_id']
                     ])->getRow();
 
                     $data = [
@@ -148,22 +150,40 @@ class Attendance extends BaseController
         $mWorkDetail = new M_WorkDetail($this->request);
         $mAbsent = new M_Absent($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mConfig = new M_Configuration($this->request);
+        $mAssignment = new M_Assignment($this->request);
+        $mEmpBranch = new M_EmpBranch($this->request);
         $cMessage = new Message();
         $cTelegram = new Telegram();
 
+        $holiday = $mHoliday->getHolidayDate();
         $today = date("Y-m-d");
-        $yesterday = date("Y-m-d", strtotime("-1 day"));
+        $yesterday = addBusinessDays($today, 1, $holiday, true);
 
+        // TODO : Set Master Data Notification
         $dataNotifIn = $mNotifText->where('name', 'Belum Absen Masuk')->first();
         $subjectIn = $dataNotifIn->getSubject();
         $messageIn = str_replace(['(Var1)'], [$today], $dataNotifIn->getText());
         $dataNotifOut = $mNotifText->where('name', 'Belum Absen Pulang')->first();
         $subjectOut = $dataNotifOut->getSubject();
         $messageOut = str_replace(['(Var1)'], [$yesterday], $dataNotifOut->getText());
-        $employee = $mEmployee->where('isactive', 'Y')->findAll();
+        $employee = $mEmployee->where('isactive', 'Y')->whereIn('md_status_id', [100001, 100002])->whereNotIn('md_levelling_id', [100001])->findAll();
+
+        $configMNSOD = $mConfig->where('name', 'MANAGER_NO_NEED_SPECIAL_OFFICE_DUTIES')->first();
+
+        $configMNSOD = $configMNSOD->value == 'Y' ? true : false;
+        $lvlManager = 100003;
 
         foreach ($employee as $value) {
-            $user = $mUser->where('md_employee_id', $value->md_employee_id)->first();
+            $empBranch = $mEmpBranch->where('md_employee_id', $value->md_employee_id)->findAll();
+            $user = $mUser->where(['md_employee_id' => $value->md_employee_id, 'isactive' => 'Y'])->first();
+
+            if (empty($empBranch)) {
+                continue;
+            }
+
+            $empBranch = implode(", ", array_column($empBranch, 'md_branch_id'));
 
             //** This Section for checking Today Absent In */
 
@@ -177,21 +197,44 @@ class Attendance extends BaseController
             $whereClause .= " AND md_day.name = '{$day}'";
             $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
+            // TODO : Get Submission Assignment
+            $whereClause = "DATE(trx_assignment_date.date) = '{$today}'
+                    AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+                    AND trx_assignment_detail.md_employee_id = {$value->md_employee_id}
+                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
+                    AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
+
+            $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
+
             // TODO : Get Attendance In Today
-            $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
-            $whereClause .= " AND v_attendance.date = '{$today}'";
-            $whereClause .= " AND v_attendance.clock_in is NOT NULL";
-            $absentIn = $this->model->getAttendance($whereClause)->getRow();
+            if ($configMNSOD && $employee == $lvlManager) {
+                $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
+                $whereClause .= " AND v_attendance.date = '{$today}'";
+                $whereClause .= " AND v_attendance.clock_in is NOT NULL";
+                $absentIn = $this->model->getAttendance($whereClause)->getRow();
+            } else {
+                $whereClause = "v_attendance_branch.md_employee_id = {$value->md_employee_id}";
+                $whereClause .= " AND v_attendance_branch.date = '{$today}'";
+                $whereClause .= " AND v_attendance_branch.clock_in is NOT NULL";
+
+                if ($tugasKunjungan) {
+                    $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in}";
+                } else {
+                    $whereClause .= " AND v_attendance_branch.md_branch_id IN ({$empBranch})";
+                }
+
+                $absentIn = $this->model->getAttBranch($whereClause)->getRow();
+            }
 
             // TODO : Get Submission Today
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
             $whereClause .= " AND v_realization.date = {$today}";
-            $whereClause .= " AND v_realization.isagree = 'Y'";
-            $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}')";
+            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+            $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
             $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
             $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
-            if (!$absentIn && $workDetail && !$submission && $dataNotifIn) {
+            if (!$absentIn && ($workDetail || $tugasKunjungan) && !$submission && !in_array($today, $holiday) && $dataNotifIn) {
                 if ($user) {
                     $cMessage->sendInformation($user, $subjectIn, $messageIn, 'SAS HRD', null, null, true, true, true);
                 } else if (!empty($value->telegram_id)) {
@@ -210,29 +253,52 @@ class Attendance extends BaseController
             $whereClause .= " AND md_day.name = '{$day}'";
             $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
-            // TODO : Get Assignment Yesterday
+            // TODO : Get Submission Assignment Yesterday
+            $whereClause = "DATE(trx_assignment_date.date) = '{$yesterday}'
+                    AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+                    AND trx_assignment_detail.md_employee_id = {$value->md_employee_id}
+                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
+                    AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
+
+            $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
+
+            // TODO : Get Submission Yesterday
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
             $whereClause .= " AND v_realization.date = {$yesterday}";
-            $whereClause .= " AND v_realization.isagree IN ('Y', 'S', 'M')";
-            $whereClause .= " AND v_realization.submissiontype IN (100008)";
+            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+            $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
             $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
-            $assignment = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
+            $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
             // TODO : Get Attendance Out Yesterday
-            $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id} ";
-            $whereClause .= " AND v_attendance.date = '{$yesterday}'";
-            $whereClause .= " AND v_attendance.clock_out IS NOT NULL";
-            $absentOut = $this->model->getAttendance($whereClause)->getRow();
+            if ($configMNSOD && $employee == $lvlManager) {
+                $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
+                $whereClause .= " AND v_attendance.date = '{$yesterday}'";
+                $whereClause .= " AND v_attendance.clock_out is NOT NULL";
+                $absentOut = $this->model->getAttendance($whereClause)->getRow();
+            } else {
+                $whereClause = "v_attendance_branch.md_employee_id = {$value->md_employee_id}";
+                $whereClause .= " AND v_attendance_branch.date = '{$yesterday}'";
+                $whereClause .= " AND v_attendance_branch.clock_out is NOT NULL";
+
+                if ($tugasKunjungan) {
+                    $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_out}";
+                } else {
+                    $whereClause .= " AND v_attendance_branch.md_branch_id IN ({$empBranch})";
+                }
+
+                $absentOut = $this->model->getAttBranch($whereClause)->getRow();
+            }
 
             // TODO : Get Submission Forget Absent Leave Yesterday
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
             $whereClause .= " AND v_realization.date = {$yesterday}";
-            $whereClause .= " AND v_realization.isagree = 'Y'";
-            $whereClause .= " AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang})";
-            $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}')";
+            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+            $whereClause .= " AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang}, {$mAbsent->Pengajuan_Pulang_Cepat})";
+            $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
             $forgotAbsentLeave = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
-            if (($workDetail || $assignment) && !$absentOut && !$forgotAbsentLeave && $dataNotifOut) {
+            if ($workDetail && !$absentOut && !$forgotAbsentLeave && !$submission && $dataNotifOut) {
                 if ($user) {
                     $cMessage->sendInformation($user, $subjectOut, $messageOut, 'SAS HRD', null, null, true, true, true);
                 } else if (!empty($value->telegram_id)) {
@@ -253,14 +319,21 @@ class Attendance extends BaseController
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDivision = new M_EmpDivision($this->request);
-        $cMail = new Mail();
+        $mHoliday = new M_Holiday($this->request);
+        $cMessage = new Message();
 
         $today = date("Y-m-d");
         $storagePath = FCPATH . "/uploads/attsummary/";
+        $holiday = $mHoliday->getHolidayDate();
 
-        $manager = $mEmployee->where(['isactive' => 'Y', 'md_levelling_id' => 100003])->findAll();
+        if (in_array($today, $holiday))
+            return;
+
+        $manager = $mEmployee->where(['isactive' => 'Y', 'md_levelling_id' => 100003])->whereIn('md_status_id', [100001, 100002])->findAll();
 
         $dataNotif = $mNotifText->where('name', 'Summary Absent')->first();
+        $message = str_replace(['(Var1)'], [$today], $dataNotif->getText());
+        $subject = $dataNotif->getSubject();
 
         $seq = 1;
         foreach ($manager as $value) {
@@ -308,7 +381,7 @@ class Attendance extends BaseController
                 $whereClause .= " AND md_employee.superior_id IN (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $value->md_employee_id))";
                 $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $value->md_employee_id)";
                 $whereClause .= " OR md_employee.superior_id = $value->md_employee_id";
-                $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
+                $whereClause .= " AND md_employee.md_status_id IN ({$this->Status_PERMANENT}, {$this->Status_PROBATION})";
                 $employee = $mEmployee->getEmployee($whereClause);
 
 
@@ -336,6 +409,9 @@ class Attendance extends BaseController
                     $day = strtoupper(formatDay_idn(date('w')));
                     $branch = $mEmpBranch->getBranchDetail("md_employee_branch.md_employee_id = {$val->md_employee_id}")->getRow();
                     $division = $mEmpDivision->getDivisionDetail("md_employee_division.md_employee_id = {$val->md_employee_id}")->getRow();
+                    if (empty($branch) || empty($division)) {
+                        continue;
+                    }
 
                     // TODO : Get Workday Employee
                     $whereClause = "md_work_detail.isactive = 'Y'";
@@ -345,42 +421,39 @@ class Attendance extends BaseController
                     $whereClause .= " AND md_day.name = '{$day}'";
                     $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
+                    // TODO : Get Submission Assignment
+                    $whereClause = "DATE(trx_assignment_date.date) = '{$today}'
+                    AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+                    AND trx_assignment_detail.md_employee_id = {$val->md_employee_id}
+                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
+                    AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
+
+                    $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
+
                     // TODO : Get Absent Clock In Today
-                    $whereClause = " v_attendance_serialnumber.md_employee_id = {$val->md_employee_id}";
-                    $whereClause .= " AND v_attendance_serialnumber.date = '{$today}'";
-                    $whereClause .= " AND v_attendance_serialnumber.clock_in IS NOT NULL";
-                    $whereClause .= " AND md_attendance_machines.md_branch_id = {$branch->md_branch_id}";
-                    $absentIn = $this->model->getAttendanceBranch($whereClause)->getRow();
+                    $whereClause = " v_attendance_branch.md_employee_id = {$val->md_employee_id}";
+                    $whereClause .= " AND v_attendance_branch.date = '{$today}'";
+                    $whereClause .= " AND v_attendance_branch.clock_in IS NOT NULL";
+
+                    if ($tugasKunjungan) {
+                        $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in}";
+                    } else {
+                        $whereClause .= " AND v_attendance_branch.md_branch_id = {$branch->md_branch_id}";
+                    }
+
+                    $absentIn = $this->model->getAttBranch($whereClause)->getRow();
 
                     // TODO : Get Submission Today
                     $whereClause = "v_realization.md_employee_id = {$val->md_employee_id}";
                     $whereClause .= " AND v_realization.date = '{$today}'";
-                    $whereClause .= " AND v_realization.isagree = 'Y'";
-                    $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}')";
+                    $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+                    $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
                     $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                     $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
-                    // TODO : Get Assignment Today
-                    $whereClause = "trx_assignment_detail.md_employee_id = {$val->md_employee_id}";
-                    $whereClause .= " AND trx_assignment_date.date = '{$today}'";
-                    $whereClause .= " AND trx_assignment_date.isagree = 'Y'";
-                    $whereClause .= " AND trx_assignment.submissiontype IN ({$mAbsent->Pengajuan_Penugasan})";
-                    $whereClause .= " AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
-                    $subAssign = $mAssignment->getDetailData($whereClause)->getRow();
-
-                    $absentInBranch = null;
-
-                    // TODO : get Absent In Based on Submission Assignment
-                    if ($subAssign) {
-                        $whereClause = " v_attendance_serialnumber.md_employee_id = {$val->md_employee_id}";
-                        $whereClause .= " AND v_attendance_serialnumber.date = '{$today}'";
-                        $whereClause .= " AND v_attendance_serialnumber.clock_in IS NOT NULL";
-                        $whereClause .= " AND md_attendance_machines.md_branch_id = {$subAssign->branch_in}";
-                        $absentInBranch = $this->model->getAttendanceBranch($whereClause)->getRow();
-                    }
 
                     // TODO : If There no Clock In, Then Insert to Report
-                    if ((!$absentIn && !$submission && $workDetail) && !$absentInBranch) {
+                    if ((!$absentIn && !$submission && $workDetail)) {
                         $excel->setActiveSheetIndex(0)->setCellValue('A' . $row, $number);
                         $excel->getActiveSheet()->getStyle('A' . $row)->applyFromArray($style_row);
                         $excel->setActiveSheetIndex(0)->setCellValue('B' . $row, $val->nik);
@@ -417,10 +490,7 @@ class Attendance extends BaseController
 
                     // TODO : Save File and Send Email
                     $write->save($filePath);
-                    $text = $dataNotif->text . date('d F Y');
-                    $text = new Html2Text($text);
-                    $text = $text->getText();
-                    $cMail->sendEmail($user->email, $dataNotif->subject, $text, null, null, $filePath);
+                    $cMessage->sendInformation($user, $subject, $message, null, $filePath, null, true, false, false);
 
                     $seq++;
                 }
