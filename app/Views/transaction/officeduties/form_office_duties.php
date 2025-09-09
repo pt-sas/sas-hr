@@ -4,9 +4,9 @@
         <div class="row">
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="md_employee_id">Pemohon <span class="required">*</span></label>
+                    <label for="md_employee_id">Karyawan <span class="required">*</span></label>
                     <select class="form-control select-data" id="md_employee_id" name="md_employee_id"
-                        data-url="employee/getList/$Spesific">
+                        data-url="employee/getList/$Access">
                         <option value="">Select Karyawan</option>
                     </select>
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
