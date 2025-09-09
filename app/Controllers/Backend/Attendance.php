@@ -228,7 +228,7 @@ class Attendance extends BaseController
 
             // TODO : Get Submission Today
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
-            $whereClause .= " AND v_realization.date = {$today}";
+            $whereClause .= " AND v_realization.date = '{$today}'";
             $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
             $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
             $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
@@ -264,7 +264,7 @@ class Attendance extends BaseController
 
             // TODO : Get Submission Yesterday
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
-            $whereClause .= " AND v_realization.date = {$yesterday}";
+            $whereClause .= " AND v_realization.date = '{$yesterday}'";
             $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
             $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
             $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
@@ -292,7 +292,7 @@ class Attendance extends BaseController
 
             // TODO : Get Submission Forget Absent Leave Yesterday
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
-            $whereClause .= " AND v_realization.date = {$yesterday}";
+            $whereClause .= " AND v_realization.date = '{$yesterday}'";
             $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
             $whereClause .= " AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang}, {$mAbsent->Pengajuan_Pulang_Cepat})";
             $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
