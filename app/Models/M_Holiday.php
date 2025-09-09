@@ -85,7 +85,7 @@ class M_Holiday extends Model
         $mMassLeave = new M_MassLeave($this->request);
 
         $date1 = $this->where([
-            "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
+            // "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
             "isactive"                      => "Y"
         ])->findAll();
 
@@ -94,7 +94,7 @@ class M_Holiday extends Model
         endforeach;
 
         $date2 = $mMassLeave->where([
-            "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
+            // "DATE_FORMAT(startdate, '%Y')"  => date("Y"),
             "isaffect"                      => "Y",
             "isactive"                      => "Y"
         ])->findAll();

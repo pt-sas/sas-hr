@@ -166,13 +166,14 @@ function calculateTime($date)
     }
 }
 
-function addBusinessDays($startDate, $daysToAdd, $holidays = [])
+function addBusinessDays($startDate, $daysToAdd, $holidays = [], $backwards = false)
 {
     $date = new DateTime($startDate);
     $addedDays = 0;
 
     while ($addedDays < $daysToAdd) {
-        $date->modify('+1 day');
+        $operator = $backwards ? '-' : '+';
+        $date->modify("{$operator}1 day");
         $dayOfWeek = $date->format('N');
 
         // TODO : Check Apakah Hari Weekend atau Hari Libur

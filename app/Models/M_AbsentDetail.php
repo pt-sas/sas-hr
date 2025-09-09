@@ -325,7 +325,7 @@ class M_AbsentDetail extends Model
 
                     $rsvdTransaction = $mTransaction->where(['record_id' => $ID, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
 
-                    if ($balance && ($balance->balance_amount > 0 || $balance->carried_over_amount > 0)) {
+                    if ($balance && ($balance->balance_amount > 0 || $balance->carried_over_amount > 0) && $rsvdTransaction) {
                         $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
                         $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
                         $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin Cuti"])->first();
@@ -340,8 +340,6 @@ class M_AbsentDetail extends Model
                         $entityBal->md_employee_id = $sql->md_employee_id;
                         $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
-                        $rsvdTransaction = $mTransaction->where(['record_id' => $ID, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
-
                         if ($carryOverValid && $balance->carried_over_amount > 0) {
                             $updateField = 'carried_over_amount';
                             $oldValue = $balance->carried_over_amount;
@@ -355,34 +353,19 @@ class M_AbsentDetail extends Model
                         }
 
                         if ($mLeaveBalance->save($entityBal)) {
-                            if ($rsvdTransaction) {
-                                $dataLeaveUsage = [
-                                    'record_id'       => $ID,
-                                    'table'           => $this->table,
-                                    'transactiondate' => $line->date,
-                                    'transactiontype' => 'I-',
-                                    'year'            => $year,
-                                    'amount'          => -$rsvdTransaction->reserved_amount,
-                                    'reserved_amount' => -$rsvdTransaction->reserved_amount,
-                                    'md_employee_id'  => $sql->md_employee_id,
-                                    'isprocessed'     => 'N',
-                                    'created_by'      => $updated_by,
-                                    'updated_by'      => $updated_by
-                                ];
-                            } else {
-                                $dataLeaveUsage = [
-                                    'record_id'       => $ID,
-                                    'table'           => $this->table,
-                                    'transactiondate' => $line->date,
-                                    'transactiontype' => 'I-',
-                                    'year'            => $year,
-                                    'amount'          => $conseq,
-                                    'md_employee_id'  => $sql->md_employee_id,
-                                    'isprocessed'     => 'N',
-                                    'created_by'      => $updated_by,
-                                    'updated_by'      => $updated_by
-                                ];
-                            }
+                            $dataLeaveUsage = [
+                                'record_id'       => $ID,
+                                'table'           => $this->table,
+                                'transactiondate' => $line->date,
+                                'transactiontype' => 'I-',
+                                'year'            => $year,
+                                'amount'          => -$rsvdTransaction->reserved_amount,
+                                'reserved_amount' => -$rsvdTransaction->reserved_amount,
+                                'md_employee_id'  => $sql->md_employee_id,
+                                'isprocessed'     => 'N',
+                                'created_by'      => $updated_by,
+                                'updated_by'      => $updated_by
+                            ];
 
                             $mTransaction->builder->insert($dataLeaveUsage);
                         }
