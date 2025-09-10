@@ -18,10 +18,12 @@ use App\Models\M_AssignmentDate;
 use App\Models\M_ChangeLog;
 use App\Models\M_Configuration;
 use App\Models\M_Employee;
+use App\Models\M_Holiday;
 use App\Models\M_NotificationText;
 use App\Models\M_SubmissionCancel;
 use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_User;
+use App\Models\M_UserRole;
 use Html2Text\Html2Text;
 use Config\Services;
 
@@ -467,7 +469,6 @@ class Realization extends BaseController
                             $this->entity->realization_out = date('Y-m-d', strtotime($post['submissiondate'])) . " " . $post['endtime_att'];
 
                             if (empty($post['starttime_att']) || empty($post['endtime_att'])) {
-
                                 $clock_in = null;
                                 $clock_out = null;
 
@@ -487,13 +488,13 @@ class Realization extends BaseController
                                     $clock_out = $mAttendance->getAttendanceBranch($whereOut)->getRow();
                                 }
 
-                                if ($clock_in && $clock_out) {
+                                if (empty($clock_in) && empty($clock_out)) {
                                     $this->entity->instruction_in = 'N';
                                     $this->entity->instruction_out = 'N';
-                                } else if ($clock_in) {
+                                } else if (empty($clock_in)) {
                                     $this->entity->instruction_in = 'N';
                                     $this->entity->instruction_out = 'Y';
-                                } else if ($clock_out) {
+                                } else if (empty($clock_out)) {
                                     $this->entity->instruction_in = 'Y';
                                     $this->entity->instruction_out = 'N';
                                 }
@@ -627,10 +628,9 @@ class Realization extends BaseController
                             $this->entity->setAbsentId($ID);
                             $this->save();
                         } else {
-                            $this->entity->{$this->model->primaryKey} = $post['id'];
+                            $this->entity->{$this->model->primaryKey} = $post['foreignkey'];
                             $this->entity->realization_by = $this->access->getSessionUser();
                             $this->entity->isagree = $this->LINESTATUS_Ditolak;
-                            $this->entity->{$this->model->primaryKey} = $post['foreignkey'];
                             $response = $this->save();
                         }
                     }
@@ -989,7 +989,6 @@ class Realization extends BaseController
 
         $starttime = format_time($startdate);
         $endtime = format_time($endate);
-
         // If a employee have a workday
         if (!empty($work)) {
             $startMinutes = convertToMinutes(format_time($starttime));
@@ -1106,65 +1105,313 @@ class Realization extends BaseController
     {
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mConfig = new M_Configuration($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mAttendance = new M_Attendance($this->request);
         $changeLog = new M_ChangeLog($this->request);
+        $mNotifText = new M_NotificationText($this->request);
+        $mUser = new M_User($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $mOvertimeDetail = new M_OvertimeDetail($this->request);
+        $mUserRole = new M_UserRole($this->request);
+        $cTelegram = new Telegram();
+        $cMessage = new Message();
 
         //TODO : Get Rule How Many Days to Auto Approve
         $rule = $mConfig->where(['name' => 'AUTO_APPROVE_REALIZATION', 'isactive' => 'Y'])->first();
 
-        if ($rule && $rule->value > 0) {
+        $typeFormHalfDay = [100010, 100011, 100012, 100013];
+        $dataNotif = $mNotifText->where('name', 'Realisasi Disetujui Sistem')->first();
+        $holiday = $mHoliday->getHolidayDate();
 
+        $todayTime = date('Y-m-d H:i:s');
+        $today = date('Y-m-d');
+
+        $this->session->set([
+            'sys_user_id'       => 100000,
+        ]);
+
+        // TODO : Get HR Role and Employee, then get Email Adrress each of HR Employee
+        $hrRole = $mUserRole->whereIn('sys_role_id', [5, 6])->findAll();
+        $listHrUser = array_column($hrRole, "sys_user_id");
+        $hrUsers = $mUser->whereIn('sys_user_id', $listHrUser)->findAll();
+
+        if ($rule && $rule->value > 0) {
+            // TODO : Get Submission Excluded Overtime
             $where = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
             $where .= " AND isapproved = 'Y'";
-            $where .= " AND isagree IN ('M','S')";
-            $where .= " AND ADDDATE(date, INTERVAL {$rule->value} DAY) <= NOW()";
+            $where .= " AND isagree IN ('{$this->LINESTATUS_Realisasi_Atasan}','{$this->LINESTATUS_Realisasi_HRD}')";
 
             $listApproved = $mAbsentDetail->getAllSubmission($where)->getResult();
 
             if ($listApproved) {
-                $this->session->set([
-                    'sys_user_id'       => 100000,
-                ]);
-
-                $todayTime = date('Y-m-d H:i:s');
-
                 foreach ($listApproved as $row) {
                     //TODO : Update Detail Status to Approved
-                    $this->modelDetail = $row->table === 'trx_absent' ? new M_AbsentDetail($this->request) : new M_AssignmentDate($this->request);
-                    $entity = $row->table === "trx_absent" ? new \App\Entities\AbsentDetail() : new \App\Entities\AssignmentDate();
+                    if ($row->table === "trx_submission_cancel") {
+                        $this->model = new M_SubmissionCancel($this->request);
+                        $this->modelDetail = new M_SubmissionCancelDetail($this->request);
+                        $entity = new \App\Entities\SubmissionCancelDetail();
+                    } else if ($row->table === "trx_assignment") {
+                        $this->model = new M_Assignment($this->request);
+                        $this->modelDetail = new M_AssignmentDate($this->request);
+                        $entity = new \App\Entities\AssignmentDate();
+                    } else {
+                        $this->model = new M_Absent($this->request);
+                        $this->modelDetail = new M_AbsentDetail($this->request);
+                        $entity = new \App\Entities\AbsentDetail();
+                    }
 
-                    $entity->isagree = 'Y';
+                    $isHRD = $row->isagree == $this->LINESTATUS_Realisasi_HRD ? true : false;
+
+                    $dateApproved = addBusinessDays(
+                        $isHRD ? $row->realization_hrd : $row->realization_mgr,
+                        $rule->value,
+                        $holiday
+                    );
+
+                    // TODO : Continue Iteration when DateApproved not meet condition
+                    if (!($dateApproved <= $today)) {
+                        continue;
+                    }
+
+                    $trx = $this->model->find($row->header_id);
+                    $trxLine = $this->modelDetail->find($row->id);
+                    $date = date('Y-m-d', strtotime($row->date));
+
+                    // TODO : Set Notification
+                    $subject = $dataNotif->getSubject();
+                    $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, $date], $dataNotif->getText());
+
+                    if (!$isHRD) {
+                        if ($row->submissiontype == 100008) {
+                            $whereIn = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
+                            $whereIn .= " AND v_attendance_branch.date = '{$date}'";
+                            $whereIn .= " AND v_attendance_branch.md_branch_id = {$trxLine->branch_in}";
+                            $clock_in = $mAttendance->getAttBranch($whereIn)->getRow();
+
+                            $whereOut = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
+                            $whereOut .= " AND v_attendance_branch.date = '{$date}'";
+                            $whereOut .= " AND v_attendance_branch.md_branch_id = {$trxLine->branch_out}";
+                            $clock_out = $mAttendance->getAttBranch($whereOut)->getRow();
+
+                            $isAgreeUpdate = $this->LINESTATUS_Realisasi_HRD;
+                            $startTime = $clock_in ? $clock_in->clock_in : '';
+                            $endTime = $clock_out ? $clock_out->clock_out : '';
+
+                            $entity->realization_in = $date . " " . $startTime;
+                            $entity->realization_out = $date . " " . $endTime;
+                        } else {
+                            $isAgreeUpdate = $this->LINESTATUS_Disetujui;
+
+                            if (in_array($row->submissiontype, $typeFormHalfDay))
+                                $entity->date = $date . " " . format_time($trx->startdate);
+                        }
+                    } else {
+                        $isAgreeUpdate = $this->LINESTATUS_Disetujui;
+                        if ($row->submissiontype == 100008) {
+                            $whereIn = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
+                            $whereIn .= " AND v_attendance_branch.date = '{$date}'";
+                            $whereIn .= " AND v_attendance_branch.md_branch_id = {$trxLine->branch_in}";
+                            $clock_in = $mAttendance->getAttBranch($whereIn)->getRow();
+
+                            $whereOut = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
+                            $whereOut .= " AND v_attendance_branch.date = '{$date}'";
+                            $whereOut .= " AND v_attendance_branch.md_branch_id = {$trxLine->branch_out}";
+                            $clock_out = $mAttendance->getAttBranch($whereOut)->getRow();
+
+                            $startTime = $clock_in ? $clock_in->clock_in : '';
+                            $endTime = $clock_out ? $clock_out->clock_out : '';
+
+                            $entity->realization_in = $date . " " . $startTime;
+                            $entity->realization_out = $date . " " . $endTime;
+
+                            if (empty($startTime) || empty($endTime)) {
+                                $clock_in = null;
+                                $clock_out = null;
+
+                                if (empty($startTime)) {
+                                    $whereIn = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
+                                    $whereIn .= " AND v_attendance_branch.date = '{$date}'";
+                                    $whereIn .= " AND v_attendance_branch.clock_in IS NOT null";
+                                    $whereIn .= " AND v_attendance_branch.md_branch_id != {$trxLine->branch_in}";
+                                    $clock_in = $mAttendance->getAttBranch($whereIn)->getRow();
+                                }
+
+                                if (empty($endTime)) {
+                                    $whereOut = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
+                                    $whereOut .= " AND v_attendance_branch.date = '{$date}'";
+                                    $whereOut .= " AND v_attendance_branch.clock_out IS NOT null";
+                                    $whereOut .= " AND v_attendance_branch.md_branch_id != {$trxLine->branch_out}";
+                                    $clock_out = $mAttendance->getAttBranch($whereOut)->getRow();
+                                }
+
+                                if (empty($clock_in) && empty($clock_out)) {
+                                    $entity->instruction_in = 'N';
+                                    $entity->instruction_out = 'N';
+                                } else if (empty($clock_in)) {
+                                    $entity->instruction_in = 'N';
+                                    $entity->instruction_out = 'Y';
+                                } else if (empty($clock_out)) {
+                                    $entity->instruction_in = 'Y';
+                                    $entity->instruction_out = 'N';
+                                }
+
+                                // if (empty($startTime) && empty($clock_in)) {
+                                //     continue;
+                                // } else if (empty($endTime) && empty($clock_out)) {
+                                //     continue;
+                                // }
+                            } else {
+                                $entity->instruction_in = 'Y';
+                                $entity->instruction_out = 'Y';
+                            }
+                        }
+                    }
+
+                    $entity->isagree = $isAgreeUpdate;
                     $entity->updated_at = $todayTime;
                     $entity->updated_by = $this->session->get('sys_user_id');
+                    $entity->realization_by = $this->session->get('sys_user_id');
                     $entity->{$this->modelDetail->primaryKey} = $row->id;
 
-                    if ($this->modelDetail->save($entity)) {
-                        $changeLog->insertLog($this->modelDetail->table, 'isagree', $row->id, $row->isagree, 'Y', $this->EVENTCHANGELOG_Update);
-                    };
+                    $result = $this->modelDetail->save($entity);
 
-                    //TODO : Update Header Status to Complete if There's No Another Line to Realization
-                    $where = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
-                    $where .= " AND isapproved = 'Y'";
-                    $where .= " AND isagree IN ('M','S','H')";
-                    $where .= " AND header_id = {$row->header_id}";
-                    $where .= " AND table = '{$row->table}'";
-                    $remaining = $mAbsentDetail->getAllSubmission($where)->getRow();
+                    if ($result) {
+                        $changeLog->insertLog($this->modelDetail->table, 'isagree', $row->id, $row->isagree, $isAgreeUpdate, $this->EVENTCHANGELOG_Update);
 
-                    if (!$remaining) {
-                        $this->model = $row->table === 'trx_absent' ? new M_Absent($this->request) : new M_Assignment($this->request);
-                        $this->entity = $row->table === 'trx_absent' ? new \App\Entities\Absent() : new \App\Entities\Assignment();
+                        // TODO : Send Information
+                        $user = $mUser->where('sys_user_id', $trx->created_by)->first();
+                        $employee = $mEmployee->find($row->md_employee_id);
+                        $cMessage->sendInformation($user, $subject, $message, 'SISTEM', null, null, true, true, true);
 
-                        $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-                        $this->entity->setReceivedDate($todayTime);
+                        // TODO : Send Telegram Message to Employee
+                        if (($user->md_employee_id != $employee->md_employee_id) && !empty($employee->telegram_id))
+                            $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
 
-                        if ($row->table === 'trx_absent') {
-                            $this->entity->setAbsentId($row->header_id);
-                        } else {
-                            $this->entity->setAssignmentId($row->header_id);
+                        // TODO : Send Information to HRD
+                        foreach ($hrUsers as $hrUser)
+                            $cMessage->sendInformation($hrUser, $subject, $message, 'SISTEM', null, null, true, true, true);
+
+                        //TODO : Update Header Status to Complete if There's No Another Line to Realization
+                        $where = "v_realization.docstatus = '{$this->DOCSTATUS_Inprogress}'";
+                        $where .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_Atasan}','{$this->LINESTATUS_Realisasi_HRD}','{$this->LINESTATUS_Approval}')";
+                        $where .= " AND v_realization.header_id = {$row->header_id}";
+                        $where .= " AND v_realization.table = '{$row->table}'";
+                        $pendingLine = $mAbsentDetail->getAllSubmission($where)->getRow();
+
+                        if (!$pendingLine) {
+                            $dataUpdate = [
+                                'updated_by'   =>  $this->session->get('sys_user_id'),
+                                'docstatus'    => $this->DOCSTATUS_Completed,
+                                'receiveddate' => $today,
+                            ];
+
+                            if ($row->submissiontype == 100009) {
+                                $dataUpdate['startdate_realization'] = $date . " " . format_time($trx->startdate);
+                                $dataUpdate['enddate_realization']   = $date . " " . format_time($trx->enddate);
+                            } elseif (in_array($row->submissiontype, $typeFormHalfDay)) {
+                                $dataUpdate['enddate_realization']   = $date . " " . format_time($trx->enddate);
+                            }
+
+                            $this->model->builder->update($dataUpdate, [$this->model->primaryKey => $row->header_id]);
+                            $changeLog->insertLog($this->model->table, 'docstatus', $row->header_id, $row->docstatus, $this->DOCSTATUS_Completed, $this->EVENTCHANGELOG_Update);
                         }
-
-                        $this->save();
+                    } else {
+                        log_message('error', json_encode($result));
                     }
                 }
+            } else {
+                log_message('info', 'Tidak ada transaksi realisasi');
+            }
+
+            // TODO : This segment is for auto approve Overtime
+            $where = "isagree = '{$this->LINESTATUS_Realisasi_Atasan}'";
+            $listApprovedOvertime = $mOvertimeDetail->getRealizationOvertime($where)->getResult();
+
+            if ($listApprovedOvertime) {
+                foreach ($listApprovedOvertime as $row) {
+                    //TODO : Update Detail Status to Approved
+                    $this->model = new M_Overtime($this->request);
+                    $this->modelDetail = new M_OvertimeDetail($this->request);
+                    $entity = new \App\Entities\OvertimeDetail();
+
+                    $dateApproved = addBusinessDays(
+                        $row->realization_date,
+                        $rule->value,
+                        $holiday
+                    );
+
+                    // TODO : Continue Iteration when DateApproved not meet condition
+                    if (!($dateApproved <= $today)) {
+                        continue;
+                    }
+
+                    // TODO : Get Transaction Data
+                    $trxLine = $this->modelDetail->find($row->trx_overtime_detail_id);
+                    $trx = $this->model->find($trxLine->trx_overtime_id);
+                    $date = date('Y-m-d', strtotime($row->startdate_line));
+
+                    // TODO : Set Notification
+                    $subject = $dataNotif->getSubject();
+                    $message = str_replace(['(Var1)', '(Var2)'], [$row->documentno, $date], $dataNotif->getText());
+
+                    // TODO : Get Employee Clock Out
+                    $where = " v_attendance.md_employee_id = {$row->md_employee_id}";
+                    $where .= " AND v_attendance.date = '{$date}'";
+                    $where .= " AND v_attendance.clock_out IS NOT null";
+                    $clock_out = $mAttendance->getAttendance($where)->getRow();
+
+                    $enddate = $date . " " . (!empty($clock_out) ? $clock_out->clock_out : '');
+
+                    if (!empty($clock_out))
+                        $ovt = $this->getHourOvertime($row->startdate_line, $enddate, $row->md_employee_id);
+
+                    $entity->enddate_realization = $enddate;
+                    $entity->overtime_expense = !empty($ovt) ? $ovt['expense'] : null;
+                    $entity->overtime_balance = !empty($ovt) ? $ovt['balance'] : null;
+                    $entity->total = !empty($ovt) ? $ovt['total'] : null;
+                    $entity->isagree = $this->LINESTATUS_Disetujui;
+                    $entity->updated_at = $todayTime;
+                    $entity->updated_by = $this->session->get('sys_user_id');
+                    $entity->realization_by = $this->session->get('sys_user_id');
+                    $entity->{$this->modelDetail->primaryKey} = $row->trx_overtime_detail_id;
+
+                    $result = $this->modelDetail->save($entity);
+
+                    if ($result) {
+                        $changeLog->insertLog($this->modelDetail->table, 'isagree', $row->trx_overtime_detail_id, $row->isagree, $this->LINESTATUS_Disetujui, $this->EVENTCHANGELOG_Update);
+
+                        // TODO : Send Information
+                        $user = $mUser->where('sys_user_id', $trx->created_by)->first();
+                        $employee = $mEmployee->find($row->md_employee_id);
+                        $cMessage->sendInformation($user, $subject, $message, 'SAS HRD', null, null, true, true, true);
+
+                        // TODO : Send Telegram Message to Employee
+                        if (($user->md_employee_id != $employee->md_employee_id) && !empty($employee->telegram_id))
+                            $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
+
+                        //TODO : Update Header Status to Complete if There's No Another Line to Realization
+                        $pendingLine = $this->modelDetail->where(
+                            'trx_overtime_id',
+                            $trxLine->trx_overtime_id
+                        )->whereIn('isagree', [$this->LINESTATUS_Approval, $this->LINESTATUS_Realisasi_Atasan, $this->LINESTATUS_Realisasi_HRD])
+                            ->first();
+
+                        if (!$pendingLine) {
+                            $dataUpdate = [
+                                'updated_by'   =>  $this->session->get('sys_user_id'),
+                                'docstatus'    => $this->DOCSTATUS_Completed,
+                                'receiveddate' => $today,
+                            ];
+
+                            $this->model->builder->update($dataUpdate, [$this->model->primaryKey => $trx->trx_overtime_id]);
+                            $changeLog->insertLog($this->model->table, 'docstatus', $trx->trx_overtime_id, $trx->docstatus, $this->DOCSTATUS_Completed, $this->EVENTCHANGELOG_Update);
+                        }
+                    } else {
+                        log_message('error', json_encode($result));
+                    }
+                }
+            } else {
+                log_message('info', 'Tidak ada transaksi realisasi lembur');
             }
         }
     }
