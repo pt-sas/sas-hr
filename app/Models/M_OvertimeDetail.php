@@ -22,6 +22,7 @@ class M_OvertimeDetail extends Model
         'isagree',
         'created_by',
         'updated_by',
+        'realization_by'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\OvertimeDetail';
@@ -48,13 +49,7 @@ class M_OvertimeDetail extends Model
         $result = [];
 
         foreach ($data as $row) :
-
-            if ($row->trx_overtime_detail_id) {
-                $mOvertime = new M_Overtime($this->request);
-                $header = $mOvertime->find($dataHeader->trx_overtime_id);
-                $row->startdate = date('Y-m-d', strtotime($header->startdate)) . " " . $row->starttime;
-                $row->enddate = date('Y-m-d', strtotime($header->enddate)) . " " . $row->endtime;
-            } else {
+            if (isset($dataHeader->startdate)) {
                 $row->startdate = date('Y-m-d', strtotime($dataHeader->startdate)) . " " . $row->starttime;
                 $row->enddate = date('Y-m-d', strtotime($dataHeader->enddate)) . " " . $row->endtime;
             }
