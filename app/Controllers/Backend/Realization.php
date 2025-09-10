@@ -1288,8 +1288,10 @@ class Realization extends BaseController
                             $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
 
                         // TODO : Send Information to HRD
-                        foreach ($hrUsers as $hrUser)
-                            $cMessage->sendInformation($hrUser, $subject, $message, 'SISTEM', null, null, true, true, true);
+                        if ($isHRD) {
+                            foreach ($hrUsers as $hrUser)
+                                $cMessage->sendInformation($hrUser, $subject, $message, 'SISTEM', null, null, true, true, true);
+                        }
 
                         //TODO : Update Header Status to Complete if There's No Another Line to Realization
                         $where = "v_realization.docstatus = '{$this->DOCSTATUS_Inprogress}'";
