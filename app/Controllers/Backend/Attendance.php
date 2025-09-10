@@ -378,9 +378,9 @@ class Attendance extends BaseController
                 );
 
                 $whereClause = "md_employee.isactive = 'Y'";
-                $whereClause .= " AND md_employee.superior_id IN (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $value->md_employee_id))";
+                $whereClause .= " AND (md_employee.superior_id IN (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $value->md_employee_id))";
                 $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $value->md_employee_id)";
-                $whereClause .= " OR md_employee.superior_id = $value->md_employee_id";
+                $whereClause .= " OR md_employee.superior_id = $value->md_employee_id)";
                 $whereClause .= " AND md_employee.md_status_id IN ({$this->Status_PERMANENT}, {$this->Status_PROBATION})";
                 $employee = $mEmployee->getEmployee($whereClause);
 
