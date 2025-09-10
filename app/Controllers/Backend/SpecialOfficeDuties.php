@@ -443,9 +443,9 @@ class SpecialOfficeDuties extends BaseController
                 if ($emp->getLevellingId() == 100002) {
                     $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
                 } else {
-                    $whereClause .= " AND superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
+                    $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
                     $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
-                    $whereClause .= " OR md_employee.superior_id = $empId";
+                    $whereClause .= " OR md_employee.superior_id = $empId)";
                     $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
                 }
 
@@ -478,9 +478,9 @@ class SpecialOfficeDuties extends BaseController
                 ) {
                     $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
                 } else {
-                    $whereClause .= " AND superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
+                    $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
                     $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
-                    $whereClause .= " OR md_employee.superior_id = $empId";
+                    $whereClause .= " OR md_employee.superior_id = $empId)";
                     $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
                 }
 
@@ -577,18 +577,18 @@ class SpecialOfficeDuties extends BaseController
                 $branch_in = $mBranch->find($subDetail->branch_in);
                 $branch_out = $mBranch->find($subDetail->branch_out);
 
-                $whereIn = " md_attendance_branch.md_employee_id = {$line->md_employee_id}";
-                $whereIn .= " AND md_attendance_branch.date = '{$date}'";
-                $whereIn .= " AND md_attendance_branch.md_branch_id = {$subDetail->branch_in}";
+                $whereIn = " v_attendance_branch.md_employee_id = {$line->md_employee_id}";
+                $whereIn .= " AND v_attendance_branch.date = '{$date}'";
+                $whereIn .= " AND v_attendance_branch.md_branch_id = {$subDetail->branch_in}";
                 $clock_in = $mAttendance->getAttBranch($whereIn)->getRow();
 
                 if ($clock_in && $clock_in->clock_in) {
                     $time_in = format_time($clock_in->clock_in);
                 }
 
-                $whereOut = " md_attendance_branch.md_employee_id = {$line->md_employee_id}";
-                $whereOut .= " AND md_attendance_branch.date = '{$date}'";
-                $whereOut .= " AND md_attendance_branch.md_branch_id = {$subDetail->branch_out}";
+                $whereOut = " v_attendance_branch.md_employee_id = {$line->md_employee_id}";
+                $whereOut .= " AND v_attendance_branch.date = '{$date}'";
+                $whereOut .= " AND v_attendance_branch.md_branch_id = {$subDetail->branch_out}";
                 $clock_out = $mAttendance->getAttBranch($whereOut)->getRow();
 
                 if ($clock_out && $clock_out->clock_out) {

@@ -6,14 +6,8 @@ use App\Controllers\BaseController;
 use App\Models\M_Absent;
 use Config\Services;
 use App\Models\M_AccessMenu;
-use App\Models\M_Branch;
-use App\Models\M_Division;
 use App\Models\M_Employee;
 use App\Models\M_MedicalCertificate;
-use App\Models\M_Role;
-use App\Models\M_ProxySwitching;
-use App\Models\M_User;
-use App\Models\M_UserRole;
 
 class MedicalCertificate extends BaseController
 {
@@ -235,7 +229,7 @@ class MedicalCertificate extends BaseController
                     if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $trx = $this->model->where('trx_absent_id',  $post['trx_absent_id'])->whereIn('docstatus', ['CO', 'IP'])->first();
+                        $trx = $this->model->where('trx_absent_id',  $row->trx_absent_id)->whereIn('docstatus', ['CO', 'IP'])->first();
                         if ($trx) {
                             $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
                         } else {
