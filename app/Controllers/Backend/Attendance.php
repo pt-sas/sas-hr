@@ -61,7 +61,10 @@ class Attendance extends BaseController
                 $order = $this->request->getPost('columns');
                 $search = $this->request->getPost('search');
                 $sort = ['v_attendance.date' => 'ASC', 'v_attendance.nik' => 'ASC'];
-                $where = [];
+
+                // TODO : Get Employee Access
+                $empList = $this->access->getEmployeeData();
+                $where['v_attendance.md_employee_id'] = ['value' => $empList];
 
                 $number = $this->request->getPost('start');
                 $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);

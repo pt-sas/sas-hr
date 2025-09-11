@@ -2,6 +2,8 @@
 
 namespace App\Libraries;
 
+use App\Models\M_AccessMenu;
+use App\Models\M_Employee;
 use App\Models\M_User;
 use App\Models\M_Menu;
 use App\Models\M_Submenu;
@@ -295,5 +297,60 @@ class Access
         ])->getRow();
 
         return $role;
+    }
+
+    /**
+     * Get data Employee based on user access and employee chart
+     */
+    public function getEmployeeData($isAffectDelegation = true)
+    {
+        $mAccess = new M_AccessMenu($this->request);
+        $mEmployee = new M_Employee($this->request);
+
+        $userID = $this->session->get("sys_user_id");
+        $employeeID = $this->session->get('md_employee_id');
+
+        $roleEmp = $this->getUserRoleName($userID, 'W_Emp_All_Data');
+
+        if ($isAffectDelegation)
+            $empDelegation = $mEmployee->getEmpDelegation($userID);
+
+        $arrAccess = $mAccess->getAccess($userID);
+        $arrEmployee = !empty($employeeID) ? $mEmployee->getChartEmployee($employeeID) : [];
+
+        if (!empty($empDelegation)) {
+            $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
+        }
+
+        $empList = [];
+
+        if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+            $arrBranch = $arrAccess["branch"];
+            $arrDiv = $arrAccess["division"];
+
+            $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
+
+            if (!empty($empDelegation)) {
+                $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
+            }
+
+            if ($roleEmp && !empty($employeeID)) {
+                $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                $empList = $arrMerge;
+            } else if (!$roleEmp && !empty($employeeID)) {
+                $empList = $arrEmployee;
+            } else if ($roleEmp && empty($employeeID)) {
+                $empList = $arrEmpBased;
+            } else {
+                $empList = [$employeeID];
+            }
+        } else if (!empty($employeeID)) {
+            $empList = $arrEmployee;
+        } else {
+            $empList = [$employeeID];
+        }
+
+        return $empList;
     }
 }
