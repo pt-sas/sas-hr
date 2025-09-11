@@ -236,7 +236,7 @@ class Attendance extends BaseController
 
             if (!$absentIn && ($workDetail || $tugasKunjungan) && !$submission && !in_array($today, $holiday) && $dataNotifIn) {
                 if ($user) {
-                    $cMessage->sendInformation($user, $subjectIn, $messageIn, 'SAS HRD', null, null, true, true, true);
+                    $cMessage->sendInformation($user, $subjectIn, $messageIn, 'HARMONY SAS', null, null, true, true, true);
                 } else if (!empty($value->telegram_id)) {
                     $cTelegram->sendMessage($value->telegram_id, $messageIn);
                 }
@@ -300,7 +300,7 @@ class Attendance extends BaseController
 
             if ($workDetail && !$absentOut && !$forgotAbsentLeave && !$submission && $dataNotifOut) {
                 if ($user) {
-                    $cMessage->sendInformation($user, $subjectOut, $messageOut, 'SAS HRD', null, null, true, true, true);
+                    $cMessage->sendInformation($user, $subjectOut, $messageOut, 'HARMONY SAS', null, null, true, true, true);
                 } else if (!empty($value->telegram_id)) {
                     $cTelegram->sendMessage($value->telegram_id, $messageOut);
                 }

@@ -412,7 +412,7 @@ class User extends BaseController
 				$recipients = array_filter(array_merge([$user, $proxyUsers], $hrUsers, $lowerUser));
 
 				foreach ($recipients as $users) {
-					$cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
+					$cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
 				}
 			} elseif (!$proxySuccess && $notifTindakan) {
 				// TODO : Send action required notification to HR
@@ -420,7 +420,7 @@ class User extends BaseController
 				$subject = $notifTindakan->getSubject();
 
 				foreach ($hrUsers as $users) {
-					$cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, true, true);
+					$cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
 				}
 			}
 		}
