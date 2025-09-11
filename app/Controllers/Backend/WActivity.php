@@ -350,7 +350,7 @@ class WActivity extends BaseController
                 if (!empty($employee) && $users->md_employee_id == $employee->md_employee_id)
                     $sendTelegram = false;
 
-                $cMessage->sendInformation($users, $subject, $message, 'SAS HRD', null, null, true, $sendTelegram, true);
+                $cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, $sendTelegram, true);
             }
 
             if (!empty($employee) && !empty($employee->telegram_id)) {

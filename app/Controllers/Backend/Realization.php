@@ -639,7 +639,7 @@ class Realization extends BaseController
                     $row = $model->find($trx->header_id);
                     $user = $mUser->where('sys_user_id', $row->created_by)->first();
 
-                    $cMessage->sendInformation($user, $subject, $message, 'SAS HRD', null, null, true, true, true);
+                    $cMessage->sendInformation($user, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
 
                     // TODO : Send Telegram Message to Employee
                     if (($user->md_employee_id != $employee->md_employee_id) && !empty($employee->telegram_id))
@@ -836,7 +836,7 @@ class Realization extends BaseController
                     $row = $model->find($trx->header_id);
                     $user = $mUser->where('sys_user_id', $row->created_by)->first();
 
-                    $cMessage->sendInformation($user, $subject, $message, 'SAS HRD', null, null, true, true, true);
+                    $cMessage->sendInformation($user, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
 
 
                     // TODO : Send Telegram Message to Employee
@@ -1145,6 +1145,11 @@ class Realization extends BaseController
 
             if ($listApproved) {
                 foreach ($listApproved as $row) {
+                    // TODO : Skip Iteration if SubmissionType is Office Duties Or Half Office Duties
+                    if ($row->submissiontype == 100007 || $row->submissiontype == 100009) {
+                        continue;
+                    }
+
                     //TODO : Update Detail Status to Approved
                     if ($row->table === "trx_submission_cancel") {
                         $this->model = new M_SubmissionCancel($this->request);
@@ -1281,7 +1286,7 @@ class Realization extends BaseController
                         // TODO : Send Information
                         $user = $mUser->where('sys_user_id', $trx->created_by)->first();
                         $employee = $mEmployee->find($row->md_employee_id);
-                        $cMessage->sendInformation($user, $subject, $message, 'SISTEM', null, null, true, true, true);
+                        $cMessage->sendInformation($user, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
 
                         // TODO : Send Telegram Message to Employee
                         if (($user->md_employee_id != $employee->md_employee_id) && !empty($employee->telegram_id))
@@ -1290,7 +1295,7 @@ class Realization extends BaseController
                         // TODO : Send Information to HRD
                         if ($isHRD) {
                             foreach ($hrUsers as $hrUser)
-                                $cMessage->sendInformation($hrUser, $subject, $message, 'SISTEM', null, null, true, true, true);
+                                $cMessage->sendInformation($hrUser, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
                         }
 
                         //TODO : Update Header Status to Complete if There's No Another Line to Realization
@@ -1385,7 +1390,7 @@ class Realization extends BaseController
                         // TODO : Send Information
                         $user = $mUser->where('sys_user_id', $trx->created_by)->first();
                         $employee = $mEmployee->find($row->md_employee_id);
-                        $cMessage->sendInformation($user, $subject, $message, 'SAS HRD', null, null, true, true, true);
+                        $cMessage->sendInformation($user, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
 
                         // TODO : Send Telegram Message to Employee
                         if (($user->md_employee_id != $employee->md_employee_id) && !empty($employee->telegram_id))
