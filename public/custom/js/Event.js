@@ -9,8 +9,15 @@ $(document).ready(function () {
       url: ADMIN_URL + "branch/getList",
       delay: 250,
       data: function (params) {
+        let extraData = {};
+
+        if ($(".multiple-select-branch").hasClass("access")) {
+          extraData.name = "Access";
+        }
+
         return {
           search: params.term,
+          ...extraData,
         };
       },
       processResults: function (data, page) {
@@ -32,8 +39,15 @@ $(document).ready(function () {
       url: ADMIN_URL + "division/getList",
       delay: 250,
       data: function (params) {
+        let extraData = {};
+
+        if ($(".multiple-select-division").hasClass("access")) {
+          extraData.name = "Access";
+        }
+
         return {
           search: params.term,
+          ...extraData,
         };
       },
       processResults: function (data, page) {
