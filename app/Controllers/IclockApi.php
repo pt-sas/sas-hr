@@ -65,6 +65,8 @@ STR;
                     $row = [];
                     $req = preg_split('/\\t\\n|\\t|,|\\n/', $val);
 
+                    $row['created_by'] = 100000;
+                    $row['updated_by'] = 100000;
                     $row['nik'] = $req[0];
                     $row['checktime'] = $req[1];
                     $row['status'] = $req[2];
@@ -226,6 +228,8 @@ STR;
 
                 foreach ($json as $val) {
                     $row = [
+                        'created_by'  => 100000,
+                        'updated_by'  => 100000,
                         'nik'         => $val['uid'] ?? null,
                         'checktime'   => $val['timestamp'] ?? null,
                         'status'      => $val['status'] ?? null,
