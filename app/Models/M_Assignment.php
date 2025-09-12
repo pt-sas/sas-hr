@@ -172,7 +172,9 @@ class M_Assignment extends Model
     {
         $this->builder->select($this->table . '.*,
         trx_assignment_detail.md_employee_id as karyawan_id,
-        trx_assignment_date.*');
+        trx_assignment_date.*,
+        trx_assignment_date.branch_in as branch_in_line,
+        trx_assignment_date.branch_out as branch_out_line');
         $this->builder->join('trx_assignment_detail', 'trx_assignment_detail.trx_assignment_id = trx_assignment.trx_assignment_id', 'left');
         $this->builder->join('trx_assignment_date', 'trx_assignment_date.trx_assignment_detail_id = trx_assignment_detail.trx_assignment_detail_id', 'left');
 

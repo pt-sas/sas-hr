@@ -204,7 +204,7 @@ class Attendance extends BaseController
             $whereClause = "DATE(trx_assignment_date.date) = '{$today}'
                     AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
                     AND trx_assignment_detail.md_employee_id = {$value->md_employee_id}
-                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
+                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
                     AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
 
             $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
@@ -221,7 +221,7 @@ class Attendance extends BaseController
                 $whereClause .= " AND v_attendance_branch.clock_in is NOT NULL";
 
                 if ($tugasKunjungan) {
-                    $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in}";
+                    $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in_line}";
                 } else {
                     $whereClause .= " AND v_attendance_branch.md_branch_id IN ({$empBranch})";
                 }
@@ -232,7 +232,7 @@ class Attendance extends BaseController
             // TODO : Get Submission Today
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
             $whereClause .= " AND v_realization.date = '{$today}'";
-            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
             $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
             $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
             $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
@@ -241,7 +241,7 @@ class Attendance extends BaseController
                 if ($user) {
                     $cMessage->sendInformation($user, $subjectIn, $messageIn, 'HARMONY SAS', null, null, true, true, true);
                 } else if (!empty($value->telegram_id)) {
-                    $cTelegram->sendMessage($value->telegram_id, $messageIn);
+                    $cTelegram->sendMessage($value->telegram_id, (new Html2Text($messageIn))->getText());
                 }
             }
 
@@ -260,7 +260,7 @@ class Attendance extends BaseController
             $whereClause = "DATE(trx_assignment_date.date) = '{$yesterday}'
                     AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
                     AND trx_assignment_detail.md_employee_id = {$value->md_employee_id}
-                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
+                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
                     AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
 
             $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
@@ -268,7 +268,7 @@ class Attendance extends BaseController
             // TODO : Get Submission Yesterday
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
             $whereClause .= " AND v_realization.date = '{$yesterday}'";
-            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
             $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
             $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
             $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
@@ -285,7 +285,7 @@ class Attendance extends BaseController
                 $whereClause .= " AND v_attendance_branch.clock_out is NOT NULL";
 
                 if ($tugasKunjungan) {
-                    $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_out}";
+                    $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_out_line}";
                 } else {
                     $whereClause .= " AND v_attendance_branch.md_branch_id IN ({$empBranch})";
                 }
@@ -296,7 +296,7 @@ class Attendance extends BaseController
             // TODO : Get Submission Forget Absent Leave Yesterday
             $whereClause = "v_realization.md_employee_id = {$value->md_employee_id}";
             $whereClause .= " AND v_realization.date = '{$yesterday}'";
-            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+            $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
             $whereClause .= " AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang}, {$mAbsent->Pengajuan_Pulang_Cepat})";
             $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
             $forgotAbsentLeave = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
@@ -305,7 +305,7 @@ class Attendance extends BaseController
                 if ($user) {
                     $cMessage->sendInformation($user, $subjectOut, $messageOut, 'HARMONY SAS', null, null, true, true, true);
                 } else if (!empty($value->telegram_id)) {
-                    $cTelegram->sendMessage($value->telegram_id, $messageOut);
+                    $cTelegram->sendMessage($value->telegram_id, (new Html2Text($messageOut))->getText());
                 }
             }
         }
@@ -428,7 +428,7 @@ class Attendance extends BaseController
                     $whereClause = "DATE(trx_assignment_date.date) = '{$today}'
                     AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
                     AND trx_assignment_detail.md_employee_id = {$val->md_employee_id}
-                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
+                    AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
                     AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
 
                     $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
@@ -439,7 +439,7 @@ class Attendance extends BaseController
                     $whereClause .= " AND v_attendance_branch.clock_in IS NOT NULL";
 
                     if ($tugasKunjungan) {
-                        $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in}";
+                        $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in_line}";
                     } else {
                         $whereClause .= " AND v_attendance_branch.md_branch_id = {$branch->md_branch_id}";
                     }
@@ -449,7 +449,7 @@ class Attendance extends BaseController
                     // TODO : Get Submission Today
                     $whereClause = "v_realization.md_employee_id = {$val->md_employee_id}";
                     $whereClause .= " AND v_realization.date = '{$today}'";
-                    $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+                    $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
                     $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
                     $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                     $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
