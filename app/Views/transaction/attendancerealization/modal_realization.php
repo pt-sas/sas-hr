@@ -156,10 +156,31 @@
                         </div>
                         <div class="col-md-12">
                             <div class="form-group">
+                                <label>Foto <span class="required">*</span></label>
+                                <div class="form-upload-result">
+                                    <label class="col-md-12 form-result">
+                                        <button type="button" class="close-img" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                        <img class="img-result">
+                                    </label>
+                                </div>
+                                <div class="form-upload">
+                                    <label class="col-md-12 form-upload-foto" id="image-upload">
+                                        <input type="file" class="control-upload-image" id="image" name="image"
+                                            onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
+                                        <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
+                                    </label>
+                                    <small class="form-text text-danger" id="error_image"></small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- <div class="col-md-12">
+                            <div class="form-group">
                                 <label for="comment">Pesan ke HRD</span></label>
                                 <textarea type="text" class="form-control" name="comment" rows="4"></textarea>
                             </div>
-                        </div>
+                        </div> -->
                         <input type="hidden" class="form-control" name="isagree">
                         <input type="hidden" class="form-control" name="submissionform">
                     </div>
@@ -294,7 +315,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="starttime_att">Jam Mulai</label>
+                                <label for="starttime_att">Jam Mulai <span class="required">*</span></label>
                                 <div class="input-icon">
                                     <input type="text" class="form-control timepicker-start" name="starttime_att"
                                         id="starttime_att">
@@ -307,7 +328,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="endtime_att">Jam Selesai</label>
+                                <label for="endtime_att">Jam Selesai <span class="required">*</span></label>
                                 <div class="input-icon">
                                     <input type="text" class="form-control timepicker-end" name="endtime_att"
                                         id="endtime_att">
@@ -316,6 +337,27 @@
                                     </span>
                                 </div>
                                 <small class="form-text text-danger" id="error_endtime_att"></small>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label>Foto <span class="required">*</span></label>
+                                <div class="form-upload-result">
+                                    <label class="col-md-12 form-result">
+                                        <button type="button" class="close-img" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                        <img class="img-result">
+                                    </label>
+                                </div>
+                                <div class="form-upload">
+                                    <label class="col-md-12 form-upload-foto" id="image-upload">
+                                        <input type="file" class="control-upload-image" id="image" name="image"
+                                            onchange="previewImage(this)" accept="image/jpeg, image/png"></input>
+                                        <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
+                                    </label>
+                                    <small class="form-text text-danger" id="error_image"></small>
+                                </div>
                             </div>
                         </div>
                         <input type="hidden" class="form-control" name="isagree">

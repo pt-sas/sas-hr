@@ -3,7 +3,9 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_AccessMenu;
 use App\Models\M_Branch;
+use App\Models\M_EmpBranch;
 use App\Models\M_Employee;
 use Config\Services;
 
@@ -158,14 +160,41 @@ class Branch extends BaseController
     public function getList()
     {
         if ($this->request->isAjax()) {
+            $mAccess = new M_AccessMenu($this->request);
+            $mEmpBranch = new M_EmpBranch($this->request);
             $post = $this->request->getVar();
 
             $response = [];
 
             try {
+                $userID = $this->session->get('sys_user_id');
+                $employeeID = $this->session->get('md_employee_id');
+
+                if (isset($post['name']) && $post['name'] == "Access") {
+                    $arrAccess = $mAccess->getAccess($userID);
+                    $branchList = !empty($employeeID) ? array_column($mEmpBranch->where('md_employee_id', $employeeID)->findAll(), 'md_branch_id') : [];
+
+                    if ($arrAccess && isset($arrAccess["branch"])) {
+                        $branchList = array_unique(array_merge($branchList, $arrAccess['branch']));
+                    }
+                }
+
                 if (isset($post['search'])) {
+                    if (isset($post['name']) && $post['name'] == "Access") {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereIn('md_branch_id', !empty($branchList) ? $branchList : [0])
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
+                } else if (isset($post['name']) && $post['name'] == "Access") {
                     $list = $this->model->where('isactive', 'Y')
-                        ->like('name', $post['search'])
+                        ->whereIn('md_branch_id', !empty($branchList) ? $branchList : 0)
                         ->orderBy('name', 'ASC')
                         ->findAll();
                 } else if (isset($post['isbranch'])) {

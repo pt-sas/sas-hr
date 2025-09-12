@@ -499,13 +499,13 @@ class Realization extends BaseController
                                     $this->entity->instruction_out = 'N';
                                 }
 
-                                if (empty($post['starttime_att']) && !isset($clock_in)) {
-                                    $response = message('success', false, "Tidak ada absensi masuk di cabang lain");
-                                } else if (empty($post['endtime_att']) && !isset($clock_out)) {
-                                    $response = message('success', false, "Tidak ada absensi pulang di cabang lain");
-                                } else {
-                                    $response = $this->save();
-                                }
+                                // if (empty($post['starttime_att']) && !isset($clock_in)) {
+                                //     $response = message('success', false, "Tidak ada absensi masuk di cabang lain");
+                                // } else if (empty($post['endtime_att']) && !isset($clock_out)) {
+                                //     $response = message('success', false, "Tidak ada absensi pulang di cabang lain");
+                                // } else {
+                                $response = $this->save();
+                                // }
                             } else {
                                 $this->entity->instruction_in = 'Y';
                                 $this->entity->instruction_out = 'Y';
@@ -766,6 +766,8 @@ class Realization extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $file = $this->request->getFile('image');
+            $mAbsent = new M_Absent($this->request);
             $mAbsentDetail = new M_AbsentDetail($this->request);
             $changeLog = new M_ChangeLog($this->request);
             $mEmployee = new M_Employee($this->request);
@@ -780,6 +782,7 @@ class Realization extends BaseController
             $isAgree = $post['isagree'];
             $submissionForm = $post['submissionform'];
             $typeFormHalfDay = ['Lupa Absen Masuk', 'Lupa Absen Pulang', 'Datang Terlambat', 'Pulang Cepat'];
+            $typeFormOfficeDuties = ['Tugas Kantor', 'Tugas Kantor Setengah Hari'];
 
             $table = $submissionForm == "Penugasan" ? "trx_assignment" : "trx_absent";
 
@@ -790,6 +793,10 @@ class Realization extends BaseController
 
             try {
                 if ($isAgree == $this->LINESTATUS_Disetujui && in_array($submissionForm, $typeFormHalfDay) ? !$this->validation->run($post, 'realisasi_kehadiran') : false) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else if ($isAgree == $this->LINESTATUS_Disetujui && ($submissionForm == 'Tugas Kantor' && !$this->validation->run($post, 'realisasi_tugaskantor'))) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else if ($isAgree == $this->LINESTATUS_Disetujui && ($submissionForm == 'Tugas Kantor Setengah Hari' && !$this->validation->run($post, 'realisasi_tugaskantor_setengah'))) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else if ($today < $realizeDate) {
                     $response = message('success', false, 'tanggal realisasi belum terpenuhi');
@@ -819,6 +826,28 @@ class Realization extends BaseController
                             $this->entity->realization_out = date('Y-m-d', strtotime($submissionDate)) . " " . $post['endtime_att'];
                         } else if (in_array($submissionForm, $typeFormHalfDay)) {
                             $this->entity->date = date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
+                        } else if (in_array($submissionForm, $typeFormOfficeDuties)) {
+                            $img_name = "";
+
+                            $lenPos = strpos($employee->value, '-');
+                            $value = substr_replace($employee->value, "", $lenPos);
+                            $ymd = date('YmdHis');
+
+                            if ($file && $file->isValid()) {
+                                $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+                                $ext = $file->getClientExtension();
+
+                                if ($submissionForm == "Tugas Kantor") {
+                                    $img_name = $mAbsent->Pengajuan_Tugas_Kantor . '_' . $value . '_' . $ymd . '.' . $ext;
+                                } else {
+                                    $img_name = $mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari . '_' . $value . '_' . $ymd . '.' . $ext;
+                                }
+
+                                uploadFile($file, $path, $img_name);
+
+                                $this->entity->image = $img_name;
+                            }
                         }
                     } else {
                         // TODO : Set Notification
@@ -837,7 +866,6 @@ class Realization extends BaseController
                     $user = $mUser->where('sys_user_id', $row->created_by)->first();
 
                     $cMessage->sendInformation($user, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
-
 
                     // TODO : Send Telegram Message to Employee
                     if (($user->md_employee_id != $employee->md_employee_id) && !empty($employee->telegram_id))

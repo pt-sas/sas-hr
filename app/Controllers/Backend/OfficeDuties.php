@@ -12,7 +12,6 @@ use App\Models\M_Holiday;
 use App\Models\M_Rule;
 use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
-use App\Models\M_Division;
 use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_RuleDetail;
 use TCPDF;
@@ -38,9 +37,6 @@ class OfficeDuties extends BaseController
 
     public function showAll()
     {
-        $mAccess = new M_AccessMenu($this->request);
-        $mEmployee = new M_Employee($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -74,52 +70,9 @@ class OfficeDuties extends BaseController
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-            if (!empty($empDelegation)) {
-                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
-            }
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if (!empty($empDelegation)) {
-                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
-                }
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['md_employee.md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-            }
+            // TODO : Get Employee List
+            $empList = $this->access->getEmployeeData();
+            $where['md_employee.md_employee_id'] = ['value' => $empList];
 
             $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Tugas_Kantor;
 
@@ -447,12 +400,31 @@ class OfficeDuties extends BaseController
                     format_dmy($row->date, '-'),
                     $line->getDocumentNo(),
                     $docNoRef,
-                    statusRealize($row->isagree)
+                    statusRealize($row->isagree),
+                    viewImage($row->trx_absent_detail_id, $row->image, true)
                 ];
             endforeach;
         }
 
         return json_encode($table);
+    }
+
+    public function getImage($id)
+    {
+        $response = [];
+
+        try {
+            $row = $this->modelDetail->find($id);
+
+            $response = [];
+
+            if (!empty($row->image))
+                array_push($response, base_url('uploads/pengajuan/' . $row->image));
+        } catch (\Exception $e) {
+            $response = message('error', false, $e->getMessage());
+        }
+
+        return $this->response->setJSON($response);
     }
 
 

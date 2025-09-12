@@ -9,8 +9,15 @@ $(document).ready(function () {
       url: ADMIN_URL + "branch/getList",
       delay: 250,
       data: function (params) {
+        let extraData = {};
+
+        if ($(".multiple-select-branch").hasClass("access")) {
+          extraData.name = "Access";
+        }
+
         return {
           search: params.term,
+          ...extraData,
         };
       },
       processResults: function (data, page) {
@@ -32,8 +39,15 @@ $(document).ready(function () {
       url: ADMIN_URL + "division/getList",
       delay: 250,
       data: function (params) {
+        let extraData = {};
+
+        if ($(".multiple-select-division").hasClass("access")) {
+          extraData.name = "Access";
+        }
+
         return {
           search: params.term,
+          ...extraData,
         };
       },
       processResults: function (data, page) {
@@ -1983,7 +1997,8 @@ $(".btn_ok_realization").click(function (e) {
         field[i].type == "textarea" ||
         field[i].type == "select-one" ||
         field[i].type == "password" ||
-        field[i].type == "hidden"
+        field[i].type == "hidden" ||
+        field[i].type == "file"
       )
         formData.append(field[i].name, field[i].value);
     }
@@ -2625,3 +2640,74 @@ $("#form_leave").on(
     }
   }
 );
+
+_tableLine.on("click", ".btn_view_image", function (e) {
+  const tr = $(this).closest("tr");
+  let id = this.id;
+  let submissionDate = tr.find("td:eq(1)").text();
+
+  const modal = $("#modal_image_slide");
+  const modalBody = modal.find(".modal-body");
+  let url = CURRENT_URL + "/show-image/" + id;
+
+  modal.modal({
+    backdrop: "static",
+    keyboard: false,
+  });
+
+  let title = `${submissionDate}`;
+  modal.find(".modal-title").html(title);
+
+  $.ajax({
+    url: url,
+    type: "GET",
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      loadingForm(modalBody.prop("id"), "facebook");
+    },
+    complete: function () {
+      hideLoadingForm(modalBody.prop("id"));
+    },
+    success: function (result) {
+      if (result.length) {
+        let html =
+          '<div class="owl-carousel owl-theme owl-img-responsive image-carousel">';
+
+        $.each(result, function (i, item) {
+          html += '<div class="item">';
+
+          if (item.match(/\.pdf$/i)) {
+            html +=
+              '<canvas id="pdf-canvas-' +
+              i +
+              '" class="img-thumbnail"></canvas>';
+          } else {
+            html += '<img class="img-thumbnail" src="' + item + '">';
+          }
+
+          html += "</div>";
+        });
+        html += "</div>";
+
+        modalBody.html(html);
+
+        $.each(result, function (i, item) {
+          if (item.match(/\.pdf$/i)) {
+            renderPDF(item, i); // Render PDF
+          }
+        });
+
+        $(".image-carousel").owlCarousel({
+          nav: true, // Show next and prev buttons
+          autoplaySpeed: 300,
+          navSpeed: 400,
+          items: 1,
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+});

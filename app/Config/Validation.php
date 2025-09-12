@@ -715,10 +715,10 @@ class Validation
         ],
         'image'                 => [
             'label'             => 'gambar',
-            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             // 'rules'             => 'max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
-                'uploaded'      => 'Mohon upload {field} dahulu',
+                // 'uploaded'      => 'Mohon upload {field} dahulu',
                 'max_size'      => 'Data {field} melebehi batas maksimum 3 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
@@ -1906,6 +1906,46 @@ class Validation
         ]
     ];
 
+    public $realisasi_tugaskantor = [
+        'image'                 => [
+            'label'             => 'foto',
+            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                'uploaded'      => 'Mohon upload {field} dahulu',
+                'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
+    ];
+
+    public $realisasi_tugaskantor_setengah = [
+        'image'                 => [
+            'label'             => 'foto',
+            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                'uploaded'      => 'Mohon upload {field} dahulu',
+                'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
+        'starttime_att'          => [
+            'label'             => 'jam mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'endtime_att'          => [
+            'label'             => 'jam selesai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+    ];
+
     public $attendance = [
         'description'           => [
             'label'             => 'Keterangan',
@@ -3012,20 +3052,20 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
-        'starttime_att'          => [
-            'label'             => 'absen masuk',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
-            ]
-        ],
-        'endtime_att'          => [
-            'label'             => 'absen pulang',
-            'rules'             => 'required',
-            'errors'            => [
-                'required'      => 'Mohon mengisi {field} dahulu'
-            ]
-        ],
+        // 'starttime_att'          => [
+        //     'label'             => 'absen masuk',
+        //     'rules'             => 'required',
+        //     'errors'            => [
+        //         'required'      => 'Mohon mengisi {field} dahulu'
+        //     ]
+        // ],
+        // 'endtime_att'          => [
+        //     'label'             => 'absen pulang',
+        //     'rules'             => 'required',
+        //     'errors'            => [
+        //         'required'      => 'Mohon mengisi {field} dahulu'
+        //     ]
+        // ],
     ];
 
     public $attendance_machine = [

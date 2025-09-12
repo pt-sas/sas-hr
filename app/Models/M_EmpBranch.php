@@ -56,7 +56,7 @@ class M_EmpBranch extends Model
 			foreach ($list as $row) :
 				// Delete data when update
 				if (!in_array($row->md_branch_id, $md_branch_id)) {
-					$result = $this->builder->where($this->primaryKey, $row->{$this->primaryKey})->update($data);
+					$result = $this->builder->where($this->primaryKey, $row->{$this->primaryKey})->delete();
 				} else {
 					$data['updated_at'] = date('Y-m-d H:i:s');
 					$data['updated_by'] = session()->get('sys_user_id');

@@ -5,6 +5,8 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Division;
 use App\Models\M_Branch;
+use App\Models\M_AccessMenu;
+use App\Models\M_EmpDivision;
 use Config\Services;
 
 class Division extends BaseController
@@ -156,17 +158,42 @@ class Division extends BaseController
 
     public function getList()
     {
-        // $employee = new M_Employee($this->request);
-
         if ($this->request->isAjax()) {
+            $mAccess = new M_AccessMenu($this->request);
+            $mEmpDivision = new M_EmpDivision($this->request);
             $post = $this->request->getVar();
 
             $response = [];
 
             try {
+                $userID = $this->session->get('sys_user_id');
+                $employeeID = $this->session->get('md_employee_id');
+
+                if (isset($post['name']) && $post['name'] == "Access") {
+                    $arrAccess = $mAccess->getAccess($userID);
+                    $divisionList = !empty($employeeID) ? array_column($mEmpDivision->where('md_employee_id', $employeeID)->findAll(), 'md_division_id') : [];
+
+                    if ($arrAccess && isset($arrAccess["division"])) {
+                        $divisionList = array_unique(array_merge($divisionList, $arrAccess['division']));
+                    }
+                }
+
                 if (isset($post['search'])) {
+                    if (isset($post['name']) && $post['name'] == "Access") {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->whereIn('md_division_id', !empty($divisionList) ? $divisionList : [0])
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    } else {
+                        $list = $this->model->where('isactive', 'Y')
+                            ->like('name', $post['search'])
+                            ->orderBy('name', 'ASC')
+                            ->findAll();
+                    }
+                } else if (isset($post['name']) && $post['name'] == "Access") {
                     $list = $this->model->where('isactive', 'Y')
-                        ->like('name', $post['search'])
+                        ->whereIn('md_division_id', !empty($divisionList) ? $divisionList : [0])
                         ->orderBy('name', 'ASC')
                         ->findAll();
                 } else if (isset($post[$this->model->primaryKey])) {

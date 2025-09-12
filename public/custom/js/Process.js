@@ -1402,7 +1402,8 @@ $(".save_form").click(function (evt) {
             //? Check exist modal and modal must have there is attribute id
             if (
               container.find(".modal").length &&
-              typeof container.find(".modal").attr("id") !== "undefined"
+              typeof container.find(".modal").attr("id") !== "undefined" &&
+              container.find(".modal").attr("id") !== "modal_image_slide"
             ) {
               let modal = parent.find(".modal");
               let modalID = modal.attr("id");
@@ -1714,8 +1715,7 @@ function Edit(id, status, last_url) {
             if (
               typeof status === "undefined" ||
               status === "" ||
-              status === "DR" ||
-              status === "IP"
+              status === "DR"
             )
               $(".save_form").removeAttr("disabled");
 
