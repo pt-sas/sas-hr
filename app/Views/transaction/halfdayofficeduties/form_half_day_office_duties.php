@@ -168,6 +168,7 @@
                                 <th>Doc No</th>
                                 <th>Doc Referensi</th>
                                 <th>Status</th>
+                                <th>foto</th>
                             </tr>
                         </thead>
                     </table>

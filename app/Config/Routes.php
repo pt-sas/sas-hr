@@ -350,6 +350,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('tugas-kantor/tableLine', 'Backend\OfficeDuties::tableLine');
     $routes->post('tugas-kantor/getAssignmentDate', 'Backend\OfficeDuties::getAssignmentDate');
     $routes->get('tugas-kantor/print/(:any)', 'Backend\OfficeDuties::exportPDF/$1');
+    $routes->get('tugas-kantor/show-image/(:any)', 'Backend\OfficeDuties::getImage/$1');
 
     $routes->add('tugas-kantor-fka', 'Backend\HalfDayOfficeDuties::index');
     $routes->match(['get', 'post'], 'tugas-kantor-fka/showAll', 'Backend\HalfDayOfficeDuties::showAll');
@@ -359,6 +360,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('tugas-kantor-fka/processIt', 'Backend\HalfDayOfficeDuties::processIt');
     $routes->get('tugas-kantor-fka/print/(:any)', 'Backend\HalfDayOfficeDuties::exportPDF/$1');
     $routes->post('tugas-kantor-fka/getRealizationData', 'Backend\HalfDayOfficeDuties::getRealizationData');
+    $routes->get('tugas-kantor-fka/show-image/(:any)', 'Backend\HalfDayOfficeDuties::getImage/$1');
 
     $routes->add('izin-resmi', 'Backend\OfficialPermission::index');
     $routes->match(['get', 'post'], 'izin-resmi/showAll', 'Backend\OfficialPermission::showAll');

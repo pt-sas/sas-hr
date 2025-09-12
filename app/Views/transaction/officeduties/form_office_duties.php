@@ -117,6 +117,7 @@
                                 <th>Doc No</th>
                                 <th>Doc Referensi</th>
                                 <th>Status</th>
+                                <th>Foto</th>
                             </tr>
                         </thead>
                     </table>

@@ -18,6 +18,7 @@ class M_AbsentDetail extends Model
         'table',
         'created_by',
         'updated_by',
+        'image'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\AbsentDetail';

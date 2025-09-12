@@ -437,12 +437,16 @@ function getDaysOff($workDays)
     return $array;
 }
 
-function viewImage(int $id, ?string $img)
+function viewImage(int $id, ?string $img, bool $isLine = false)
 {
     if (empty($img))
         return null;
 
-    $img = '<button class="btn btn-icon btn-rounded btn-sm btn-info btn_view_image" id="' . $id . '" name="image" data-toggle="tooltip" title="Lihat Gambar" data-original-title="Lihat Gambar"><i class="fas fa-eye"></i></button>';
+    if ($isLine) {
+        $img = '<a href="javascript:void(0)" class="btn btn-icon btn-rounded btn-sm btn-info btn_view_image d-flex align-items-center justify-content-center" id="' . $id . '" name="image" data-toggle="tooltip" title="Lihat Gambar" data-original-title="Lihat Gambar"><i class="fas fa-eye"></i></a>';
+    } else {
+        $img = '<button class="btn btn-icon btn-rounded btn-sm btn-info btn_view_image" id="' . $id . '" name="image" data-toggle="tooltip" title="Lihat Gambar" data-original-title="Lihat Gambar"><i class="fas fa-eye"></i></button>';
+    }
 
     return $img;
 }
