@@ -215,11 +215,11 @@ class SubmissionCancel extends BaseController
                             $attPresent = $mAttendance->getAttendanceBranch($whereClause)->getRow();
 
                             //TODO : Get submission Office Duties
-                            $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                            $whereClause = "v_all_submission.md_employee_id = {$value->md_employee_id}";
                             $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') = '{$dateClause}'";
                             $whereClause .= " AND v_all_submission.submissiontype IN ($mAbsent->Pengajuan_Tugas_Kantor)";
                             $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                            $trx = $this->model->getAllSubmission($whereClause)->getResult();
+                            $trx = $mAbsent->getAllSubmission($whereClause)->getResult();
                         }
 
                         $dateNow = format_dmy($value->date, '-');
@@ -384,19 +384,17 @@ class SubmissionCancel extends BaseController
                             $trxSubmissionCancel = $this->modelDetail->getDetail(null, $whereClause)->getRow();
 
                             if ($dateClause == $today) {
-                                $empBranch = $mEmpBranch->where('md_employee_id', $value->md_employee_id)->first();
                                 //TODO : Get attendance employee
-                                $whereClause = "v_attendance_serialnumber.md_employee_id = '{$value->md_employee_id}'";
-                                $whereClause .= " AND v_attendance_serialnumber.date = '{$dateClause}'";
-                                $whereClause .= " AND md_attendance_machines.md_branch_id = {$empBranch->md_branch_id}";
-                                $attPresent = $mAttendance->getAttendanceBranch($whereClause)->getRow();
+                                $whereClause = "v_attendance.md_employee_id = '{$value->md_employee_id}'";
+                                $whereClause .= " AND v_attendance.date = '{$dateClause}'";
+                                $attPresent = $mAttendance->getAttendance($whereClause)->getRow();
 
                                 //TODO : Get submission Office Duties
-                                $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
+                                $whereClause = "v_all_submission.md_employee_id = {$value->md_employee_id}";
                                 $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') = '{$dateClause}'";
                                 $whereClause .= " AND v_all_submission.submissiontype IN ($mAbsent->Pengajuan_Tugas_Kantor)";
                                 $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                                $trxOfficeDuties = $this->model->getAllSubmission($whereClause)->getResult();
+                                $trxOfficeDuties = $mAbsent->getAllSubmission($whereClause)->getResult();
                             }
 
                             $dateNow = format_dmy($value->date, '-');

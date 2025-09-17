@@ -14,9 +14,7 @@ use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
 use App\Models\M_Configuration;
 use App\Models\M_EmpWorkDay;
-use App\Models\M_AccessMenu;
-use App\Models\M_Branch;
-use App\Models\M_Division;
+use App\Models\M_Assignment;
 use PHPExcel;
 use PHPExcel_IOFactory;
 use PHPExcel_Style_Alignment;
@@ -154,114 +152,13 @@ class AllowanceAtt extends BaseController
 
     public function index()
     {
-
-        $mAccess = new M_AccessMenu($this->request);
-        $mEmpBranch = new M_EmpBranch($this->request);
-        $mEmpDivision = new M_EmpDivision($this->request);
         $mEmployee = new M_Employee($this->request);
-        $mBranch = new M_Branch($this->request);
-        $mDivision = new M_Division($this->request);
 
-        $roleKACAB = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_KACAB');
-        $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-        $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-        $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
-
-        //** This for getting Akses Branch & Division from Employee ID */
-        $arrEmployee =  $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-        $empSession = $this->session->get('md_employee_id');
-
-        if (!empty($empDelegation)) {
-            $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
-        }
-
-        $arrEmpStr = implode(" ,", $arrEmployee);
-
-        $BrchEmp = $mEmpBranch->select('md_branch_id')->where($mEmployee->primaryKey, $empSession)->findAll();
-        $arrEmpBranch = [];
-
-        if ($BrchEmp)
-            foreach ($BrchEmp as $row) :
-                $arrEmpBranch[] = $row->md_branch_id;
-            endforeach;
-
-        $arrEmpBranchStr = implode(" ,", $arrEmpBranch);
-
-        $DivEmp = $mEmpDivision->select('md_division_id')->where($mEmployee->primaryKey, $empSession)->findAll();
-        $arrEmpDiv = [];
-
-
-        if ($DivEmp)
-            foreach ($DivEmp as $row) :
-                $arrEmpDiv[] = $row->md_division_id;
-            endforeach;
-
-        $arrEmpDivStr = implode(" ,", $arrEmpDiv);
-
-        /** This for set WhereClause */
-        $whereEmp = "";
-        $whereBranch = "";
-        $whereDiv = "";
-
-        if ($roleKACAB) {
-            $empBranch =  $mEmployee->getEmployeeBased($arrEmpBranch);
-
-            $whereEmp = "md_employee_id IN (" . implode(" ,", $empBranch) . ")";
-            $whereBranch = "md_branch_id IN ($arrEmpBranchStr)";
-
-            $allDiv = $mEmpDivision->select('md_division_id')->where('isactive', 'Y')->findAll();
-            $allDivEmp = [];
-
-            if ($allDiv)
-                foreach ($allDiv as $row) :
-                    $allDivEmp[] = $row->md_division_id;
-                endforeach;
-
-            $whereDiv = "md_division_id IN (" . implode(" ,", $allDivEmp) . ")";
-        } else if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-            $arrBranch = $arrAccess["branch"];
-            $arrDiv = $arrAccess["division"];
-
-            $arrEmpBased =  $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-            if (!empty($empDelegation)) {
-                $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
-            }
-
-            if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                $arrMerge = implode(" ,", array_unique(array_merge($arrEmpBased, $arrEmployee)));
-                $arrBrchMerge = implode(" ,", array_unique(array_merge($arrBranch, $arrEmpBranch)));
-                $arrDivMerge = implode(" ,", array_unique(array_merge($arrDiv, $arrEmpDiv)));
-
-                $whereEmp = "md_employee_id IN ($arrMerge)";
-                $whereBranch = "md_branch_id IN ($arrBrchMerge)";
-                $whereDiv = "md_division_id IN ($arrDivMerge)";
-            } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                $whereBranch = "md_branch_id IN (" . implode(" ,", $arrBranch) . ")";
-                $whereDiv = "md_division_id IN (" . implode(" ,", $arrDiv) . ")";
-                $whereEmp = "md_employee_id IN (" . implode(" ,", $arrEmpBased) . ")";
-            } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                $whereEmp = " md_employee_id IN ($arrEmpStr)";
-                $whereBranch = "md_branch_id IN ($arrEmpBranchStr)";
-                $whereDiv = "md_division_id IN ($arrEmpDivStr)";
-            } else {
-                $whereEmp = "md_employee_id IN ($empSession)";
-            }
-        } else if (!empty($this->session->get('md_employee_id'))) {
-            $whereEmp = "md_employee_id IN ($arrEmpStr)";
-            $whereBranch = "md_branch_id IN ($arrEmpBranchStr)";
-            $whereDiv = "md_division_id IN ($arrEmpDivStr)";
-        } else {
-            $whereEmp = "md_employee_id IN ($empSession)";
-        }
-
-        $whereEmp .= " AND md_status_id NOT IN (100002, 100003, 100004, 100005, 100006, 100007, 100008)";
+        $empList = $this->access->getEmployeeData();
 
         $data = [
             'month' => date('M-Y'),
-            'ref_employee' =>  $mEmployee->getEmployeeValue($whereEmp)->getResult(),
-            'ref_branch' => $mBranch->select('md_branch_id, name')->where($whereBranch)->findAll(),
-            'ref_division' => $mDivision->select('md_division_id, name')->where($whereDiv)->findAll()
+            'ref_employee' =>  $mEmployee->select('md_employee_id, value')->whereIn('md_employee_id', $empList)->whereIn('md_status_id', [100001, 100002])->findAll(),
         ];
 
         return $this->template->render('report/allowance/v_report_allowance', $data);
@@ -275,13 +172,13 @@ class AllowanceAtt extends BaseController
         $mLevel = new M_Levelling($this->request);
         $mAttendance = new M_Attendance($this->request);
         $mAbsent = new M_Absent($this->request);
+        $mAssignment = new M_Assignment($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mHoliday = new M_Holiday($this->request);
         $mAbsentDetail = new M_AbsentDetail($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
         $mConfig = new M_Configuration($this->request);
-        $mAccess = new M_AccessMenu($this->request);
 
         $md_branch_id = null;
         $md_division_id = null;
@@ -296,44 +193,7 @@ class AllowanceAtt extends BaseController
         if (isset($post['md_employee_id']) && $post['md_employee_id']) {
             $md_employee_id = $post['md_employee_id'];
         } else {
-            /**
-             * Mendapatkan Hak Akses Karyawan
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-            if (!empty($empDelegation)) {
-                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
-            }
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if (!empty($empDelegation)) {
-                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
-                }
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $md_employee_id = $arrMerge;
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $md_employee_id = $arrEmployee;
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $md_employee_id = $arrEmpBased;
-                } else {
-                    $md_employee_id = [$this->session->get('md_employee_id')];
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $md_employee_id = $arrEmployee;
-            } else {
-                $md_employee_id = [$this->session->get('md_employee_id')];
-            }
+            $md_employee_id = $this->access->getEmployeeData();
         }
 
         // Panggil class PHPExcel nya
@@ -442,18 +302,6 @@ class AllowanceAtt extends BaseController
         // TODO : Merger Cell pertama sampai ke akhir cell untuk Header
         $sheet->mergeCells('A1:' . $cell . '1');
 
-        // //** This getting to body report */
-        // $builder = $mEmployee->where([
-        //     'isactive'         => 'Y',
-        //     'md_status_id <>'  => 100004
-        // ]);
-
-        // if ($md_employee_id) {
-        //     $builder = $builder->whereIn('md_employee_id', $md_employee_id);
-        // }
-
-        // $sql = $builder->orderBy('fullname', 'ASC')->findAll();
-
         //** This getting to body report */
         $builder = $mEmployee
             ->distinct()
@@ -465,6 +313,7 @@ class AllowanceAtt extends BaseController
 
         if (!empty($md_employee_id)) {
             $builder->whereIn('md_employee.md_employee_id', (array) $md_employee_id);
+            $builder->whereIn('md_employee.md_status_id', [100001, 100002]);
         }
 
         if (!empty($md_branch_id)) {
@@ -489,6 +338,12 @@ class AllowanceAtt extends BaseController
 
         $holiday = $mHoliday->getHolidayDate();
         $totalDateRange = getDatesFromRange($prevMonth, $nowCutMonth, [], 'Y-m-d', 'all');
+
+        // TODO : Getting Configuration Manager not need Special Office Duties
+        $configMNSOD = $mConfig->where('name', 'MANAGER_NO_NEED_SPECIAL_OFFICE_DUTIES')->first();
+
+        $configMNSOD = $configMNSOD->value == 'Y' ? true : false;
+        $lvlManager = 100003;
 
         $number = 1;
         $numrow = 5;
@@ -526,122 +381,133 @@ class AllowanceAtt extends BaseController
                 // TODO : Get Assignment
                 $whereClause = "DATE(v_all_submission.date) = '{$date}'";
                 $whereClause .= " AND v_all_submission.md_employee_id = {$row->md_employee_id}";
-                $whereClause .= " AND v_all_submission.isagree = 'Y'";
-                $whereClause .= " AND v_all_submission.submissiontype IN (100007, 100008)";
+                $whereClause .= " AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'";
+                $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+                $whereClause .= " AND v_all_submission.submissiontype IN (100007, 100008, 100009)";
 
                 $assignment = $mAbsent->getAllSubmission($whereClause)->getRow();
 
-                if (!$work && !$assignment) {
+                $whereClause = "v_attendance.md_employee_id = {$row->md_employee_id}";
+                $whereClause .= " AND v_attendance.date = '{$date}'";
+                $attendance = $mAttendance->getAttendance($whereClause)->getRow();
+
+                if ((!$work && !$assignment) || (!$work && ($configMNSOD && $row->md_levelling_id <= $lvlManager) && empty($attendance))) {
                     $styleCell = $style_row_dayoff;
                 } else {
-                    //TODO : Get Attendance 
-                    $empBranch = $mEmpBranch->where([$mEmployee->primaryKey => $row->md_employee_id])->findAll();
+                    // TODO : Get Submission Assignment
+                    $whereClause = "DATE(trx_assignment_date.date) = '{$date}'
+                    AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+                    AND trx_assignment_detail.md_employee_id = {$row->md_employee_id}
+                    AND trx_assignment_date.isagree = '{$this->LINESTATUS_Disetujui}'
+                    AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
+                    $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
 
-                    $whereClause = "v_attendance_serialnumber.md_employee_id = {$row->md_employee_id}";
-                    $whereClause .= " AND v_attendance_serialnumber.date = '{$date}'";
-
-                    if (count($empBranch) > 1) {
-                        $branchID = array_column($empBranch, 'md_branch_id');
-
-                        $branchID = implode(" ,", $branchID);
-                        $whereClause .= " AND md_attendance_machines.md_branch_id IN ($branchID)";
+                    //TODO : Get Attendance if level under Manager and config is nonaktif
+                    if ($configMNSOD && $row->md_levelling_id <= $lvlManager) {
+                        $clock_in = !empty($attendance->clock_in) ? $attendance->clock_in : null;
+                        $clock_out = !empty($attendance->clock_out) ? $attendance->clock_out : null;
                     } else {
-                        $whereClause .= " AND md_attendance_machines.md_branch_id = {$empBranch[0]->md_branch_id}";
+                        $whereIn = "v_attendance_branch.md_employee_id = {$row->md_employee_id}";
+                        $whereIn .= " AND v_attendance_branch.date = '{$date}'";
+                        $whereIn .= " AND v_attendance_branch.clock_in != ''";
+
+                        $whereOut = "v_attendance_branch.md_employee_id = {$row->md_employee_id}";
+                        $whereOut .= " AND v_attendance_branch.date = '{$date}'";
+                        $whereOut .= " AND v_attendance_branch.clock_out != ''";
+
+                        if ($tugasKunjungan) {
+                            $whereIn .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in_line}";
+                            $whereOut .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_out_line}";
+                        } else {
+                            $empBranch = $mEmpBranch->where([$mEmployee->primaryKey => $row->md_employee_id])->findAll();
+
+                            if (count($empBranch) > 1) {
+                                $branchID = array_column($empBranch, 'md_branch_id');
+
+                                $branchID = implode(" ,", $branchID);
+                                $whereIn .= " AND v_attendance_branch.md_branch_id IN ($branchID)";
+                                $whereOut .= " AND v_attendance_branch.md_branch_id IN ($branchID)";
+                            } else {
+                                $whereIn .= " AND v_attendance_branch.md_branch_id = {$empBranch[0]->md_branch_id}";
+                                $whereOut .= " AND v_attendance_branch.md_branch_id = {$empBranch[0]->md_branch_id}";
+                            }
+                        }
+
+                        $attIn = $mAttendance->getAttBranch($whereIn, null, true)->getRow();
+                        $attOut = $mAttendance->getAttBranch($whereOut, null, true)->getRow();
+
+                        $clock_in = !empty($attIn) ? $attIn->clock_in : null;
+                        $clock_out = !empty($attOut) ? $attOut->clock_out : null;
                     }
 
-                    $attendance = $mAttendance->getAttendanceBranch($whereClause)->getRow();
-
                     // TODO : Get Submission Forgot Absent In
-                    $whereClause = "DATE(v_realization.date) = '{$date}'
-                        AND v_realization.md_employee_id = {$row->md_employee_id}
-                        AND v_realization.isagree = 'Y'
-                        AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Masuk})";
-
-                    $forgetAbsentIn = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
+                    $whereClause = "DATE(v_all_submission.date) = '{$date}'
+                        AND v_all_submission.md_employee_id = {$row->md_employee_id}
+                        AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'
+                        AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+                        AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Lupa_Absen_Masuk}";
+                    $forgetAbsentIn = $mAbsent->getAllSubmission($whereClause)->getRow();
 
                     // TODO : Get Submission Forgot Absent Out
-                    $whereClause = "DATE(v_realization.date) = '{$date}'
-                        AND v_realization.md_employee_id = {$row->md_employee_id}
-                        AND v_realization.isagree = 'Y'
-                        AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang})";
+                    $whereClause = "DATE(v_all_submission.date) = '{$date}'
+                        AND v_all_submission.md_employee_id = {$row->md_employee_id}
+                        AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'
+                        AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+                        AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Lupa_Absen_Pulang}";
+                    $forgetAbsentOut = $mAbsent->getAllSubmission($whereClause)->getRow();
 
-                    $forgetAbsentOut = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
+                    // TODO : Get Submission Permission Submission Leave Early
+                    $whereClause = "DATE(v_all_submission.date) = '{$date}'
+                        AND v_all_submission.md_employee_id = {$row->md_employee_id}
+                        AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'
+                        AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+                        AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Pulang_Cepat}";
+                    $leaveEarly = $mAbsent->getAllSubmission($whereClause)->getRow();
 
-                    // TODO : Get Submission Permission Submission Leave
-                    $whereClause = "DATE(v_realization.date) = '{$date}'
-                        AND v_realization.md_employee_id = {$row->md_employee_id}
-                        AND v_realization.isagree = 'Y'
-                        AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Pulang_Cepat})";
-
-                    $absentOut = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
-
-                    // TODO : Get Submission Half Day Assignment
+                    // TODO : Get Submission Half Day Office Duties
                     $whereClause = "DATE(trx_absent_detail.date) = '{$date}'
-                    AND trx_absent.docstatus = 'CO'
+                    AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
                     AND trx_absent.md_employee_id = {$row->md_employee_id}
-                    AND trx_absent_detail.isagree = 'Y'
-                    AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                    AND trx_absent_detail.isagree = '{$this->LINESTATUS_Disetujui}'
+                    AND trx_absent.submissiontype = {$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}";
+                    $officeHalfDay = $mAbsentDetail->getAbsentDetail($whereClause)->getRow();
 
-                    $tugasNotKunjungan = $mAbsentDetail->getAbsentDetail($whereClause)->getRow();
+                    if ($officeHalfDay) {
+                        $startHour = convertToMinutes(date('H:i', strtotime($officeHalfDay->startdate_realization)));
+                        $endHour = convertToMinutes(date('H:i', strtotime($officeHalfDay->enddate_realization)));
+                    }
 
                     // TODO : Getting Submission Leave, Sick, Permission, Official Permission
                     $whereClause = "trx_absent.md_employee_id = {$row->md_employee_id}";
                     $whereClause .= " AND DATE(trx_absent_detail.date) = '{$date}'";
-                    $whereClause .= " AND trx_absent.submissiontype IN (100004, 100001, 100003, 100005)";
-                    $whereClause .= " AND trx_absent.docstatus IN ('CO', 'IP')";
-                    $whereClause .= " AND trx_absent_detail.isagree IN ('Y', 'M', 'S')";
+                    $whereClause .= " AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Sakit}, {$mAbsent->Pengajuan_Cuti}, {$mAbsent->Pengajuan_Ijin}, {$mAbsent->Pengajuan_Ijin_Resmi}, {$mAbsent->Pengajuan_Tugas_Kantor})";
+                    $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+                    $whereClause .= " AND trx_absent_detail.isagree = '{$this->LINESTATUS_Disetujui}'";
                     $trxAbsent = $mAbsentDetail->getAbsentDetail($whereClause)->getRow();
 
-                    if ($attendance && !$assignment && !$trxAbsent) {
-                        // TODO : This for Normal Attendance
-
+                    if (!$trxAbsent) {
                         // This Variable for calculating if employee absent clock out less than minAbsentOut then meaning employee is late and will be punished for half TKH
-                        $minAbsentOut = convertToMinutes($work->endwork);
+                        $breakStart = $work ? convertToMinutes($work->breakstart) : convertToMinutes('12:00');
+                        $minAbsentIn = $work ? convertToMinutes($work->startwork) : convertToMinutes('08:30');
+                        $minAbsentOut = $work ? convertToMinutes($work->endwork) : convertToMinutes('15:30');
 
-                        $empClockIn = !empty($attendance->clock_in) ? convertToMinutes($attendance->clock_in) : null;
-                        $empClockOut = !empty($attendance->clock_out) ? convertToMinutes($attendance->clock_out) : null;
+                        $empClockIn = !empty($clock_in) ? convertToMinutes($clock_in) : null;
+                        $empClockOut = !empty($clock_out) ? convertToMinutes($clock_out) : null;
 
-                        if (is_null($empClockIn) && !$forgetAbsentIn && !$tugasNotKunjungan) {
+                        if ($work && is_null($empClockIn) && !$forgetAbsentIn && (!$officeHalfDay || ($officeHalfDay && $startHour > $breakStart))) {
                             $qty = 0;
                         }
 
-                        if (is_null($empClockOut) && !$forgetAbsentOut && !$tugasNotKunjungan) {
+                        if ($work && is_null($empClockOut) && (!$forgetAbsentOut && !$leaveEarly) && (!$officeHalfDay || ($officeHalfDay && $endHour < $minAbsentOut))) {
                             $qty = 0;
                         }
 
-                        if ($empClockOut < $minAbsentOut && !$absentOut) {
-                            $qty = 0;
-                        }
-                    } else if ($assignment && $assignment->submissiontype === 100008 && !$trxAbsent) {
-                        // TODO : This for Assignment Attendance
-                        $assignTrx = $mAssignmentDate->where('trx_assignment_date_id', $assignment->id)->first();
-
-                        $whereClause = "v_attendance_serialnumber.md_employee_id = {$row->md_employee_id}";
-                        $whereClause .= " AND v_attendance_serialnumber.date = '{$date}'";
-                        $whereClause .= " AND md_attendance_machines.md_branch_id = {$assignTrx->branch_in}";
-                        $attendBranchin = $mAttendance->getAttendanceBranch($whereClause)->getRow();
-
-                        $whereClause = "v_attendance_serialnumber.md_employee_id = {$row->md_employee_id}";
-                        $whereClause .= " AND v_attendance_serialnumber.date = '{$date}'";
-                        $whereClause .= " AND md_attendance_machines.md_branch_id = {$assignTrx->branch_out}";
-                        $attendBranchOut = $mAttendance->getAttendanceBranch($whereClause)->getRow();
-
-                        // This Variable for calculating if employee absent clock out less than minAbsentOut then meaning employee is late and will be punished for half TKH
-                        $minAbsentOut = convertToMinutes($work->endwork);
-
-                        $empClockIn = !empty($attendBranchin->clock_in) ? convertToMinutes($attendBranchin->clock_in) : null;
-                        $empClockOut = !empty($attendBranchOut->clock_out) ? convertToMinutes($attendBranchOut->clock_out) : null;
-
-                        if (is_null($empClockIn) && !$forgetAbsentIn) {
+                        if ($work && !is_null($empClockOut) && $empClockOut < $minAbsentOut && !$leaveEarly && (!$officeHalfDay || ($officeHalfDay && $endHour < $minAbsentOut))) {
                             $qty = 0;
                         }
 
-                        if (is_null($empClockOut) && !$forgetAbsentOut) {
-                            $qty = 0;
-                        }
-
-                        if ($empClockOut < $minAbsentOut && !$absentOut) {
-                            $qty = 0;
+                        if (!$work && ($tugasKunjungan || ($configMNSOD && $row->md_levelling_id <= $lvlManager)) && $clock_out < $minAbsentOut) {
+                            $qty += -0.5;
                         }
                     }
 

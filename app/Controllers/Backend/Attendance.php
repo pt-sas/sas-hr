@@ -213,12 +213,12 @@ class Attendance extends BaseController
             if ($configMNSOD && $employee == $lvlManager) {
                 $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance.date = '{$today}'";
-                $whereClause .= " AND v_attendance.clock_in is NOT NULL";
+                $whereClause .= " AND v_attendance.clock_in != ''";
                 $absentIn = $this->model->getAttendance($whereClause)->getRow();
             } else {
                 $whereClause = "v_attendance_branch.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance_branch.date = '{$today}'";
-                $whereClause .= " AND v_attendance_branch.clock_in is NOT NULL";
+                $whereClause .= " AND v_attendance_branch.clock_in != ''";
 
                 if ($tugasKunjungan) {
                     $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in_line}";
@@ -277,12 +277,12 @@ class Attendance extends BaseController
             if ($configMNSOD && $employee == $lvlManager) {
                 $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance.date = '{$yesterday}'";
-                $whereClause .= " AND v_attendance.clock_out is NOT NULL";
+                $whereClause .= " AND v_attendance.clock_out != ''";
                 $absentOut = $this->model->getAttendance($whereClause)->getRow();
             } else {
                 $whereClause = "v_attendance_branch.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance_branch.date = '{$yesterday}'";
-                $whereClause .= " AND v_attendance_branch.clock_out is NOT NULL";
+                $whereClause .= " AND v_attendance_branch.clock_out != ''";
 
                 if ($tugasKunjungan) {
                     $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_out_line}";
@@ -436,7 +436,7 @@ class Attendance extends BaseController
                     // TODO : Get Absent Clock In Today
                     $whereClause = " v_attendance_branch.md_employee_id = {$val->md_employee_id}";
                     $whereClause .= " AND v_attendance_branch.date = '{$today}'";
-                    $whereClause .= " AND v_attendance_branch.clock_in IS NOT NULL";
+                    $whereClause .= " AND v_attendance_branch.clock_in != ''";
 
                     if ($tugasKunjungan) {
                         $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in_line}";

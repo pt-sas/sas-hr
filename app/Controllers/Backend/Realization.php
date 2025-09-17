@@ -225,7 +225,7 @@ class Realization extends BaseController
 
                 $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance.date = '{$startDateLine}'";
-                $whereClause .= " AND v_attendance.clock_out IS NOT NULL";
+                $whereClause .= " AND v_attendance.clock_out != ''";
                 $attendance = $mAttendance->getAttendance($whereClause)->getRow();
 
                 $ID = $value->trx_overtime_detail_id;
@@ -343,9 +343,9 @@ class Realization extends BaseController
                 $whereClause .= " AND v_attendance.date = '{$startDate}'";
 
                 if ($value->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat)
-                    $whereClause .= " AND v_attendance.clock_out IS NOT NULL";
+                    $whereClause .= " AND v_attendance.clock_out != ''";
                 else if ($value->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat)
-                    $whereClause .= " AND v_attendance.clock_in IS NOT null";
+                    $whereClause .= " AND v_attendance.clock_in != ''";
 
                 $attendance = $mAttendance->getAttendance($whereClause)->getRow();
 
@@ -475,7 +475,7 @@ class Realization extends BaseController
                                 if (empty($post['starttime_att'])) {
                                     $whereIn = " v_attendance_serialnumber.md_employee_id = {$trx->md_employee_id}";
                                     $whereIn .= " AND v_attendance_serialnumber.date = '{$submissionDate}'";
-                                    $whereIn .= " AND v_attendance_serialnumber.clock_in IS NOT null";
+                                    $whereIn .= " AND v_attendance_serialnumber.clock_in != ''";
                                     $whereIn .= " AND md_attendance_machines.md_branch_id != {$post['branch_in']}";
                                     $clock_in = $mAttendance->getAttendanceBranch($whereIn)->getRow();
                                 }
@@ -483,7 +483,7 @@ class Realization extends BaseController
                                 if (empty($post['endtime_att'])) {
                                     $whereOut = " v_attendance_serialnumber.md_employee_id = {$trx->md_employee_id}";
                                     $whereOut .= " AND v_attendance_serialnumber.date = '{$submissionDate}'";
-                                    $whereOut .= " AND v_attendance_serialnumber.clock_out IS NOT null";
+                                    $whereOut .= " AND v_attendance_serialnumber.clock_out != ''";
                                     $whereOut .= " AND md_attendance_machines.md_branch_id != {$post['branch_out']}";
                                     $clock_out = $mAttendance->getAttendanceBranch($whereOut)->getRow();
                                 }
@@ -1264,7 +1264,7 @@ class Realization extends BaseController
                                 if (empty($startTime)) {
                                     $whereIn = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
                                     $whereIn .= " AND v_attendance_branch.date = '{$date}'";
-                                    $whereIn .= " AND v_attendance_branch.clock_in IS NOT null";
+                                    $whereIn .= " AND v_attendance_branch.clock_in != ''";
                                     $whereIn .= " AND v_attendance_branch.md_branch_id != {$trxLine->branch_in}";
                                     $clock_in = $mAttendance->getAttBranch($whereIn)->getRow();
                                 }
@@ -1272,7 +1272,7 @@ class Realization extends BaseController
                                 if (empty($endTime)) {
                                     $whereOut = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
                                     $whereOut .= " AND v_attendance_branch.date = '{$date}'";
-                                    $whereOut .= " AND v_attendance_branch.clock_out IS NOT null";
+                                    $whereOut .= " AND v_attendance_branch.clock_out != ''";
                                     $whereOut .= " AND v_attendance_branch.md_branch_id != {$trxLine->branch_out}";
                                     $clock_out = $mAttendance->getAttBranch($whereOut)->getRow();
                                 }
@@ -1392,7 +1392,7 @@ class Realization extends BaseController
                     // TODO : Get Employee Clock Out
                     $where = " v_attendance.md_employee_id = {$row->md_employee_id}";
                     $where .= " AND v_attendance.date = '{$date}'";
-                    $where .= " AND v_attendance.clock_out IS NOT null";
+                    $where .= " AND v_attendance.clock_out != ''";
                     $clock_out = $mAttendance->getAttendance($where)->getRow();
 
                     $enddate = $date . " " . (!empty($clock_out) ? $clock_out->clock_out : '');

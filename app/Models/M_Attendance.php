@@ -130,7 +130,7 @@ class M_Attendance extends Model
         return $builder->get();
     }
 
-    public function getAttBranch($where, $order = null)
+    public function getAttBranch($where, $order = null, $sort = false)
     {
         $builder = $this->db->table("v_attendance_branch");
 
@@ -142,6 +142,11 @@ class M_Attendance extends Model
             $builder->orderBy('v_attendance_branch.date', 'ASC');
         } else if ($order === 'DESC') {
             $builder->orderBy('v_attendance_branch.date', 'DESC');
+        }
+
+        if ($sort) {
+            $builder->orderBy('v_attendance_branch.clock_in', 'ASC');
+            $builder->orderBy('v_attendance_branch.clock_out', 'DESC');
         }
 
         if ($where)
