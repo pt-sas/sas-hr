@@ -619,9 +619,10 @@ class M_AbsentDetail extends Model
         $changeLog = new M_ChangeLog($this->request);
 
         try {
+            $sessionUser = session()->get('sys_user_id');
             $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
             $todayTime = date('Y-m-d H:i:s');
-            $updatedBy = $rows['data']['updated_by'];
+            $updatedBy = !empty($sessionUser) ? $sessionUser : 100000;
             $line = $this->find($ID);
             $header = $mAbsent->find($line->trx_absent_id);
 
