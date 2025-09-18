@@ -215,6 +215,7 @@ class M_Overtime extends Model
                 $entity->trx_overtime_detail_id = $row->trx_overtime_detail_id;
                 $entity->updated_by = $updatedBy;
                 $entity->isagree = $sql->docstatus === "IP" ? 'M' : 'Y';
+                $entity->approve_date = date('Y-m-d H:i:s');
 
                 $mOvertimeDetail->save($entity);
             }

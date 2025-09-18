@@ -77,21 +77,22 @@ class Realization extends BaseController
     public function showAll()
     {
         if ($this->request->getMethod(true) === 'POST') {
-            $table = 'v_realization';
+            $mSubCancelDetail = new M_SubmissionCancelDetail($this->request);
+            $table = 'v_realization_new';
             $select = '*';
             $join = [];
             $order = [
                 '', // Number
-                'v_realization.date',
-                'v_realization.doctype',
-                'v_realization.branch',
-                'v_realization.division',
-                'v_realization.employee_fullname',
+                'v_realization_new.date',
+                'v_realization_new.doctype',
+                'v_realization_new.branch',
+                'v_realization_new.division',
+                'v_realization_new.employee_fullname',
                 '',
-                'v_realization.reason'
+                'v_realization_new.reason'
             ];
             $search = $this->request->getPost('search');
-            $sort = ['v_realization.date' => 'ASC', 'v_realization.employee_fullname' => 'ASC'];
+            $sort = ['v_realization_new.date' => 'ASC', 'v_realization_new.employee_fullname' => 'ASC'];
 
             $formType = [
                 $this->model->Pengajuan_Lupa_Absen_Masuk,
@@ -102,7 +103,7 @@ class Realization extends BaseController
 
             $where = [
                 "docstatus = '{$this->DOCSTATUS_Inprogress}'
-                AND isagree = 'S' 
+                AND isagree = '{$this->LINESTATUS_Realisasi_HRD}' 
                 AND submissiontype NOT IN (" . implode(",", $formType) . ")"
             ];
 
@@ -119,23 +120,26 @@ class Realization extends BaseController
             foreach ($list as $value) :
                 $row = [];
                 $ID = $value->id;
+                $trxCancel = $mSubCancelDetail->where(['reference_id' => $ID, 'ref_table' => 'trx_absent_detail'])
+                    ->whereIn('isagree', [$this->LINESTATUS_Approval, $this->LINESTATUS_Disetujui, $this->LINESTATUS_Realisasi_Atasan, "{$this->LINESTATUS_Realisasi_HRD}"])->first();
 
                 $number++;
 
                 $reason = $value->reason;
+                $dateFormat = format_dmy($value->date, '-');
 
                 if ($value->comment)
                     $reason .= " | <small class='text-danger'>{$value->comment}</small>";
 
-                $row[] = $number;
-                $row[] = format_dmy($value->date, '-');
-                $row[] = $value->doctype;
-                $row[] = $value->branch;
-                $row[] = $value->division;
-                $row[] = $value->employee_fullname;
+                $row[] = !$trxCancel ? $number : "<small class='text-danger'>{$number}</small>";
+                $row[] = !$trxCancel ? $dateFormat : "<small class='text-danger'>{$dateFormat}</small>";
+                $row[] = !$trxCancel ? $value->doctype : "<small class='text-danger'>{$value->doctype}</small>";
+                $row[] = !$trxCancel ? $value->branch : "<small class='text-danger'>{$value->branch}</small>";
+                $row[] = !$trxCancel ? $value->division : "<small class='text-danger'>{$value->division}</small>";
+                $row[] = !$trxCancel ? $value->employee_fullname : "<small class='text-danger'>{$value->employee_fullname}</small>";
                 $row[] = viewImage($value->header_id, $value->image);
-                $row[] = $reason;
-                $row[] = $this->template->tableButtonProcess($ID);
+                $row[] = !$trxCancel ? $reason : "<small class='text-danger'>{$reason}</small>";
+                $row[] = !$trxCancel ? $this->template->tableButtonProcess($ID) : null;
                 $data[] = $row;
             endforeach;
 
@@ -152,10 +156,7 @@ class Realization extends BaseController
 
     public function showAllOvertime()
     {
-        $mAccess = new M_AccessMenu($this->request);
-        $mOvertime = new M_Overtime($this->request);
         $mAttendance = new M_Attendance($this->request);
-        $mEmployee = new M_Employee($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $table = 'v_realization_overtime';
@@ -174,44 +175,7 @@ class Realization extends BaseController
             $sort = ['documentno' => 'ASC'];
 
             $where['docstatus'] = $this->DOCSTATUS_Inprogress;
-
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['md_employee_id'] = $this->session->get('md_employee_id');
-            }
+            $where['md_employee_id'] = ['value' => $this->access->getEmployeeData(false)];
 
             $data = [];
 
@@ -262,69 +226,32 @@ class Realization extends BaseController
     {
         $mAttendance = new M_Attendance($this->request);
         $mAbsent = new M_Absent($this->request);
-        $mAccess = new M_AccessMenu($this->request);
-        $mEmployee = new M_Employee($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
-            $table = 'v_realization';
+            $table = 'v_realization_new';
             $select = '*';
             $join = [];
             $order = [
                 '', // Number
-                'v_realization.date',
+                'v_realization_new.date',
                 '',
-                'v_realization.documentno',
-                'v_realization.doctype',
-                'v_realization.branch',
-                'v_realization.division',
-                'v_realization.employee_fullname',
+                'v_realization_new.documentno',
+                'v_realization_new.doctype',
+                'v_realization_new.branch',
+                'v_realization_new.division',
+                'v_realization_new.employee_fullname',
                 '',
                 '',
-                'v_realization.reason'
+                'v_realization_new.reason'
             ];
             $search = $this->request->getPost('search');
-            $sort = ['v_realization.date' => 'ASC', 'v_realization.employee_fullname' => 'ASC'];
+            $sort = ['v_realization_new.date' => 'ASC', 'v_realization_new.employee_fullname' => 'ASC'];
 
             $where['docstatus'] = $this->DOCSTATUS_Inprogress;
             $where['isagree'] = 'M';
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['md_employee_id'] = $this->session->get('md_employee_id');
-            }
+            $empList = $this->access->getEmployeeData(false);
+            $where['md_employee_id'] = ['value' => $empList];
 
             $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
 
@@ -418,13 +345,13 @@ class Realization extends BaseController
             }
 
             if ($isAgree == $this->LINESTATUS_Disetujui) {
-                $whereClause = "v_realization.id = {$post['id']}";
+                $whereClause = "v_realization_new.id = {$post['id']}";
             } else {
-                $whereClause = "v_realization.id = {$post['foreignkey']}";
+                $whereClause = "v_realization_new.id = {$post['foreignkey']}";
             }
 
-            $whereClause .= " AND v_realization.table = '{$table}'";
-            $trx = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
+            $whereClause .= " AND v_realization_new.table = '{$table}'";
+            $trx = $mAbsentDetail->getRealization($whereClause)->getRow();
             $realizeDate = date('Y-m-d', strtotime($trx->realization_hrd));
 
             try {
@@ -462,7 +389,9 @@ class Realization extends BaseController
 
                         $this->entity->isagree = $this->LINESTATUS_Disetujui;
                         $this->entity->{$this->model->primaryKey} = $post['id'];
-                        $this->entity->realization_by = $this->access->getSessionUser();
+                        $this->entity->realization_date_hrd = date('Y-m-d H:i:s');
+                        $this->entity->realization_by_hrd = $this->access->getSessionUser();
+
 
                         if ($submissionForm == "Penugasan") {
                             $this->entity->realization_in = date('Y-m-d', strtotime($post['submissiondate'])) . " " . $post['starttime_att'];
@@ -605,10 +534,11 @@ class Realization extends BaseController
                             $this->model = $isAssignment ? new M_AssignmentDate($this->request) : new M_AbsentDetail($this->request);
                             $this->entity = $isAssignment ? new \App\Entities\AssignmentDate() : new \App\Entities\AbsentDetail();
                             $this->entity->isagree = $this->LINESTATUS_Ditolak;
-                            $this->entity->realization_by = $this->access->getSessionUser();
                             $this->entity->{$isAssignment ? 'trx_assignment_date_id' : 'trx_absent_detail_id'} = $post['foreignkey'];
                             $this->entity->table = 'trx_absent_detail';
                             $this->entity->{$isAssignment ? 'reference_id' : 'ref_absent_detail_id'} = $lineID;
+                            $this->entity->realization_date_hrd = date('Y-m-d H:i:s');
+                            $this->entity->realization_by_hrd = $this->access->getSessionUser();
                             $this->save();
 
                             /**
@@ -629,7 +559,8 @@ class Realization extends BaseController
                             $this->save();
                         } else {
                             $this->entity->{$this->model->primaryKey} = $post['foreignkey'];
-                            $this->entity->realization_by = $this->access->getSessionUser();
+                            $this->entity->realization_date_hrd = date('Y-m-d H:i:s');
+                            $this->entity->realization_by_hrd = $this->access->getSessionUser();
                             $this->entity->isagree = $this->LINESTATUS_Ditolak;
                             $response = $this->save();
                         }
@@ -654,6 +585,7 @@ class Realization extends BaseController
                     if (empty($pendingLine)) {
                         $dataUpdate = [
                             'updated_by'   => $this->access->getSessionUser(),
+                            'updated_at'   => date('Y-m-d H:i:s'),
                             'docstatus'    => $this->DOCSTATUS_Completed,
                             'receiveddate' => $today,
                         ];
@@ -702,7 +634,8 @@ class Realization extends BaseController
                     $line = $this->model->find($post['id']);
 
                     $this->entity->trx_overtime_detail_id = $post['id'];
-                    $this->entity->realization_by = $this->access->getSessionUser();
+                    $this->entity->realization_date_superior = date('Y-m-d H:i:s');
+                    $this->entity->realization_by_superior = $this->access->getSessionUser();
 
                     if ($isAgree == $this->LINESTATUS_Disetujui) {
                         // TODO : Set Notification
@@ -746,6 +679,7 @@ class Realization extends BaseController
 
                         $dataUpdate = [
                             'updated_by'   => $this->access->getSessionUser(),
+                            'updated_at'   => date('Y-m-d H:i:s'),
                             'docstatus'    => $this->DOCSTATUS_Completed,
                             'receiveddate' => $todayTime,
                         ];
@@ -786,9 +720,9 @@ class Realization extends BaseController
 
             $table = $submissionForm == "Penugasan" ? "trx_assignment" : "trx_absent";
 
-            $whereClause = "v_realization.id = {$post['id']}";
-            $whereClause .= " AND v_realization.table = '{$table}'";
-            $trx = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
+            $whereClause = "v_realization_new.id = {$post['id']}";
+            $whereClause .= " AND v_realization_new.table = '{$table}'";
+            $trx = $mAbsentDetail->getRealization($whereClause)->getRow();
             $realizeDate = date('Y-m-d', strtotime($trx->realization_mgr));
 
             try {
@@ -807,7 +741,8 @@ class Realization extends BaseController
                     $this->entity = $submissionForm == "Penugasan" ? new \App\Entities\AssignmentDate() : new \App\Entities\AbsentDetail();
 
                     $this->entity->{$this->model->primaryKey} = $post['id'];
-                    $this->entity->realization_by = $this->access->getSessionUser();
+                    $this->entity->realization_date_superior = date('Y-m-d H:i:s');
+                    $this->entity->realization_by_superior = $this->access->getSessionUser();
 
                     if ($isAgree == $this->LINESTATUS_Disetujui) {
                         // TODO : Set Notification
@@ -879,6 +814,7 @@ class Realization extends BaseController
                     if (empty($pendingLine)) {
                         $dataUpdate = [
                             'updated_by'   => $this->access->getSessionUser(),
+                            'updated_at'   => date('Y-m-d H:i:s'),
                             'docstatus'    => $this->DOCSTATUS_Completed,
                             'receiveddate' => $today,
                         ];
@@ -1169,7 +1105,7 @@ class Realization extends BaseController
             $where .= " AND isapproved = 'Y'";
             $where .= " AND isagree IN ('{$this->LINESTATUS_Realisasi_Atasan}','{$this->LINESTATUS_Realisasi_HRD}')";
 
-            $listApproved = $mAbsentDetail->getAllSubmission($where)->getResult();
+            $listApproved = $mAbsentDetail->getRealization($where)->getResult();
 
             if ($listApproved) {
                 foreach ($listApproved as $row) {
@@ -1215,6 +1151,9 @@ class Realization extends BaseController
                     $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, $date], $dataNotif->getText());
 
                     if (!$isHRD) {
+                        $entity->realization_date_superior = date('Y-m-d H:i:s');
+                        $entity->realization_by_superior = $this->access->getSessionUser();
+
                         if ($row->submissiontype == 100008) {
                             $whereIn = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
                             $whereIn .= " AND v_attendance_branch.date = '{$date}'";
@@ -1240,6 +1179,9 @@ class Realization extends BaseController
                         }
                     } else {
                         $isAgreeUpdate = $this->LINESTATUS_Disetujui;
+                        $entity->realization_date_hrd = date('Y-m-d H:i:s');
+                        $entity->realization_by_hrd = $this->access->getSessionUser();
+
                         if ($row->submissiontype == 100008) {
                             $whereIn = " v_attendance_branch.md_employee_id = {$row->md_employee_id}";
                             $whereIn .= " AND v_attendance_branch.date = '{$date}'";
@@ -1303,7 +1245,6 @@ class Realization extends BaseController
                     $entity->isagree = $isAgreeUpdate;
                     $entity->updated_at = $todayTime;
                     $entity->updated_by = $this->session->get('sys_user_id');
-                    $entity->realization_by = $this->session->get('sys_user_id');
                     $entity->{$this->modelDetail->primaryKey} = $row->id;
 
                     $result = $this->modelDetail->save($entity);
@@ -1336,6 +1277,7 @@ class Realization extends BaseController
                         if (!$pendingLine) {
                             $dataUpdate = [
                                 'updated_by'   =>  $this->session->get('sys_user_id'),
+                                'updated_at'   => $todayTime,
                                 'docstatus'    => $this->DOCSTATUS_Completed,
                                 'receiveddate' => $today,
                             ];
@@ -1407,7 +1349,8 @@ class Realization extends BaseController
                     $entity->isagree = $this->LINESTATUS_Disetujui;
                     $entity->updated_at = $todayTime;
                     $entity->updated_by = $this->session->get('sys_user_id');
-                    $entity->realization_by = $this->session->get('sys_user_id');
+                    $entity->realization_date_superior = date('Y-m-d H:i:s');
+                    $entity->realization_by_superior = $this->access->getSessionUser();
                     $entity->{$this->modelDetail->primaryKey} = $row->trx_overtime_detail_id;
 
                     $result = $this->modelDetail->save($entity);
@@ -1434,6 +1377,7 @@ class Realization extends BaseController
                         if (!$pendingLine) {
                             $dataUpdate = [
                                 'updated_by'   =>  $this->session->get('sys_user_id'),
+                                'updated_at'   => $todayTime,
                                 'docstatus'    => $this->DOCSTATUS_Completed,
                                 'receiveddate' => $today,
                             ];

@@ -327,6 +327,7 @@ class M_Absent extends Model
                 $entity->isagree = $rows['isagree'] ?? "";
                 $entity->created_by = $rows['created_by'];
                 $entity->updated_by = $rows['updated_by'];
+                $entity->approve_date = isset($rows["approve_date"]) ?? null;
 
                 $mAbsentDetail->save($entity);
             }
@@ -390,7 +391,8 @@ class M_Absent extends Model
                 'id'         => $ID,
                 'created_by' => $updatedBy,
                 'updated_by' => $updatedBy,
-                'isagree'    => $isagree
+                'isagree'    => $isagree,
+                'approve_date' => date('Y-m-d H:i:s'),
             ];
 
             $this->createAbsentDetail($data, $sql);
@@ -414,6 +416,7 @@ class M_Absent extends Model
                     $entity = new \App\Entities\AbsentDetail();
                     $entity->{$mAbsentDetail->primaryKey} = $row->{$mAbsentDetail->primaryKey};
                     $entity->isagree = $isagree;
+                    $entity->approve_date = date('Y-m-d H:i:s');
 
                     $mAbsentDetail->save($entity);
                 endforeach;

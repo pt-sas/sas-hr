@@ -22,7 +22,12 @@ class M_OvertimeDetail extends Model
         'isagree',
         'created_by',
         'updated_by',
-        'realization_by'
+        'realization_by',
+        'approve_date',
+        'realization_date_superior',
+        'realization_by_superior',
+        'realization_date_hrd',
+        'realization_by_hrd'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\OvertimeDetail';
