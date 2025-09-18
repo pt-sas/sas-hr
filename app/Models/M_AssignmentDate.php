@@ -23,6 +23,11 @@ class M_AssignmentDate extends Model
         'instruction_in',
         'instruction_out',
         'description',
+        'approve_date',
+        'realization_date_superior',
+        'realization_by_superior',
+        'realization_date_hrd',
+        'realization_by_hrd',
         'created_by',
         'updated_by',
     ];

@@ -325,6 +325,7 @@ class WActivity extends BaseController
 
                     //TODO: Save data update 
                     $this->entity->updated_by = $user_by;
+                    $this->entity->approve_date = date("Y-m-d H:i:s");
                     $result = $this->save();
 
                     //TODO : Get data user based on createdby

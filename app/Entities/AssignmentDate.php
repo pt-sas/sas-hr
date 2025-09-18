@@ -20,6 +20,11 @@ class AssignmentDate extends Entity
     protected $realization_out;
     protected $instruction_in;
     protected $instruction_out;
+    protected $approve_date;
+    protected $realization_date_superior;
+    protected $realization_by_superior;
+    protected $realization_date_hrd;
+    protected $realization_by_hrd;
     protected $created_by;
     protected $updated_by;
 

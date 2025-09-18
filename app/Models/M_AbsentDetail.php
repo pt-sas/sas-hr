@@ -18,7 +18,12 @@ class M_AbsentDetail extends Model
         'table',
         'created_by',
         'updated_by',
-        'image'
+        'image',
+        'approve_date',
+        'realization_date_superior',
+        'realization_by_superior',
+        'realization_date_hrd',
+        'realization_by_hrd'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\AbsentDetail';
@@ -722,6 +727,17 @@ class M_AbsentDetail extends Model
         $builder = $this->db->table("v_realization");
 
         // $this->builder->join('trx_absent', 'trx_absent.trx_absent_id = ' . $this->table . '.trx_absent_id', 'left');
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
+    }
+
+
+    public function getRealization($where)
+    {
+        $builder = $this->db->table("v_realization_new");
 
         if ($where)
             $builder->where($where);

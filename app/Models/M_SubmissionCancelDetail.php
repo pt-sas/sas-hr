@@ -20,6 +20,11 @@ class M_SubmissionCancelDetail extends Model
         'description',
         'created_by',
         'updated_by',
+        'approve_date',
+        'realization_date_superior',
+        'realization_by_superior',
+        'realization_date_hrd',
+        'realization_by_hrd'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\SubmissionCancelDetail';

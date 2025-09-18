@@ -246,6 +246,7 @@ class M_Assignment extends Model
                     $entity->trx_assignment_date_id = $row->trx_assignment_date_id;
                     $entity->updated_by = $updatedBy;
                     $entity->isagree = $sql->docstatus === "IP" ? 'M' : 'Y';
+                    $entity->approve_date = date('Y-m-d H:i:s');
 
                     $mAssignmentDate->save($entity);
                 }
