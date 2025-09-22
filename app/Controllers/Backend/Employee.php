@@ -209,16 +209,17 @@ class Employee extends BaseController
                 } else {
                     $path = $this->PATH_UPLOAD . $this->PATH_Karyawan . '/';
 
-                    if ($this->isNew() && $file && $file->isValid()) {
-                        uploadFile($file, $path, $img_name);
+                    if ($this->isNew()) {
+                        if ($file && $file->isValid())
+                            uploadFile($file, $path, $img_name);
                     } else {
                         $row = $this->model->find($this->getID());
 
-                        if (!empty($row->getImage()) && $post['image'] !== $row->getImage() && file_exists($path . $row->getImage()))
+                        if (empty($post['image']) && !empty($row->getImage()) && file_exists($path . $row->getImage())) {
                             unlink($path . $row->getImage());
-
-                        if ($post['image'] !== $row->getImage() && $file && $file->isValid())
+                        } else if (!empty($post['image']) && !empty($row->getImage()) && $post['image'] !== $row->getImage() && $file && $file->isValid()) {
                             uploadFile($file, $path, $img_name);
+                        }
                     }
 
                     $this->entity->fill($post);
