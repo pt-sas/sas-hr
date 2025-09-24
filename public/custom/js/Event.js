@@ -2508,11 +2508,16 @@ _tableReport.on("click", ".btn_generate_memo", function (e) {
     cache: false,
     dataType: "JSON",
     beforeSend: function () {
+      $(_this).data("original-text", $(_this).html());
+
       $(_this)
         .html(
           '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
         )
         .prop("disabled", true);
+    },
+    complete: function () {
+      $(_this).html($(_this).data("original-text")).prop("disabled", false);
     },
     success: function (result) {
       if (result[0].success) {

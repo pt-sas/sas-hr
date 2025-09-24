@@ -68,6 +68,13 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
+                    <label for="memocriteria">Kriteria<span class="required">*</span></label>
+                    <input type="text" class="form-control" id="memocriteria" name="memocriteria" readonly>
+                    <small class="form-text text-danger" id="error_memocriteria"></small>
+                </div>
+            </div>
+            <!-- <div class="col-md-3">
+                <div class="form-group">
                     <label for="memocriteria">Kriteria <span class="required">*</span></label>
                     <select class="form-control select-data" id="memocriteria" name="memocriteria"
                         data-url="reference/getList/$MemoCriteria">
@@ -75,7 +82,7 @@
                     </select>
                     <small class="form-text text-danger" id="error_memocriteria"></small>
                 </div>
-            </div>
+            </div> -->
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="totaldays">Total <span class="required">*</span></label>

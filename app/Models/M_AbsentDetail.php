@@ -20,6 +20,7 @@ class M_AbsentDetail extends Model
         'updated_by',
         'image',
         'approve_date',
+        'is_generated_memo',
         'realization_date_superior',
         'realization_by_superior',
         'realization_date_hrd',
@@ -219,11 +220,13 @@ class M_AbsentDetail extends Model
                         $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
                         if ($ruleDetail) {
-                            $balance = $mLeaveBalance->where([
-                                'year'              => date("Y", strtotime($sql->startdate)),
-                                'md_employee_id'    => $sql->md_employee_id
-                            ])->first();
-                            $saldo = $balance->balance_amount;
+                            // $balance = $mLeaveBalance->where([
+                            //     'year'              => date("Y", strtotime($sql->startdate)),
+                            //     'md_employee_id'    => $sql->md_employee_id
+                            // ])->first();
+
+                            $balance = $mLeaveBalance->getTotalBalance($sql->md_employee_id, date("Y", strtotime($line->date)));
+                            $saldo = $balance ? $balance->balance_amount : 0;
 
                             $dataLeaveUsage = [];
                             foreach ($ruleDetail as $detail) {

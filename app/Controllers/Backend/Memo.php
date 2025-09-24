@@ -3,6 +3,7 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_AbsentDetail;
 use App\Models\M_Memo;
 use App\Models\M_AccessMenu;
 use App\Models\M_Employee;
@@ -11,6 +12,9 @@ use App\Models\M_Division;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Position;
 use App\Models\M_ReferenceDetail;
+use App\Models\M_Rule;
+use App\Models\M_RuleDetail;
+use App\Models\M_RuleValue;
 use Config\Services;
 use DateTime;
 use TCPDF;
@@ -35,9 +39,6 @@ class Memo extends BaseController
 
     public function showAll()
     {
-        $mAccess = new M_AccessMenu($this->request);
-        $mEmployee = new M_Employee($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -46,52 +47,7 @@ class Memo extends BaseController
             $search = $this->model->column_search;
             $sort = $this->model->order;
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-            if (!empty($empDelegation)) {
-                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
-            }
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if (!empty($empDelegation)) {
-                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
-                }
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['md_employee.md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-            }
+            $where['md_employee.md_employee_id'] = ['value' => $this->access->getEmployeeData(false)];
 
             $where['trx_hr_memo.memotype'] = $this->model->Pengajuan_Memo_SDM;
 
@@ -114,7 +70,7 @@ class Memo extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->memodate, '-');
-                $row[] = $value->criteria;
+                $row[] = $value->memocriteria;
                 $row[] = $value->memocontent;
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
@@ -139,7 +95,6 @@ class Memo extends BaseController
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
-
 
             try {
                 if (!$this->validation->run($post, 'memo')) {
@@ -183,7 +138,6 @@ class Memo extends BaseController
 
     public function show($id)
     {
-        $mRefDetail = new M_ReferenceDetail($this->request);
         $mEmployee = new M_Employee($this->request);
 
         if ($this->request->isAJAX()) {
@@ -191,10 +145,6 @@ class Memo extends BaseController
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
                 $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
 
-                if (!empty($list[0]->getMemoCriteria())) {
-                    $rowCriteria = $mRefDetail->where("name", $list[0]->getMemoCriteria())->first();
-                    $list = $this->field->setDataSelect($mRefDetail->table, $list, "memocriteria", $rowCriteria->getValue(), $rowCriteria->getName());
-                }
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 
@@ -286,6 +236,9 @@ class Memo extends BaseController
         $post = $this->request->getVar();
 
         if ($this->request->getMethod(true) === 'POST') {
+            $mRule = new M_Rule($this->request);
+            $mRuleDetail = new M_RuleDetail($this->request);
+
             $table = "v_attendance_submission";
             $select = $this->model->getSelectList();
             $join = $this->model->getJoinList();
@@ -295,19 +248,27 @@ class Memo extends BaseController
             $number = $this->request->getPost('start');
 
             $period = date('m-Y');
+            $year = date('Y');
 
             foreach ($post['form'] as $value) :
                 if ($value['name'] === "periode") {
-                    if (!empty($value['value']))
+                    if (!empty($value['value'])) {
                         $period = date('m-Y', strtotime($value['value']));
+                        $year = date('Y', strtotime($value['value']));
+                    }
                 }
 
             endforeach;
 
-            $where = ["v_attendance_submission.period = '{$period}'
-                    AND ((v_attendance_submission.type = 'alpa' AND v_attendance_submission.total >= 2) 
-                    OR (v_attendance_submission.type = 'kehadiran' AND v_attendance_submission.total >= 6) 
-                    OR (v_attendance_submission.type = 'ijin' AND v_attendance_submission.total >= 6))"];
+            $rule = $mRule->where('name', 'Memo')->first();
+            $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->{$mRule->primaryKey})->findAll();
+
+            $where = ["(v_attendance_submission.period = '{$period}' OR v_attendance_submission.period = '{$year}')
+                    AND md_employee.md_levelling_id " . getOperation($ruleDetail[0]->operation) . " {$ruleDetail[0]->condition}
+                    AND ((v_attendance_submission.type = 'alpa' AND v_attendance_submission.total " . getOperation($ruleDetail[5]->operation) . " {$ruleDetail[5]->condition}) 
+                    OR (v_attendance_submission.type = 'kehadiran_masuk' AND v_attendance_submission.total " . getOperation($ruleDetail[1]->operation) . " {$ruleDetail[1]->condition})
+                    OR (v_attendance_submission.type = 'kehadiran_pulang' AND v_attendance_submission.total " . getOperation($ruleDetail[3]->operation) . " {$ruleDetail[3]->condition})
+                    OR (v_attendance_submission.type = 'ijin' AND v_attendance_submission.total " . getOperation($ruleDetail[6]->operation) . " {$ruleDetail[6]->condition}))"];
 
             $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
             $data = [];
@@ -322,7 +283,7 @@ class Memo extends BaseController
                 $row[] = $val->branch;
                 $row[] = $val->division;
                 $row[] = $val->type;
-                $row[] = $val->period;
+                $row[] = $period;
                 $row[] = $val->total;
                 $row[] = $this->template->buttonGenerateMemo($ID);
                 $data[] = $row;
@@ -344,12 +305,16 @@ class Memo extends BaseController
 
     public function generateMemo()
     {
-        $mEmployee = new M_Employee($this->request);
-        $mBranch = new M_Branch($this->request);
-        $mDiv = new M_Division($this->request);
-        $mPosition = new M_Position($this->request);
-
         if ($this->request->isAJAX()) {
+            $mEmployee = new M_Employee($this->request);
+            $mBranch = new M_Branch($this->request);
+            $mDiv = new M_Division($this->request);
+            $mPosition = new M_Position($this->request);
+            $mRule = new M_Rule($this->request);
+            $mRuleDetail = new M_RuleDetail($this->request);
+            $mRuleValue = new M_RuleValue($this->request);
+            $mAbsentDetail = new M_AbsentDetail($this->request);
+
             try {
                 $post = $this->request->getVar();
                 $post = json_decode($post['memos'])[0];
@@ -363,11 +328,74 @@ class Memo extends BaseController
                 $employeeId = $post['md_employee_id'];
                 $branch =  $post['branch'];
                 $division =  $post['division'];
-                $criteria =  $post['criteria'];
+                $criteria =  [];
                 $period = $post['period'];
                 $totalDays = $post['total'];
 
+                $rule = $mRule->where(['name' => 'Memo', 'isactive' => 'Y'])->first();
+                $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->{$mRule->primaryKey})->findAll();
+
+                // TODO : Get Memo Last Month
+                $lastMonth = DateTime::createFromFormat('m-Y', $period);
+
+                $memoLastMonthAgo = $this->model->where([
+                    'docstatus'                             => 'CO',
+                    'date_format(memodate, "%Y-%m")'        => $lastMonth->modify('-1 month')->format('Y-m'),
+                    'md_employee_id'                        => $employeeId
+                ])->first();
+
+                // TODO : Get All Memo List
                 $date = DateTime::createFromFormat('m-Y', $period);
+
+                $where = "(v_attendance_submission.period = '{$period}' OR v_attendance_submission.period = '{$date->format('Y')}')
+                    AND md_employee.md_employee_id = {$employeeId}
+                    AND md_employee.md_levelling_id " . getOperation($ruleDetail[0]->operation) . " {$ruleDetail[0]->condition}
+                    AND ((v_attendance_submission.type = 'alpa' AND v_attendance_submission.total " . getOperation($ruleDetail[5]->operation) . " {$ruleDetail[5]->condition}) 
+                    OR (v_attendance_submission.type = 'kehadiran_masuk' AND v_attendance_submission.total " . getOperation($ruleDetail[1]->operation) . " {$ruleDetail[1]->condition})
+                    OR (v_attendance_submission.type = 'kehadiran_pulang' AND v_attendance_submission.total " . getOperation($ruleDetail[3]->operation) . " {$ruleDetail[3]->condition})
+                    OR (v_attendance_submission.type = 'ijin' AND v_attendance_submission.total " . getOperation($ruleDetail[6]->operation) . " {$ruleDetail[6]->condition}))";
+
+                $memoList = $this->model->getMemoList($where)->getResult();
+
+                // TODO : Do Looping to get memo Level and Set memo Content
+                $memoLevel = $memoLastMonthAgo ? $memoLastMonthAgo->getMemoLevel() : 0;
+                $memoContent = "";
+                $number = 1;
+
+                foreach ($memoList as $memo) {
+                    $memoLevel += 1;
+                    $criteria[] = $memo->type;
+                    $str = ucfirst(str_replace('_', ' ', $memo->type));
+
+                    if ($memo->type == "kehadiran_masuk" && $memo->total > $ruleDetail[2]->condition) {
+                        $memoLevel += 1;
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[2]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                    } else if ($memo->type == "kehadiran_masuk") {
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[1]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                    }
+
+                    if ($memo->type == "kehadiran_pulang" && $memo->total > $ruleDetail[4]->condition) {
+                        $memoLevel += 1;
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[4]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                    } else if ($memo->type == "kehadiran_pulang") {
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[3]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                    }
+
+                    if ($memo->type == "ijin") {
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[6]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                    }
+
+                    if ($memo->type == "alpa") {
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[5]->condition} Kali Total {$str} dalam tahun {$date->format('Y')} = {$memo->total} Kali.";
+                    }
+
+                    $number++;
+                }
+
+                if ($memoLevel > 3) {
+                    return $this->response->setJSON(message('error', false, "Maaf, Memo tidak bisa digenerate karena melebihi Memo SDM 3"));
+                }
+
                 $date->modify('last day of this month');
                 $post['memodate'] = $date->format('Y-m-d');
                 $post['submissiondate'] = $today;
@@ -378,6 +406,8 @@ class Memo extends BaseController
 
                 $rowPoisition = $mPosition->find($rowEmp->md_position_id);
                 $position = $rowPoisition ? $rowPoisition->getName() : "";
+                $isAlpa = in_array('alpa', $criteria) ? true : false;
+                $criteria = ucwords(str_replace('_', ' ', implode(", ", $criteria)));
 
                 $this->entity->setEmployeeId($employeeId);
                 $this->entity->setNik($nik);
@@ -388,10 +418,11 @@ class Memo extends BaseController
                 $this->entity->setMemoDate($post['memodate']);
                 $this->entity->setMemoCriteria($criteria);
                 $this->entity->setTotalDays($totalDays);
+                $this->entity->setMemoLevel($memoLevel);
                 $this->entity->setDescription("Tanggal pemotongan akan berlaku selama karyawan masuk kerja (tanggal tidak mengikat).");
 
-                $criteria = ucfirst($criteria);
-                $this->entity->setMemoContent("Pemotongan Tunjangan kehadiran atas nama : {$name} - {$nik} ({$position} - {$branch}) Sebanyak 5 (Lima) hari kerja, karena {$criteria} lebih dari 5 (Lima) Kali Total {$criteria} dalam bulan {$period} = {$totalDays} Kali");
+                $ruleValue = $mRuleValue->where(['name' => "Memo SDM {$memoLevel}"])->first();
+                $this->entity->setMemoContent("Memo SDM {$memoLevel}. Pemotongan Tunjangan kehadiran atas nama : {$name} - {$nik} ({$position} - {$branch}) Sebanyak " . abs($ruleValue->value) . " hari kerja, dikarenakan :" . $memoContent);
 
                 if ($this->isNew()) {
                     $this->entity->setDocStatus($this->DOCSTATUS_Completed);
@@ -400,6 +431,22 @@ class Memo extends BaseController
                 }
 
                 $this->save();
+
+                if ($isAlpa) {
+                    $whereClause = "trx_absent.md_employee_id = {$employeeId}";
+                    $whereClause .= " AND trx_absent.docstatus = 'CO'";
+                    $whereClause .= " AND trx_absent_detail.is_generated_memo = 'N'";
+                    $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y') = '{$date->format('Y')}'";
+                    $listAlpa = $mAbsentDetail->getAbsentDetail($whereClause)->getResult();
+
+                    foreach ($listAlpa as $alpa) {
+                        $data = [
+                            'is_generated_memo' => 'Y'
+                        ];
+
+                        $mAbsentDetail->builder->update($data, [$mAbsentDetail->primaryKey => $alpa->trx_absent_detail_id]);
+                    }
+                }
 
                 $response = message('success', true, "Memo telah digenerate dengan nomor {$docNo}");
             } catch (\Exception $e) {

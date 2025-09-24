@@ -26,6 +26,7 @@ class M_Memo extends Model
         'isapproved',
         'approveddate',
         'sys_wfscenario_id',
+        'memo_level',
         'created_by',
         'updated_by'
     ];
@@ -168,80 +169,38 @@ class M_Memo extends Model
 
     public function createAllowance(array $rows)
     {
-        $mRule = new M_Rule($this->request);
-        $mRuleDetail = new M_RuleDetail($this->request);
+        $mRuleValue = new M_RuleValue($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
-        $mEmployee = new M_Employee($this->request);
 
         $amount = 0;
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-        $memoDate = $rows['data']['memodate'];
+        $trx = $this->find($ID);
         $submissionDate = $rows['data']['submissiondate'];
-        $criteria = $rows['data']['memocriteria'];
-        $totalDays = $rows['data']['totaldays'];
         $employeeID = $rows['data']['md_employee_id'];
 
-        $startOfMonth = date('Y-m-d', strtotime('first day of this month', strtotime($memoDate)));
-        $lastMonth = date('Y-m', strtotime('-1 month', strtotime($startOfMonth)));
-        $twoMonthAgo = date('Y-m', strtotime('-2 month', strtotime($startOfMonth)));
-
-        $memoTwoMonthAgo = $this->where([
-            'docstatus'                             => 'CO',
-            'date_format(memodate, "%Y-%m")'        => $twoMonthAgo,
-            'md_employee_id'                        => $employeeID
-        ])->first();
-
-        $memoLastMonthAgo = $this->where([
-            'docstatus'                             => 'CO',
-            'date_format(memodate, "%Y-%m")'        => $lastMonth,
-            'md_employee_id'                        => $employeeID
-        ])->first();
-
-        $rowEmployee = $mEmployee->find($employeeID);
-
-        if ($criteria === "kehadiran") {
-            $rule = $mRule->where([
-                'name'      => 'Datang Terlambat',
-                'isactive'  => 'Y'
-            ])->first();
-        } else if ($criteria === "ijin") {
-            $rule = $mRule->where([
-                'name'      => 'Ijin',
-                'isactive'  => 'Y'
-            ])->first();
-        } else if ($criteria === "alpa") {
-            $rule = $mRule->where([
-                'name'      => 'Alpa',
-                'isactive'  => 'Y'
-            ])->first();
-        }
-
-        if ($rule) {
-            $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
-
-            if ($ruleDetail) {
-                foreach ($ruleDetail as $detail) {
-                    if ($detail->name === "Permanent" && $rowEmployee->getStatusId() == 100001 && getOperationResult($totalDays, $detail->condition, $detail->operation)) {
-                        $amount = $detail->value;
-
-                        if ($criteria !== "alpa")
-                            if (getOperationResult($totalDays, $detail->condition, $detail->operation) && $memoTwoMonthAgo && $memoLastMonthAgo) {
-                                $amount *= 3;
-                            } else if (getOperationResult($totalDays, $detail->condition, $detail->operation) && is_null($memoTwoMonthAgo) && $memoLastMonthAgo) {
-                                $amount *= 2;
-                            }
-                    } else if ($detail->name === "Probation" && $rowEmployee->getStatusId() == 100002 && getOperationResult($totalDays, $detail->condition, $detail->operation)) {
-                        $amount = $detail->value;
-                    }
-                }
-            }
-        }
+        $ruleValue = $mRuleValue->where('name', "Memo SDM {$trx->memo_level}")->first();
+        $amount = $ruleValue->value;
 
         if ($amount != 0) {
             $mAllowance->insertAllowance($ID, $this->table, 'A-', $submissionDate, $this->Pengajuan_Memo_SDM, $employeeID, $amount, $rows['data']['created_by']);
         }
 
         return $rows;
+    }
+
+    public function getMemoList($where)
+    {
+        $builder = $this->builder('v_attendance_submission');
+
+        $builder->select("v_attendance_submission.*,
+        md_employee.fullname,
+        md_employee.nik");
+
+        $builder->join('md_employee', 'md_employee.md_employee_id = v_attendance_submission.md_employee_id', 'left');
+
+        $builder->where($where);
+
+        return $builder->get();
     }
 }
