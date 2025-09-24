@@ -45,8 +45,7 @@ class CreateViewRealizationNew extends Migration
             ELSE add_workdays(adetail.date, dt.`days_realization_mgr`)
         END AS realization_mgr,
         CASE 
-        WHEN DATE(adetail.date) <= DATE(a.submissiondate) 
-            AND adetail.realization_date_superior IS NOT NULL
+        WHEN adetail.realization_date_superior IS NOT NULL
             THEN add_workdays(adetail.realization_date_superior, dt.`days_realization_hrd`)
         WHEN DATE(adetail.date) <= DATE(a.submissiondate)
             AND adetail.approve_date IS NOT NULL
@@ -95,14 +94,12 @@ class CreateViewRealizationNew extends Migration
             ELSE add_workdays(adate.date, dt.`days_realization_mgr`)
         END AS realization_mgr,
         CASE 
-        WHEN DATE(adate.date) <= DATE(a.submissiondate) 
-            AND adate.realization_date_superior IS NOT NULL
+        WHEN adate.realization_date_superior IS NOT NULL
             THEN add_workdays(adate.realization_date_superior, dt.`days_realization_hrd`)
         WHEN DATE(adate.date) <= DATE(a.submissiondate)
             AND adate.approve_date IS NOT NULL
             THEN add_workdays(adate.approve_date, dt.`days_realization_hrd`)
         ELSE add_workdays(adate.date, dt.`days_realization_hrd`)
-        END AS realization_hrd
         FROM trx_assignment a
         LEFT JOIN trx_assignment_detail adetail ON a.trx_assignment_id = adetail.trx_assignment_id
         LEFT JOIN trx_assignment_date adate ON adetail.trx_assignment_detail_id = adate.trx_assignment_detail_id
