@@ -3,12 +3,15 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
 use App\Models\M_Attendance;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Holiday;
 use App\Models\M_WorkDetail;
 use App\Models\M_Employee;
+use App\Models\M_Rule;
+use App\Models\M_RuleDetail;
 use Config\Services;
 
 class ListAbsent extends BaseController
@@ -35,121 +38,124 @@ class ListAbsent extends BaseController
 
     public function showAll()
     {
-        $mAbsentDetail = new M_AbsentDetail($this->request);
-        $mHoliday = new M_Holiday($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-        $mEmployee = new M_Employee($this->request);
-        $mAttendance = new M_Attendance($this->request);
-        $post = $this->request->getVar();
-
         if ($this->request->getMethod(true) === 'POST') {
+            $mEmployee = new M_Employee($this->request);
+            $mHoliday = new M_Holiday($this->request);
+            $mWorkDetail = new M_WorkDetail($this->request);
+            $mAttendance = new M_Attendance($this->request);
+            $mEmpWork = new M_EmpWorkDay($this->request);
+            $mAbsent = new M_Absent($this->request);
+            $mRule = new M_Rule($this->request);
+            $mRuleDetail = new M_RuleDetail($this->request);
+
+            $post = $this->request->getVar();
+            $today = date('Y-m-d');
+            $holiday = $mHoliday->getHolidayDate();
+
+            $rule = $mRule->where('name', 'List Alpa')->first();
+            $ruleDetail = $mRuleDetail->where(['name' => 'Included Level', 'md_rule_id' => $rule->md_rule_id])->first();
+            $operation = getOperation($ruleDetail->operation);
+
             $table = $mEmployee->table;
-            $select = $mEmployee->findAll();
-            $order = $this->request->getPost('columns');
-            $search = $this->request->getPost('search');
-            $sort = ['nik' => 'ASC', 'fullname' => 'ASC'];
+            $select = "*";
+            $order = [];
+            $search = [];
+            $sort = ['nik' => 'ASC'];
 
-            $where = [
-                'isactive'          => 'Y',
-                'md_status_id <>'   => 100003 //Resign
-            ];
+            $where["isactive"] = 'Y';
+            $where["md_status_id"] = ["value" => [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK]];
+            $where["md_levelling_id {$operation}"] = $ruleDetail->condition;
 
-            $data = [];
-
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, [], $where);
-
-            $number = $this->request->getPost('start');
             foreach ($post['form'] as $value) :
                 if ($value['name'] === "date") {
-                    $holiday = $mHoliday->getHolidayDate();
-                    $today = date('Y-m-d');
-
                     if (!empty($value['value'])) {
-                        $datetime = urldecode($value['value']);
-                        $date = explode(" - ", $datetime);
+                        $dateRange = explode(" - ",  urldecode($value['value']));
                     } else {
-                        // $date[0] = date('Y-m-d', strtotime('first day of january this year'));
-                        $date[0] = date('Y-m-d', strtotime('-7 day'));
-                        $date[1] = $today;
+                        $dateRange = [date('Y-m-d', strtotime('-7 day')), $today];
                     }
-
-                    $date_range = getDatesFromRange($date[0], $date[1], [], 'Y-m-d H:i:s', 'all');
-
-                    foreach ($date_range as $date) :
-                        foreach ($list as $val) :
-                            //TODO : Get work day employee
-                            $workDay = $mEmpWork->where([
-                                'md_employee_id'    => $val->md_employee_id,
-                                'validfrom <='      => $today,
-                                'validto >='        => $today
-                            ])->orderBy('validfrom', 'ASC')->first();
-
-                            if ($workDay) {
-                                // $parSub = [
-                                //     'v_realization.date' => $date,
-                                //     'v_realization.md_employee_id' => $val->md_employee_id,
-                                //     'v_realization.isagree' => 'Y'
-                                // ];
-
-                                // $submission = $mAbsentDetail->getAbsentDetail($parSub)->getResult();
-
-                                $parAbsent = "DATE_FORMAT(v_realization.date, '%Y-%m-%d') = '{$date}'
-                                              AND v_realization.md_employee_id = {$val->md_employee_id}
-                                              AND v_realization.isagree = 'Y'";
-
-                                $submission = $mAbsentDetail->getAllSubmission($parAbsent)->getResult();
-
-
-                                //TODO : Get Work Detail
-                                $whereClause = "md_work_detail.isactive = 'Y'";
-                                $whereClause .= " AND md_employee_work.md_employee_id = {$val->md_employee_id}";
-                                $whereClause .= " AND md_work.md_work_id = {$workDay->md_work_id}";
-                                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-                                $daysOff = getDaysOff($workDetail);
-
-                                $numDate = date('w', strtotime($date));
-                                $date = date('Y-m-d', strtotime($date));
-
-                                $attend = $mAttendance->getAttendance([
-                                    'v_attendance.nik'        => $val->nik,
-                                    'v_attendance.date'       => $date
-                                ])->getRow();
-
-                                $todayRange = getDatesFromRange($date, $today, $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
-                                $totalrange = count($todayRange);
-
-                                $fieldChk = new \App\Entities\Table();
-                                $fieldChk->setName("ischecked");
-                                $fieldChk->setType("checkbox");
-                                $fieldChk->setClass("check-alpa");
-
-                                if (
-                                    empty($submission) &&
-                                    !in_array($numDate, $daysOff) &&
-                                    !in_array($date, $holiday) &&
-                                    empty($attend) &&
-                                    $totalrange > 3
-                                ) {
-                                    $row = [];
-                                    $ID = $val->md_employee_id;
-                                    $number++;
-
-                                    $fieldChk->setValue($ID);
-                                    $row[] = $this->field->fieldTable($fieldChk);
-                                    $row[] = $val->nik;
-                                    $row[] = $val->fullname;
-                                    $row[] = format_dmy($date, "-");
-                                    //         $row[] = $val->description;
-                                    //         $row[] = $this->template->buttonEdit($ID);
-                                    $data[] = $row;
-                                }
-                            }
-                        endforeach;
-                    endforeach;
                 }
+
             endforeach;
+
+            $date_range = getDatesFromRange($dateRange[0], $dateRange[1], $holiday, 'Y-m-d H:i:s', 'all');
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, [], $where);
+
+            // TODO : Preparing data before looping
+            // Get All Submission and Stored in array
+            $dateStart = date('Y-m-d', strtotime($dateRange[0]));
+            $dateEnd = date('Y-m-d', strtotime($dateRange[1]));
+            $whereClause = "DATE(v_all_submission.date) BETWEEN '{$dateStart}' AND '{$dateEnd}'";
+            $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Realisasi_HRD}')";
+            $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+            $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", array_merge($this->Form_Satu_Hari, $this->Form_Setengah_Hari)) . ")";
+            $allSubmission = [];
+
+            foreach ($mAbsent->getAllSubmission($whereClause)->getResult() as $val) {
+                $dateKey = date('Y-m-d', strtotime($val->date));
+                $allSubmission[$val->md_employee_id][$dateKey] = $val;
+            }
+
+            // Get All Attendance and Stored in array
+            $whereClause = "DATE(v_attendance.date) BETWEEN '{$dateStart}' AND '{$dateEnd}'";
+            $allAttendance = [];
+            foreach ($mAttendance->getAttendance($whereClause)->getResult() as $val) {
+                $dateKey = date('Y-m-d', strtotime($val->date));
+                $allAttendance[$val->md_employee_id][$dateKey] = $val;
+            }
+
+            $data = [];
+            $number = $this->request->getPost('start');
+            foreach ($list as $emp) {
+                $workDay = $mEmpWork->where([
+                    'md_employee_id'    => $emp->md_employee_id,
+                    'validfrom <='      => $dateStart,
+                    'validto >='        => $dateEnd
+                ])->orderBy('validfrom', 'ASC')->first();
+
+                if (!$workDay) continue;
+
+                //TODO : Get Work Detail
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND md_employee_work.md_employee_id = {$emp->md_employee_id}";
+                $whereClause .= " AND md_work.md_work_id = {$workDay->md_work_id}";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $daysOff = getDaysOff($workDetail);
+
+                foreach ($date_range as $date) {
+                    $date = date('Y-m-d', strtotime($date));
+
+                    $numDate = date('w', strtotime($date));
+                    if (in_array($numDate, $daysOff)) continue;
+
+                    if (in_array($date, $holiday)) continue;
+
+                    $dateInterval = getDatesFromRange($date, $today, $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
+                    $totalInterval = count($dateInterval);
+
+                    $fieldChk = new \App\Entities\Table();
+                    $fieldChk->setName("ischecked");
+                    $fieldChk->setType("checkbox");
+                    $fieldChk->setClass("check-alpa");
+
+                    if (
+                        !isset($allSubmission[$emp->md_employee_id][$date]) &&
+                        !isset($allAttendance[$emp->md_employee_id][$date]) &&
+                        $totalInterval > $rule->max
+                    ) {
+                        $row = [];
+                        $ID = $emp->md_employee_id;
+                        $number++;
+
+                        $fieldChk->setValue($ID);
+                        $row[] = $this->field->fieldTable($fieldChk);
+                        $row[] = $emp->nik;
+                        $row[] = $emp->fullname;
+                        $row[] = format_dmy($date, "-");
+                        $data[] = $row;
+                    }
+                }
+            }
 
             $recordTotal = count($data);
             $recordsFiltered = count($data);

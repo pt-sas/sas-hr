@@ -539,18 +539,9 @@ class Alpha extends BaseController
 
             $today = date('Y-m-d');
             $todayTime = date('Y-m-d H:i:s');
-            $agree = 'Y';
 
             $holidays = $mHoliday->getHolidayDate();
             $doc = [];
-
-            //TODO: Adding for each data date
-            $holidayClause = [];
-
-            foreach ($holidays as $value) {
-                $date = date('Y-m-d H:i:s', strtotime($value));
-                $holidayClause[] = "'{$date}'";
-            }
 
             //TODO: Grouping By Nik 
             foreach ($attendance as $item) {
@@ -591,7 +582,7 @@ class Alpha extends BaseController
                  */
                 foreach ($value as $item) {
                     $whereClause = "v_attendance.nik = {$item->nik}";
-                    $whereClause .= " AND v_attendance.date NOT IN " . "(" . implode(", ", $holidayClause) . ")";
+                    $whereClause .= " AND DATE(v_attendance.date) NOT IN " . "(" . implode(", ", $holidays) . ")";
                     $whereClause .= " AND DATE_FORMAT(v_attendance.date," . "'%w'" . ") NOT IN " . "(" . implode(", ", $daysOff) . ")";
 
                     $whereDate = " AND v_attendance.date > '$item->date'";
@@ -639,7 +630,7 @@ class Alpha extends BaseController
                     $this->entity->setEndDate($endDate);
                     $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Alpa, $post, $this->session->get('sys_user_id'));
+                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Alpa, $post, $this->session->get('sys_user_id'), false);
                     $this->entity->setDocumentNo($docNo);
 
                     $this->save();
@@ -653,7 +644,7 @@ class Alpha extends BaseController
                         $mAbsentDetail = new M_AbsentDetail($this->request);
                         $detailEntity = new \App\Entities\AbsentDetail();
 
-                        $detailEntity->isagree = $agree;
+                        $detailEntity->isagree = $this->LINESTATUS_Disetujui;
                         $detailEntity->trx_absent_id = $_refID;
                         $detailEntity->lineno = $lineNo;
                         $detailEntity->date = $line;
