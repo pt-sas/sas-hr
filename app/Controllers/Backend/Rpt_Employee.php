@@ -47,6 +47,8 @@ class Rpt_Employee extends BaseController
         $mBranch = new M_Branch($this->request);
         $mDivision = new M_Division($this->request);
 
+        $employee = $this->model->find($this->session->get('md_employee_id'));
+
         $roleKACAB = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_KACAB');
         $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
         $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
@@ -57,22 +59,11 @@ class Rpt_Employee extends BaseController
         $arrEmpStr = implode(" ,", $arrEmployee);
 
         $BrchEmp = $mEmpBranch->select('md_branch_id')->where($this->model->primaryKey, $empSession)->findAll();
-        $arrEmpBranch = [];
-
-        if ($BrchEmp)
-            foreach ($BrchEmp as $row) :
-                $arrEmpBranch[] = $row->md_branch_id;
-            endforeach;
-
+        $arrEmpBranch = array_column($BrchEmp, 'md_branch_id');
         $arrEmpBranchStr = implode(" ,", $arrEmpBranch);
 
         $DivEmp = $mEmpDivision->select('md_division_id')->where($this->model->primaryKey, $empSession)->findAll();
-        $arrEmpDiv = [];
-
-        if ($DivEmp)
-            foreach ($DivEmp as $row) :
-                $arrEmpDiv[] = $row->md_division_id;
-            endforeach;
+        $arrEmpDiv = array_column($DivEmp, 'md_division_id');
 
         $arrEmpDivStr = implode(" ,", $arrEmpDiv);
 
@@ -88,12 +79,7 @@ class Rpt_Employee extends BaseController
             $whereBranch = "md_branch_id IN ($arrEmpBranchStr)";
 
             $allDiv = $mEmpDivision->select('md_division_id')->where('isactive', 'Y')->findAll();
-            $allDivEmp = [];
-
-            if ($allDiv)
-                foreach ($allDiv as $row) :
-                    $allDivEmp[] = $row->md_division_id;
-                endforeach;
+            $allDivEmp = array_column($allDiv, 'md_division_id');
 
             $whereDiv = "md_division_id IN (" . implode(" ,", $allDivEmp) . ")";
         } else if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
@@ -129,7 +115,11 @@ class Rpt_Employee extends BaseController
             $whereEmp = "md_employee_id IN ($empSession)";
         }
 
-        $whereEmp .= " AND md_status_id NOT IN (100003, 100004, 100005, 100006, 100007, 100008)";
+        if ($employee->md_levelling_id > 100003 && !$roleEmp) {
+            $whereEmp = "md_employee_id = $employee->md_employee_id";
+        }
+
+        $whereEmp .= " AND md_status_id IN (100001, 100002)";
 
         $data = [
             'ref_employee' => $this->model->getEmployeeValue($whereEmp)->getResult(),
@@ -228,7 +218,7 @@ class Rpt_Employee extends BaseController
         $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
         $arrEmployee = $this->model->getChartEmployee($this->session->get('md_employee_id'));
         $arrEmpStr = implode(" ,", $arrEmployee);
-
+        $employee = $this->model->find($this->session->get('md_employee_id'));
         $whereClause = "isactive = 'Y'";
 
         if (isset($md_branch_id)) {
@@ -275,6 +265,10 @@ class Rpt_Employee extends BaseController
                 $whereClause .= " AND md_employee_id IN ($arrEmpStr)";
             } else {
                 $whereClause .= " AND md_employee_id IN (" . $this->session->get('md_employee_id') . ")";
+            }
+
+            if ($employee->md_levelling_id > 100003 && !$roleEmp) {
+                $whereClause .= " AND md_employee_id = $employee->md_employee_id";
             }
         }
 

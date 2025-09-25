@@ -646,45 +646,10 @@ class SickLeave extends BaseController
             $response = [];
 
             try {
-                $mAccess = new M_AccessMenu($this->request);
-                $mEmployee = new M_Employee($this->request);
+                $empList = $this->access->getEmployeeData(false, true);
+                $empList = implode(", ", $empList);
 
-                /**
-                 * Hak akses
-                 */
-                $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-                $roleEmpRepren = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Representative');
-                $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-                $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-                if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                    $arrBranch = $arrAccess["branch"];
-                    $arrDiv = $arrAccess["division"];
-
-                    $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                    if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                        $arrMerge = implode(',', array_unique(array_merge($arrEmpBased, $arrEmployee)));
-
-                        $where = "trx_absent.md_employee_id IN ({$arrMerge})";
-                    } else if ($roleEmpRepren && !empty($this->session->get('md_employee_id'))) {
-                        $whereClause = 'md_employee.md_levelling_id IN (100005, 100006)';
-                        $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv, $whereClause);
-                        $arrMerge = implode(',', array_unique(array_merge($arrEmpBased, $arrEmployee)));
-
-                        $where = "trx_absent.md_employee_id IN ({$arrMerge})";
-                    } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                        $arrEmp = implode(',', $arrEmployee);
-                        $where = "trx_absent.md_employee_id IN ({$arrEmp})";
-                    } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                        $arrEmp = implode(',', $arrEmpBased);
-                        $where = "trx_absent.md_employee_id IN ({$arrEmp})";
-                    }
-                } else if (!empty($this->session->get('md_employee_id'))) {
-                    $arrEmp = implode(',', $arrEmployee);
-                    $where = "trx_absent.md_employee_id IN ({$arrEmp})";
-                }
-
+                $where = "trx_absent.md_employee_id IN ({$empList})";
                 $where .= " AND trx_absent.md_employee_id != {$this->session->get('md_employee_id')}";
                 $where .= " AND trx_absent.submissiontype = {$this->model->Pengajuan_Sakit}";
                 $where .= " AND trx_absent.docstatus = 'DR'";

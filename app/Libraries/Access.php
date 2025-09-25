@@ -302,7 +302,7 @@ class Access
     /**
      * Get data Employee based on user access and employee chart
      */
-    public function getEmployeeData($isAffectDelegation = true)
+    public function getEmployeeData($isAffectDelegation = true, $excludeSelf = false)
     {
         $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
@@ -350,6 +350,9 @@ class Access
         } else {
             $empList = [$employeeID];
         }
+
+        if ($excludeSelf)
+            $empList = array_diff($empList, [$employeeID]);
 
         return $empList;
     }
