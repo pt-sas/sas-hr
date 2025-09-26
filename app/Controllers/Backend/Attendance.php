@@ -110,17 +110,17 @@ class Attendance extends BaseController
 
                     if (!empty($val->clock_in)) {
                         if (convertToMinutes($val->clock_in) > convertToMinutes($minAbsentIn)) {
-                            $clock_in = "<small class='text-danger'>" . format_time($val->clock_in) . "</small>";
+                            $clock_in = "<small class='text-danger'>$val->clock_in</small>";
                         } else {
-                            $clock_in = format_time($val->clock_in);
+                            $clock_in = $val->clock_in;
                         }
                     }
 
                     if (!empty($val->clock_out)) {
                         if (convertToMinutes($val->clock_out) < convertToMinutes($minAbsentOut)) {
-                            $clock_out = "<small class='text-danger'>" . format_time($val->clock_out) . "</small>";
+                            $clock_out = "<small class='text-danger'>$val->clock_out</small>";
                         } else {
-                            $clock_out = format_time($val->clock_out);
+                            $clock_out = $val->clock_out;
                         }
                     }
 
