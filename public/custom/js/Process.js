@@ -797,7 +797,7 @@ _tableRealization = $(".table_realization")
       {
         targets: [-1],
         orderable: false,
-        width: "20%",
+        width: "15%",
       },
       {
         targets: 0,
