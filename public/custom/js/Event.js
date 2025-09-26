@@ -1829,8 +1829,8 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
   } else if (parent.hasClass("table_superior")) {
     formType = tr.find("td:eq(4)").text();
     submissionDate = tr.find("td:eq(1)").text();
-    date_out = tr.find("td:eq(8)").text();
-    clock_out = tr.find("td:eq(9)").text();
+    // date_out = tr.find("td:eq(8)").text();
+    // clock_out = tr.find("td:eq(9)").text();
     ID = id;
 
     if (this.name === "agree") {
@@ -1862,24 +1862,24 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
 
       form.find("input[name=submissiondate]").val(submissionDate);
       form.find("input[name=isagree]").val("Y");
-      form.find("input[name=enddate_att]").val(date_out);
-      form.find("input[name=endtime_att]").val(clock_out);
+      // form.find("input[name=enddate_att]").val(date_out);
+      // form.find("input[name=endtime_att]").val(clock_out);
       form.find("input[name=enddate_realization]").val(submissionDate);
       form.find("input[name=submissionform]").val(formType);
 
-      if (date_out !== "" || clock_out !== "") {
-        form
-          .find("input[name=endtime_realization]")
-          .val(clock_out)
-          .change()
-          .prop("disabled", true);
-      } else if (date_out === "" || clock_out === "") {
-        form
-          .find("input[name=endtime_realization]")
-          .val(null)
-          .change()
-          .prop("disabled", false);
-      }
+      // if (date_out !== "" || clock_out !== "") {
+      //   form
+      //     .find("input[name=endtime_realization]")
+      //     .val(clock_out)
+      //     .change()
+      //     .prop("disabled", true);
+      // } else if (date_out === "" || clock_out === "") {
+      //   form
+      //     .find("input[name=endtime_realization]")
+      //     .val(null)
+      //     .change()
+      //     .prop("disabled", false);
+      // }
 
       if (form.find("select.select-data").length) {
         initSelectData(form.find("select.select-data"));
