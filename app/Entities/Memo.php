@@ -23,6 +23,7 @@ class Memo extends Entity
     protected $isapproved;
     protected $approveddate;
     protected $sys_wfscenario_id;
+    protected $memo_level;
     protected $isactive;
     protected $created_by;
     protected $updated_by;
@@ -207,6 +208,16 @@ class Memo extends Entity
     public function setWfScenarioId($sys_wfscenario_id)
     {
         $this->attributes['sys_wfscenario_id'] = $sys_wfscenario_id;
+    }
+
+    public function getMemoLevel()
+    {
+        return $this->attributes['memo_level'];
+    }
+
+    public function setMemoLevel($memo_level)
+    {
+        $this->attributes['memo_level'] = $memo_level;
     }
 
     public function getIsActive()

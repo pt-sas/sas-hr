@@ -20,6 +20,7 @@ class M_AbsentDetail extends Model
         'updated_by',
         'image',
         'approve_date',
+        'is_generated_memo',
         'realization_date_superior',
         'realization_by_superior',
         'realization_date_hrd',
@@ -219,11 +220,13 @@ class M_AbsentDetail extends Model
                         $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
                         if ($ruleDetail) {
-                            $balance = $mLeaveBalance->where([
-                                'year'              => date("Y", strtotime($sql->startdate)),
-                                'md_employee_id'    => $sql->md_employee_id
-                            ])->first();
-                            $saldo = $balance->balance_amount;
+                            $balance = $mLeaveBalance->getTotalBalance($sql->md_employee_id, date("Y", strtotime($line->date)));
+
+                            $saldo = 0;
+
+                            if ($balance && $balance->balance > 0) {
+                                $saldo = $balance->balance;
+                            }
 
                             $dataLeaveUsage = [];
                             foreach ($ruleDetail as $detail) {
@@ -233,11 +236,10 @@ class M_AbsentDetail extends Model
                                         $tkh = $detail->value;
 
                                         $calculate = $saldo + $tkh;
-
                                         if ($tkh != 0) {
                                             if ($calculate > 0) {
                                                 $entityBal->md_employee_id = $sql->md_employee_id;
-                                                $entityBal->balance_amount = $saldo - $tkh;
+                                                $entityBal->balance_amount = $balance->balance_amount + $tkh;
                                                 $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
                                                 if ($mLeaveBalance->save($entityBal)) {
@@ -258,7 +260,7 @@ class M_AbsentDetail extends Model
                                                 $amount = 0;
                                             } else if ($saldo != 0) {
                                                 $entityBal->md_employee_id = $sql->md_employee_id;
-                                                $entityBal->balance_amount = $saldo - $saldo;
+                                                $entityBal->balance_amount = $balance->balance_amount - $saldo;
                                                 $entityBal->trx_leavebalance_id = $balance->trx_leavebalance_id;
 
                                                 if ($mLeaveBalance->save($entityBal)) {

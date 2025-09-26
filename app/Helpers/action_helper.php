@@ -467,3 +467,17 @@ function statusTransfered(string $str)
             return '<small class="badge badge-black">Not Processed</small>';
     }
 }
+
+function getOperation(string $operator)
+{
+    $operations = [
+        '=='  => '=',
+        '>>'  => '>',
+        '>=' =>  '>=',
+        '<<'  => '<',
+        '<=' =>  '<=',
+        '!=' =>  '!=',
+    ];
+
+    return $operations[$operator];
+}
