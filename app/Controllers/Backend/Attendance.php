@@ -13,6 +13,7 @@ use App\Models\M_Configuration;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
+use App\Models\M_EmpWorkDay;
 use App\Models\M_Holiday;
 use App\Models\M_WorkDetail;
 use App\Models\M_NotificationText;
@@ -48,6 +49,7 @@ class Attendance extends BaseController
     public function reportShowAll()
     {
         $post = $this->request->getVar();
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         $recordTotal = 0;
         $recordsFiltered = 0;
@@ -69,17 +71,65 @@ class Attendance extends BaseController
                 $number = $this->request->getPost('start');
                 $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);
 
+                // TODO : Get All Employee Workday
+                foreach ($post['form'] as $value) {
+                    if (!empty($value['value'])) {
+                        if ($value['name'] === "date") {
+                            $datetime = urldecode($value['value']);
+                            $date = explode(" - ", $datetime);
+                        }
+                    }
+                }
+
+                $dateStart = isset($date) ? date('Y-m-d', strtotime($date[0])) : date('Y-m-d');
+                $dateEnd = isset($date) ? date('Y-m-d', strtotime($date[1])) : date('Y-m-d');
+
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND DATE(md_employee_work.validfrom) <= '{$dateStart}'";
+                $whereClause .= " AND DATE(md_employee_work.validto) >= '{$dateEnd}'";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $allWorkDay = [];
+                foreach ($workDetail as $val) {
+                    $allWorkDay[$val->md_employee_id][$val->day] = $val;
+                }
+
                 foreach ($list as $val) :
                     $row = [];
 
                     $number++;
 
+                    $day = strtoupper(formatDay_idn(date('w', strtotime($val->date))));
+
+                    // TODO : Get Workday Employee
+                    $minAbsentIn = isset($allWorkDay[$val->md_employee_id][$day]) ? $allWorkDay[$val->md_employee_id][$day]->startwork : "08:30";
+                    $minAbsentOut = isset($allWorkDay[$val->md_employee_id][$day]) ? $allWorkDay[$val->md_employee_id][$day]->endwork : "15:30";
+
+                    $clock_in = '';
+                    $clock_out = '';
+
+                    if (!empty($val->clock_in)) {
+                        if (convertToMinutes($val->clock_in) > convertToMinutes($minAbsentIn)) {
+                            $clock_in = "<small class='text-danger'>" . format_time($val->clock_in) . "</small>";
+                        } else {
+                            $clock_in = format_time($val->clock_in);
+                        }
+                    }
+
+                    if (!empty($val->clock_out)) {
+                        if (convertToMinutes($val->clock_out) < convertToMinutes($minAbsentOut)) {
+                            $clock_out = "<small class='text-danger'>" . format_time($val->clock_out) . "</small>";
+                        } else {
+                            $clock_out = format_time($val->clock_out);
+                        }
+                    }
+
                     $row[] = $number;
                     $row[] = $val->nik;
                     $row[] = $val->fullname;
                     $row[] = format_dmy($val->date, "-");
-                    $row[] = $val->clock_in ?? format_time($val->clock_in);
-                    $row[] = $val->clock_out ?? format_time($val->clock_out);
+                    $row[] = $clock_in;
+                    $row[] = $clock_out;
                     $data[] = $row;
                 endforeach;
 

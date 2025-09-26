@@ -39,7 +39,8 @@ class M_WorkDetail extends Model
 	{
 		$this->builder->select($this->table . '.*,
 			md_day.name as day,
-            md_work.name as work');
+            md_work.name as work,
+			md_employee_work.md_employee_id');
 
 		$this->builder->join('md_work', 'md_work.md_work_id = ' . $this->table . '.md_work_id', 'inner');
 		$this->builder->join('md_day', 'md_day.md_day_id = ' . $this->table . '.md_day_id', 'left');

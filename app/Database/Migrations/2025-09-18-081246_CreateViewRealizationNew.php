@@ -100,6 +100,7 @@ class CreateViewRealizationNew extends Migration
             AND adate.approve_date IS NOT NULL
             THEN add_workdays(adate.approve_date, dt.`days_realization_hrd`)
         ELSE add_workdays(adate.date, dt.`days_realization_hrd`)
+        END AS realization_hrd
         FROM trx_assignment a
         LEFT JOIN trx_assignment_detail adetail ON a.trx_assignment_id = adetail.trx_assignment_id
         LEFT JOIN trx_assignment_date adate ON adetail.trx_assignment_detail_id = adate.trx_assignment_detail_id
