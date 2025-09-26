@@ -210,7 +210,7 @@ class Attendance extends BaseController
             $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
 
             // TODO : Get Attendance In Today
-            if ($configMNSOD && $employee == $lvlManager) {
+            if ($configMNSOD && $value->md_levelling_id <= $lvlManager) {
                 $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance.date = '{$today}'";
                 $whereClause .= " AND v_attendance.clock_in != ''";
@@ -274,7 +274,7 @@ class Attendance extends BaseController
             $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
             // TODO : Get Attendance Out Yesterday
-            if ($configMNSOD && $employee == $lvlManager) {
+            if ($configMNSOD && $value->md_levelling_id <= $lvlManager) {
                 $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance.date = '{$yesterday}'";
                 $whereClause .= " AND v_attendance.clock_out != ''";
