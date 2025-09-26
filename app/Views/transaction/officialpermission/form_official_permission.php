@@ -100,7 +100,7 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label>Foto</label>
+                    <label>Foto <span class="required">*</span></label>
                     <div class="form-upload-result">
                         <label class="col-md-4 form-result">
                             <button type="button" class="close-img" aria-label="Close">

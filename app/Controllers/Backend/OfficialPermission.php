@@ -149,7 +149,7 @@ class OfficialPermission extends BaseController
                     $post['image'] = $img_name;
                 }
 
-                if (!$this->validation->run($post, 'absent')) {
+                if (!$this->validation->run($post, 'ijin_resmi')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $holidays = $mHoliday->getHolidayDate();
