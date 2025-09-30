@@ -69,8 +69,15 @@ $(document).ready(function () {
       url: ADMIN_URL + "karyawan/getList",
       delay: 250,
       data: function (params) {
+        let extraData = {};
+
+        if ($(".multiple-select-employee").hasClass("access")) {
+          extraData.name = "Access";
+        }
+
         return {
           search: params.term,
+          ...extraData,
         };
       },
       processResults: function (data, page) {
@@ -2602,10 +2609,10 @@ $("#form_leave").on(
   "change dp.change",
   "#md_employee_id, #startdate, #enddate",
   function (e) {
+    if (setSave == "detail") return;
+
     let _this = $(this);
-    const target = $(e.target);
     const form = _this.closest("form");
-    let value = this.value;
 
     let employeeID = form
       .find("select[name=md_employee_id] option:selected")

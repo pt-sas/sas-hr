@@ -757,6 +757,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('dokumen-draft', 'Backend\UnprocessedDocuments::index');
     $routes->match(['get', 'post'], 'dokumen-draft/showAll', 'Backend\UnprocessedDocuments::showAll');
+
+    $routes->add('laporan-rekap-kehadiran', 'Backend\Attendance::indexSummary');
+    $routes->match(['get', 'post'], 'laporan-rekap-kehadiran/showAllSummary', 'Backend\Attendance::showAllSummary');
 });
 
 /*
