@@ -13,13 +13,16 @@ use App\Models\M_Configuration;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
+use App\Models\M_EmpWorkDay;
 use App\Models\M_Holiday;
 use App\Models\M_WorkDetail;
 use App\Models\M_NotificationText;
 use App\Models\M_User;
 use Config\Services;
 use Html2Text\Html2Text;
+use DateTime;
 use PHPExcel_Style_Alignment;
+use PHPExcel_Style_Fill;
 use PHPExcel_IOFactory;
 use PHPExcel_Style_Border;
 use PHPExcel;
@@ -48,6 +51,7 @@ class Attendance extends BaseController
     public function reportShowAll()
     {
         $post = $this->request->getVar();
+        $mWorkDetail = new M_WorkDetail($this->request);
 
         $recordTotal = 0;
         $recordsFiltered = 0;
@@ -69,17 +73,65 @@ class Attendance extends BaseController
                 $number = $this->request->getPost('start');
                 $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);
 
+                // TODO : Get All Employee Workday
+                foreach ($post['form'] as $value) {
+                    if (!empty($value['value'])) {
+                        if ($value['name'] === "date") {
+                            $datetime = urldecode($value['value']);
+                            $date = explode(" - ", $datetime);
+                        }
+                    }
+                }
+
+                $dateStart = isset($date) ? date('Y-m-d', strtotime($date[0])) : date('Y-m-d');
+                $dateEnd = isset($date) ? date('Y-m-d', strtotime($date[1])) : date('Y-m-d');
+
+                $whereClause = "md_work_detail.isactive = 'Y'";
+                $whereClause .= " AND DATE(md_employee_work.validfrom) <= '{$dateStart}'";
+                $whereClause .= " AND DATE(md_employee_work.validto) >= '{$dateEnd}'";
+                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+                $allWorkDay = [];
+                foreach ($workDetail as $val) {
+                    $allWorkDay[$val->md_employee_id][$val->day] = $val;
+                }
+
                 foreach ($list as $val) :
                     $row = [];
 
                     $number++;
 
+                    $day = strtoupper(formatDay_idn(date('w', strtotime($val->date))));
+
+                    // TODO : Get Workday Employee
+                    $minAbsentIn = isset($allWorkDay[$val->md_employee_id][$day]) ? $allWorkDay[$val->md_employee_id][$day]->startwork : "08:30";
+                    $minAbsentOut = isset($allWorkDay[$val->md_employee_id][$day]) ? $allWorkDay[$val->md_employee_id][$day]->endwork : "15:30";
+
+                    $clock_in = '';
+                    $clock_out = '';
+
+                    if (!empty($val->clock_in)) {
+                        if (convertToMinutes($val->clock_in) > convertToMinutes($minAbsentIn)) {
+                            $clock_in = "<small class='text-danger'>$val->clock_in</small>";
+                        } else {
+                            $clock_in = $val->clock_in;
+                        }
+                    }
+
+                    if (!empty($val->clock_out)) {
+                        if (convertToMinutes($val->clock_out) < convertToMinutes($minAbsentOut)) {
+                            $clock_out = "<small class='text-danger'>$val->clock_out</small>";
+                        } else {
+                            $clock_out = $val->clock_out;
+                        }
+                    }
+
                     $row[] = $number;
                     $row[] = $val->nik;
                     $row[] = $val->fullname;
                     $row[] = format_dmy($val->date, "-");
-                    $row[] = $val->clock_in ?? format_time($val->clock_in);
-                    $row[] = $val->clock_out ?? format_time($val->clock_out);
+                    $row[] = $clock_in;
+                    $row[] = $clock_out;
                     $data[] = $row;
                 endforeach;
 
@@ -96,6 +148,208 @@ class Attendance extends BaseController
 
             return $this->response->setJSON($result);
         }
+    }
+
+    public function indexSummary()
+    {
+        $data = [
+            'month' => date('M-Y'),
+        ];
+
+        return $this->template->render('report/attendancesummary/v_report_attendance_summary', $data);
+    }
+
+    public function showAllSummary()
+    {
+        $post = $this->request->getPost();
+
+        $mEmployee = new M_Employee($this->request);
+        $mAbsent = new M_Absent($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mAttendance = new M_Attendance($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
+
+        $periode = date('m-Y', strtotime($post['periode']));
+        $md_branch_id = isset($post['md_branch_id']) ? $post['md_branch_id'] : null;
+        $md_division_id = isset($post['md_division_id']) ? $post['md_division_id'] : null;
+        $md_employee_id = isset($post['md_employee_id']) ? $post['md_employee_id'] : $this->access->getEmployeeData();
+
+        // Panggil class PHPExcel nya
+        $excel = new PHPExcel();
+        // Settingan awal file excel
+        $excel->getProperties()->setCreator('Laporan Rekap Kehadiran')
+            ->setTitle("Laporan Rekap Kehadiran");
+
+        // Style untuk header kolom (teks bold dan rata tengah)
+        $style_col = $this->createBorderStyle(true, true);
+
+        // Style untuk baris normal
+        $style_row = $this->createBorderStyle();
+
+        // Style untuk baris ada transaksi
+        $style_trx = $this->createBorderStyle(false, true, "FFFF00");
+
+        // Style untuk baris tidak ada transaksi
+        $style_no_trx = $this->createBorderStyle(false, true);
+
+        $sheet = $excel->setActiveSheetIndex(0);
+
+        //** This set header report */
+        $sheet->setCellValue('A2', "LAPORAN REKAP KEHADIRAN");
+        $sheet->mergeCells('A2:P2');
+        $sheet->getStyle('A2:P2')->getFont()->setBold(true)->setSize(15);
+        $sheet->getStyle('A2:P2')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+
+        //** This set Date report */
+        $sheet->setCellValue('P1', date('M-Y', strtotime($post['periode'])));
+        $sheet->getStyle('P1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_RIGHT);
+
+        //TODO : Header kolom dan merge cell
+        $headers = [
+            'A' => ['text' => 'No'],
+            'B' => ['text' => 'NIK'],
+            'C' => ['text' => 'Nama'],
+            'D' => ['text' => 'Sakit', 'submissiontype' => $mAbsent->Pengajuan_Sakit],
+            'E' => ['text' => 'Cuti', 'submissiontype' => $mAbsent->Pengajuan_Cuti],
+            'F' => ['text' => 'Ijin', 'submissiontype' => $mAbsent->Pengajuan_Ijin],
+            'G' => ['text' => 'I. Resmi', 'submissiontype' => $mAbsent->Pengajuan_Ijin_Resmi],
+            'H' => ['text' => 'Alpa', 'submissiontype' => $mAbsent->Pengajuan_Alpa],
+            'I' => ['text' => 'TK 1 Hari', 'submissiontype' => $mAbsent->Pengajuan_Tugas_Kantor],
+            'J' => ['text' => 'Penugasan', 'submissiontype' => $mAbsent->Pengajuan_Penugasan],
+            'K' => ['text' => 'TK 1/2 Hari', 'submissiontype' => $mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari],
+            'L' => ['text' => 'Telat < 30 MNT'],
+            'M' => ['text' => 'Telat > 30 MNT'],
+            'N' => ['text' => 'Pulang Cepat', 'submissiontype' => $mAbsent->Pengajuan_Pulang_Cepat],
+            'O' => ['text' => 'Lupa Absen Masuk', 'submissiontype' => $mAbsent->Pengajuan_Lupa_Absen_Masuk],
+            'P' => ['text' => 'Lupa Absen Pulang', 'submissiontype' => $mAbsent->Pengajuan_Lupa_Absen_Pulang],
+        ];
+
+        foreach ($headers as $cell => $info) {
+            $sheet->setCellValue($cell . 4, $info['text']);
+            $sheet->getStyle($cell . 4)->applyFromArray($style_col);
+        }
+
+        //** This getting to body report */
+        $builder = $mEmployee
+            ->distinct()
+            ->select('md_employee.*')
+            ->where([
+                'md_employee.isactive'        => 'Y'
+            ]);
+
+        if (!empty($md_employee_id)) {
+            $builder->whereIn('md_employee.md_employee_id', (array) $md_employee_id);
+            $builder->whereIn('md_employee.md_status_id', [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK]);
+        }
+
+        if (!empty($md_branch_id)) {
+            $builder->join(
+                'md_employee_branch eb',
+                'eb.md_employee_id = md_employee.md_employee_id',
+                'left'
+            );
+            $builder->whereIn('eb.md_branch_id', (array) $md_branch_id);
+        }
+
+        if (!empty($md_division_id)) {
+            $builder->join(
+                'md_employee_division ed',
+                'ed.md_employee_id = md_employee.md_employee_id',
+                'left'
+            );
+            $builder->whereIn('ed.md_division_id', (array) $md_division_id);
+        }
+
+        $sql = $builder->orderBy('md_employee.fullname', 'ASC')->findAll();
+
+        $holiday = $mHoliday->getHolidayDate();
+        $holidays = implode(", ", $holiday);
+        $date = DateTime::createFromFormat('m-Y', $periode);
+        $firstDate = $date->format('Y-m-01');
+        $lastDate = $date->modify('last day of this month')->format('Y-m-d');
+
+        $number = 1;
+        $numrow = 5;
+
+        foreach ($sql as $row) {
+            // TODO : Set Data Karyawan
+            $sheet->setCellValue('A' . $numrow, $number);
+            $sheet->getStyle('A' . $numrow)->applyFromArray($style_row);
+
+            $sheet->setCellValue('B' . $numrow, $row->nik);
+            $sheet->getStyle('B' . $numrow)->applyFromArray($style_row);
+
+            $sheet->setCellValue('C' . $numrow, $row->fullname);
+            $sheet->getStyle('C' . $numrow)->applyFromArray($style_row);
+
+            // TODO : Get Employee Days Off
+            $whereClause = "md_work_detail.isactive = 'Y'";
+            $whereClause .= " AND md_employee_work.md_employee_id = {$row->md_employee_id}";
+            $whereClause .= " AND (md_employee_work.validfrom <= '{$firstDate}' and md_employee_work.validto >= '{$lastDate}')";
+            $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+            $daysOff = getDaysOff($workDetail);
+            $daysOffStr = implode(", ", $daysOff);
+
+            foreach ($headers as $cell => $info) {
+                if (($info['text'] != "Telat < 30 MNT" && $info['text'] != "Telat > 30 MNT") && !isset($info['submissiontype'])) continue;
+
+                if (isset($info['submissiontype'])) {
+                    $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}
+                                    AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'
+                                    AND MONTH(v_all_submission.date) = '{$periode}'
+                                    AND v_all_submission.submissiontype = {$info['submissiontype']}";
+                    $trx = count($mAbsent->getAllSubmission($whereClause)->getResult());
+                } else {
+                    if ($info['text'] == "Telat < 30 MNT") {
+                        $whereClause = "(v_attendance.clock_in >= '08:01' and v_attendance.clock_in < '08:31')";
+                    } else {
+                        $whereClause = "v_attendance.clock_in >= '08:31'";
+                    }
+
+                    $whereClause .= " AND v_attendance.md_employee_id = {$row->md_employee_id}
+                                      AND MONTH(v_attendance.date) = '{$periode}'
+                                      AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})
+                                      AND DATE(v_attendance.date) NOT IN ({$holidays})
+                                      AND NOT EXISTS (SELECT 1
+                                                      FROM trx_absent a
+                                                      LEFT JOIN trx_absent_detail ad ON a.trx_absent_id = ad.trx_absent_id
+                                                      WHERE a.md_employee_id = {$row->md_employee_id}
+                                                      AND a.submissiontype = {$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}
+                                                      AND ad.isagree = '{$this->LINESTATUS_Disetujui}'
+                                                      AND DATE(ad.date) = DATE(v_attendance.date)
+                                                      AND TIME_FORMAT(a.startdate, '%H:%i') <= '12:00')";
+
+                    $trx = count($mAttendance->getAttendance($whereClause)->getResult());
+                }
+
+                $sheet->setCellValue($cell . $numrow, '-');
+                $sheet->getStyle($cell . $numrow)->applyFromArray($style_no_trx);
+
+                if ($trx > 0) {
+                    $sheet->setCellValue($cell . $numrow, $trx);
+                    $sheet->getStyle($cell . $numrow)->applyFromArray($style_trx);
+                }
+
+                $sheet->getColumnDimension($cell)->setWidth(17);
+            }
+
+            $number++;
+            $numrow++;
+        }
+
+        $sheet->getColumnDimension('A')->setWidth(4); // Set width kolom A
+        $sheet->getColumnDimension('B')->setWidth(10); // Set width kolom B
+        $sheet->getColumnDimension('C')->setWidth(25); // Set width kolom C
+        // Set orientasi kertas jadi LANDSCAPE
+        $sheet->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
+        // Set judul file excel nya
+        $sheet->setTitle("Laporan Rekap Kehadiran");
+        // Proses file excel
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="Laporan Rekap Kehadiran.xlsx"'); // Set nama file excel nya
+        header('Cache-Control: max-age=0');
+        PHPExcel_IOFactory::createWriter($excel, 'Excel2007')->save('php://output');
+        exit();
     }
 
     public function getClockInOut()
@@ -210,7 +464,7 @@ class Attendance extends BaseController
             $tugasKunjungan = $mAssignment->getDetailData($whereClause)->getRow();
 
             // TODO : Get Attendance In Today
-            if ($configMNSOD && $employee == $lvlManager) {
+            if ($configMNSOD && $value->md_levelling_id <= $lvlManager) {
                 $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance.date = '{$today}'";
                 $whereClause .= " AND v_attendance.clock_in != ''";
@@ -274,7 +528,7 @@ class Attendance extends BaseController
             $submission = $mAbsentDetail->getAllSubmission($whereClause)->getRow();
 
             // TODO : Get Attendance Out Yesterday
-            if ($configMNSOD && $employee == $lvlManager) {
+            if ($configMNSOD && $value->md_levelling_id <= $lvlManager) {
                 $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
                 $whereClause .= " AND v_attendance.date = '{$yesterday}'";
                 $whereClause .= " AND v_attendance.clock_out != ''";
@@ -507,5 +761,28 @@ class Attendance extends BaseController
 
         if (is_dir($storagePath))
             exec("rm -rf " . escapeshellarg($storagePath));
+    }
+    private function createBorderStyle($bold = false, $center = false, $fillColor = null)
+    {
+        $style = [
+            'font' => ['bold' => $bold],
+            'alignment' => [
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ],
+            'borders' => array_fill_keys(['top', 'right', 'bottom', 'left'], ['style' => PHPExcel_Style_Border::BORDER_THIN])
+        ];
+
+        if ($center) {
+            $style['alignment']['horizontal'] = PHPExcel_Style_Alignment::HORIZONTAL_CENTER;
+        }
+
+        if ($fillColor) {
+            $style['fill'] = [
+                'type'  => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => ['rgb' => $fillColor]
+            ];
+        }
+
+        return $style;
     }
 }

@@ -250,8 +250,7 @@ class Realization extends BaseController
             $where['docstatus'] = $this->DOCSTATUS_Inprogress;
             $where['isagree'] = 'M';
 
-            $empList = $this->access->getEmployeeData(false);
-            $where['md_employee_id'] = ['value' => $empList];
+            $where['md_employee_id'] = ['value' => $this->access->getEmployeeData(false, true)];
 
             $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
 
@@ -261,30 +260,33 @@ class Realization extends BaseController
                 $row = [];
                 $ID = $value->id;
 
-                $tanggal = '';
-                $clock = '';
+                // $tanggal = '';
+                // $clock = '';
 
-                $startDate = date('Y-m-d', strtotime($value->date));
-
-                $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
-                $whereClause .= " AND v_attendance.date = '{$startDate}'";
-
-                if ($value->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat)
-                    $whereClause .= " AND v_attendance.clock_out != ''";
-                else if ($value->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat)
-                    $whereClause .= " AND v_attendance.clock_in != ''";
-
-                $attendance = $mAttendance->getAttendance($whereClause)->getRow();
-
-                if ($attendance && $value->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat) {
-                    $tanggal = format_dmy($attendance->date, '-');
-                    $absent = format_time($attendance->clock_out);
+                if ($value->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Pulang || $value->submissiontype == $mAbsent->Pengajuan_Lupa_Absen_Masuk)
                     $clock = format_time($value->date);
-                } else if ($attendance && $value->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat) {
-                    $tanggal = format_dmy($attendance->date, '-');
-                    $absent = format_time($attendance->clock_in);
-                    $clock = format_time($value->date);
-                }
+
+                // $startDate = date('Y-m-d', strtotime($value->date));
+
+                // $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
+                // $whereClause .= " AND v_attendance.date = '{$startDate}'";
+
+                // if ($value->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat)
+                //     $whereClause .= " AND v_attendance.clock_out != ''";
+                // else if ($value->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat)
+                //     $whereClause .= " AND v_attendance.clock_in != ''";
+
+                // $attendance = $mAttendance->getAttendance($whereClause)->getRow();
+
+                // if ($attendance && $value->submissiontype == $mAbsent->Pengajuan_Pulang_Cepat) {
+                //     $tanggal = format_dmy($attendance->date, '-');
+                //     $absent = format_time($attendance->clock_out);
+                //     $clock = format_time($value->date);
+                // } else if ($attendance && $value->submissiontype == $mAbsent->Pengajuan_Datang_Terlambat) {
+                //     $tanggal = format_dmy($attendance->date, '-');
+                //     $absent = format_time($attendance->clock_in);
+                //     $clock = format_time($value->date);
+                // }
 
                 $number++;
 
@@ -296,8 +298,8 @@ class Realization extends BaseController
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = $value->employee_fullname;
-                $row[] = $tanggal ?? '';
-                $row[] = $absent ?? '';
+                // $row[] = $tanggal ?? '';
+                // $row[] = $absent ?? '';
                 $row[] = viewImage($value->header_id, $value->image);
                 $row[] = $value->reason;
                 $row[] = $this->template->tableButtonProcess($ID);

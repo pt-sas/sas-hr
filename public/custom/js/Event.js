@@ -69,8 +69,15 @@ $(document).ready(function () {
       url: ADMIN_URL + "karyawan/getList",
       delay: 250,
       data: function (params) {
+        let extraData = {};
+
+        if ($(".multiple-select-employee").hasClass("access")) {
+          extraData.name = "Access";
+        }
+
         return {
           search: params.term,
+          ...extraData,
         };
       },
       processResults: function (data, page) {
@@ -1829,8 +1836,8 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
   } else if (parent.hasClass("table_superior")) {
     formType = tr.find("td:eq(4)").text();
     submissionDate = tr.find("td:eq(1)").text();
-    date_out = tr.find("td:eq(8)").text();
-    clock_out = tr.find("td:eq(9)").text();
+    // date_out = tr.find("td:eq(8)").text();
+    // clock_out = tr.find("td:eq(9)").text();
     ID = id;
 
     if (this.name === "agree") {
@@ -1862,24 +1869,24 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
 
       form.find("input[name=submissiondate]").val(submissionDate);
       form.find("input[name=isagree]").val("Y");
-      form.find("input[name=enddate_att]").val(date_out);
-      form.find("input[name=endtime_att]").val(clock_out);
+      // form.find("input[name=enddate_att]").val(date_out);
+      // form.find("input[name=endtime_att]").val(clock_out);
       form.find("input[name=enddate_realization]").val(submissionDate);
       form.find("input[name=submissionform]").val(formType);
 
-      if (date_out !== "" || clock_out !== "") {
-        form
-          .find("input[name=endtime_realization]")
-          .val(clock_out)
-          .change()
-          .prop("disabled", true);
-      } else if (date_out === "" || clock_out === "") {
-        form
-          .find("input[name=endtime_realization]")
-          .val(null)
-          .change()
-          .prop("disabled", false);
-      }
+      // if (date_out !== "" || clock_out !== "") {
+      //   form
+      //     .find("input[name=endtime_realization]")
+      //     .val(clock_out)
+      //     .change()
+      //     .prop("disabled", true);
+      // } else if (date_out === "" || clock_out === "") {
+      //   form
+      //     .find("input[name=endtime_realization]")
+      //     .val(null)
+      //     .change()
+      //     .prop("disabled", false);
+      // }
 
       if (form.find("select.select-data").length) {
         initSelectData(form.find("select.select-data"));
@@ -2602,10 +2609,10 @@ $("#form_leave").on(
   "change dp.change",
   "#md_employee_id, #startdate, #enddate",
   function (e) {
+    if (setSave == "detail") return;
+
     let _this = $(this);
-    const target = $(e.target);
     const form = _this.closest("form");
-    let value = this.value;
 
     let employeeID = form
       .find("select[name=md_employee_id] option:selected")

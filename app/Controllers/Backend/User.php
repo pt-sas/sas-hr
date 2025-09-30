@@ -15,10 +15,8 @@ use App\Models\M_ProxySwitching;
 use App\Models\M_Attendance;
 use App\Models\M_UserRole;
 use App\Models\M_NotificationText;
-use Html2Text\Html2Text;
 use App\Models\M_Absent;
 use App\Models\M_Levelling;
-use App\Models\M_ProxySpecial;
 use Config\Services;
 
 class User extends BaseController
@@ -432,7 +430,8 @@ class User extends BaseController
 		$mAttendance = new M_Attendance($this->request);
 		$mNotifText = new M_NotificationText($this->request);
 		$mEmployee = new M_Employee($this->request);
-		$cMail = new Mail();
+		$mAbsent = new M_Absent($this->request);
+		$cMessage = new Message();
 
 		$today = date('Y-m-d');
 		$strDate = date('d/M/Y', strtotime($today));
@@ -441,28 +440,28 @@ class User extends BaseController
 		$dataNotif = $mNotifText->where('name', 'Duta Tidak Hadir')->first();
 
 		foreach ($userList as $value) {
-			$user = $this->model->where('sys_user_id', $value->sys_user_id)->first();
+			$user = $this->model->where(['sys_user_id' => $value->sys_user_id, 'isactive' => 'Y'])->first();
 
-			if ($user->md_employee_id) {
-				$where = "md_employee.md_employee_id = {$user->md_employee_id}";
-				$where .= " AND v_attendance.date = '{$today}'";
-				$empAttendance = $mAttendance->getAttendance($where)->getRow();
+			if (!$user && !$user->md_employee_id) continue;
 
-				if (!$empAttendance) {
-					$managerID = $mEmployee->getEmployeeManagerID($user->md_employee_id);
-					$emailManager = $this->model->select('email')->where(['md_employee_id' => $managerID, 'isactive' => 'Y'])->first();
+			$where = "md_employee.md_employee_id = {$user->md_employee_id}";
+			$where .= " AND v_attendance.date = '{$today}'";
+			$empAttendance = $mAttendance->getAttendance($where)->getRow();
 
-					$message = $dataNotif->getText();
-					$message = str_replace(['(Var1)', '(Var2)'], [$user->username, $strDate], $message);
+			$where = "v_all_submission.md_employee_id = {$user->md_employee_id}";
+			$where .= " AND DATE(v_all_submission.date) = '{$today}'";
+			$where .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}','{$this->LINESTATUS_Realisasi_Atasan}','{$this->LINESTATUS_Realisasi_HRD}','{$this->LINESTATUS_Approval}')";
+			$where .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+			$empSubmission = $mAbsent->getAllSubmission($where)->getRow();
 
-					$subject = $dataNotif->getSubject();
-					$message = new Html2Text($message);
-					$message = $message->getText();
+			if (!$empAttendance && !$empSubmission) {
+				$managerID = $mEmployee->getEmployeeManagerID($user->md_employee_id);
+				$mgrUser = $this->model->where(['md_employee_id' => $managerID, 'isactive' => 'Y'])->first();
+				$message = $dataNotif->getText();
+				$message = str_replace(['(Var1)', '(Var2)'], [$user->username, $strDate], $message);
 
-					if ($emailManager->email) {
-						$cMail->sendEmail($emailManager->email, $subject, $message, null, "SAS HR");
-					}
-				}
+				if ($mgrUser)
+					$cMessage->sendInformation($mgrUser, $dataNotif->getSubject(), $message, "HARMONY SAS", null, null, true, true, true);
 			}
 		}
 	}
