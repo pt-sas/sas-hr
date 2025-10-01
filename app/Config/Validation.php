@@ -701,7 +701,17 @@ class Validation
             'errors'        => [
                 'required'    => 'Mohon mengisi {field} dahulu'
             ]
-        ]
+        ],
+        'image'                 => [
+            'label'             => 'foto',
+            'rules'             => 'max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                // 'uploaded'      => 'Mohon upload {field} dahulu',
+                'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
     ];
 
     public $employee = [
@@ -2253,6 +2263,16 @@ class Validation
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'image'                 => [
+            'label'             => 'foto',
+            'rules'             => 'max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'errors'            => [
+                // 'uploaded'      => 'Mohon upload {field} dahulu',
+                'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
+                'is_image'      => 'Format file {field} salah',
+                'mime_in'       => 'Format file {field} wajib {param}',
             ]
         ],
     ];

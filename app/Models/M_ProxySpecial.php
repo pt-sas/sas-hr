@@ -138,15 +138,17 @@ class M_ProxySpecial extends Model
     public function doAfterUpdate(array $rows)
     {
         $mProxySwitch = new M_ProxySwitching($this->request);
+        $mProxySpecialDetail = new M_ProxySpecialDetail($this->request);
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
         $sql = $this->find($ID);
-        $line = $mProxySpecialDetail->where($this->primaryKey, $ID)->findAll();
         $today = date('Y-m-d');
         $date = date('Y-m-d', strtotime($sql->startdate));
 
         if ($sql->docstatus === "CO" && !empty($line)) {
             if ($date === $today) {
+                $line = $mProxySpecialDetail->where($this->primaryKey, $ID)->findAll();
+
                 foreach ($line as $value) {
                     $mProxySwitch->insertProxy($sql->sys_user_from, $sql->sys_user_to, $value->sys_role_id, true, $value->trx_proxy_special_detail_id, $sql->ispermanent);
                 }
