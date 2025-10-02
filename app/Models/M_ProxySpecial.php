@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Controllers\Backend\EmpEducation;
+use App\Controllers\Backend\Message;
 use CodeIgniter\Model;
 use CodeIgniter\HTTP\RequestInterface;
 
@@ -138,17 +139,47 @@ class M_ProxySpecial extends Model
     public function doAfterUpdate(array $rows)
     {
         $mProxySwitch = new M_ProxySwitching($this->request);
+        $mProxySpecialDetail = new M_ProxySpecialDetail($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $mNotifText = new M_NotificationText($this->request);
+        $mUser = new M_User($this->request);
+        $cMessage = new Message();
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
         $sql = $this->find($ID);
-        $line = $mProxySpecialDetail->where($this->primaryKey, $ID)->findAll();
+
         $today = date('Y-m-d');
         $date = date('Y-m-d', strtotime($sql->startdate));
 
+        $line = $mProxySpecialDetail->where($this->primaryKey, $ID)->findAll();
+
         if ($sql->docstatus === "CO" && !empty($line)) {
+
             if ($date === $today) {
+                $notifPengalihan = $mNotifText->where('name', 'Pengalihan Approval')->first();
+                $proxySuccess = false;
                 foreach ($line as $value) {
-                    $mProxySwitch->insertProxy($sql->sys_user_from, $sql->sys_user_to, $value->sys_role_id, true, $value->trx_proxy_special_detail_id, $sql->ispermanent);
+                    if ($mProxySwitch->insertProxy($sql->sys_user_from, $sql->sys_user_to, $value->sys_role_id, true, $value->trx_proxy_special_detail_id, $sql->ispermanent))
+                        $proxySuccess = true;
+                }
+
+                if ($proxySuccess) {
+                    $userFrom = $mUser->find($sql->sys_user_from);
+                    $userTo = $mUser->find($sql->sys_user_to);
+
+                    // TODO : Send successful proxy notification
+                    $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$userTo->username, $date, $userFrom->username], $notifPengalihan->getText());
+                    $subject = $notifPengalihan->getSubject();
+
+                    // TODO : get User Subordinate
+                    $lowerEmployee = $mEmployee->getChartEmployee($userFrom->md_employee_id);
+                    $lowerUser = $mUser->where('isactive', 'Y')->whereIn('md_employee_id', $lowerEmployee)->findAll();
+
+                    $recipients = array_filter(array_merge([$userFrom, $userTo], $lowerUser));
+
+                    foreach ($recipients as $users) {
+                        $cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
+                    }
                 }
             }
         }

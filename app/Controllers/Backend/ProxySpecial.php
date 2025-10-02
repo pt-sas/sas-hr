@@ -3,6 +3,8 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Employee;
+use App\Models\M_NotificationText;
 use Config\Services;
 use App\Models\M_ProxySpecial;
 use App\Models\M_ProxySpecialDetail;
@@ -323,6 +325,12 @@ class ProxySpecial extends BaseController
     {
         $mUserRole = new M_UserRole($this->request);
         $mProxySwitch = new M_ProxySwitching($this->request);
+        $mEmployee = new M_Employee($this->request);
+        $mUser = new M_User($this->request);
+        $mRole = new M_Role($this->request);
+        $mNotifText = new M_NotificationText($this->request);
+        $cMessage = new Message();
+
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime("+1 day"));
 
@@ -335,11 +343,35 @@ class ProxySpecial extends BaseController
         $where = "DATE_FORMAT(startdate, '%Y-%m-%d') = '{$tomorrow}' AND docstatus = '{$this->DOCSTATUS_Completed}'";
         $listDocNo = $this->model->where($where)->findAll();
 
+        $notifPengalihan = $mNotifText->where('name', 'Pengalihan Approval')->first();
+
         if ($listDocNo) {
             foreach ($listDocNo as $value) {
                 $line = $this->modelDetail->where('trx_proxy_special_id', $value->trx_proxy_special_id)->findAll();
+
+                $proxySuccess = false;
                 foreach ($line as $val) {
-                    $mProxySwitch->insertProxy($value->sys_user_from, $value->sys_user_to, $val->sys_role_id, true, $val->trx_proxy_special_detail_id, $value->ispermanent);
+                    if ($mProxySwitch->insertProxy($value->sys_user_from, $value->sys_user_to, $val->sys_role_id, true, $val->trx_proxy_special_detail_id, $value->ispermanent))
+                        $proxySuccess = true;
+                }
+
+                if ($proxySuccess) {
+                    $userFrom = $mUser->find($value->sys_user_from);
+                    $userTo = $mUser->find($value->sys_user_to);
+
+                    // TODO : Send successful proxy notification
+                    $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$userTo->username, $tomorrow, $userFrom->username], $notifPengalihan->getText());
+                    $subject = $notifPengalihan->getSubject();
+
+                    // TODO : get User Subordinate
+                    $lowerEmployee = $mEmployee->getChartEmployee($userFrom->md_employee_id);
+                    $lowerUser = $mUser->where('isactive', 'Y')->whereIn('md_employee_id', $lowerEmployee)->findAll();
+
+                    $recipients = array_filter(array_merge([$userFrom, $userTo], $lowerUser));
+
+                    foreach ($recipients as $users) {
+                        $cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
+                    }
                 }
             }
         }
@@ -347,6 +379,7 @@ class ProxySpecial extends BaseController
         //TODO : Get All In Progress Reguler Proxy dan Return it back to original user
         $where = "(trx_proxy_switching.proxytype = 'reguler' OR (trx_proxy_switching.proxytype = 'special' AND ps.ispermanent = 'N' AND DATE_FORMAT(ps.enddate, '%Y-%m-%d') = '{$today}')) AND trx_proxy_switching.state = 'IP'";
         $listProxy = $mProxySwitch->getProxyDetail($where)->getResult();
+        $notifPengembalian = $mNotifText->where('name', 'Pengembalian Approval')->first();
 
         if ($listProxy) {
             foreach ($listProxy as $value) {
@@ -362,6 +395,20 @@ class ProxySpecial extends BaseController
                     //TODO : Delete User Role
                     if ($mProxySwitch->save($entity)) {
                         $mUserRole->delete($userRole->sys_user_role_id);
+
+                        $userFrom = $mUser->find($value->sys_user_from);
+                        $userTo = $mUser->find($value->sys_user_to);
+                        $role = $mRole->find($value->sys_role_id);
+
+                        // TODO : Send successful proxy notification
+                        $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$role->name, $userFrom->username, $today], $notifPengembalian->getText());
+                        $subject = $notifPengalihan->getSubject();
+
+                        $recipients = array_filter(array_merge([$userFrom, $userTo]));
+
+                        foreach ($recipients as $users) {
+                            $cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
+                        }
                     }
                 }
             }

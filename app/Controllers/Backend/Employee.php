@@ -107,7 +107,7 @@ class Employee extends BaseController
             $employeeId = $this->session->get('md_employee_id');
             $employee = $this->model->find($employeeId);
 
-            if ($employee->md_levelling_id > 100003 && !$roleEmp) {
+            if (!$roleEmp && $employee && $employee->md_levelling_id > 100003) {
                 $where['md_employee.md_employee_id'] = $employeeId;
             } else {
                 $where['md_employee.md_employee_id'] = [
