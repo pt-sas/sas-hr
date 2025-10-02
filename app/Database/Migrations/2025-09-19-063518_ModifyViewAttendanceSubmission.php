@@ -32,7 +32,7 @@ class ModifyViewAttendanceSubmission extends Migration
             DATE_FORMAT(va.date, '%m-%Y') AS period,
             COUNT(va.md_employee_id) AS total
             FROM v_attendance va
-            WHERE (va.clock_in = '' OR va.clock_in > '08:00')
+            WHERE (va.clock_in = '' OR va.clock_in >= '08:01')
             and WEEKDAY(va.`date`) < 5
             AND NOT EXISTS (
             SELECT 1 
