@@ -375,7 +375,7 @@ class User extends BaseController
 			$proxyUsers = null;
 
 			$superior = $mEmployee->where(['md_employee_id' => $emp->superior_id, 'isactive' => 'Y'])->first();
-			if ($superior || (isset($attendanceMap[$superior->md_employee_id]) || isset($submissionMap[$superior->md_employee_id]))) {
+			if ($superior && $superior->md_levelling_id != 100001 && (isset($attendanceMap[$superior->md_employee_id]))) {
 				// TODO : Execute proxy switching for all roles
 				if (isset($userMap[$superior->md_employee_id])) {
 					$superiorUser = $userMap[$superior->md_employee_id];
@@ -407,7 +407,7 @@ class User extends BaseController
 					}
 				}
 
-				$recipients = array_filter(array_merge([$user, $proxyUsers], $hrUsers, $lowerUser));
+				$recipients = array_filter(array_merge([$user, $proxyUsers], $lowerUser));
 
 				foreach ($recipients as $users) {
 					$cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
