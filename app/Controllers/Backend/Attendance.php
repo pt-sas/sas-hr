@@ -260,7 +260,7 @@ class Attendance extends BaseController
             $builder->whereIn('ed.md_division_id', (array) $md_division_id);
         }
 
-        $sql = $builder->orderBy('md_employee.fullname', 'ASC')->findAll();
+        $sql = $builder->orderBy('md_employee.nik', 'ASC')->findAll();
 
         $holiday = $mHoliday->getHolidayDate();
         $holidays = implode(", ", $holiday);
