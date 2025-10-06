@@ -17,6 +17,7 @@ use App\Models\M_UserRole;
 use App\Models\M_NotificationText;
 use App\Models\M_Absent;
 use App\Models\M_Levelling;
+use App\Models\M_Holiday;
 use Config\Services;
 
 class User extends BaseController
@@ -327,8 +328,13 @@ class User extends BaseController
 		$mUserRole = new M_UserRole($this->request);
 		$mNotifText = new M_NotificationText($this->request);
 		$mProxySwitch = new M_ProxySwitching($this->request);
+		$mHoliday = new M_Holiday($this->request);
 		$cMessage = new Message();
 		$today = date('Y-m-d');
+		$dayOfWeek = date('N', strtotime($today));
+
+		$holiday = $mHoliday->getHolidayDate();
+		if (in_array($today, $holiday) || $dayOfWeek >= 6) return;
 
 		// TODO : Get Manager and General Manager
 		$employees = $mEmployee->where("isactive = 'Y' AND md_levelling_id IN (100002, 100003)")->findAll();
@@ -375,7 +381,7 @@ class User extends BaseController
 			$proxyUsers = null;
 
 			$superior = $mEmployee->where(['md_employee_id' => $emp->superior_id, 'isactive' => 'Y'])->first();
-			if ($superior || (isset($attendanceMap[$superior->md_employee_id]) || isset($submissionMap[$superior->md_employee_id]))) {
+			if ($superior && $superior->md_levelling_id != 100001 && (isset($attendanceMap[$superior->md_employee_id]))) {
 				// TODO : Execute proxy switching for all roles
 				if (isset($userMap[$superior->md_employee_id])) {
 					$superiorUser = $userMap[$superior->md_employee_id];
@@ -407,7 +413,7 @@ class User extends BaseController
 					}
 				}
 
-				$recipients = array_filter(array_merge([$user, $proxyUsers], $hrUsers, $lowerUser));
+				$recipients = array_filter(array_merge([$user, $proxyUsers], $lowerUser));
 
 				foreach ($recipients as $users) {
 					$cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, true, true);
@@ -429,11 +435,17 @@ class User extends BaseController
 		$mEmpDelegation = new M_EmpDelegation($this->request);
 		$mAttendance = new M_Attendance($this->request);
 		$mNotifText = new M_NotificationText($this->request);
+		$mHoliday = new M_Holiday($this->request);
 		$mEmployee = new M_Employee($this->request);
 		$mAbsent = new M_Absent($this->request);
 		$cMessage = new Message();
 
 		$today = date('Y-m-d');
+		$dayOfWeek = date('N', strtotime($today));
+		$holiday = $mHoliday->getHolidayDate();
+
+		if (in_array($today, $holiday) || $dayOfWeek >= 6) return;
+
 		$strDate = date('d/M/Y', strtotime($today));
 		$userList = $mEmpDelegation->select('sys_user_id')->distinct()->findAll();
 

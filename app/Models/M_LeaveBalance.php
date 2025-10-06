@@ -111,6 +111,7 @@ class M_LeaveBalance extends Model
     public function getTotalBalance($id, $year)
     {
         $sql = "SELECT tl.*,
+                xt.reserved as reserved,
                 tl.balance_amount - xt.reserved AS balance,
                 tl.carried_over_amount - xt.reserved AS balance_carried
                 FROM trx_leavebalance tl 
@@ -124,5 +125,24 @@ class M_LeaveBalance extends Model
                 AND tl.year = ?";
 
         return $this->db->query($sql, [$id, $year])->getRow();
+    }
+
+    public function getNextYearBalance($id)
+    {
+        $sql = "SELECT tl.*,
+                case 
+                when xt.reserved is null then tl.saldo_cuti
+                else tl.saldo_cuti - xt.reserved
+                end as balance
+                FROM v_leavebalance_nextyear tl
+                LEFT JOIN (SELECT SUM(t.reserved_amount) AS reserved,
+                t.year,
+                t.md_employee_id
+                FROM md_transaction t
+                GROUP BY t.year, t.md_employee_id) xt ON xt.md_employee_id = tl.md_employee_id AND xt.year = tl.`year`
+                WHERE 1=1
+                AND tl.md_employee_id = ?";
+
+        return $this->db->query($sql, [$id])->getRow();
     }
 }

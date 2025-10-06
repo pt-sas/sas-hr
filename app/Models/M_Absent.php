@@ -38,6 +38,7 @@ class M_Absent extends Model
         'isbranch',
         'branch_to',
         'reference_id',
+        'leavebalance',
         'availableleavedays',
         'totaldays',
         'img_medical'

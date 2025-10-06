@@ -2641,8 +2641,11 @@ $("#form_leave").on(
         dataType: "JSON",
         success: function (result) {
           if (result[0].success) {
-            let balance = result[0].message;
-            form.find("input[name=availableleavedays]").val(balance);
+            let data = result[0].message;
+            form.find("input[name=leavebalance]").val(data.balance);
+            form
+              .find("input[name=availableleavedays]")
+              .val(data.availableleave);
           }
         },
         error: function (jqXHR, exception) {

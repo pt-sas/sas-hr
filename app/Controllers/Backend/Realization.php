@@ -19,6 +19,7 @@ use App\Models\M_ChangeLog;
 use App\Models\M_Configuration;
 use App\Models\M_Employee;
 use App\Models\M_Holiday;
+use App\Models\M_LeaveBalance;
 use App\Models\M_NotificationText;
 use App\Models\M_SubmissionCancel;
 use App\Models\M_SubmissionCancelDetail;
@@ -120,7 +121,14 @@ class Realization extends BaseController
             foreach ($list as $value) :
                 $row = [];
                 $ID = $value->id;
-                $trxCancel = $mSubCancelDetail->where(['reference_id' => $ID, 'ref_table' => 'trx_absent_detail'])
+
+                if ($value->table == "trx_absent") {
+                    $tableline = "trx_absent_detail";
+                } else {
+                    $tableline = "trx_assignment_date";
+                }
+
+                $trxCancel = $mSubCancelDetail->where(['reference_id' => $ID, 'ref_table' => $tableline])
                     ->whereIn('isagree', [$this->LINESTATUS_Approval, $this->LINESTATUS_Disetujui, $this->LINESTATUS_Realisasi_Atasan, "{$this->LINESTATUS_Realisasi_HRD}"])->first();
 
                 $number++;
@@ -328,6 +336,7 @@ class Realization extends BaseController
             $mEmployee = new M_Employee($this->request);
             $mUser = new M_User($this->request);
             $mNotifText = new M_NotificationText($this->request);
+            $mLeaveBalance = new M_LeaveBalance($this->request);
             $cMessage = new Message();
             $cTelegram = new Telegram();
 
@@ -443,6 +452,20 @@ class Realization extends BaseController
                                 $response = $this->save();
                             }
                         } else {
+                            // TODO : When There's no Leave balance available, then return message no leave balance available
+                            if ($submissionForm == "Cuti") {
+                                $balance = $mLeaveBalance->where([
+                                    'year'              => date("Y", strtotime($submissionDate)),
+                                    'md_employee_id'    => $trx->md_employee_id
+                                ])->first();
+
+                                if (!$balance || ($balance && ($balance->balance_amount <= 0
+                                    && (($balance->carried_over_amount <= 0 && $submissionDate <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)))
+                                        || ($balance->carried_over_amount > 0 && $submissionDate > date('Y-m-d', strtotime($balance->carry_over_expiry_date))))
+                                )))
+                                    return $this->response->setJSON(message('success', false, 'Karyawan tidak memiliki Saldo Cuti'));
+                            }
+
                             $response = $this->save();
                         }
                     } else {

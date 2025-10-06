@@ -228,7 +228,6 @@ class WActivity extends BaseController
 
                     //TODO : Get data responsible 
                     $dataResp = $mWResponsible->find($sys_wfresponsible_id);
-
                     $msg = 'Approved By : ' . $dataUser[0]->getUserName() . ' </br> ';
                     $msg .= 'Next Approver : ' . $dataResp->getName() . ' </br> ';
                     $msg .= $textmsg;
@@ -454,7 +453,7 @@ class WActivity extends BaseController
                     );
 
                     if ($dateNotApproved <= $today) {
-                        $this->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, session()->get('sys_user_id'), $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu);
+                        $this->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, session()->get('sys_user_id'), $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu, null, $row->tableline, $row->recordline_id);
                     }
                 } else {
                     log_message('info', "Data transaction not found for sys_wactivity_id: {$row->sys_wfactivity_id}");

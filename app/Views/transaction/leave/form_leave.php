@@ -89,8 +89,8 @@
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
                 <div class="form-group">
-                    <label for="availableleavedays">Sisa Cuti </label>
-                    <input type="text" class="form-control" id="availableleavedays" name="availableleavedays" readonly>
+                    <label for="leavebalance">Saldo Cuti </label>
+                    <input type="text" class="form-control" id="leavebalance" name="leavebalance" readonly>
                 </div>
             </div>
             <div class="col-md-3">
@@ -103,6 +103,10 @@
                         </span>
                     </div>
                     <small class="form-text text-danger" id="error_enddate"></small>
+                </div>
+                <div class="form-group">
+                    <label for="availableleavedays">Saldo Tersedia </label>
+                    <input type="text" class="form-control" id="availableleavedays" name="availableleavedays" readonly>
                 </div>
             </div>
         </div>
