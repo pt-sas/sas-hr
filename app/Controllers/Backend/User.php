@@ -17,6 +17,7 @@ use App\Models\M_UserRole;
 use App\Models\M_NotificationText;
 use App\Models\M_Absent;
 use App\Models\M_Levelling;
+use App\Models\M_Holiday;
 use Config\Services;
 
 class User extends BaseController
@@ -327,8 +328,13 @@ class User extends BaseController
 		$mUserRole = new M_UserRole($this->request);
 		$mNotifText = new M_NotificationText($this->request);
 		$mProxySwitch = new M_ProxySwitching($this->request);
+		$mHoliday = new M_Holiday($this->request);
 		$cMessage = new Message();
 		$today = date('Y-m-d');
+		$dayOfWeek = date('N', strtotime($today));
+
+		$holiday = $mHoliday->getHolidayDate();
+		if (in_array($today, $holiday) || $dayOfWeek >= 6) return;
 
 		// TODO : Get Manager and General Manager
 		$employees = $mEmployee->where("isactive = 'Y' AND md_levelling_id IN (100002, 100003)")->findAll();
@@ -429,11 +435,17 @@ class User extends BaseController
 		$mEmpDelegation = new M_EmpDelegation($this->request);
 		$mAttendance = new M_Attendance($this->request);
 		$mNotifText = new M_NotificationText($this->request);
+		$mHoliday = new M_Holiday($this->request);
 		$mEmployee = new M_Employee($this->request);
 		$mAbsent = new M_Absent($this->request);
 		$cMessage = new Message();
 
 		$today = date('Y-m-d');
+		$dayOfWeek = date('N', strtotime($today));
+		$holiday = $mHoliday->getHolidayDate();
+
+		if (in_array($today, $holiday) || $dayOfWeek >= 6) return;
+
 		$strDate = date('d/M/Y', strtotime($today));
 		$userList = $mEmpDelegation->select('sys_user_id')->distinct()->findAll();
 
