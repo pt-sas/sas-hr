@@ -190,6 +190,7 @@ class Leave extends BaseController
                     $startDate = date("Y-m-d", strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
                     $subDate = date('Y-m-d', strtotime($post['submissiondate']));
+                    $nextYear = date('Y', strtotime('+1 year'));
 
                     $rule = $mRule->where([
                         'name'      => 'Cuti',
@@ -234,44 +235,59 @@ class Leave extends BaseController
 
                         // TODO : Calculate Total Days Leave
                         $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
-                        $totalDays = count($dateRange);
+
+                        $amountThisYear = [];
+                        $amountNextYear = [];
+
+                        foreach ($dateRange as $date) {
+                            if (date('Y', strtotime($date)) == $nextYear) {
+                                $amountNextYear[] = $date;
+                            } else {
+                                $amountThisYear[] = $date;
+                            }
+                        }
 
                         // TODO : Get Leave Balance
                         $leaveBalance = $mLeaveBalance->getTotalBalance($employeeId, date("Y", strtotime($startDate)));
+                        $leaveBalanceNextYear = !empty($amountNextYear) ? $mLeaveBalance->getNextYearBalance($employeeId) : null;
 
                         if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
-                        } else if (is_null($leaveBalance)) {
+                        } else if (empty($leaveBalance) && empty($leaveBalanceNextYear)) {
                             $response = message('success', false, 'Saldo cuti tidak tersedia');
                         } else if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
                         } else if ($startDate <= $lastDate) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada tanggal ' . format_dmy($startDate, "-") . ', karena tidak sesuai dengan batas pengajuan');
                         } else {
-                            $this->entity->fill($post);
+                            // Cek apakah saldo carry over ada dan belum expired
+                            $balance = 0;
 
-                            if ($this->isNew()) {
-                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Cuti, $post, $this->session->get('sys_user_id'));
-                                $this->entity->setDocumentNo($docNo);
+                            if (!empty($leaveBalance)) {
+                                $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+
+                                $balance = $carryOverValid ? $leaveBalance->carried_over_amount + $leaveBalance->balance_amount : $leaveBalance->balance_amount;
+                                $balance = $balance - $leaveBalance->reserved;
                             }
 
-                            // Cek apakah saldo carry over ada dan belum expired
-                            $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+                            $balanceNextYear = !empty($leaveBalanceNextYear) ? $leaveBalanceNextYear->balance : 0;
 
-                            // Cek apakah saldo cuti utama ada dan belum expired
-                            $mainLeaveValid = ($leaveBalance->enddate && $endDate <= date('Y-m-d', strtotime($leaveBalance->enddate)));
+                            $amountThisYear = count($amountThisYear);
+                            $amountNextYear = count($amountNextYear);
 
-                            if ($carryOverValid && ($leaveBalance->balance_carried <= 0 || $totalDays > $leaveBalance->balance_carried)) {
-                                $response = message('success', false, 'Saldo carry over tidak cukup atau sudah expired');
+                            if (!empty($amountNextYear) && $amountNextYear > $balanceNextYear) {
+                                $response = message('success', false, 'Saldo tahun depan tidak cukup');
+                            } else if (!empty($amountThisYear) && $amountThisYear > $balance) {
+                                $response = message('success', false, 'Saldo cuti tidak cukup atau sudah expired');
                             } else {
-                                if (!$mainLeaveValid) {
-                                    $response = message('success', false, 'Belum bisa mengajukan sudah expired');
-                                } else if ($leaveBalance->balance <= 0 || $totalDays > $leaveBalance->balance) {
-                                    $response = message('success', false, 'Saldo utama tidak cukup atau sudah expired');
-                                } else {
-                                    $response = $this->save();
+                                $this->entity->fill($post);
+
+                                if ($this->isNew()) {
+                                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Cuti, $post, $this->session->get('sys_user_id'));
+                                    $this->entity->setDocumentNo($docNo);
                                 }
+                                $response = $this->save();
                             }
                         }
                     }
@@ -355,6 +371,7 @@ class Leave extends BaseController
 
             $endDate = date('Y-m-d', strtotime($row->enddate));
             $startDate = date("Y-m-d", strtotime($row->startdate));
+            $nextYear = date('Y', strtotime('+1 year'));
 
             try {
                 if (!empty($_DocAction)) {
@@ -378,7 +395,17 @@ class Leave extends BaseController
                         $daysOff = getDaysOff($workDetail);
 
                         $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
-                        $totalDays = count($dateRange);
+
+                        $amountThisYear = [];
+                        $amountNextYear = [];
+
+                        foreach ($dateRange as $date) {
+                            if (date('Y', strtotime($date)) == $nextYear) {
+                                $amountNextYear[] = $date;
+                            } else {
+                                $amountThisYear[] = $date;
+                            }
+                        }
 
                         //TODO : Get submission one day
                         $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
@@ -388,42 +415,46 @@ class Leave extends BaseController
                         $trx = $this->model->getAllSubmission($whereClause)->getRow();
 
                         $leaveBalance = $mLeaveBalance->getTotalBalance($row->md_employee_id, date("Y", strtotime($startDate)));
+                        $leaveBalanceNextYear = !empty($amountNextYear) ? $mLeaveBalance->getNextYearBalance($row->md_employee_id) : null;
 
                         if ($trx) {
                             $response = message('success', false, 'Tidak bisa proses pengajuan, karena sudah ada pengajuan lain');
-                        } else if (is_null($leaveBalance)) {
+                        } else if (empty($leaveBalance) && empty($leaveBalanceNextYear)) {
                             $response = message('error', true, 'Saldo cuti tidak tersedia');
                         } else {
-                            // Cek apakah saldo carry over ada dan belum expired
-                            $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+                            $balance = 0;
+                            if (!empty($leaveBalance)) {
+                                $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
 
-                            // Cek apakah saldo cuti utama ada dan belum expired
-                            $mainLeaveValid = ($leaveBalance->enddate && $endDate <= date('Y-m-d', strtotime($leaveBalance->enddate)));
+                                $balance = $carryOverValid ? $leaveBalance->carried_over_amount + $leaveBalance->balance_amount : $leaveBalance->balance_amount;
+                                $balance = $balance - $leaveBalance->reserved;
+                            }
 
-                            if ($carryOverValid && ($leaveBalance->balance_carried <= 0 || $totalDays > $leaveBalance->balance_carried)) {
-                                $response = message('error', true, 'Saldo carry over tidak cukup atau sudah expired');
+                            $balanceNextYear = !empty($leaveBalanceNextYear) ? $leaveBalanceNextYear->balance : 0;
+
+                            $amountThisYear = count($amountThisYear);
+                            $amountNextYear = count($amountNextYear);
+
+                            if (!empty($amountNextYear) && $amountNextYear > $balanceNextYear) {
+                                $response = message('success', false, 'Saldo tahun depan tidak cukup');
+                            } else if (!empty($amountThisYear) && $amountThisYear > $balance) {
+                                $response = message('success', false, 'Saldo cuti tidak cukup atau sudah expired');
                             } else {
-                                if (!$mainLeaveValid) {
-                                    $response = message('error', true, 'Belum bisa mengajukan sudah expired');
-                                } else if ($leaveBalance->balance <= 0 || $totalDays > $leaveBalance->balance) {
-                                    $response = message('error', true, 'Saldo utama tidak cukup atau sudah expired');
-                                } else {
-                                    $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+                                $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 
-                                    if (empty($line)) {
-                                        // TODO : Create Line if not exist
-                                        $data = [
-                                            'id'        => $_ID,
-                                            'created_by' => $this->access->getSessionUser(),
-                                            'updated_by' => $this->access->getSessionUser()
-                                        ];
+                                if (empty($line)) {
+                                    // TODO : Create Line if not exist
+                                    $data = [
+                                        'id'        => $_ID,
+                                        'created_by' => $this->access->getSessionUser(),
+                                        'updated_by' => $this->access->getSessionUser()
+                                    ];
 
-                                        $this->model->createAbsentDetail($data, $row);
-                                    }
-
-                                    $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
-                                    $response = message('success', true, true);
+                                    $this->model->createAbsentDetail($data, $row);
                                 }
+
+                                $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
+                                $response = message('success', true, true);
                             }
                         }
                     } else if ($_DocAction === $this->DOCSTATUS_Voided) {
@@ -532,25 +563,25 @@ class Leave extends BaseController
 
                 if ($employee) {
                     $where = ["md_employee.isactive = 'Y'
-                    AND md_employee.md_status_id NOT IN ({$this->Status_OUTSOURCING}, {$this->Status_RESIGN})
+                    AND md_employee.md_status_id IN ({$this->Status_PERMANENT}, {$this->Status_PROBATION})
                     AND {$mLeaveBalance->table}.md_employee_id IN ({$arrEmpID})
                     AND {$mLeaveBalance->table}.year = {$year}"];
 
                     $arrEmp = $mEmployee->where([
                         'isactive'          => 'Y',
-                    ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                    ])->whereIn('md_status_id', [$this->Status_PERMANENT, $this->Status_PROBATION])
                         ->whereIn('md_employee_id', $employee)
                         ->where($subQuery)
                         ->orderBy('value', 'ASC')
                         ->findAll();
                 } else {
                     $where = ["md_employee.isactive = 'Y'
-                    AND md_employee.md_status_id NOT IN ({$this->Status_OUTSOURCING}, {$this->Status_RESIGN})
+                    AND md_employee.md_status_id IN ({$this->Status_PERMANENT}, {$this->Status_PROBATION})
                     AND {$mLeaveBalance->table}.year = {$year}"];
 
                     $arrEmp = $mEmployee->where([
                         'isactive'          => 'Y',
-                    ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
+                    ])->whereIn('md_status_id', [$this->Status_PERMANENT, $this->Status_PROBATION])
                         ->where($subQuery)
                         ->orderBy('value', 'ASC')
                         ->findAll();
@@ -596,6 +627,7 @@ class Leave extends BaseController
         $mLeaveBalance = new M_LeaveBalance($this->request);
         $mTransaction = new M_Transaction($this->request);
         $mMassLeave = new M_MassLeave($this->request);
+        $mAbsent = new M_Absent($this->request);
 
         if (empty($array))
             return false;
@@ -637,7 +669,7 @@ class Leave extends BaseController
             ])->orderBy('startdate', 'ASC')
                 ->findAll();
 
-            $totalMassCount = count($totalMassLeave);
+            // $totalMassCount = count($totalMassLeave);
 
             $dataInsert = [];
             $dataUpdate = [];
@@ -668,7 +700,6 @@ class Leave extends BaseController
                 //* Startdate <= 5 Januari 
                 $yearOfStartDate = date('Y', $startDateTimestamp);
                 $isBeforeOrEqualJanuary5 = $startDateTimestamp <= strtotime("January {$dayCutOff}, {$yearOfStartDate}");
-
                 //* Tentukan tanggal 5 Januari tahun berikutnya 
                 $nextYearCutOff = strtotime('+1 year', strtotime("January {$dayCutOff}, {$yearOfStartDate}"));
 
@@ -682,10 +713,29 @@ class Leave extends BaseController
                 ])->orderBy('startdate', 'ASC')
                     ->findAll();
 
-                $registerMassCount = count($registerMassLeave);
+                // $registerMassCount = count($registerMassLeave);
 
                 //TODO: Periksa apakah sudah 1 tahun atau lebih 
                 if ($endDateTimestamp >= $nextYearCutOff || $isBeforeOrEqualJanuary5) {
+                    // TODO : Do Iteration Checking Submission on Mass Leave Date
+                    $totalMassCount = 0;
+                    $massLeaveCut = [];
+                    foreach ($totalMassLeave as $leaveDate) {
+                        $date = date('Y-m-d', strtotime($leaveDate->startdate));
+
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND v_all_submission.submissiontype IN ({$mAbsent->Pengajuan_Penugasan}, {$mAbsent->Pengajuan_Tugas_Kantor}, {$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                        $whereClause .= " AND DATE(v_all_submission.date) = '{$date}'";
+                        $whereClause .= " AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'";
+                        $whereClause .= " AND v_all_submission.docstatus = '{$this->DOCSTATUS_Completed}'";
+                        $trxMassLeave = $mAbsent->getAllSubmission($whereClause)->getRow();
+
+                        if (!$trxMassLeave) {
+                            $totalMassCount++;
+                            $massLeaveCut[] = $leaveDate;
+                        }
+                    }
+
                     $balance = $amount - $totalMassCount;
 
                     $dataLeaveUsage[] = [
@@ -699,8 +749,8 @@ class Leave extends BaseController
                         "updated_by"        => $this->session->get('sys_user_id')
                     ];
 
-                    if ($totalMassLeave)
-                        foreach ($totalMassLeave as $item) {
+                    if (!empty($massLeaveCut))
+                        foreach ($massLeaveCut as $item) {
                             $leaveUsage = -1;
 
                             $dataLeaveUsage[] = [
@@ -711,11 +761,30 @@ class Leave extends BaseController
                                 "md_employee_id"    => $row->md_employee_id,
                                 "isprocessed"       => "Y",
                                 "created_by"        => $this->session->get('sys_user_id'),
-                                "updated_by"        => $this->session->get('sys_user_id')
+                                "updated_by"        => $this->session->get('sys_user_id'),
+                                "description"       => $item->name
                             ];
                         }
                 } else if ($dayOfMonth <= $dayCutOff) {
-                    $balance = $monthsDifference - $registerMassCount;
+                    // TODO : Do Iteration Checking Submission on Mass Leave Date
+                    $totalMassCount = 0;
+                    $massLeaveCut = [];
+                    foreach ($registerMassLeave as $leaveDate) {
+                        $date = date('Y-m-d', strtotime($leaveDate->startdate));
+
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND v_all_submission.submissiontype IN ({$mAbsent->Pengajuan_Penugasan}, {$mAbsent->Pengajuan_Tugas_Kantor}, {$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                        $whereClause .= " AND DATE(v_all_submission.date) = '{$date}'";
+                        $whereClause .= " AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'";
+                        $whereClause .= " AND v_all_submission.docstatus = '{$this->DOCSTATUS_Completed}'";
+                        $trxMassLeave = $mAbsent->getAllSubmission($whereClause)->getRow();
+
+                        if (!$trxMassLeave) {
+                            $totalMassCount++;
+                            $massLeaveCut[] = $leaveDate;
+                        }
+                    }
+                    $balance = $monthsDifference - $totalMassCount;
 
                     $dataLeaveUsage[] = [
                         "transactiondate"   => $startDateOfYear,
@@ -728,8 +797,8 @@ class Leave extends BaseController
                         "updated_by"        => $this->session->get('sys_user_id')
                     ];
 
-                    if ($registerMassLeave)
-                        foreach ($registerMassLeave as $item) {
+                    if (!empty($massLeaveCut))
+                        foreach ($massLeaveCut as $item) {
                             $leaveUsage = -1;
 
                             $dataLeaveUsage[] = [
@@ -740,12 +809,32 @@ class Leave extends BaseController
                                 "md_employee_id"    => $row->md_employee_id,
                                 "isprocessed"       => "Y",
                                 "created_by"        => $this->session->get('sys_user_id'),
-                                "updated_by"        => $this->session->get('sys_user_id')
+                                "updated_by"        => $this->session->get('sys_user_id'),
+                                "description"       => $item->name
                             ];
                         }
                 } else if ($dayOfMonth > $dayCutOff) {
+                    // TODO : Do Iteration Checking Submission on Mass Leave Date
+                    $totalMassCount = 0;
+                    $massLeaveCut = [];
+                    foreach ($registerMassLeave as $leaveDate) {
+                        $date = date('Y-m-d', strtotime($leaveDate->startdate));
+
+                        $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
+                        $whereClause .= " AND v_all_submission.submissiontype IN ({$mAbsent->Pengajuan_Penugasan}, {$mAbsent->Pengajuan_Tugas_Kantor}, {$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                        $whereClause .= " AND DATE(v_all_submission.date) = '{$date}'";
+                        $whereClause .= " AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'";
+                        $whereClause .= " AND v_all_submission.docstatus = '{$this->DOCSTATUS_Completed}'";
+                        $trxMassLeave = $mAbsent->getAllSubmission($whereClause)->getRow();
+
+                        if (!$trxMassLeave) {
+                            $totalMassCount++;
+                            $massLeaveCut[] = $leaveDate;
+                        }
+                    }
+
                     $monthsDifference -= 1;
-                    $balance = $monthsDifference - $registerMassCount;
+                    $balance = $monthsDifference - $totalMassCount;
 
                     $dataLeaveUsage[] = [
                         "transactiondate"   => $startDateOfYear,
@@ -758,8 +847,8 @@ class Leave extends BaseController
                         "updated_by"        => $this->session->get('sys_user_id')
                     ];
 
-                    if ($registerMassLeave)
-                        foreach ($registerMassLeave as $item) {
+                    if (!empty($massLeaveCut))
+                        foreach ($massLeaveCut as $item) {
                             $leaveUsage = -1;
 
                             $dataLeaveUsage[] = [
@@ -770,7 +859,8 @@ class Leave extends BaseController
                                 "md_employee_id"    => $row->md_employee_id,
                                 "isprocessed"       => "Y",
                                 "created_by"        => $this->session->get('sys_user_id'),
-                                "updated_by"        => $this->session->get('sys_user_id')
+                                "updated_by"        => $this->session->get('sys_user_id'),
+                                "description"       => $item->name
                             ];
                         }
                 }
@@ -879,8 +969,12 @@ class Leave extends BaseController
             if ($dataUpdate)
                 $mLeaveBalance->builder->updateBatch($dataUpdate, $mLeaveBalance->primaryKey);
 
-            if ($dataLeaveUsage)
-                $mTransaction->builder->insertBatch($dataLeaveUsage);
+            if ($dataLeaveUsage) {
+                foreach ($dataLeaveUsage as $data) {
+                    $mTransaction->builder->insert($data);
+                }
+            }
+            // $mTransaction->builder->insertBatch($dataLeaveUsage);
 
             return $mLeaveBalance->builder->insertBatch($dataInsert);
         } catch (\Exception $e) {
@@ -891,71 +985,44 @@ class Leave extends BaseController
     public function getAvailableDays()
     {
         $mLeaveBalance = new M_LeaveBalance($this->request);
-        $mEmployee = new M_Employee($this->request);
-        $mConfig = new M_Configuration($this->request);
 
         if ($this->request->isAJAX()) {
             $get = $this->request->getGet();
 
             $md_employee_id = $get['md_employee_id'];
             $startDate = $get['startdate'];
-            $endDate = $get['enddate'];
 
             $startOfYear = date('Y', strtotime($startDate));
-            $endOfYear = date('Y', strtotime($endDate));
+            $nextYear = date('Y', strtotime('+1 year'));
 
             try {
-                $balanceStartYear = $mLeaveBalance->where([
-                    'year'              => $startOfYear,
-                    'md_employee_id'    => $md_employee_id
-                ])->first();
-
-                $balanceEndYear = $mLeaveBalance->where([
-                    'year'              => $endOfYear,
-                    'md_employee_id'    => $md_employee_id
-                ])->first();
-
-                $dayCutOff = $mConfig->where([
-                    'isactive'  => 'Y',
-                    'name'      => 'DAY_CUT_OFF_LEAVE'
-                ])->first();
-                $dayCutOff = $dayCutOff->value;
-
                 $balance = 0;
+                $availableleave = 0;
+                if ($startOfYear == $nextYear) {
+                    $leaveBalance = $mLeaveBalance->getNextYearBalance($md_employee_id);
 
-                if (!empty($balanceStartYear) && !empty($balanceEndYear) && $startOfYear !== $endOfYear) {
-                    $balance = $balanceStartYear->balance_amount + $balanceEndYear->balance_amount;
-                } else if (!empty($balanceStartYear) && $startOfYear === $endOfYear) {
-                    $balance = $balanceStartYear->balance_amount;
-                    // } else if (empty($balanceStartYear)) {
-                    //     $rowEmp = $mEmployee->where([
-                    //         'isactive'          => 'Y',
-                    //     ])->whereNotIn('md_status_id', [$this->Status_OUTSOURCING, $this->Status_RESIGN])
-                    //         ->where('md_employee_id', $md_employee_id)
-                    //         ->first();
+                    $balance = $leaveBalance->saldo_cuti;
+                    $availableleave = $leaveBalance->balance;
+                } else {
+                    $leaveBalance = $mLeaveBalance->getTotalBalance($md_employee_id, $startOfYear);
+                    $carryOverValid = ($leaveBalance->carry_over_expiry_date && $startDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
 
-                    //     $registerDate = $rowEmp->registerdate;
-
-                    //     //* Konversi tanggal ke timestamp 
-                    //     $startDateTimestamp = strtotime($registerDate);
-
-                    //     //* Hari dalam bulan dari registerDate
-                    //     $dayOfMonth = date('j', $startDateTimestamp);
-
-                    //     if ($dayOfMonth <= $dayCutOff) {
-                    //     } else if ($dayOfMonth > $dayCutOff) {
-                    //     }
-                    //     $balance = $balanceStartYear->balance_amount;
+                    $balance = $leaveBalance->balance_amount;
+                    $availableleave = $carryOverValid ? $leaveBalance->carried_over_amount + $leaveBalance->balance_amount : $leaveBalance->balance_amount;
+                    $availableleave = $availableleave - $leaveBalance->reserved;
                 }
 
-                $response = message('success', true, intval($balance));
+                $data = [
+                    "balance" => intval($balance),
+                    "availableleave" => intval($availableleave)
+                ];
+
+                $response = message('success', true, $data);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
 
             return $this->response->setJSON($response);
-
-            // return json_encode($response);
         }
     }
 

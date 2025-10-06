@@ -115,6 +115,7 @@ class M_AbsentDetail extends Model
         try {
             $ruleDetail = null;
             $year = date('Y', strtotime($line->date));
+            $date = date('Y-m-d', strtotime($line->date));
 
             if ($line->isagree === "Y") {
                 if ($sql->submissiontype == $mAbsent->Pengajuan_Cuti) {
@@ -124,12 +125,12 @@ class M_AbsentDetail extends Model
                     ])->first();
 
                     $balance = $mLeaveBalance->where([
-                        'year'              => date("Y", strtotime($sql->startdate)),
+                        'year'              => $year,
                         'md_employee_id'    => $sql->md_employee_id
                     ])->first();
 
-                    $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
-                    $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
+                    $carryOverValid = ($balance->carry_over_expiry_date && $date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
+                    $mainLeaveValid = ($balance->enddate && $date <= date('Y-m-d', strtotime($balance->enddate)));
 
                     $dataLeaveUsage = [];
                     $updateField = null;
@@ -220,7 +221,7 @@ class M_AbsentDetail extends Model
                         $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
                         if ($ruleDetail) {
-                            $balance = $mLeaveBalance->getTotalBalance($sql->md_employee_id, date("Y", strtotime($line->date)));
+                            $balance = $mLeaveBalance->getTotalBalance($sql->md_employee_id, $year);
 
                             $saldo = 0;
 
@@ -327,15 +328,15 @@ class M_AbsentDetail extends Model
                     ])->first();
 
                     $balance = $mLeaveBalance->where([
-                        'year'              => date("Y", strtotime($line->date)),
+                        'year'              => $year,
                         'md_employee_id'    => $sql->md_employee_id
                     ])->first();
 
                     $rsvdTransaction = $mTransaction->where(['record_id' => $ID, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
 
                     if ($balance && ($balance->balance_amount > 0 || $balance->carried_over_amount > 0) && $rsvdTransaction) {
-                        $carryOverValid = ($balance->carry_over_expiry_date && $line->date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
-                        $mainLeaveValid = ($balance->enddate && $line->date <= date('Y-m-d', strtotime($balance->enddate)));
+                        $carryOverValid = ($balance->carry_over_expiry_date && $date <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)));
+                        $mainLeaveValid = ($balance->enddate && $date <= date('Y-m-d', strtotime($balance->enddate)));
                         $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => "Sanksi Ijin Cuti"])->first();
                         $conseq = $ruleDetail->value;
 
@@ -583,14 +584,14 @@ class M_AbsentDetail extends Model
                 }
 
                 if ($sql->submissionType == $mAbsent->Pengajuan_Ijin) {
-                    $leaveBalance = $mLeaveBalance->getTotalBalance($sql->md_employee_id, date("Y", strtotime($line->date)));
+                    $leaveBalance = $mLeaveBalance->getTotalBalance($sql->md_employee_id, $year);
 
                     if ($leaveBalance) {
                         // Cek apakah saldo carry over ada dan belum expired
-                        $carryOverValid = ($leaveBalance->carry_over_expiry_date && date('Y-m-d', strtotime($line->date)) <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+                        $carryOverValid = ($leaveBalance->carry_over_expiry_date && $date <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
 
                         // Cek apakah saldo cuti utama ada dan belum expired
-                        $mainLeaveValid = ($leaveBalance->enddate && date('Y-m-d', strtotime($line->date)) <= date('Y-m-d', strtotime($leaveBalance->enddate)));
+                        $mainLeaveValid = ($leaveBalance->enddate && $date <= date('Y-m-d', strtotime($leaveBalance->enddate)));
 
                         if (($carryOverValid && $leaveBalance->balance_carried > 0) || ($mainLeaveValid && $leaveBalance->balance > 0)) {
                             $rule = $mRule->where(['name' => 'Ijin', 'isactive' => 'Y'])->first();
@@ -608,7 +609,6 @@ class M_AbsentDetail extends Model
                             $entity->isprocessed = 'N';
                             $entity->created_by = $updated_by;
                             $entity->updated_by = $updated_by;
-
 
                             $mTransaction->save($entity);
                         }
