@@ -37,6 +37,7 @@ class Absent extends Entity
     protected $reference_id;
     protected $totaldays;
     protected $img_medical;
+    protected $isreopen;
 
     protected $dates   = [
         'created_at',
@@ -378,5 +379,15 @@ class Absent extends Entity
     public function setImageMedical($img_medical)
     {
         $this->attributes['img_medical'] = $img_medical;
+    }
+
+    public function getIsReopen()
+    {
+        return $this->attributes['isreopen'];
+    }
+
+    public function setIsReopen($isreopen)
+    {
+        $this->attributes['isreopen'] = $isreopen;
     }
 }

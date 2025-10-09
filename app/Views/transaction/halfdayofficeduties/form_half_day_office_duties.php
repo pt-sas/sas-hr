@@ -156,6 +156,14 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-2">
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input" id="isreopen" name="isreopen" disabled>
+                        <span class="form-check-sign">Reopen</span>
+                    </label>
+                </div>
+            </div>
         </div>
         <div class="row">
             <div class="col-md-12">

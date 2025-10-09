@@ -87,6 +87,8 @@ class BaseController extends Controller
 	protected $DOCSTATUS_Requested = "RE";
 	/** Aborted = XL */
 	protected $DOCSTATUS_Unlock = "XL";
+	/** Reopen = RO */
+	protected $DOCSTATUS_Reopen = "RO";
 	/** Status HIDUP*/
 	protected $Status_Hidup = 'HIDUP';
 	/** Status MENINGGAL */

@@ -24,7 +24,8 @@ class M_AbsentDetail extends Model
         'realization_date_superior',
         'realization_by_superior',
         'realization_date_hrd',
-        'realization_by_hrd'
+        'realization_by_hrd',
+        'isreopen'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\AbsentDetail';
@@ -565,8 +566,10 @@ class M_AbsentDetail extends Model
                 }
             }
 
-            if ($line->isagree === "H") {
-                if ($sql->submissionType == $mAbsent->Pengajuan_Cuti) {
+            if ($line->isagree === "H" || $line->isagree === "S") {
+                $rsvdTransaction = $mTransaction->where(['record_id' => $ID, 'table' => 'trx_absent_detail'])->orderBy('created_at', 'DESC')->first();
+
+                if ($sql->submissionType == $mAbsent->Pengajuan_Cuti && (!$rsvdTransaction || $rsvdTransaction->transactiontype !== "R+")) {
                     $entity = new \App\Entities\Transaction();
                     $entity->table = $this->table;
                     $entity->transactiondate = $line->date;
@@ -583,7 +586,7 @@ class M_AbsentDetail extends Model
                     $mTransaction->save($entity);
                 }
 
-                if ($sql->submissionType == $mAbsent->Pengajuan_Ijin) {
+                if ($sql->submissionType == $mAbsent->Pengajuan_Ijin && (!$rsvdTransaction || $rsvdTransaction->transactiontype !== "R+")) {
                     $leaveBalance = $mLeaveBalance->getTotalBalance($sql->md_employee_id, $year);
 
                     if ($leaveBalance) {

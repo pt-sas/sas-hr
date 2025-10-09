@@ -34,6 +34,12 @@ class DocAction extends BaseController
                         'isactive'      => 'Y',
                         'sys_role_id'   => $this->access->getSessionRole()
                     ])->whereIn('ref_list', [$this->DOCSTATUS_Voided, $this->DOCSTATUS_Completed])->findAll();
+                } else if ($post['status'] === $this->DOCSTATUS_NotApproved) {
+                    $list = $this->model->where([
+                        'menu'          => $post['url'],
+                        'isactive'      => 'Y',
+                        'sys_role_id'   => $this->access->getSessionRole()
+                    ])->whereIn('ref_list', [$this->DOCSTATUS_Reopen])->findAll();
                 } else {
                     $list = $this->model->where([
                         'menu'      => $post['url'],

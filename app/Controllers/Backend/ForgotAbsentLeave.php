@@ -14,17 +14,24 @@ use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_Division;
 use App\Models\M_Attendance;
+use App\Models\M_Configuration;
+use App\Models\M_DocumentType;
+use App\Models\M_RuleDetail;
 use TCPDF;
 use Config\Services;
+use DateTime;
 
 class ForgotAbsentLeave extends BaseController
 {
+    protected $baseSubType;
+
     public function __construct()
     {
         $this->request = Services::request();
         $this->model = new M_Absent($this->request);
         $this->modelDetail = new M_AbsentDetail($this->request);
         $this->entity = new \App\Entities\Absent();
+        $this->baseSubType = $this->model->Pengajuan_Lupa_Absen_Pulang;
     }
 
     public function index()
@@ -38,10 +45,11 @@ class ForgotAbsentLeave extends BaseController
 
     public function showAll()
     {
-        $mAccess = new M_AccessMenu($this->request);
         $mEmployee = new M_Employee($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
+            $employee = $mEmployee->find($this->session->get('md_employee_id'));
+
             $table = $this->model->table;
             $select = $this->model->getSelect();
             $join = $this->model->getJoin();
@@ -76,54 +84,11 @@ class ForgotAbsentLeave extends BaseController
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+            // TODO : Get Employee List
+            $empList = $this->access->getEmployeeData();
+            $where['md_employee.md_employee_id'] = ['value' => $empList];
 
-            if (!empty($empDelegation)) {
-                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
-            }
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if (!empty($empDelegation)) {
-                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
-                }
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['md_employee.md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-            }
-
-            $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Lupa_Absen_Pulang;
+            $where['trx_absent.submissiontype'] = $this->baseSubType;
 
             $data = [];
 
@@ -133,6 +98,9 @@ class ForgotAbsentLeave extends BaseController
             foreach ($list as $value) :
                 $row = [];
                 $ID = $value->trx_absent_id;
+
+                $editable = true;
+                if ($employee && ($employee->md_levelling_id > 100003 || $value->md_employee_id == $employee->md_employee_id) && $value->isreopen == "Y") $editable = false;
 
                 $number++;
 
@@ -149,7 +117,7 @@ class ForgotAbsentLeave extends BaseController
                 $row[] = $value->reason;
                 $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
-                $row[] = $this->template->tableButton($ID, $value->docstatus, $this->BTN_Print);
+                $row[] = $this->template->tableButton($ID, $value->docstatus, $this->BTN_Print, $editable);
                 $data[] = $row;
             endforeach;
 
@@ -176,7 +144,8 @@ class ForgotAbsentLeave extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->model->Pengajuan_Lupa_Absen_Pulang;
+            $ID = isset($post['id']) ? $post['id'] : null;
+            $post["submissiontype"] = $this->baseSubType;
             $post["necessary"] = 'LP';
             $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
             $post["enddate"] = $post["startdate"];
@@ -286,6 +255,15 @@ class ForgotAbsentLeave extends BaseController
                             $whereClause .= " AND v_attendance.date = '{$endDate}'";
                             $attPresent = $mAttendance->getAttendance($whereClause)->getRow();
 
+                            // TODO : Get Reopen Status
+                            $reopen = false;
+                            if ($ID) {
+                                $trxReopen = $this->model->where(['trx_absent_id' => $ID])->first();
+
+                                if ($trxReopen->isreopen == "Y")
+                                    $reopen = true;
+                            }
+
                             if ($trx) {
                                 $date = format_dmy($trx->date, '-');
                                 $response = message('success', false, "Tidak bisa mengajukan pada tanggal : {$date}, karena sudah ada pengajuan lain dengan no : {$trx->documentno}");
@@ -293,7 +271,7 @@ class ForgotAbsentLeave extends BaseController
                                 $response = message('success', false, 'Anda sudah ada absen pulang');
                             } else if ($endDate > $addDays) {
                                 $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                            } else if (!is_null($presentNextDate) && ($lastDate < $subDate)) {
+                            } else if (!is_null($presentNextDate) && ($lastDate < $subDate) && !$reopen) {
                                 $lastDate = format_dmy($lastDate, '-');
 
                                 $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
@@ -303,7 +281,7 @@ class ForgotAbsentLeave extends BaseController
                                 if ($this->isNew()) {
                                     $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Lupa_Absen_Pulang, $post, $this->session->get('sys_user_id'));
+                                    $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $post, $this->session->get('sys_user_id'));
                                     $this->entity->setDocumentNo($docNo);
                                 }
 
@@ -375,13 +353,19 @@ class ForgotAbsentLeave extends BaseController
     public function processIt()
     {
         $cWfs = new WScenario();
+        $mConfig = new M_Configuration($this->request);
+        $mRule = new M_Rule($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
+        $mHoliday = new M_Holiday($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
 
+            $employeeId = $this->session->get('md_employee_id');
             $_ID = $post['id'];
             $_DocAction = $post['docaction'];
-
+            $_SubType = $post['subtype'];
+            $today = date('Y-m-d');
             $row = $this->model->find($_ID);
             $menu = $this->request->uri->getSegment(2);
             $startDate = date('Y-m-d', strtotime($row->startdate));
@@ -403,18 +387,14 @@ class ForgotAbsentLeave extends BaseController
                         if ($trx) {
                             $response = message('error', true, "Sudah ada pengajuan lain dengan nomor : {$trx->documentno}");
                         } else {
-                            $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
+                            // TODO : Create Line if not exist
+                            $data = [
+                                'id'        => $_ID,
+                                'created_by' => $this->access->getSessionUser(),
+                                'updated_by' => $this->access->getSessionUser()
+                            ];
 
-                            if (empty($line)) {
-                                // TODO : Create Line if not exist
-                                $data = [
-                                    'id'        => $_ID,
-                                    'created_by' => $this->access->getSessionUser(),
-                                    'updated_by' => $this->access->getSessionUser()
-                                ];
-
-                                $this->model->createAbsentDetail($data, $row, true, true);
-                            }
+                            $this->model->createAbsentDetail($data, $row, true, true);
 
                             $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
                             $response = message('success', true, true);
@@ -422,6 +402,42 @@ class ForgotAbsentLeave extends BaseController
                     } else if ($_DocAction === $this->DOCSTATUS_Voided) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
+                    } else if ($_DocAction === $this->DOCSTATUS_Reopen) {
+                        $holiday = $mHoliday->getHolidayDate();
+                        $config = $mConfig->where('name', "MAX_DATE_REOPEN")->first();
+
+                        $rule = $mRule->where([
+                            'name'      => 'Lupa Absen Pulang',
+                            'isactive'  => 'Y'
+                        ])->first();
+                        $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => 'Batas Reopen'])->first();
+
+                        $maxDateReopen = DateTime::createFromFormat('d-m', $config->value);
+                        $dateRange = getDatesFromRange($row->submissiondate, $today, $holiday, 'Y-m-d');
+
+                        if (empty($_SubType)) {
+                            $response = message('error', true, 'Silahkan pilih tipe form dahulu.');
+                        } else if ($employeeId == $row->md_employee_id) {
+                            $response = message('error', true, 'Tidak bisa reopen untuk pengajuan diri sendiri');
+                        } else if (date('Y-m-d', strtotime($row->startdate)) > date('Y-m-d', strtotime($row->submissiondate))) {
+                            $response = message('error', true, 'Tidak bisa reopen untuk pengajuan future');
+                        } else if ($today > $maxDateReopen->format('Y-m-d')) {
+                            $response = message('error', true, 'Batas reopen tanggal 24 Desember');
+                        } else if (count($dateRange) > ($ruleDetail ? $ruleDetail->condition : 1)) {
+                            $response = message('error', true, "Sudah melewati batas waktu reopen");
+                        } else if ($row->isreopen == "Y") {
+                            $response = message('error', true, "Dokumen ini sudah tidak bisa direopen");
+                        } else {
+                            if ($_SubType == $this->baseSubType) {
+                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                                $this->entity->setIsReopen('Y');
+                                $this->entity->setIsApproved('');
+
+                                $response = $this->save();
+                            } else {
+                                $response = message('error', true, "Tipe pengajuan ini tidak bisa direopen ke tipe pengajuan lain");
+                            }
+                        }
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();
@@ -526,5 +542,33 @@ class ForgotAbsentLeave extends BaseController
         $this->response->setContentType('application/pdf');
         $pdf->IncludeJS("print();");
         $pdf->Output('pengajuan.pdf', 'I');
+    }
+
+    public function getRefSubType()
+    {
+        $mDocType = new M_DocumentType($this->request);
+
+        if ($this->request->isAjax()) {
+            try {
+                $post = $this->request->getVar();
+
+                $builder = $mDocType->whereIn('md_doctype_id', [$this->baseSubType])->where('isactive', 'Y');
+
+                if (isset($post['search'])) {
+                    $builder->like('name', $post['search']);
+                }
+
+                $list = $mDocType->findAll();
+
+                foreach ($list as $key => $row) :
+                    $response[$key]['id'] = $row->md_doctype_id;
+                    $response[$key]['text'] = $row->name;
+                endforeach;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
     }
 }

@@ -41,7 +41,8 @@ class M_Absent extends Model
         'leavebalance',
         'availableleavedays',
         'totaldays',
-        'img_medical'
+        'img_medical',
+        'isreopen'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Absent';
@@ -318,15 +319,25 @@ class M_Absent extends Model
 
             $number = 0;
             foreach ($date_range as $date) {
+                $line = $mAbsentDetail->where([$this->primaryKey => $rows['id'], 'DATE(date)' => date('Y-m-d', strtotime($date))])->first();
                 $entity = new \App\Entities\AbsentDetail();
 
                 $number++;
 
-                $entity->{$this->primaryKey} = $rows['id'];
-                $entity->date = $date;
+                if ($line) {
+                    $entity->{$mAbsentDetail->primaryKey} = $line->{$mAbsentDetail->primaryKey};
+                } else {
+                    $entity->{$this->primaryKey} = $rows['id'];
+                    $entity->date = $date;
+                    $entity->created_by = $rows['created_by'];
+                }
+
+                // TODO : Add flagging isreopen
+                if ($header->isreopen == "Y")
+                    $entity->isreopen = "Y";
+
                 $entity->lineno = $number;
                 $entity->isagree = $rows['isagree'] ?? "";
-                $entity->created_by = $rows['created_by'];
                 $entity->updated_by = $rows['updated_by'];
                 $entity->approve_date = isset($rows["approve_date"]) ?? null;
 
@@ -334,6 +345,23 @@ class M_Absent extends Model
             }
 
             $result = $number;
+
+            // TODO : Set number to blank
+            if ($header->isreopen == "Y") {
+                $lineNotReopen = $mAbsentDetail->where([$this->primaryKey => $rows['id'], 'isreopen' => 'N'])->findAll();
+
+                if ($lineNotReopen) {
+                    foreach ($lineNotReopen as $val) {
+                        $entity = new \App\Entities\AbsentDetail();
+
+                        $number++;
+
+                        $entity->{$mAbsentDetail->primaryKey} = $val->{$mAbsentDetail->primaryKey};
+                        $entity->lineno = $number;
+                        $mAbsentDetail->save($entity);
+                    }
+                }
+            }
 
             //TODO : Insert Total Days
             $entity = new \App\Entities\Absent();

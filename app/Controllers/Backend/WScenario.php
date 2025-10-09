@@ -316,6 +316,7 @@ class WScenario extends BaseController
         $totalDays = null;
 
         $trx = $this->model->find($trxID);
+        $reopen = $trx->isreopen == "Y" ? true : false;
 
         if (!is_null($modelDetail)) {
             $this->modelDetail = $modelDetail;
@@ -374,7 +375,7 @@ class WScenario extends BaseController
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
             }
 
-            if ($this->sys_wfscenario_id) {
+            if ($this->sys_wfscenario_id && !$reopen) {
                 $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
                 $this->entity->setWfScenarioId($this->sys_wfscenario_id);
                 $this->entity->setIsApproved("");

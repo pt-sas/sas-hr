@@ -212,6 +212,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('sakit/print/(:any)', 'Backend\SickLeave::exportPDF/$1');
     $routes->match(['get', 'post'], 'sakit/getList', 'Backend\SickLeave::getList');
     $routes->post('sakit/getDetail', 'Backend\SickLeave::getDetail');
+    $routes->post('sakit/getRefDocType', 'Backend\SickLeave::getRefSubType');
 
     $routes->add('cuti', 'Backend\Leave::index');
     $routes->match(['get', 'post'], 'cuti/showAll', 'Backend\Leave::showAll');
@@ -229,6 +230,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('ijin-resmi/destroy/(:any)', 'Backend\OfficialPermission::destroy/$1');
     $routes->get('ijin-resmi/processIt', 'Backend\OfficialPermission::processIt');
     $routes->post('ijin-resmi/getEndDate', 'Backend\OfficialPermission::getEndDate');
+    $routes->post('ijin-resmi/getRefDocType', 'Backend\OfficialPermission::getRefSubType');
 
     $routes->add('alpa', 'Backend\Alpha::index');
     $routes->match(['get', 'post'], 'alpa/showAll', 'Backend\Alpha::showAll');
@@ -253,6 +255,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('lupa-absen-masuk/destroy/(:any)', 'Backend\ForgotAbsentArrive::destroy/$1');
     $routes->get('lupa-absen-masuk/processIt', 'Backend\ForgotAbsentArrive::processIt');
     $routes->get('lupa-absen-masuk/print/(:any)', 'Backend\ForgotAbsentArrive::exportPDF/$1');
+    $routes->post('lupa-absen-masuk/getRefDocType', 'Backend\ForgotAbsentArrive::getRefSubType');
 
     $routes->add('lupa-absen-pulang', 'Backend\ForgotAbsentLeave::index');
     $routes->match(['get', 'post'], 'lupa-absen-pulang/showAll', 'Backend\ForgotAbsentLeave::showAll');
@@ -261,6 +264,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('lupa-absen-pulang/destroy/(:any)', 'Backend\ForgotAbsentLeave::destroy/$1');
     $routes->get('lupa-absen-pulang/processIt', 'Backend\ForgotAbsentLeave::processIt');
     $routes->get('lupa-absen-pulang/print/(:any)', 'Backend\ForgotAbsentLeave::exportPDF/$1');
+    $routes->post('lupa-absen-pulang/getRefDocType', 'Backend\ForgotAbsentLeave::getRefSubType');
 
     $routes->add('laporan-potongan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-potongan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');
@@ -340,6 +344,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('pulang-cepat/destroy/(:any)', 'Backend\PermissionLeaveEarly::destroy/$1');
     $routes->get('pulang-cepat/processIt', 'Backend\PermissionLeaveEarly::processIt');
     $routes->get('pulang-cepat/print/(:any)', 'Backend\PermissionLeaveEarly::exportPDF/$1');
+    $routes->post('pulang-cepat/getRefDocType', 'Backend\PermissionLeaveEarly::getRefSubType');
 
     $routes->add('tugas-kantor', 'Backend\OfficeDuties::index');
     $routes->match(['get', 'post'], 'tugas-kantor/showAll', 'Backend\OfficeDuties::showAll');
@@ -351,6 +356,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('tugas-kantor/getAssignmentDate', 'Backend\OfficeDuties::getAssignmentDate');
     $routes->get('tugas-kantor/print/(:any)', 'Backend\OfficeDuties::exportPDF/$1');
     $routes->get('tugas-kantor/show-image/(:any)', 'Backend\OfficeDuties::getImage/$1');
+    $routes->post('tugas-kantor/getRefDocType', 'Backend\OfficeDuties::getRefSubType');
 
     $routes->add('tugas-kantor-fka', 'Backend\HalfDayOfficeDuties::index');
     $routes->match(['get', 'post'], 'tugas-kantor-fka/showAll', 'Backend\HalfDayOfficeDuties::showAll');
@@ -361,6 +367,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('tugas-kantor-fka/print/(:any)', 'Backend\HalfDayOfficeDuties::exportPDF/$1');
     $routes->post('tugas-kantor-fka/getRealizationData', 'Backend\HalfDayOfficeDuties::getRealizationData');
     $routes->get('tugas-kantor-fka/show-image/(:any)', 'Backend\HalfDayOfficeDuties::getImage/$1');
+    $routes->post('tugas-kantor-fka/getRefDocType', 'Backend\HalfDayOfficeDuties::getRefSubType');
 
     $routes->add('izin-resmi', 'Backend\OfficialPermission::index');
     $routes->match(['get', 'post'], 'izin-resmi/showAll', 'Backend\OfficialPermission::showAll');
@@ -433,6 +440,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'ijin/getList', 'Backend\Permission::getList');
     $routes->get('ijin/processIt', 'Backend\Permission::processIt');
     $routes->get('ijin/print/(:any)', 'Backend\Permission::exportPDF/$1');
+    $routes->post('ijin/getRefDocType', 'Backend\Permission::getRefSubType');
 
     $routes->add('laporan-tkh', 'Backend\AllowanceAtt::reportIndex');
     $routes->match(['get', 'post'], 'laporan-tkh/showAll', 'Backend\AllowanceAtt::reportShowAll');

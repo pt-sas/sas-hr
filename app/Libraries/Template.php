@@ -87,7 +87,7 @@ class Template
         return $result;
     }
 
-    public function tableButton($btnID, $status = null, $type = null)
+    public function tableButton($btnID, $status = null, $type = null, $editable = true)
     {
         $uri = $this->request->uri->getSegment(2);
         $allBtn = '';
@@ -105,15 +105,19 @@ class Template
 
         $btnPrint = '<a class="btn btn_print" data-toggle="tooltip" title="Cetak" data-original-title="Cetak"><i class="fas fa-print text-default"></i></a>';
 
+        $btnPreview = '<a class="btn" onclick="Edit(' . "'" . $btnID . "'," . "'IP'" . ')" id="' . $btnID . '" data-status="IP" data-toggle="tooltip" title="Detail" data-original-title="Detail"><i class="fas fa-file text-info"></i></a>';
+
         $update = $this->access->checkCrud($uri, $this->isUpdate);
         $delete = $this->access->checkCrud($uri, $this->isDelete);
 
-        if ($update === 'Y' && (empty($status) || $status === 'DR'))
+        if ($update === 'Y' && (empty($status) || ($status === 'DR' && $editable)))
             $allBtn .= $btnUpdate;
         else if ($update === 'Y' && (!empty($status) && $status !== 'DR'))
             $allBtn .= $btnDetail;
+        else if ($update === 'Y' && (!empty($status) && ($status == 'DR' && !$editable)))
+            $allBtn .= $btnPreview;
 
-        if ($update === 'Y' && !empty($status) && ($status === 'CO' || $status === 'DR' || $status === 'NA'))
+        if ($update === 'Y' && !empty($status) && ($status === 'CO' || $status === 'DR' || $status === 'NA') && $editable)
             $allBtn .= $btnProcess;
 
         if (!is_null($type) && $type === $this->BTN_Print && ($status === 'CO' || $status === 'IP' || $status === 'NA'))
