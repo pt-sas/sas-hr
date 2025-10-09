@@ -1364,14 +1364,21 @@ class Realization extends BaseController
 
                     $enddate = $date . " " . (!empty($clock_out) ? $clock_out->clock_out : '');
 
-                    if (!empty($clock_out))
+                    $ovt = null;
+                    $isagree = null;
+                    if (!empty($clock_out)) {
                         $ovt = $this->getHourOvertime($row->startdate_line, $enddate, $row->md_employee_id);
 
-                    $entity->enddate_realization = $enddate;
+                        $isagree = $this->LINESTATUS_Disetujui;
+                        $entity->enddate_realization = $enddate;
+                    } else {
+                        $isagree = $this->LINESTATUS_Ditolak;
+                    }
+
                     $entity->overtime_expense = !empty($ovt) ? $ovt['expense'] : null;
                     $entity->overtime_balance = !empty($ovt) ? $ovt['balance'] : null;
                     $entity->total = !empty($ovt) ? $ovt['total'] : null;
-                    $entity->isagree = $this->LINESTATUS_Disetujui;
+                    $entity->isagree = $isagree;
                     $entity->updated_at = $todayTime;
                     $entity->updated_by = $this->session->get('sys_user_id');
                     $entity->realization_date_superior = date('Y-m-d H:i:s');
@@ -1381,7 +1388,7 @@ class Realization extends BaseController
                     $result = $this->modelDetail->save($entity);
 
                     if ($result) {
-                        $changeLog->insertLog($this->modelDetail->table, 'isagree', $row->trx_overtime_detail_id, $row->isagree, $this->LINESTATUS_Disetujui, $this->EVENTCHANGELOG_Update);
+                        $changeLog->insertLog($this->modelDetail->table, 'isagree', $row->trx_overtime_detail_id, $row->isagree, $isagree, $this->EVENTCHANGELOG_Update);
 
                         // TODO : Send Information
                         $user = $mUser->where('sys_user_id', $trx->created_by)->first();
