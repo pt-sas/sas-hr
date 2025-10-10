@@ -2144,7 +2144,8 @@ function docProcess(id, status) {
   if (checkAccess[0].success && checkAccess[0].message == "Y") {
     let docAction = getDocAction(status, LAST_URL);
     let html =
-      '<div class="d-flex justify-content-center">' + '<select id="docaction">';
+      '<div class="d-flex justify-content-center" style="margin-bottom:20px;">' +
+      '<select id="docaction">';
 
     html += '<option value=""></option>';
 
@@ -2153,7 +2154,11 @@ function docProcess(id, status) {
         html += `<option value="${item.id}">${item.text}</option>`;
       });
 
-    html += "</select>" + "</div>";
+    html += "</select></div>";
+
+    html +=
+      '<div class="d-flex flex-column align-items-center" id="subtypecontainer" style="display:none;"></div>' +
+      "</div>";
 
     Swal.fire({
       title: "Document Action",
@@ -2172,13 +2177,31 @@ function docProcess(id, status) {
           dropdownAutoWidth: true,
           allowClear: true,
         });
+
+        $("#docaction").on("change", function () {
+          let val = $(this).val();
+          let text = $("#docaction option:selected").text().toLowerCase();
+
+          if (val === "RO" || text.includes("reopen")) {
+            showDocTypeSelect();
+          } else {
+            hideDocTypeSelect();
+          }
+        });
       },
       preConfirm: (generate) => {
         return new Promise(function (resolve) {
           let docAction = $("#docaction option:selected").val();
+          let subtype = $("#submissiontype option:selected").val();
 
           let url =
-            CURRENT_URL + "/processIt?id=" + id + "&docaction=" + docAction;
+            CURRENT_URL +
+            "/processIt?id=" +
+            id +
+            "&docaction=" +
+            docAction +
+            "&subtype=" +
+            subtype;
 
           $.getJSON(url, function (result) {
             if (result[0].success) {
@@ -2189,6 +2212,17 @@ function docProcess(id, status) {
                   type: "success",
                   showConfirmButton: false,
                   timer: 1000,
+                });
+              } else if (
+                result[0].success &&
+                typeof result[0].message == "string"
+              ) {
+                Swal.fire({
+                  title: "Success !!",
+                  text: result[0].message,
+                  type: "success",
+                  showConfirmButton: true,
+                  // timer: 1000,
                 });
               } else {
                 Swal.fire({
@@ -2219,6 +2253,47 @@ function docProcess(id, status) {
       },
       allowOutsideClick: () => !Swal.isLoading(),
     });
+
+    // helper: tampilkan field doc type
+    function showDocTypeSelect() {
+      let html = `
+        <h4 class="text-center mb-2">Tipe Form</h4>
+        <select id="submissiontype">
+        <option value=""></option>
+        </select>`;
+
+      $("#subtypecontainer").html(html);
+
+      $("#submissiontype").select2({
+        placeholder: "Select an option",
+        width: "40%",
+        theme: "bootstrap",
+        dropdownAutoWidth: true,
+        allowClear: false,
+        ajax: {
+          url: CURRENT_URL + "/getRefDocType",
+          type: "POST",
+          cache: true,
+          delay: 250,
+          dataType: "JSON",
+          data: function (params) {
+            return {
+              search: params.term,
+            };
+          },
+          processResults: function (data, page) {
+            return {
+              results: data,
+            };
+          },
+        },
+      });
+    }
+
+    // helper: sembunyikan field doc type
+    function hideDocTypeSelect() {
+      $("#subtypecontainer").hide().empty();
+    }
   } else if (checkAccess[0].success && checkAccess[0].message == "N") {
     Toast.fire({
       type: "error",

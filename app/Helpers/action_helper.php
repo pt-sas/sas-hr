@@ -184,6 +184,8 @@ function docStatus(string $str, string $type = null, ?int $total = 0, ?int $avai
         $msg = '<center><span class="badge badge-primary">Requested</span></center>';
     } else if ($str === "NP") {
         $msg = '<center><span class="badge badge-black">Not Processed</span></center>';
+    } else if ($str === "RO") {
+        $msg = '<center><span class="badge badge-info">Reopen</span></center>';
     } else {
         if (strtoupper($type) === "TERIMA") {
             if ($total == 0 && $available == 0)

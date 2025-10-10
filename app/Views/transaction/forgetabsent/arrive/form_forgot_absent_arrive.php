@@ -77,6 +77,12 @@
                     </div>
                     <small class="form-text text-danger" id="error_datestart"></small>
                 </div>
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input" id="isreopen" name="isreopen" disabled>
+                        <span class="form-check-sign">Reopen</span>
+                    </label>
+                </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
