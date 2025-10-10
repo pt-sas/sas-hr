@@ -768,6 +768,10 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
 
     $routes->add('laporan-rekap-kehadiran', 'Backend\Attendance::indexSummary');
     $routes->match(['get', 'post'], 'laporan-rekap-kehadiran/showAllSummary', 'Backend\Attendance::showAllSummary');
+
+    $routes->add('list-kabar', 'Backend\News::index');
+    $routes->post('list-kabar/showAll', 'Backend\News::showAll');
+    $routes->post('list-kabar/create', 'Backend\News::create');
 });
 
 /*

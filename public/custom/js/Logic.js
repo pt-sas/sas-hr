@@ -549,10 +549,10 @@ $("#form_office_duties").on("change", "input[name=isbranch]", function (e) {
   }
 });
 
-$("#form_office_duties").on("change", "#md_branch_id", function (e) {
-  let _this = $(this);
-  getOptionBranchTo(_this);
-});
+// $("#form_office_duties").on("change", "#md_branch_id", function (e) {
+//   let _this = $(this);
+//   getOptionBranchTo(_this);
+// });
 
 $("#form_resign").on("change", "#departuretype", function (e) {
   let _this = $(this);
@@ -2335,4 +2335,25 @@ $("#form_employee").on("change", "#md_ambassador_id", function (evt) {
       },
     });
   }
+});
+
+_tableReport.on("click", ".btn_input_news", function (e) {
+  const tr = $(this).closest("tr");
+  let date;
+  let reason;
+  let id = this.id;
+
+  date = tr.find("td:eq(3)").text();
+  reason = tr.find("td:eq(4)").text();
+
+  const form = $("#form_input_news");
+
+  $("#modal_input_news").modal({
+    backdrop: "static",
+    keyboard: false,
+  });
+
+  form.find("input[name=date]").val(date);
+  form.find("textarea[name=reason]").val(reason);
+  form.find("input[name=md_employee_id]").val(id);
 });

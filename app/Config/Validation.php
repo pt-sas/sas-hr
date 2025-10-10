@@ -3344,4 +3344,21 @@ class Validation
             ]
         ],
     ];
+
+    public $news = [
+        'md_employee_id'          => [
+            'label'             => 'Duta Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'date'          => [
+            'label'             => 'Tanggal todal masuk',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ]
+    ];
 }
