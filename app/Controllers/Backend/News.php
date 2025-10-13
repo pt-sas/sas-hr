@@ -4,7 +4,6 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_Absent;
-use App\Models\M_AbsentDetail;
 use App\Models\M_Attendance;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Holiday;
@@ -15,26 +14,25 @@ use App\Models\M_Rule;
 use App\Models\M_RuleDetail;
 use Config\Services;
 
-class ListAbsent extends BaseController
+class News extends BaseController
 {
     public function __construct()
     {
         $this->request = Services::request();
-        $this->model = new M_Attendance($this->request);
-        $this->entity = new \App\Entities\Attendance();
+        $this->model = new M_News($this->request);
+        $this->entity = new \App\Entities\News();
     }
 
     public function index()
     {
-        $start_date = format_dmy(date('Y-m-d', strtotime('- 1 days')), "-");
+        $start_date = format_dmy(date('Y-m-d', strtotime('first day of this month')), "-");
         $end_date = format_dmy(date('Y-m-d'), "-");
 
         $data = [
-            'date_range'            => $start_date . ' - ' . $end_date,
-            'toolbarListAbsent'     => $this->template->buttonGenerate()
+            'date_range'            => $start_date . ' - ' . $end_date
         ];
 
-        return $this->template->render('generate/listabsent/v_list_absent', $data);
+        return $this->template->render('generate/listnews/v_list_news', $data);
     }
 
     public function showAll()
@@ -48,7 +46,6 @@ class ListAbsent extends BaseController
             $mAbsent = new M_Absent($this->request);
             $mRule = new M_Rule($this->request);
             $mRuleDetail = new M_RuleDetail($this->request);
-            $mNews = new M_News($this->request);
 
             $post = $this->request->getVar();
             $today = date('Y-m-d');
@@ -68,12 +65,15 @@ class ListAbsent extends BaseController
             $where["md_status_id"] = ["value" => [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK]];
             $where["md_levelling_id {$operation}"] = $ruleDetail->condition;
 
+            $empList = $this->access->getEmployeeData();
+            $where["md_employee_id"] = ["value" => $empList];
+
             foreach ($post['form'] as $value) :
                 if ($value['name'] === "date") {
                     if (!empty($value['value'])) {
                         $dateRange = explode(" - ",  urldecode($value['value']));
                     } else {
-                        $dateRange = [date('Y-m-d', strtotime('-7 day')), $today];
+                        $dateRange = [date('Y-m-d', strtotime('first day of this month')), $today];
                     }
                 }
 
@@ -90,6 +90,7 @@ class ListAbsent extends BaseController
             $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Realisasi_HRD}')";
             $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
             $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", array_merge($this->Form_Satu_Hari, $this->Form_Setengah_Hari)) . ")";
+            $whereClause .= " AND v_all_submission.md_employee_id IN (" . implode(", ", $empList) . ")";
             $allSubmission = [];
 
             foreach ($mAbsent->getAllSubmission($whereClause)->getResult() as $val) {
@@ -99,6 +100,7 @@ class ListAbsent extends BaseController
 
             // Get All Attendance and Stored in array
             $whereClause = "DATE(v_attendance.date) BETWEEN '{$dateStart}' AND '{$dateEnd}'";
+            $whereClause .= " AND v_attendance.md_employee_id IN (" . implode(", ", $empList) . ")";
             $allAttendance = [];
             foreach ($mAttendance->getAttendance($whereClause)->getResult() as $val) {
                 $dateKey = date('Y-m-d', strtotime($val->date));
@@ -107,8 +109,9 @@ class ListAbsent extends BaseController
 
             // TODO : Get All News
             $whereClause = "DATE(date) BETWEEN '{$dateStart}' AND '{$dateEnd}'";
+            $whereClause .= " AND md_employee_id IN (" . implode(", ", $empList) . ")";
             $allNews = [];
-            foreach ($mNews->where($whereClause)->findAll() as $val) {
+            foreach ($this->model->where($whereClause)->findAll() as $val) {
                 $dateKey = date('Y-m-d', strtotime($val->date));
                 $allNews[$val->md_employee_id][$dateKey] = $val;
             }
@@ -122,15 +125,16 @@ class ListAbsent extends BaseController
                     'validto >='        => $dateEnd
                 ])->orderBy('validfrom', 'ASC')->first();
 
-                if (!$workDay) continue;
+                $workDetail = null;
+                if ($workDay) {
+                    //TODO : Get Work Detail
+                    $whereClause = "md_work_detail.isactive = 'Y'";
+                    $whereClause .= " AND md_employee_work.md_employee_id = {$emp->md_employee_id}";
+                    $whereClause .= " AND md_work.md_work_id = {$workDay->md_work_id}";
+                    $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                }
 
-                //TODO : Get Work Detail
-                $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND md_employee_work.md_employee_id = {$emp->md_employee_id}";
-                $whereClause .= " AND md_work.md_work_id = {$workDay->md_work_id}";
-                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-                $daysOff = getDaysOff($workDetail);
+                $daysOff = !empty($workDetail) ? getDaysOff($workDetail) : [];
 
                 foreach ($date_range as $date) {
                     $date = date('Y-m-d', strtotime($date));
@@ -140,14 +144,9 @@ class ListAbsent extends BaseController
 
                     if (in_array($date, $holiday)) continue;
 
-                    $dateInterval = getDatesFromRange($date, $today, $holiday, 'Y-m-d H:i:s', 'all', $daysOff);
-                    $totalInterval = count($dateInterval);
-
-
                     if (
                         !isset($allSubmission[$emp->md_employee_id][$date]) &&
-                        !isset($allAttendance[$emp->md_employee_id][$date]) &&
-                        $totalInterval > $rule->max
+                        !isset($allAttendance[$emp->md_employee_id][$date])
                     ) {
                         $row = [];
                         $ID = $emp->md_employee_id;
@@ -155,20 +154,12 @@ class ListAbsent extends BaseController
 
                         $news = isset($allNews[$emp->md_employee_id][$date]) ? ($allNews[$emp->md_employee_id][$date]) : null;
 
-                        $fieldChk = new \App\Entities\Table();
-                        $fieldChk->setName("ischecked");
-                        $fieldChk->setType("checkbox");
-                        $fieldChk->setClass("check-alpa");
-
-                        if ($news)
-                            $fieldChk->setIsReadonly(true);
-
-                        $fieldChk->setValue($ID);
-                        $row[] = $this->field->fieldTable($fieldChk);
+                        $row[] = $number;
                         $row[] = $emp->nik;
                         $row[] = $emp->fullname;
                         $row[] = format_dmy($date, "-");
                         $row[] = !empty($news) ? $news->reason : '';
+                        $row[] = $this->template->buttonNews($ID);
                         $data[] = $row;
                     }
                 }
@@ -192,13 +183,32 @@ class ListAbsent extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $md_employee_id = $post['md_employee_id'];
+            $date = date('Y-m-d', strtotime($post['date']));
+            $reason = $post['reason'];
 
             try {
-                if (!$this->validation->run($post, 'attendance')) {
+                if (!$this->validation->run($post, 'news')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $this->entity->fill($post);
-                    $response = $this->save();
+                    $trxNews = $this->model->where(['md_employee_id' => $md_employee_id, 'DATE(date)' => $date])->first();
+                    if ($trxNews && !empty($reason)) {
+                        $this->entity->trx_news_id = $trxNews->trx_news_id;
+                        $this->entity->reason = $reason;
+                        $response = $this->save();
+                    } else if (!$trxNews && !empty($reason)) {
+                        $this->entity->md_employee_id = $md_employee_id;
+                        $this->entity->date = $date;
+                        $this->entity->reason = $reason;
+                        $response = $this->save();
+                    } else if ($trxNews && empty($reason)) {
+                        $result = $this->delete($trxNews->trx_news_id);
+                        if ($result) {
+                            $response = message('success', true, 'Kabar berhasil dihapus');
+                        }
+                    } else {
+                        $response = message('success', true, 'Tidak ada perubahan data');
+                    }
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());

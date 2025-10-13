@@ -427,4 +427,23 @@ class Template
 
         return $btnRecordInfo;
     }
+
+    public function buttonNews($id)
+    {
+        $uri = $this->request->uri->getSegment(2);
+        $allBtn = '';
+
+        $btnInputNews = '<div class="d-flex justify-content-between">
+                            <div>
+                                <a class="btn btn-sm btn-info rounded ml-auto btn_input_news" id="' . $id . '" name="input_news" data-toggle="tooltip" title="Input Kabar" data-original-title="Input Kabar"><i class="flaticon-chat-8"></i> Input Kabar</a>
+                            </div>
+                        </div>';
+
+        $create = $this->access->checkCrud($uri, $this->isCreate);
+
+        if ($create === 'Y')
+            $allBtn = $btnInputNews;
+
+        return $allBtn;
+    }
 }
