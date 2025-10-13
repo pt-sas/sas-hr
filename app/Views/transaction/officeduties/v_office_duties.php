@@ -10,6 +10,7 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>No Form</th>
+                <th>Doc Status</th>
                 <th>Pemohon</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
@@ -17,7 +18,6 @@
                 <th>Tanggal Tugas Kantor</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
-                <th>Doc Status</th>
                 <th>Createdby</th>
                 <th>Actions</th>
             </tr>

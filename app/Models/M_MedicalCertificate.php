@@ -43,6 +43,7 @@ class M_MedicalCertificate extends Model
         '', // Hide column
         '', // Number column
         'trx_medical_certificate.documentno',
+        'trx_medical_certificate.docstatus',
         'ref.documentno',
         'md_employee.fullname',
         'md_branch.name',
@@ -51,11 +52,11 @@ class M_MedicalCertificate extends Model
         'trx_medical_certificate.date',
         'trx_medical_certificate.approveddate',
         'trx_medical_certificate.reason',
-        'trx_medical_certificate.docstatus',
         'sys_user.name'
     ];
     protected $column_search        = [
         'trx_medical_certificate.documentno',
+        'trx_medical_certificate.docstatus',
         'ref.documentno',
         'md_employee.fullname',
         'md_branch.name',
@@ -64,7 +65,6 @@ class M_MedicalCertificate extends Model
         'trx_medical_certificate.date',
         'trx_medical_certificate.approveddate',
         'trx_medical_certificate.reason',
-        'trx_medical_certificate.docstatus',
         'sys_user.name'
     ];
 

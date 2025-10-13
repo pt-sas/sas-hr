@@ -44,9 +44,6 @@ class SpecialOfficeDuties extends BaseController
 
     public function showAll()
     {
-        $mAccess = new M_AccessMenu($this->request);
-        $mEmployee = new M_Employee($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -55,6 +52,7 @@ class SpecialOfficeDuties extends BaseController
                 '', // Hide column
                 '', // Number column
                 'trx_assignment.documentno',
+                'trx_assignment.docstatus',
                 'md_employee.fullname',
                 'md_branch.name',
                 'md_division.name',
@@ -62,11 +60,11 @@ class SpecialOfficeDuties extends BaseController
                 'trx_assignment.startdate',
                 'trx_assignment.approveddate',
                 'trx_assignment.reason',
-                'trx_assignment.docstatus',
                 'sys_user.name'
             ];
             $search = [
                 'trx_assignment.documentno',
+                'trx_assignment.docstatus',
                 'md_employee.fullname',
                 'md_branch.name',
                 'md_division.name',
@@ -75,57 +73,12 @@ class SpecialOfficeDuties extends BaseController
                 'trx_assignment.enddate',
                 'trx_assignment.approveddate',
                 'trx_assignment.reason',
-                'trx_assignment.docstatus',
                 'sys_user.name'
             ];
             $sort = ['trx_assignment.submissiondate' => 'DESC'];
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-            if (!empty($empDelegation)) {
-                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
-            }
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if (!empty($empDelegation)) {
-                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
-                }
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['md_employee.md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-            }
+            // TODO : Get Employee List
+            $where['md_employee.md_employee_id'] = ['value' => $this->access->getEmployeeData()];
 
             $where['trx_assignment.submissiontype'] = $this->model->Pengajuan_Penugasan;
 
@@ -143,6 +96,7 @@ class SpecialOfficeDuties extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->employee_fullname;
                 $row[] = $value->branch;
                 $row[] = $value->division;
@@ -150,7 +104,6 @@ class SpecialOfficeDuties extends BaseController
                 $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
                 $row[] = !is_null($value->approveddate) ? format_dmy($value->approveddate, '-') : "";
                 $row[] = $value->reason;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus);
                 $data[] = $row;

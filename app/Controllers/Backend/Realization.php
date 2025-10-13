@@ -892,14 +892,22 @@ class Realization extends BaseController
                         [
                             'id'    => 'alpa',
                             'name'  => 'Alpa'
-                        ]
+                        ],
+                        [
+                            'id'    => 'tidak setuju',
+                            'name'  => 'Tidak Setuju'
+                        ],
                     ];
                 } else if (!empty($post['name']) && $post['name'] === "Cuti") {
                     $list = [
                         [
                             'id'    => 'ijin',
                             'name'  => 'Ijin'
-                        ]
+                        ],
+                        [
+                            'id'    => 'tidak setuju',
+                            'name'  => 'Tidak Setuju'
+                        ],
                     ];
                 } else if (!empty($post['name']) && $post['name'] === "Pembatalan") {
                     $list = [

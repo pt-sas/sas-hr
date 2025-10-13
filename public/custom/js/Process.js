@@ -914,7 +914,7 @@ function checkFixedColumns() {
   if ($(".tb_display thead th").length > 10) {
     return {
       rightColumns: 1,
-      leftColumns: 4,
+      leftColumns: 5,
     };
   }
   if ($(".table_report thead th").length > 10) {

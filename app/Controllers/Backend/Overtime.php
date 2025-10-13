@@ -38,9 +38,6 @@ class Overtime extends BaseController
 
     public function showAll()
     {
-        $mAccess = new M_AccessMenu($this->request);
-        $mEmployee = new M_Employee($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -49,52 +46,9 @@ class Overtime extends BaseController
             $search = $this->model->column_search;
             $sort = $this->model->order;
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-            if (!empty($empDelegation)) {
-                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
-            }
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if (!empty($empDelegation)) {
-                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
-                }
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['md_employee.md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-            }
+            $where['md_employee.md_employee_id'] = [
+                'value'     => $this->access->getEmployeeData()
+            ];
 
             $data = [];
 
@@ -110,13 +64,13 @@ class Overtime extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->employee_fullname;
                 $row[] = $value->branch;
                 $row[] = $value->division;
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = format_dmy($value->startdate, '-');
                 $row[] = $value->description;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus, $this->BTN_Print);
                 $data[] = $row;

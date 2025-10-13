@@ -51,7 +51,12 @@ class M_OvertimeDetail extends Model
      */
     public function doChangeValueField($data, $id, $dataHeader): array
     {
+        $mOvertime = new M_Overtime($this->request);
         $result = [];
+
+        if (!empty($id)) {
+            $dataHeader = $mOvertime->find($id);
+        }
 
         foreach ($data as $row) :
             if (isset($dataHeader->startdate)) {

@@ -43,6 +43,7 @@ class M_SubmissionCancel extends Model
         '', // Hide column
         '', // Number column
         'trx_submission_cancel.documentno',
+        'trx_submission_cancel.docstatus',
         'md_employee.fullname',
         'md_branch.name',
         'md_division.name',
@@ -50,11 +51,11 @@ class M_SubmissionCancel extends Model
         'trx_submission_cancel.submissiondate',
         'trx_submission_cancel.receiveddate',
         'trx_submission_cancel.reason',
-        'trx_submission_cancel.docstatus',
         'sys_user.name'
     ];
     protected $column_search        = [
         'trx_submission_cancel.documentno',
+        'trx_submission_cancel.docstatus',
         'md_employee.fullname',
         'md_branch.name',
         'md_division.name',
@@ -63,7 +64,6 @@ class M_SubmissionCancel extends Model
         'trx_submission_cancel.submissiondate',
         'trx_submission_cancel.receiveddate',
         'trx_submission_cancel.reason',
-        'trx_submission_cancel.docstatus',
         'sys_user.name'
     ];
     protected $order                = ['documentno' => 'ASC'];

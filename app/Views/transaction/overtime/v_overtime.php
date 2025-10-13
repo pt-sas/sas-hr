@@ -10,13 +10,13 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>No Form</th>
+                <th>Doc Status</th>
                 <th>Karyawan</th>
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Tanggal Pembuatan</th>
                 <th>Tanggal Lembur</th>
                 <th>Alasan</th>
-                <th>Doc Status</th>
                 <th>Createdby</th>
                 <th>Aksi</th>
             </tr>
