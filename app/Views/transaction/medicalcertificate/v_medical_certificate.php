@@ -10,6 +10,7 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>No Form</th>
+                <th>Doc Status</th>
                 <th>No Sakit</th>
                 <th>Karyawan</th>
                 <th>Cabang</th>
@@ -18,7 +19,6 @@
                 <th>Tanggal</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
-                <th>Doc Status</th>
                 <th>Dibuat Oleh</th>
                 <th>Aksi</th>
             </tr>

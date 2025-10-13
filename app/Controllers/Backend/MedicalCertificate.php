@@ -57,6 +57,7 @@ class MedicalCertificate extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->reference_doc;
                 $row[] = $value->employee;
                 $row[] = $value->branch;
@@ -65,7 +66,6 @@ class MedicalCertificate extends BaseController
                 $row[] = format_dmy($value->date, '-');
                 $row[] = !is_null($value->approveddate) ? format_dmy($value->approveddate, '-') : "";
                 $row[] = $value->reason;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus);
                 $data[] = $row;

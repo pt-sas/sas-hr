@@ -42,6 +42,7 @@ class M_ProxySpecial extends Model
         '', // Hide column
         '', // Number column
         'trx_proxy_special.documentno',
+        'trx_proxy_special.docstatus',
         'uf.name',
         'ut.name',
         'trx_proxy_special.submissiondate',
@@ -49,11 +50,11 @@ class M_ProxySpecial extends Model
         'trx_proxy_special.enddate',
         'trx_proxy_special.approveddate',
         'trx_proxy_special.reason',
-        'trx_proxy_special.docstatus',
         'uc.name'
     ];
     protected $column_search        = [
         'trx_proxy_special.documentno',
+        'trx_proxy_special.docstatus',
         'uf.name',
         'ut.name',
         'trx_proxy_special.submissiondate',
@@ -61,7 +62,6 @@ class M_ProxySpecial extends Model
         'trx_proxy_special.enddate',
         'trx_proxy_special.approveddate',
         'trx_proxy_special.reason',
-        'trx_proxy_special.docstatus',
         'uc.name'
     ];
     protected $order                = ['documentno' => 'ASC'];

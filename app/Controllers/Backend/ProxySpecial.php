@@ -59,13 +59,13 @@ class ProxySpecial extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->user_from;
                 $row[] = $value->user_to;
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = $value->ispermanent === "Y" ? format_dmy($value->startdate, '-') : format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
                 $row[] = !is_null($value->approveddate) ? format_dmy($value->approveddate, '-') : "";
                 $row[] = $value->reason;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus);
                 $data[] = $row;

@@ -53,6 +53,7 @@ class Alpha extends BaseController
                 '', // Hide column
                 '', // Number column
                 'trx_absent.documentno',
+                'trx_absent.docstatus',
                 'md_employee.fullname',
                 'trx_absent.nik',
                 'md_branch.name',
@@ -61,11 +62,11 @@ class Alpha extends BaseController
                 'trx_absent.startdate',
                 'trx_absent.receiveddate',
                 'trx_absent.reason',
-                'trx_absent.docstatus',
                 'sys_user.name'
             ];
             $search = [
                 'trx_absent.documentno',
+                'trx_absent.docstatus',
                 'md_employee.fullname',
                 'trx_absent.nik',
                 'md_branch.name',
@@ -75,50 +76,15 @@ class Alpha extends BaseController
                 'trx_absent.enddate',
                 'trx_absent.receiveddate',
                 'trx_absent.reason',
-                'trx_absent.docstatus',
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
 
             $where['trx_absent.submissiontype'] = $this->model->Pengajuan_Alpa;
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['trx_absent.md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['trx_absent.md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['trx_absent.md_employee_id'] = $this->session->get('md_employee_id');
-            }
+            // TODO : Get Employee List
+            $empList = $this->access->getEmployeeData(false);
+            $where['md_employee.md_employee_id'] = ['value' => $empList];
 
             $data = [];
 
@@ -134,6 +100,7 @@ class Alpha extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->employee_fullname;
                 $row[] = $value->nik;
                 $row[] = $value->branch;
@@ -142,7 +109,6 @@ class Alpha extends BaseController
                 $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
                 $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus);
                 $data[] = $row;

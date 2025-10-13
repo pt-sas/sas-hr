@@ -10,6 +10,7 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>No Form</th>
+                <th>Doc Status</th>
                 <th>Karyawan</th>
                 <th>NIK</th>
                 <th>Cabang</th>
@@ -17,7 +18,6 @@
                 <th>Tanggal</th>
                 <th>Kriteria</th>
                 <th>Isi Memo</th>
-                <th>Doc Status</th>
                 <th>Pembuat</th>
                 <th>Aksi</th>
             </tr>

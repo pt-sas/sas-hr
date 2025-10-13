@@ -10,6 +10,7 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>No Form</th>
+                <th>Doc Status</th>
                 <th>Karyawan</th>
                 <th>NIK</th>
                 <th>Cabang</th>
@@ -18,7 +19,6 @@
                 <th>Tanggal Tidak Masuk</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
-                <th>Doc Status</th>
                 <th>Createdby</th>
                 <th>Actions</th>
             </tr>

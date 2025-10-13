@@ -43,6 +43,7 @@ class M_Memo extends Model
         '', // Hide column
         '', // Number column
         'trx_hr_memo.documentno',
+        'trx_hr_memo.docstatus',
         'md_employee.fullname',
         'md_employee.nik',
         'md_branch.name',
@@ -50,11 +51,11 @@ class M_Memo extends Model
         'trx_hr_memo.memodate',
         'trx_hr_memo.memocriteria',
         'trx_hr_memo.memocontent',
-        'trx_hr_memo.docstatus',
         'sys_user.name'
     ];
     protected $column_search        = [
         'trx_hr_memo.documentno',
+        'trx_hr_memo.docstatus',
         'md_employee.fullname',
         'md_employee.nik',
         'md_branch.name',
@@ -62,7 +63,6 @@ class M_Memo extends Model
         'trx_hr_memo.memodate',
         'trx_hr_memo.memocriteria',
         'trx_hr_memo.memocontent',
-        'trx_hr_memo.docstatus',
         'sys_user.name'
     ];
     protected $order                = ['created_at' => 'DESC'];

@@ -55,6 +55,7 @@ class OfficeDuties extends BaseController
                 '', // Hide column
                 '', // Number column
                 'trx_absent.documentno',
+                'trx_absent.docstatus',
                 'md_employee.fullname',
                 'md_branch.name',
                 'md_division.name',
@@ -62,11 +63,11 @@ class OfficeDuties extends BaseController
                 'trx_absent.startdate',
                 'trx_absent.approveddate',
                 'trx_absent.reason',
-                'trx_absent.docstatus',
                 'sys_user.name'
             ];
             $search = [
                 'trx_absent.documentno',
+                'trx_absent.docstatus',
                 'md_employee.fullname',
                 'md_branch.name',
                 'md_division.name',
@@ -75,7 +76,6 @@ class OfficeDuties extends BaseController
                 'trx_absent.enddate',
                 'trx_absent.approveddate',
                 'trx_absent.reason',
-                'trx_absent.docstatus',
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
@@ -103,6 +103,7 @@ class OfficeDuties extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->employee_fullname;
                 $row[] = $value->branch;
                 $row[] = $value->division;
@@ -110,7 +111,6 @@ class OfficeDuties extends BaseController
                 $row[] = format_dmy($value->startdate, '-') . " s/d " . format_dmy($value->enddate, '-');
                 $row[] = !is_null($value->approveddate) ? format_dmy($value->approveddate, '-') : "";
                 $row[] = $value->reason;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus, null, $editable);
                 $data[] = $row;

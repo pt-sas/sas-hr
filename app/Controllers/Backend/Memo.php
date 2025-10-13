@@ -65,6 +65,7 @@ class Memo extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->employee_fullname;
                 $row[] = $value->nik;
                 $row[] = $value->branch;
@@ -72,7 +73,6 @@ class Memo extends BaseController
                 $row[] = format_dmy($value->memodate, '-');
                 $row[] = $value->memocriteria;
                 $row[] = $value->memocontent;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus, "Print");
                 $data[] = $row;

@@ -35,24 +35,24 @@ class M_Overtime extends Model
         '', // Hide column
         '', // Number column
         'trx_overtime.documentno',
+        'trx_overtime.docstatus',
         'md_employee.fullname',
         'md_branch.name',
         'md_division.name',
         'trx_overtime.submissiondate',
         'trx_overtime.startdate',
         'trx_overtime.description',
-        'trx_overtime.docstatus',
         'sys_user.name'
     ];
     protected $column_search        = [
         'trx_overtime.documentno',
+        'trx_overtime.docstatus',
         'md_employee.fullname',
         'md_branch.name',
         'md_division.name',
         'trx_overtime.submissiondate',
         'trx_overtime.startdate',
         'trx_overtime.description',
-        'trx_overtime.docstatus',
         'sys_user.name'
     ];
     protected $order                = ['submissiondate' => 'DESC'];

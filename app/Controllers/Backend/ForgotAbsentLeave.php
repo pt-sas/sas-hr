@@ -57,6 +57,7 @@ class ForgotAbsentLeave extends BaseController
                 '', // Hide column
                 '', // Number column
                 'trx_absent.documentno',
+                'trx_absent.docstatus',
                 'md_employee.fullname',
                 'trx_absent.nik',
                 'md_branch.name',
@@ -65,11 +66,11 @@ class ForgotAbsentLeave extends BaseController
                 'trx_absent.startdate',
                 'trx_absent.receiveddate',
                 'trx_absent.reason',
-                'trx_absent.docstatus',
                 'sys_user.name'
             ];
             $search = [
                 'trx_absent.documentno',
+                'trx_absent.docstatus',
                 'md_employee.fullname',
                 'trx_absent.nik',
                 'md_branch.name',
@@ -79,7 +80,6 @@ class ForgotAbsentLeave extends BaseController
                 'trx_absent.enddate',
                 'trx_absent.receiveddate',
                 'trx_absent.reason',
-                'trx_absent.docstatus',
                 'sys_user.name'
             ];
             $sort = ['trx_absent.submissiondate' => 'DESC'];
@@ -107,6 +107,7 @@ class ForgotAbsentLeave extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->employee_fullname;
                 $row[] = $value->nik;
                 $row[] = $value->branch;
@@ -115,7 +116,6 @@ class ForgotAbsentLeave extends BaseController
                 $row[] = format_dmytime($value->startdate, '-');
                 $row[] = !is_null($value->receiveddate) ? format_dmy($value->receiveddate, '-') : "";
                 $row[] = $value->reason;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus, $this->BTN_Print, $editable);
                 $data[] = $row;

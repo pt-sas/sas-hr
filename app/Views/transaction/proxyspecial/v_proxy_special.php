@@ -10,13 +10,13 @@
                 <th>ID</th>
                 <th>No</th>
                 <th>No Form</th>
+                <th>Doc Status</th>
                 <th>Pengguna</th>
                 <th>Di Wakilkan Oleh</th>
                 <th>Tanggal Pembuatan</th>
                 <th>Tanggal Peralihan</th>
                 <th>Tanggal Diterima</th>
                 <th>Alasan</th>
-                <th>Doc Status</th>
                 <th>Createdby</th>
                 <th>Actions</th>
             </tr>

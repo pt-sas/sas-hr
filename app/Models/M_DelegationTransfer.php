@@ -43,6 +43,7 @@ class M_DelegationTransfer extends Model
         '', // Hide column
         '', // Number column
         'trx_delegation_transfer.documentno',
+        'trx_delegation_transfer.docstatus',
         'ef.value',
         'et.value',
         'mb.name',
@@ -51,11 +52,11 @@ class M_DelegationTransfer extends Model
         'trx_delegation_transfer.startdate',
         'trx_delegation_transfer.receiveddate',
         'trx_delegation_transfer.reason',
-        'trx_delegation_transfer.docstatus',
         'uc.name'
     ];
     protected $column_search        = [
         'trx_delegation_transfer.documentno',
+        'trx_delegation_transfer.docstatus',
         'ef.value',
         'et.value',
         'mb.name',
@@ -65,7 +66,6 @@ class M_DelegationTransfer extends Model
         'trx_delegation_transfer.enddate',
         'trx_delegation_transfer.approveddate',
         'trx_delegation_transfer.reason',
-        'trx_delegation_transfer.docstatus',
         'uc.name'
     ];
     protected $order                = ['trx_delegation_transfer.documentno' => 'ASC'];
