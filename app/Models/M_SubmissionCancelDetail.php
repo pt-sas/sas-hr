@@ -84,31 +84,19 @@ class M_SubmissionCancelDetail extends Model
         $result = [];
 
         $number = 1;
-        if (isset($dataHeader->trx_submission_cancel_id))
-            $header = $mSubmissionCancel->find($dataHeader->trx_submission_cancel_id);
 
-        $reference_id = empty($header) ? $dataHeader->reference_id : $header->reference_id;
-        $ref_submissiontype = empty($header) ? $dataHeader->ref_submissiontype : $header->ref_submissiontype;
+        if (!empty($id))
+            $dataHeader = $mSubmissionCancel->find($id);
 
         foreach ($data as $row) :
             if (property_exists($row, "lineno"))
                 $row->lineno = $number;
 
             if (!property_exists($row, "reference_id")) {
-
-                // if (isset($dataHeader->trx_submission_cancel_id)) {
-                //     $header = $mSubmissionCancel->find($dataHeader->trx_submission_cancel_id);
-
-                //     $where = "header_id = {$header->reference_id}";
-                //     $where .= " AND submissiontype = {$header->ref_submissiontype}";
-                //     $where .= " AND date = '{$row->date}'";
-                //     $where .= " AND md_employee_id = {$row->md_employee_id}";
-                // } else {
-                $where = "header_id = {$reference_id}";
-                $where .= " AND submissiontype = {$ref_submissiontype}";
-                $where .= " AND date = '{$row->date}'";
+                $where = "header_id = {$dataHeader->reference_id}";
+                $where .= " AND submissiontype = {$dataHeader->ref_submissiontype}";
+                $where .= " AND DATE(date) = '" . date('Y-m-d', strtotime($row->date)) . "'";
                 $where .= " AND md_employee_id = {$row->md_employee_id}";
-                // }
 
                 $ref = $mSubmissionCancel->getAllSubmission($where)->getRow();
 
@@ -128,15 +116,17 @@ class M_SubmissionCancelDetail extends Model
         $mSubmissionCancel = new M_SubmissionCancel($this->request);
         $mTransaction = new M_Transaction($this->request);
         $mWActivity = new M_WActivity($this->request);
+        $mAllowance = new M_AllowanceAtt($this->request);
         $mWEvent = new M_WEvent($this->request);
 
         $docSubmission = [
-            'Sakit' => 100001, // Sakit
-            'Cuti' => 100003, // Cuti
-            'Ijin' => 100004, // Ijin
-            'Ijin Resmi' => 100005, // Ijin Resmi
-            'Tugas Kantor' => 100007, // Tugas Kantor
-            'Penugasan' => 100008  // Penugasan
+            'Sakit' => 100001,
+            'Cuti' => 100003,
+            'Ijin' => 100004,
+            'Ijin Resmi' => 100005,
+            'Tugas Kantor' => 100007,
+            'Penugasan' => 100008,
+            'Pulang Cepat' => 100013
         ];
 
         $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
@@ -149,20 +139,21 @@ class M_SubmissionCancelDetail extends Model
             $year = date('Y', strtotime($line->date));
 
             $model = $line->ref_table === "trx_absent_detail" ? new M_AbsentDetail($this->request) : new M_AssignmentDate($this->request);
+            $date = date('Y-m-d', strtotime($line->date));
 
             $where = "header_id = {$sql->reference_id}";
             $where .= " AND table = '{$sql->ref_table}'";
             $where .= " AND md_employee_id = {$line->md_employee_id}";
-            $where .= " AND date = '{$line->date}'";
+            $where .= " AND DATE(date) = '{$date}'";
             $where .= " AND isagree != 'C'";
             $where .= " AND (ref_id IS NULL OR ref_id = 0)";
 
             $refData = $mSubmissionCancel->getAllSubmission($where)->getRow();
 
             if (($sql->getRefSubmissionType() == $docSubmission['Cuti'] || $sql->getRefSubmissionType() == $docSubmission['Ijin']) && $line->isagree === "Y") {
-                $rsvdTransaction = $mTransaction->where(['record_id' => $refData->id, 'table' => 'trx_absent_detail', 'transactiontype' => 'R+'])->first();
+                $rsvdTransaction = $mTransaction->where(['record_id' => $refData->id, 'table' => 'trx_absent_detail'])->orderBy('created_at', 'DESC')->first();
 
-                if ($rsvdTransaction) {
+                if ($rsvdTransaction && $rsvdTransaction->transactiontype == "R+") {
                     $dataLeaveUsage = [
                         "record_id"         => $ID,
                         "table"             => $this->table,
@@ -178,6 +169,15 @@ class M_SubmissionCancelDetail extends Model
                     ];
 
                     $mTransaction->builder->insert($dataLeaveUsage);
+                }
+            }
+
+            if ($sql->getRefSubmissionType() == $docSubmission['Pulang Cepat'] && $line->isagree === "Y") {
+                $allowance = $mAllowance->where(['record_id' => $refData->header_id, 'table' => 'trx_absent', 'submissiontype' => $sql->getRefSubmissionType(), 'md_employee_id' => $sql->getEmployeeId()])
+                    ->orderBy('created_at', 'DESC')->first();
+
+                if ($allowance && $allowance->transactiontype == "A-") {
+                    $mAllowance->insertAllowance($sql->trx_submission_cancel_id, $mSubmissionCancel->table, 'A+', $line->date, $sql->submissiontype, $sql->md_employee_id, abs($allowance->amount), $updated_by);
                 }
             }
 

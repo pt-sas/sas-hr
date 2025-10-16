@@ -177,7 +177,6 @@ $(document).ready(function (e) {
       showTodayButton: true,
       showClear: true,
       showClose: true,
-      daysOfWeekDisabled: [0, 6],
       disabledDates: getHolidayDate(),
       useCurrent: false,
     });
