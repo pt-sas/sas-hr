@@ -506,7 +506,7 @@ class AllowanceAtt extends BaseController
                             $qty = 0;
                         }
 
-                        if (!$work && ($tugasKunjungan || ($configMNSOD && $row->md_levelling_id <= $lvlManager)) && $clock_out < $minAbsentOut) {
+                        if (!$work && ($tugasKunjungan || ($configMNSOD && $row->md_levelling_id <= $lvlManager)) && $empClockOut < $minAbsentOut) {
                             $qty += -0.5;
                         }
                     }
