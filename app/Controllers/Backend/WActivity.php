@@ -91,10 +91,12 @@ class WActivity extends BaseController
                     $row[] = $record_id;
                     $row[] = $table;
                     $row[] = $menu;
+                    $row[] = "<input type='checkbox' name='ischecked' value='{$ID}' class='check-wactivity'/>";
                     $row[] = $node;
                     $row[] = $created_at;
                     $row[] = $scenario;
                     $row[] = $summary;
+                    $row[] = $this->template->buttonRecordInfo($ID, '');
                     $data[] = $row;
                 endforeach;
             }
@@ -387,30 +389,42 @@ class WActivity extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
             $isAnswer = $post['isanswer'];
-            $_ID = $post['record_id'];
+            $_ID = json_decode($post['record_id']);
             $txtMsg = $post['textmsg'];
 
             try {
                 if (!$this->validation->run($post, 'wactivity')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $activity = $this->model->find($_ID);
+                    $result = false;
+                    foreach ($_ID as $val) {
+                        $this->model = new M_WActivity($this->request);
 
-                    if ($isAnswer !== 'N') {
-                        $eList = $mWEvent->where($this->model->primaryKey, $_ID)->orderBy('created_at', 'ASC')->findAll();
+                        $activity = $this->model->find($val->id);
 
-                        foreach ($eList as $event) :
-                            $this->wfResponsibleId[] = $event->getWfResponsibleId();
-                        endforeach;
+                        if ($activity->state == 'CO' || $activity->state == 'AB')
+                            continue;
 
-                        $this->wfScenarioId = $activity->getWfScenarioId();
+                        // TODO : Reset Global Variable value
+                        $this->wfResponsibleId = [];
+                        $this->wfScenarioId = 0;
 
-                        $result = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Completed, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
-                    } else {
-                        $result = $this->setActivity($_ID, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Aborted, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
+                        if ($isAnswer !== 'N') {
+                            $eList = $mWEvent->where($this->model->primaryKey, $val->id)->orderBy('created_at', 'ASC')->findAll();
+
+                            foreach ($eList as $event) :
+                                $this->wfResponsibleId[] = $event->getWfResponsibleId();
+                            endforeach;
+
+                            $this->wfScenarioId = $activity->getWfScenarioId();
+
+                            $result = $this->setActivity($val->id, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Completed, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
+                        } else {
+                            $result = $this->setActivity($val->id, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Aborted, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
+                        }
                     }
 
-                    $response = message('success', true, $result);;
+                    $response = message('success', true, $result);
                 }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
