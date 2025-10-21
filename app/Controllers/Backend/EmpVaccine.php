@@ -93,6 +93,7 @@ class EmpVaccine extends BaseController
     public function tableLine($set = null, $detail = [])
     {
         $reference = new M_Reference($this->request);
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
 
         $table = [];
         $id = 0;
@@ -136,6 +137,14 @@ class EmpVaccine extends BaseController
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
 
+        // TODO : Set ReadOnly if no role Emp Admin
+        if (!$roleEmpAdm) {
+            $fieldVaccineType->setIsReadonly(true);
+            $fieldVaccineDate->setIsReadonly(true);
+            $fieldDesc->setIsReadonly(true);
+            $btnDelete->setIsReadonly(true);
+        }
+
         //? Create
         if (empty($set)) {
             $table = [
@@ -163,7 +172,7 @@ class EmpVaccine extends BaseController
                     $this->field->fieldTable($fieldVaccineType),
                     $this->field->fieldTable($fieldVaccineDate),
                     $this->field->fieldTable($fieldDesc),
-                    $this->field->fieldTable($btnDelete)
+                    $roleEmpAdm ? $this->field->fieldTable($btnDelete) : ''
                 ];
             endforeach;
         }

@@ -103,6 +103,7 @@ class EmpLanguage extends BaseController
     public function tableLine($set = null, $detail = [])
     {
         $reference = new M_Reference($this->request);
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
 
         $table = [];
         $id = 0;
@@ -185,6 +186,15 @@ class EmpLanguage extends BaseController
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
 
+        // TODO : Set ReadOnly if no role Emp Admin
+        if (!$roleEmpAdm) {
+            $fieldName->setIsReadonly(true);
+            $fieldWriteAbility->setIsReadonly(true);
+            $fieldVerbalAbility->setIsReadonly(true);
+            $fieldSkillType->setIsReadonly(true);
+            $btnDelete->setIsReadonly(true);
+        }
+
         //? Create
         if (empty($set)) {
             $table = [
@@ -214,7 +224,7 @@ class EmpLanguage extends BaseController
                     $this->field->fieldTable($fieldWriteAbility),
                     $this->field->fieldTable($fieldVerbalAbility),
                     $this->field->fieldTable($fieldSkillType),
-                    $this->field->fieldTable($btnDelete)
+                    $roleEmpAdm ? $this->field->fieldTable($btnDelete) : ''
                 ];
             endforeach;
         }

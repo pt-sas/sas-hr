@@ -105,6 +105,7 @@ class EmpSkill extends BaseController
     {
         $reference = new M_Reference($this->request);
         $mSkill = new M_Skill($this->request);
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
 
         $table = [];
         $id = 0;
@@ -179,6 +180,15 @@ class EmpSkill extends BaseController
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
 
+        // TODO : Set ReadOnly if no role Emp Admin
+        if (!$roleEmpAdm) {
+            $fieldName->setIsReadonly(true);
+            $fieldDesc->setIsReadonly(true);
+            $fieldAbility->setIsReadonly(true);
+            $fieldSkillType->setIsReadonly(true);
+            $btnDelete->setIsReadonly(true);
+        }
+
         //? Create
         if (empty($set)) {
             $table = [
@@ -208,7 +218,7 @@ class EmpSkill extends BaseController
                     $this->field->fieldTable($fieldDesc),
                     $this->field->fieldTable($fieldAbility),
                     $this->field->fieldTable($fieldSkillType),
-                    $this->field->fieldTable($btnDelete)
+                    $roleEmpAdm ? $this->field->fieldTable($btnDelete) : ''
                 ];
             endforeach;
         }

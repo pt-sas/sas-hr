@@ -14,7 +14,7 @@
             <div class="form-group">
                 <div class="text-right">
                     <button type="button" name="button" class="btn btn-primary btn-sm btn-round ml-auto add_row"
-                        title="Create Line"><i class="fa fa-plus fa-fw"></i> Tambah Data</button>
+                        title="Create Line" <?= $disabled ?>><i class="fa fa-plus fa-fw"></i> Tambah Data</button>
                 </div>
             </div>
         </div>

@@ -97,7 +97,7 @@ class EmpBenefit extends BaseController
     {
         $reference = new M_Reference($this->request);
         $mBenefitDetail = new M_BenefitDetail($this->request);
-
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
         $table = [];
         $id = 0;
 
@@ -193,6 +193,16 @@ class EmpBenefit extends BaseController
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
 
+        // TODO : Set ReadOnly if no role Emp Admin
+        if (!$roleEmpAdm) {
+            $fieldBenefitType->setIsReadonly(true);
+            $fieldStatus->setIsReadonly(true);
+            $fieldDescription->setIsReadonly(true);
+            $fieldIsDetail->setIsReadonly(true);
+            $fieldDetail->setIsReadonly(true);
+            $btnDelete->setIsReadonly(true);
+        }
+
         //? Create
         if (empty($set)) {
             $table = [
@@ -234,7 +244,7 @@ class EmpBenefit extends BaseController
                     $this->field->fieldTable($fieldDescription),
                     $this->field->fieldTable($fieldIsDetail),
                     $this->field->fieldTable($fieldDetail),
-                    $this->field->fieldTable($btnDelete)
+                    $roleEmpAdm ? $this->field->fieldTable($btnDelete) : ''
                 ];
             endforeach;
         }

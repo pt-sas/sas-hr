@@ -93,6 +93,7 @@ class EmpWorkDay extends BaseController
     public function tableLine($set = null, $detail = [])
     {
         $mWork = new M_Work($this->request);
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
 
         $table = [];
         $id = 0;
@@ -131,6 +132,14 @@ class EmpWorkDay extends BaseController
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
 
+        // TODO : Set ReadOnly if no role Emp Admin
+        if (!$roleEmpAdm) {
+            $fieldWork->setIsReadonly(true);
+            $fieldValidFrom->setIsReadonly(true);
+            $fieldValidTo->setIsReadonly(true);
+            $btnDelete->setIsReadonly(true);
+        }
+
         //? Create
         if (empty($set)) {
             $table = [
@@ -159,7 +168,7 @@ class EmpWorkDay extends BaseController
                     $this->field->fieldTable($fieldWork),
                     $this->field->fieldTable($fieldValidFrom),
                     $this->field->fieldTable($fieldValidTo),
-                    $this->field->fieldTable($btnDelete)
+                    $roleEmpAdm ? $this->field->fieldTable($btnDelete) : ''
                 ];
             endforeach;
         }

@@ -96,6 +96,7 @@ class EmpFamilyCore extends BaseController
     public function tableLine($set = null, $detail = [])
     {
         $reference = new M_Reference($this->request);
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
 
         $table = [];
         $id = 0;
@@ -230,6 +231,21 @@ class EmpFamilyCore extends BaseController
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
 
+        // TODO : Set ReadOnly if no role Emp Admin
+        if (!$roleEmpAdm) {
+            $fieldMember->setIsReadonly(true);
+            $fieldName->setIsReadonly(true);
+            $fieldGender->setIsReadonly(true);
+            $fieldBirthDate->setIsReadonly(true);
+            $fieldAge->setIsReadonly(true);
+            $fieldEducation->setIsReadonly(true);
+            $fieldJob->setIsReadonly(true);
+            $fieldPhone->setIsReadonly(true);
+            $fieldStatus->setIsReadonly(true);
+            $fieldDateOfDeath->setIsReadonly(true);
+            $btnDelete->setIsReadonly(true);
+        }
+
         //? Create
         if (empty($set)) {
             $fieldStatus->setValue($this->Status_Hidup);
@@ -277,7 +293,7 @@ class EmpFamilyCore extends BaseController
 
                 if ($row->getStatus() === $this->Status_Hidup)
                     $fieldDateOfDeath->setIsReadonly(true);
-                else
+                else if ($roleEmpAdm)
                     $fieldDateOfDeath->setIsReadonly(false);
 
                 $btnDelete->setValue($id);
@@ -294,7 +310,7 @@ class EmpFamilyCore extends BaseController
                     $this->field->fieldTable($fieldPhone),
                     $this->field->fieldTable($fieldStatus),
                     $this->field->fieldTable($fieldDateOfDeath),
-                    $this->field->fieldTable($btnDelete)
+                    $roleEmpAdm ? $this->field->fieldTable($btnDelete) : ''
                 ];
             endforeach;
         }
