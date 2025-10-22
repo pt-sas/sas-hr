@@ -6,8 +6,8 @@
                     <li class="nav-item"> <a class="nav-link active show" data-toggle="tab" href="#karyawan" role="tab"
                             aria-selected="true">Data Diri</a> </li>
                     <?php if ($role_emp_adm) : ?>
-                        <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#user" role="tab"
-                                aria-selected="true" disabled>Pengguna</a> </li>
+                    <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#user" role="tab"
+                            aria-selected="true" disabled>Pengguna</a> </li>
                     <?php endif; ?>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button"
@@ -49,8 +49,6 @@
                             aria-selected="false">SIM</a> </li>
                     <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#hari-kerja-karyawan" role="tab"
                             aria-selected="false">Hari Kerja</a> </li>
-                    <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#benefit" role="tab"
-                            aria-selected="false">Benefit</a> </li>
                 </ul>
             </div>
             <div class="modal-body" id="employee">
@@ -105,9 +103,6 @@
                                 <div class="tab-pane fade" id="hari-kerja-karyawan" role="tabpanel"
                                     aria-labelledby="hari-kerja-karyawan-tab">
                                     <?= $this->include('masterdata/employee/form_emp_workday'); ?>
-                                </div>
-                                <div class="tab-pane fade" id="benefit" role="tabpanel" aria-labelledby="benefit-tab">
-                                    <?= $this->include('masterdata/employee/form_emp_benefit'); ?>
                                 </div>
                             </div>
                         </div>
