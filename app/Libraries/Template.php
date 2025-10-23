@@ -32,7 +32,7 @@ class Template
         $mEmployee = new M_Employee($this->request);
 
         $uri = $this->request->uri->getSegment(2);
-        $picture = "https://via.placeholder.com/100/808080/ffffff?text=No+Image";
+        $picture = base_url("/custom/image/no_image.png");
 
         // Set previouse url from current url
         $this->session->set(['previous_url' => current_url()]);
