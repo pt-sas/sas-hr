@@ -489,7 +489,8 @@ class SubmissionCancel extends BaseController
                 $today = date('Y-m-d');
                 $where = "v_all_submission.documentno = '{$post['document_no']}'";
                 $where .= " AND v_all_submission.docstatus IN ('CO','IP')";
-                $where .= " AND v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Approval}')";
+                $where .= " AND (v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Approval}')";
+                $where .= " OR (v_all_submission.submissiontype = 100013 AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_Atasan}')))";
                 $where .= " AND (v_all_submission.ref_id IS NULL OR v_all_submission.ref_id = 0)";
                 $where .= " AND trx_submission_cancel_detail.trx_submission_cancel_id IS NULL";
                 $where .= " AND v_all_submission.date >= '{$today}'";
@@ -520,7 +521,8 @@ class SubmissionCancel extends BaseController
                 $where = "v_all_submission.employee_id = {$post['md_employee_id']}";
                 $where .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                 $where .= " AND v_all_submission.submissiontype = {$post['ref_submissiontype']}";
-                $where .= " AND v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Approval}')";
+                $where .= " AND (v_all_submission.isagree NOT IN ('{$this->LINESTATUS_Dibatalkan}', '{$this->LINESTATUS_Ditolak}', '{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Approval}')";
+                $where .= " OR (v_all_submission.submissiontype = 100013 AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_Atasan}')))";
                 $where .= " AND (v_all_submission.ref_id IS NULL OR v_all_submission.ref_id = 0)";
                 $where .= " AND trx_submission_cancel_detail.trx_submission_cancel_id IS NULL";
                 $where .= " AND v_all_submission.date >= '{$today}'";

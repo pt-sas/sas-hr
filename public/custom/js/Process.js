@@ -177,7 +177,6 @@ $(document).ready(function (e) {
       showTodayButton: true,
       showClear: true,
       showClose: true,
-      daysOfWeekDisabled: [0, 6],
       disabledDates: getHolidayDate(),
       useCurrent: false,
     });
@@ -712,7 +711,7 @@ _tableApproval = $(".table_approval")
     processing: true,
     columnDefs: [
       {
-        targets: 6,
+        targets: [4, 7],
         orderable: false,
       },
       {
@@ -720,8 +719,12 @@ _tableApproval = $(".table_approval")
         visible: false, //hide column
       },
       {
-        targets: [4],
+        targets: 5,
         width: "20%",
+      },
+      {
+        targets: [4, 9],
+        width: "5%",
       },
     ],
     order: [],
@@ -5667,33 +5670,56 @@ $("#task_activity").click(function (e) {
   });
 });
 
-$(".table_approval tbody").on("click", "tr", function () {
+$(".checkAll").on("click", function (e) {
+  const isChecked = $(this).is(":checked");
   const modalBody = $(this).closest(".modal-body");
   const form = modalBody.find("form");
+  const checkbox = _tableApproval
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-wactivity");
 
-  if ($(this).hasClass("selected")) {
-    $(this).removeClass("selected");
+  checkbox.prop("checked", isChecked);
 
-    ID = 0;
+  if (isChecked == false) {
     form.find("input").prop("readonly", true);
-    form.find('select[name="isanswer"]').val("N").prop("disabled", true);
+    form.find('select[name="isanswer"]').val("").prop("disabled", true);
     form.find("button").prop("disabled", true);
   } else {
-    _tableApproval.$("tr.selected").removeClass("selected");
-    $(this).addClass("selected");
+    form.find("input").removeAttr("readonly");
+    form.find('select[name="isanswer"]').val("").removeAttr("disabled").show();
+    form.find("button").removeAttr("disabled");
+  }
+});
 
-    let data = _tableApproval.row(this).data();
+_tableApproval.on("click", ".check-wactivity", function (e) {
+  const modalBody = $(this).closest(".modal-body");
+  const form = modalBody.find("form");
+  const checkbox = _tableApproval
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-wactivity");
 
-    if (typeof data !== "undefined") {
-      ID = data[0];
-      form.find("input").removeAttr("readonly");
-      form
-        .find('select[name="isanswer"]')
-        .val("N")
-        .removeAttr("disabled")
-        .show();
-      form.find("button").removeAttr("disabled");
+  let checkData = [];
+
+  $.each(checkbox, function (idx, item) {
+    if ($(this).is(":checked")) {
+      if ($(item).is(":checked")) checkData.push(item.value);
     }
+  });
+
+  if (checkData.length == 0) {
+    form.find("input").prop("readonly", true);
+    form.find('select[name="isanswer"]').val("").prop("disabled", true);
+    form.find("button").prop("disabled", true);
+
+    $(".checkAll").prop("checked", false);
+  } else {
+    form.find("input").removeAttr("readonly");
+    form.find('select[name="isanswer"]').val("").removeAttr("disabled").show();
+    form.find("button").removeAttr("disabled");
   }
 });
 
@@ -5701,14 +5727,27 @@ $(".btn_ok_answer").click(function (evt) {
   evt.preventDefault();
   let _this = $(this);
   let oriElement = _this.html();
-
   const modalBody = _this.closest(".modal-body");
   const form = _this.closest("form");
-
   let formData = new FormData(form[0]);
   let url = ADMIN_URL + "wactivity" + CREATE;
+  const checkbox = _tableApproval
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-wactivity");
 
-  formData.append("record_id", ID);
+  let row = [];
+
+  $.each(checkbox, function (idx, item) {
+    if ($(this).is(":checked")) {
+      row.push({
+        id: item.value,
+      });
+    }
+  });
+
+  formData.append("record_id", JSON.stringify(row));
 
   $.ajax({
     url: url,
@@ -5732,10 +5771,8 @@ $(".btn_ok_answer").click(function (evt) {
     },
     success: function (result) {
       if (result[0].success) {
-        ID = 0;
-
         form.find("input").prop("readonly", true).val("");
-        form.find('select[name="isanswer"]').val("N").prop("disabled", true);
+        form.find('select[name="isanswer"]').val("").prop("disabled", true);
         form.find("button").prop("disabled", true);
         form.find("button").prop("disabled", true);
         clearErrorForm(form);
@@ -5750,13 +5787,16 @@ $(".btn_ok_answer").click(function (evt) {
           title: result[0].message,
         });
         clearErrorForm(form);
+        url = ADMIN_URL + "wactivity" + "/showActivityInfo";
+        _tableApproval.ajax.url(url).load().columns.adjust();
       }
     },
   });
 });
 
-$(".btn_record_info").click(function (evt) {
-  const tr = _tableApproval.$("tr.selected");
+_tableApproval.on("click", ".btn_record", function (evt) {
+  const _this = $(this);
+  const tr = _this.closest("tr");
   const td = tr.find("td");
   const row = _tableApproval.row(td).data();
 

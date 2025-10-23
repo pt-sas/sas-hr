@@ -92,6 +92,8 @@ class EmpContact extends BaseController
 
     public function tableLine($set = null, $detail = [])
     {
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
+
         $table = [];
         $id = 0;
 
@@ -119,6 +121,14 @@ class EmpContact extends BaseController
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
 
+        // TODO : Set ReadOnly if no role Emp Admin
+        if (!$roleEmpAdm) {
+            $fieldMember->setIsReadonly(true);
+            $fieldName->setIsReadonly(true);
+            $fieldPhone->setIsReadonly(true);
+            $btnDelete->setIsReadonly(true);
+        }
+
         //? Create
         if (empty($set)) {
             $table = [
@@ -145,7 +155,7 @@ class EmpContact extends BaseController
                     $this->field->fieldTable($fieldMember),
                     $this->field->fieldTable($fieldName),
                     $this->field->fieldTable($fieldPhone),
-                    $this->field->fieldTable($btnDelete)
+                    $roleEmpAdm ? $this->field->fieldTable($btnDelete) : ''
                 ];
             endforeach;
         }

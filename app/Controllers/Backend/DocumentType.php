@@ -137,6 +137,7 @@ class DocumentType extends BaseController
                 100007, // Tugas Kantor
                 100008, // Penugasan
                 100009, // Tugas Kantor (Setengah Hari)
+                100013, // Pulang Cepat
             ];
 
             try {
@@ -155,7 +156,6 @@ class DocumentType extends BaseController
                             ->findAll();
                     } else {
                         $list = $this->model->where('isactive', 'Y')
-                            ->whereNotIn('md_doctype_id', [100010, 100011, 100012, 100013])
                             ->like('name', $post['search'])
                             ->orderBy('name', 'ASC')
                             ->findAll();
@@ -173,7 +173,6 @@ class DocumentType extends BaseController
                             ->findAll();
                     } else {
                         $list = $this->model->where('isactive', 'Y')
-                            ->whereNotIn('md_doctype_id', [100010, 100011, 100012, 100013])
                             ->orderBy('name', 'ASC')
                             ->findAll();
                     }

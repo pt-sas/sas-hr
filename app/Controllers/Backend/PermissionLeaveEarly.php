@@ -12,11 +12,13 @@ use App\Models\M_Assignment;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
 use App\Models\M_AccessMenu;
+use App\Models\M_AssignmentDate;
 use App\Models\M_Attendance;
 use App\Models\M_Division;
 use App\Models\M_Configuration;
 use App\Models\M_DocumentType;
 use App\Models\M_RuleDetail;
+use App\Models\M_SubmissionCancelDetail;
 use TCPDF;
 use Config\Services;
 use DateTime;
@@ -465,7 +467,14 @@ class PermissionLeaveEarly extends BaseController
                 $line = $this->model->where('trx_absent_id', $row->trx_absent_id)->first();
 
                 if (!empty($row->ref_absent_detail_id)) {
-                    $lineRef = $this->modelDetail->getDetail('trx_absent_detail_id', $row->ref_absent_detail_id)->getRow();
+                    if ($row->table === 'trx_submission_cancel_detail') {
+                        $refModel = new M_SubmissionCancelDetail($this->request);
+                    } else if ($row->table === 'trx_assignment') {
+                        $refModel = new M_AssignmentDate($this->request);
+                    } else {
+                        $refModel = new M_AbsentDetail($this->request);
+                    }
+                    $lineRef = $refModel->getDetail($refModel->primaryKey, $row->ref_absent_detail_id)->getRow();
                     $docNoRef = $lineRef->documentno;
                 }
 

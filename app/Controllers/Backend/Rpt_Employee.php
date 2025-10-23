@@ -115,7 +115,7 @@ class Rpt_Employee extends BaseController
             $whereEmp = "md_employee_id IN ($empSession)";
         }
 
-        if ($employee->md_levelling_id > 100003 && !$roleEmp) {
+        if ($employee && $employee->md_levelling_id > 100003 && !$roleEmp) {
             $whereEmp = "md_employee_id = $employee->md_employee_id";
         }
 
@@ -267,7 +267,7 @@ class Rpt_Employee extends BaseController
                 $whereClause .= " AND md_employee_id IN (" . $this->session->get('md_employee_id') . ")";
             }
 
-            if ($employee->md_levelling_id > 100003 && !$roleEmp) {
+            if ($employee && $employee->md_levelling_id > 100003 && !$roleEmp) {
                 $whereClause .= " AND md_employee_id = $employee->md_employee_id";
             }
         }

@@ -93,6 +93,7 @@ class EmpLicense extends BaseController
     public function tableLine($set = null, $detail = [])
     {
         $reference = new M_Reference($this->request);
+        $roleEmpAdm = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_Admin');
 
         $table = [];
         $id = 0;
@@ -138,6 +139,14 @@ class EmpLicense extends BaseController
         $btnDelete->setType("button");
         $btnDelete->setClass("delete");
 
+        // TODO : Set ReadOnly if no role Emp Admin
+        if (!$roleEmpAdm) {
+            $fieldLicenseType->setIsReadonly(true);
+            $fieldLicenseNo->setIsReadonly(true);
+            $fieldExpiredDate->setIsReadonly(true);
+            $btnDelete->setIsReadonly(true);
+        }
+
         //? Create
         if (empty($set)) {
             $table = [
@@ -165,7 +174,7 @@ class EmpLicense extends BaseController
                     $this->field->fieldTable($fieldLicenseType),
                     $this->field->fieldTable($fieldLicenseNo),
                     $this->field->fieldTable($fieldExpiredDate),
-                    $this->field->fieldTable($btnDelete)
+                    $roleEmpAdm ? $this->field->fieldTable($btnDelete) : ''
                 ];
             endforeach;
         }

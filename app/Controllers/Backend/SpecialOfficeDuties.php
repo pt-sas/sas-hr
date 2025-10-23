@@ -389,6 +389,7 @@ class SpecialOfficeDuties extends BaseController
                 $table = $this->field->errorValidation($this->model->table, $post);
             } else {
                 $emp = $employee->find($this->session->get('md_employee_id'));
+                $empList = $this->access->getEmployeeData(false, true);
                 $empId = $emp->getEmployeeId();
 
                 $whereClause = "md_employee.isactive = 'Y'";
@@ -396,9 +397,14 @@ class SpecialOfficeDuties extends BaseController
                 if ($emp->getLevellingId() == 100002) {
                     $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
                 } else {
-                    $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
-                    $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
-                    $whereClause .= " OR md_employee.superior_id = $empId)";
+                    if ($empList) {
+                        $whereClause .= " AND md_employee.md_employee_id IN (" . implode(", ", $empList) . ")";
+                    } else {
+                        $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
+                        $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
+                        $whereClause .= " OR md_employee.superior_id = $empId)";
+                    }
+
                     $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
                 }
 
@@ -422,6 +428,7 @@ class SpecialOfficeDuties extends BaseController
                 $subDetail = $mAssignmentDate->where('trx_assignment_detail_id', $row->getAssignmentDetailId())->first();
 
                 $emp = $employee->find($header->md_employee_id);
+                $empList = $this->access->getEmployeeData(false, true);
                 $empId = $emp->getEmployeeId();
 
                 $whereClause = "md_employee.isactive = 'Y'";
@@ -431,9 +438,12 @@ class SpecialOfficeDuties extends BaseController
                 ) {
                     $whereClause .= " AND (md_employee.superior_id = $empId OR md_employee.md_employee_id = $empId)";
                 } else {
-                    $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
-                    $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
-                    $whereClause .= " OR md_employee.superior_id = $empId)";
+                    if ($empList) {
+                        $whereClause .= " AND md_employee.md_employee_id IN (" . implode(", ", $empList) . ")";
+                    } else {
+                        $whereClause .= " AND md_employee.md_employee_id = " . $row->getEmployeeID();
+                    }
+
                     $whereClause .= " AND md_employee.md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
                 }
 

@@ -406,14 +406,21 @@ class Overtime extends BaseController
 
                 if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
                     $empId = $post['md_employee_id'];
+                    $empList = $this->access->getEmployeeData(false, true);
 
                     $whereClause = "md_employee.isactive = 'Y'";
                     $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
                     $whereClause .= " AND md_benefit_detail.status = 'Y'";
                     $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}";
-                    $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
-                    $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
-                    $whereClause .= " OR md_employee.superior_id = $empId)";
+
+                    if ($empList) {
+                        $whereClause .= " AND md_employee.md_employee_id IN (" . implode(", ", $empList) . ")";
+                    } else {
+                        $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
+                        $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
+                        $whereClause .= " OR md_employee.superior_id = $empId)";
+                    }
+
                     $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
 
                     if (!empty($post['md_supplier_id']))
@@ -444,15 +451,19 @@ class Overtime extends BaseController
             foreach ($detail as $row) :
                 $id = $row->getOvertimeId();
                 $header = $this->model->where('trx_overtime_id', $id)->first();
-                $empId = $header->md_employee_id;
+                $empList = $this->access->getEmployeeData(false, true);
 
                 $whereClause = "md_employee.isactive = 'Y'";
                 $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
                 $whereClause .= " AND md_benefit_detail.status = 'Y'";
                 $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}";
-                $whereClause .= " AND (superior_id in (select e.md_employee_id from md_employee e where e.superior_id in (select e.md_employee_id from md_employee e where e.superior_id = $empId))";
-                $whereClause .= " OR md_employee.superior_id IN (SELECT e.md_employee_id FROM md_employee e WHERE e.superior_id = $empId)";
-                $whereClause .= " OR md_employee.superior_id = $empId)";
+
+                if ($empList) {
+                    $whereClause .= " AND md_employee.md_employee_id IN (" . implode(", ", $empList) . ")";
+                } else {
+                    $whereClause .= " AND md_employee.md_employee_id = " . $row->getEmployeeID();
+                }
+
                 $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
 
                 if (!empty($header->md_supplier_id))

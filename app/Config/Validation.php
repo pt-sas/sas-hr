@@ -2189,6 +2189,13 @@ class Validation
     ];
 
     public $wactivity = [
+        'isanswer'        => [
+            'label'             => 'isanswer',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'    => 'Mohon pilih {field} dahulu',
+            ]
+        ],
         'textmsg'        => [
             'label'             => 'message',
             'rules'             => 'required_based_field_value[isanswer, W]',
