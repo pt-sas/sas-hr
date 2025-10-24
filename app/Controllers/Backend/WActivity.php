@@ -4,6 +4,7 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_AlertRecipient;
+use App\Models\M_Branch;
 use App\Models\M_Configuration;
 use App\Models\M_Responsible;
 use App\Models\M_User;
@@ -12,6 +13,7 @@ use App\Models\M_WEvent;
 use App\Models\M_WScenarioDetail;
 use App\Models\M_Menu;
 use App\Models\M_Datatable;
+use App\Models\M_Division;
 use App\Models\M_NotificationText;
 use App\Models\M_DocumentType;
 use App\Models\M_Employee;
@@ -119,6 +121,8 @@ class WActivity extends BaseController
         $mNotifText = new M_NotificationText($this->request);
         $mDocType = new M_DocumentType($this->request);
         $mEmployee = new M_Employee($this->request);
+        $mDivision = new M_Division($this->request);
+        $mBranch = new M_Branch($this->request);
         $cTelegram = new Telegram();
         $cMessage = new Message();
 
@@ -196,6 +200,12 @@ class WActivity extends BaseController
                 $dataNotif = $mNotifText->where('name', 'Email Approval Line')->first();
                 $subject = $dataNotif->getSubject();
                 $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date)), $emp->fullname], $dataNotif->getText());
+            } else if ($table == "trx_assignment" || $table == "trx_overtime") {
+                $dataNotif = $mNotifText->where('name', 'Email Approval Bundling')->first();
+                $subject = $dataNotif->getSubject();
+                $branch = $mBranch->find($trx->md_branch_id);
+                $division = $mDivision->find($trx->md_division_id);
+                $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
             } else {
                 $dataNotif = $mNotifText->where('name', 'Email Approval')->first();
                 $subject = $dataNotif->getSubject();
