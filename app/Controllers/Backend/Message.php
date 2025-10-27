@@ -91,7 +91,7 @@ class Message extends BaseController
                 if (isset($list[0]->image)) {
                     $list[0]->image = '<img src="' . base_url("uploads/karyawan/" . $list[0]->image) . '">';
                 } else {
-                    $list[0]->image = '<img src="https://via.placeholder.com/200/808080/ffffff?text=No+Image">';
+                    $list[0]->image = '<img src="' . base_url("/custom/image/no_image.png") . '">';
                 }
 
                 $result = [

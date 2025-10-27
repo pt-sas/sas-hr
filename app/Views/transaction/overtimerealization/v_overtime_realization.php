@@ -12,6 +12,7 @@
                     <thead>
                         <tr>
                             <th>No</th>
+                            <th></th>
                             <th>No Form</th>
                             <th>Karyawan</th>
                             <th>Cabang</th>

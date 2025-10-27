@@ -809,6 +809,10 @@ _tableRealization = $(".table_realization")
       },
       {
         targets: 1,
+        visible: false,
+      },
+      {
+        targets: 2,
         width: "15%",
       },
     ],
