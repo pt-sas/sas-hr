@@ -1736,6 +1736,8 @@ $(".btn_filter_realize").on("click", function (e) {
 _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
   const parent = $(this).closest("table");
   const tr = $(this).closest("tr");
+  let data = _tableRealization.row(tr).data();
+
   let formType;
   let submissionDate;
   let description;
@@ -1750,7 +1752,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
 
   if (parent.hasClass("table_hrd")) {
     formType = tr.find("td:eq(2)").text();
-    submissionDate = tr.find("td:eq(1)").text();
+    submissionDate = data[1];
     description = tr.find("td:eq(7)");
     if (description.find("span").length)
       leaveTypeID = description.find("span").attr("id");
@@ -1835,7 +1837,7 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
     }
   } else if (parent.hasClass("table_superior")) {
     formType = tr.find("td:eq(4)").text();
-    submissionDate = tr.find("td:eq(1)").text();
+    submissionDate = data[1];
     // date_out = tr.find("td:eq(8)").text();
     // clock_out = tr.find("td:eq(9)").text();
     ID = id;
@@ -2257,8 +2259,9 @@ $(".btn_ok_anulir").on("click", function (evt) {
 _tableRealization.on("click", ".btn_view_image", function (e) {
   const tr = $(this).closest("tr");
   const table = $(this).closest("table");
+  let data = _tableRealization.row(tr).data();
 
-  let submissionDate = tr.find("td:eq(1)").text();
+  let submissionDate = data[1];
   let formType;
   let employee;
 

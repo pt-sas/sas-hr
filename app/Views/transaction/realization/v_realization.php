@@ -26,6 +26,7 @@
                             </th> -->
                             <th>#</th>
                             <th>Tanggal Tidak Masuk</th>
+                            <th>Tanggal Realisasi</th>
                             <th>Tipe Form</th>
                             <th>Cabang</th>
                             <th>Divisi</th>

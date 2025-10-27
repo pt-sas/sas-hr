@@ -26,6 +26,7 @@
                             </th> -->
                             <th>#</th>
                             <th>Tanggal Tidak Lengkap</th>
+                            <th>Tanggal Realisasi</th>
                             <th>Jam</th>
                             <th>Nomor Form</th>
                             <th>Tipe Form</th>

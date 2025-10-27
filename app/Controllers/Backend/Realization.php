@@ -84,7 +84,8 @@ class Realization extends BaseController
             $join = [];
             $order = [
                 '', // Number
-                'v_realization_new.date',
+                '', // submissiondate
+                'v_realization_new.realization_hrd',
                 'v_realization_new.doctype',
                 'v_realization_new.branch',
                 'v_realization_new.division',
@@ -134,12 +135,13 @@ class Realization extends BaseController
                 $number++;
 
                 $reason = $value->reason;
-                $dateFormat = format_dmy($value->date, '-');
+                $dateFormat = format_dmy($value->realization_hrd, '-');
 
                 if ($value->comment)
                     $reason .= " | <small class='text-danger'>{$value->comment}</small>";
 
                 $row[] = !$trxCancel ? $number : "<small class='text-danger'>{$number}</small>";
+                $row[] = format_dmy($value->date, '-') . " | " . formatDay_idn(date('w', strtotime($value->date)));
                 $row[] = !$trxCancel ? $dateFormat : "<small class='text-danger'>{$dateFormat}</small>";
                 $row[] = !$trxCancel ? $value->doctype : "<small class='text-danger'>{$value->doctype}</small>";
                 $row[] = !$trxCancel ? $value->branch : "<small class='text-danger'>{$value->branch}</small>";
@@ -171,6 +173,7 @@ class Realization extends BaseController
             $select = '*';
             $join = [];
             $order = [
+                '',
                 '',
                 'documentno',
                 'employee_name',
@@ -205,6 +208,7 @@ class Realization extends BaseController
                 $number++;
 
                 $row[] = $number;
+                $row[] = '';
                 $row[] = $value->documentno;
                 $row[] = $value->employee_name;
                 $row[] = $value->branch_name;
@@ -241,7 +245,8 @@ class Realization extends BaseController
             $join = [];
             $order = [
                 '', // Number
-                'v_realization_new.date',
+                '',
+                'v_realization_new.realization_mgr',
                 '',
                 'v_realization_new.documentno',
                 'v_realization_new.doctype',
@@ -299,7 +304,8 @@ class Realization extends BaseController
                 $number++;
 
                 $row[] = $number;
-                $row[] = format_dmy($value->date, '-');
+                $row[] = format_dmy($value->date, '-') . " | " . formatDay_idn(date('w', strtotime($value->date)));
+                $row[] = format_dmy($value->realization_mgr, '-');
                 $row[] = $clock ?? '';
                 $row[] = $value->documentno;
                 $row[] = $value->doctype;
@@ -340,6 +346,7 @@ class Realization extends BaseController
             $cMessage = new Message();
             $cTelegram = new Telegram();
 
+            $post['submissiondate'] = trim(preg_replace('/\|.*/', '', $post['submissiondate']));
             $isAgree = $post['isagree'];
             $submissionDate = date('Y-m-d', strtotime($post['submissiondate']));
             $today = date('Y-m-d');
@@ -736,6 +743,7 @@ class Realization extends BaseController
             $cTelegram = new Telegram();
 
             $today = date('Y-m-d');
+            $post['submissiondate'] = trim(preg_replace('/\|.*/', '', $post['submissiondate']));
             $submissionDate = date('Y-m-d', strtotime($post['submissiondate']));
 
             $isAgree = $post['isagree'];
