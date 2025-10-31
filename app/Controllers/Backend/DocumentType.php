@@ -4,6 +4,7 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_DocumentType;
+use App\Models\M_Submenu;
 use Config\Services;
 
 class DocumentType extends BaseController
@@ -85,8 +86,14 @@ class DocumentType extends BaseController
     public function show($id)
     {
         if ($this->request->isAJAX()) {
+            $mSubmenu = new M_Submenu($this->request);
             try {
                 $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+
+                if ($list[0]->sys_submenu_id) {
+                    $rowSubmenu = $mSubmenu->find($list[0]->sys_submenu_id);
+                    $list = $this->field->setDataSelect($mSubmenu->table, $list, $mSubmenu->primaryKey, $rowSubmenu->getSubId(), $rowSubmenu->getName());
+                }
 
                 $title = $list[0]->getName();
 

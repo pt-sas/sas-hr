@@ -143,4 +143,36 @@ class Submenu extends BaseController
 			return $this->response->setJSON($response);
 		}
 	}
+
+	public function getList()
+	{
+		if ($this->request->isAjax()) {
+			$post = $this->request->getVar();
+
+			$response = [];
+
+			try {
+				$builder = $this->model->where('isactive', 'Y')
+					->orderBy('name', 'ASC');
+
+				if (isset($post['search']))
+					$builder->like('name', $post['search']);
+
+
+				if (isset($post['name']) && $post['name'] == "Pengajuan")
+					$builder->where('sys_menu_id', 3);
+
+				$list = $builder->findAll();
+
+				foreach ($list as $key => $row) :
+					$response[$key]['id'] = $row->getSubId();
+					$response[$key]['text'] = $row->getName();
+				endforeach;
+			} catch (\Exception $e) {
+				$response = message('error', false, $e->getMessage());
+			}
+
+			return $this->response->setJSON($response);
+		}
+	}
 }
