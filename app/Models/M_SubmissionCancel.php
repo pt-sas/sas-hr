@@ -36,7 +36,7 @@ class M_SubmissionCancel extends Model
     protected $beforeInsert         = [];
     protected $afterInsert          = [];
     protected $beforeUpdate         = [];
-    protected $afterUpdate          = [];
+    protected $afterUpdate          = ['doAfterUpdate'];
     protected $beforeDelete         = [];
     protected $afterDelete          = [];
     protected $column_order         = [
@@ -164,5 +164,31 @@ class M_SubmissionCancel extends Model
             $builder->where($where);
 
         return $builder->get();
+    }
+
+    public function doAfterUpdate(array $rows)
+    {
+        $mSubmissionCancelDetail = new M_SubmissionCancelDetail($this->request);
+
+        $ID = $rows['id'][0] ?? $rows['id'];
+
+        $sql = $this->find($ID);
+        $line = $mSubmissionCancelDetail->where($this->primaryKey, $ID)->findAll();
+        $updatedBy = $rows['data']['updated_by'] ?? session()->get('id');
+
+        if (
+            $sql->getIsApproved() === 'Y' && ($sql->docstatus === "IP" || $sql->docstatus === "CO") && !is_null($line)
+        ) {
+            foreach ($line as $row) {
+                $entity = new \App\Entities\SubmissionCancelDetail();
+
+                $entity->trx_submission_cancel_detail_id = $row->trx_submission_cancel_detail_id;
+                $entity->updated_by = $updatedBy;
+                $entity->isagree = $sql->docstatus === "IP" ? 'S' : 'Y';
+                $entity->approve_date = date('Y-m-d H:i:s');
+
+                $mSubmissionCancelDetail->save($entity);
+            }
+        }
     }
 }

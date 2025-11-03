@@ -20,6 +20,7 @@ class DocumentType extends Entity
     protected $is_realization_hrd;
     protected $days_realization_hrd;
     protected $auto_not_approve_days;
+    protected $sys_submenu_id;
 
     protected $dates   = [
         'created_at',
@@ -175,5 +176,15 @@ class DocumentType extends Entity
     public function setAutoNotApproveDays($auto_not_approve_days)
     {
         $this->attributes['auto_not_approve_days'] = $auto_not_approve_days;
+    }
+
+    public function getSubmenuId()
+    {
+        return $this->attributes['sys_submenu_id'];
+    }
+
+    public function setSubmenuId($sys_submenu_id)
+    {
+        $this->attributes['sys_submenu_id'] = $sys_submenu_id;
     }
 }

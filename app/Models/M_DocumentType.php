@@ -21,7 +21,8 @@ class M_DocumentType extends Model
         'days_realization_mgr',
         'is_realization_hrd',
         'days_realization_hrd',
-        'auto_not_approve_days'
+        'auto_not_approve_days',
+        'sys_submenu_id'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\DocumentType';

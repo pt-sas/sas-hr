@@ -65,6 +65,15 @@
                     <small class="form-text text-danger" id="error_auto_not_approve_days"></small>
                 </div>
             </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>Submenu</label>
+                    <select name="sys_submenu_id" id="sys_submenu_id" class="form-control select-data" data-url="submenu/getList/$Pengajuan">
+                        <option value="">Pilih Submenu</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_sys_submenu_id"></small>
+                </div>
+            </div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="description">Keterangan </label>
