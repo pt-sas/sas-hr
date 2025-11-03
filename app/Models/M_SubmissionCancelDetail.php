@@ -223,11 +223,19 @@ class M_SubmissionCancelDetail extends Model
                     $hModel = $refData->table === "trx_absent" ? new M_Absent($this->request) : new M_Assignment($this->request);
                     $hEntity = $refData->table === "trx_absent" ? new \App\Entities\Absent() : new \App\Entities\Assignment();
 
-                    $hEntity->updated_by = $updated_by;
-                    $hEntity->docstatus = 'CO';
-                    $hEntity->{$hModel->primaryKey} = $refData->header_id;
+                    // $hEntity->updated_by = $updated_by;
+                    // $hEntity->docstatus = 'CO';
+                    // $hEntity->{$hModel->primaryKey} = $refData->header_id;
 
-                    $hModel->save($hEntity);
+                    // $hModel->save($hEntity);
+
+                    $dataUpdate = [
+                        "docstatus"     => "CO",
+                        "receiveddate"  => date('Y-m-d H:i'),
+                        "updated_by"    => $updated_by
+                    ];
+
+                    $hModel->builder->update($dataUpdate, [$hModel->primaryKey => $refData->header_id]);
                 }
             }
         } catch (\Exception $e) {
@@ -238,25 +246,25 @@ class M_SubmissionCancelDetail extends Model
     public function doAfterUpdate(array $rows)
     {
         $mSubmissionCancel = new M_SubmissionCancel($this->request);
-        $entity = new \App\Entities\SubmissionCancel();
 
         try {
+            $sessionUser = session()->get('sys_user_id');
             $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-
+            $todayTime = date('Y-m-d H:i:s');
+            $updatedBy = !empty($sessionUser) ? $sessionUser : 100000;
             $line = $this->find($ID);
             $list = $this->where([
                 $mSubmissionCancel->primaryKey => $line->{$mSubmissionCancel->primaryKey}
             ])->whereIn('isagree', ['S', 'M', 'H'])->first();
 
             if (is_null($list)) {
-                $todayTime = date('Y-m-d H:i:s');
-                $updatedBy = $rows['data']['updated_by'];
+                $dataUpdate = [
+                    "docstatus"     => "CO",
+                    "receiveddate"  => $todayTime,
+                    "updated_by"    => $updatedBy
+                ];
 
-                $entity->setDocStatus("CO");
-                $entity->setReceivedDate($todayTime);
-                $entity->setSubmissionCancelId($line->{$mSubmissionCancel->primaryKey});
-                $entity->setUpdatedBy($updatedBy);
-                $mSubmissionCancel->save($entity);
+                $mSubmissionCancel->builder->update($dataUpdate, [$mSubmissionCancel->primaryKey => $line->trx_submission_cancel_id]);
             }
 
             if ($line->isagree === "Y")
