@@ -21,7 +21,14 @@
                 <table class="table table-hover tb_notification" style="width: 100%;">
                     <thead>
                         <th>ID</th>
-                        <th>Aksi</th>
+                        <th>
+                            <div class="form-check">
+                                <label class="form-check-label">
+                                    <input class="checkAll form-check-input" type="checkbox">
+                                    <span class="form-check-sign"></span>
+                                </label>
+                            </div>
+                        </th>
                         <th>From</th>
                         <th>Subject</th>
                         <th>Date</th>

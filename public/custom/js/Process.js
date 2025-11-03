@@ -862,7 +862,7 @@ _tableNotification = $(".tb_notification")
         targets: 0,
         visible: false, //hide column
       },
-      { targets: 1, width: "10%" },
+      { targets: 1, width: "10%", orderable: false },
       { targets: 2, width: "10%" },
       { targets: 3, width: "70%", orderable: false },
       { targets: 4, width: "10%" },
@@ -5676,24 +5676,46 @@ $("#task_activity").click(function (e) {
 
 $(".checkAll").on("click", function (e) {
   const isChecked = $(this).is(":checked");
-  const modalBody = $(this).closest(".modal-body");
-  const form = modalBody.find("form");
-  const checkbox = _tableApproval
-    .rows()
-    .nodes()
-    .to$()
-    .find("input.check-wactivity");
+  const thisTable = $(this).closest(".table");
 
-  checkbox.prop("checked", isChecked);
+  if (thisTable.hasClass("tb_notification")) {
+    
+  const card = $(e.target).closest(".card");
+  const floatRight = card.find(".card-header .float-right");
 
-  if (isChecked == false) {
-    form.find("input").prop("readonly", true);
-    form.find('select[name="isanswer"]').val("").prop("disabled", true);
-    form.find("button").prop("disabled", true);
+    const checkbox = _tableNotification
+      .rows()
+      .nodes()
+      .to$()
+      .find("input.check-wactivity, input.check-message");
+
+      checkbox.prop("checked", isChecked);
+      console.log(isChecked);
+    floatRight.toggleClass("d-none", isChecked == false);
   } else {
-    form.find("input").removeAttr("readonly");
-    form.find('select[name="isanswer"]').val("").removeAttr("disabled").show();
-    form.find("button").removeAttr("disabled");
+    const modalBody = $(this).closest(".modal-body");
+    const form = modalBody.find("form");
+    const checkbox = _tableApproval
+      .rows()
+      .nodes()
+      .to$()
+      .find("input.check-wactivity, input.check-message");
+
+    checkbox.prop("checked", isChecked);
+
+    if (isChecked == false) {
+      form.find("input").prop("readonly", true);
+      form.find('select[name="isanswer"]').val("").prop("disabled", true);
+      form.find("button").prop("disabled", true);
+    } else {
+      form.find("input").removeAttr("readonly");
+      form
+        .find('select[name="isanswer"]')
+        .val("")
+        .removeAttr("disabled")
+        .show();
+      form.find("button").removeAttr("disabled");
+    }
   }
 });
 

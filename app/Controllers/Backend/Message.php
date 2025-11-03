@@ -98,10 +98,6 @@ class Message extends BaseController
                     'notification' => $list
                 ];
 
-                if ($list[0]->isread === "N") {
-                    $this->updateRead($list[0]->trx_message_id);
-                }
-
                 $response = message('success', true, $result);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
@@ -111,20 +107,23 @@ class Message extends BaseController
         }
     }
 
-    public function updateRead($messageId = null)
+    public function updateRead()
     {
         if ($this->request->isAJAX()) {
             $post = $this->request->getPost();
 
             try {
-                if ($messageId) {
-                    $id = $messageId;
-                } else {
-                    $id = $post['trx_message_id'];
+                $id = explode(",", $post['trx_message_id']);
+
+                $dataUpdate = [];
+                foreach ($id as $val) {
+                    $dataUpdate[] = [
+                        'trx_message_id' => $val,
+                        'isread' => 'Y'
+                    ];
                 }
 
-                $this->entity->setMessageId($id);
-                $this->entity->setIsRead("Y");
+                $result = $this->model->builder->updateBatch($dataUpdate, $this->model->primaryKey);
 
                 $options = array(
                     'cluster' => 'ap1',
@@ -140,7 +139,7 @@ class Message extends BaseController
                 $data['message'] = 'hello world';
                 $pusher->trigger('my-channel', 'my-event', $data);
 
-                $response = $this->save();
+                $response = message('success', true, $result);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
