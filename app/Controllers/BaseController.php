@@ -1035,16 +1035,16 @@ class BaseController extends Controller
 
 	public function deleteBatch(array $id): bool
 	{
-		foreach ($id as $id) {
-			$row = $this->model->findAll($id);
-			$result = $this->model->delete($id);
+		foreach ($id as $val) {
+			$row = $this->model->where($this->model->primaryKey, $val)->findAll();
+			$result = $this->model->delete($val);
 
 			if ($result) {
 				$this->logChanges($this->model->table, $this->model->primaryKey, $row, $this->model->db->getFieldNames($this->model->table));
 
 				if ($this->modelDetail) {
-					$line = $this->modelDetail->where($this->primaryKey, $id)->findAll();
-					$this->modelDetail->where($this->primaryKey, $id)->delete();
+					$line = $this->modelDetail->where($this->primaryKey, $val)->findAll();
+					$this->modelDetail->where($this->primaryKey, $val)->delete();
 
 					//** Inserting log changes for detail*/
 					$this->logChanges($this->modelDetail->table, $this->modelDetail->primaryKey, $line, $this->modelDetail->db->getFieldNames($this->modelDetail->table));

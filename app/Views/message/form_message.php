@@ -4,8 +4,8 @@
             <div class="email-sender">
                 <div class="avatar avatar-notif">
                 </div>
-                <div class="sender">Joko Subianto</div>
-                <div class="date">June 21, 20:03</div>
+                <div class="sender">Loading</div>
+                <div class="date">Loading</div>
             </div>
             <div class="email-body">
             </div>

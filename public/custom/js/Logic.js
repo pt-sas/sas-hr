@@ -1301,7 +1301,7 @@ _tableNotification.on(
   }
 );
 
-_tableNotification.on("click", ".check-message", function (e) {
+_tableNotification.on("change", ".check-message", function (e) {
   const card = $(e.target).closest(".card");
   const floatRight = card.find(".card-header .float-right");
 
@@ -1318,7 +1318,12 @@ _tableNotification.on("click", ".check-message", function (e) {
  * Delete Data for Notification
  * **/
 $(".multiple-delete").on("click", function () {
-  let formData = new FormData();
+let formData = new FormData();
+  const _this = $(this);
+  let oriElement = _this.html();
+  const card = _this.closest('.card');
+  const cardBody = card.find("#card-notif");
+
   let url = CURRENT_URL + DELETE;
   let row = [];
 
@@ -1352,6 +1357,18 @@ $(".multiple-delete").on("click", function () {
         contentType: false,
         cache: false,
         dataType: "JSON",
+        beforeSend: function () {
+        $(_this)
+          .html(
+            '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
+          )
+          .prop("disabled", true);
+        loadingForm(cardBody.prop("id"), "facebook");
+      },
+      complete: function () {
+        $(_this).html(oriElement).prop("disabled", false);
+        hideLoadingForm(cardBody.prop("id"));
+      },
         success: function (result) {
           if (result[0].success) {
             Toast.fire({
@@ -1362,6 +1379,7 @@ $(".multiple-delete").on("click", function () {
               timer: 1000,
             });
             reloadTable();
+            card.find('.checkAll').trigger('click');
           } else if (result[0].error) {
             Toast.fire({
               type: "error",
@@ -2357,3 +2375,93 @@ _tableReport.on("click", ".btn_input_news", function (e) {
   form.find("textarea[name=reason]").val(reason);
   form.find("input[name=md_employee_id]").val(id);
 });
+
+$(".set-read").on('click', function(e) {
+let formData = new FormData();
+const _this = $(this);
+let oriElement = _this.html();
+const card = _this.closest('.card');
+const cardBody = card.find("#card-notif");
+
+let url = CURRENT_URL + '/updateRead';
+let row = [];
+
+  _tableNotification
+    .rows()
+    .nodes()
+    .to$()
+    .find("input.check-message:checked")
+    .each(function () {
+      row.push(this.value);
+    });
+
+  formData.append("trx_message_id", row);
+
+  Swal.fire({
+    title: "Tandai sudah dibaca ?",
+    text: "Apakah anda yakin untuk menandai sudah dibaca ? ",
+    type: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    confirmButtonText: "Ok",
+    cancelButtonText: "Close",
+    reverseButtons: true,
+  }).then((data) => {
+    if (data.value) {
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        beforeSend: function () {
+        $(_this)
+          .html(
+            '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
+          )
+          .prop("disabled", true);
+        loadingForm(cardBody.prop("id"), "facebook");
+      },
+      complete: function () {
+        $(_this).html(oriElement).prop("disabled", false);
+        hideLoadingForm(cardBody.prop("id"));
+      },
+        success: function (result) {
+          if (result[0].success) {
+            Toast.fire({
+              title: "Updated!",
+              text: "Data sudah diupdate.",
+              type: "success",
+              showConfirmButton: false,
+              timer: 1000,
+            });
+            reloadTable();
+            card.find('.checkAll').trigger('click');
+
+          } else if (result[0].error) {
+            Toast.fire({
+              type: "error",
+              title: "Error!",
+              text: result[0].message,
+              showConfirmButton: true,
+            });
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
+  });
+});
+
+// $("#saldo_cuti_detail").ready(function () {
+//   const _this = $(this);
+//   const form = _this.find("form");
+
+//   if (form.find("select.select-data").length) {
+//     initSelectData(form.find("select.select-data"));
+//   }
+// });
