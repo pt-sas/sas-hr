@@ -179,7 +179,8 @@ class User extends BaseController
 				$rowBranchAcc = $mBranchAcc->where($this->model->primaryKey, $id)->findAll();
 				$rowDivAcc = $mDivAcc->where($this->model->primaryKey, $id)->findAll();
 				$rowEmpDel = $mEmpDelegation->where($this->model->primaryKey, $id)->findAll();
-				$rowLvl = $mLevelling->where("md_levelling_id", $list[0]->getLevellingId())->first();
+				if ($list)
+					$rowLvl = $mLevelling->where("md_levelling_id", $list[0]->getLevellingId())->first();
 
 				if ($rowRoleAcc) {
 					$list = $this->field->setDataSelect($mUserRole->table, $list, $mRole->primaryKey, $mRole->primaryKey, $mRole->primaryKey, $rowRoleAcc);
@@ -199,7 +200,7 @@ class User extends BaseController
 					$list = $this->field->setDataSelect($mEmployee->table, $list, $mEmpDelegation->primaryKey, $mEmployee->primaryKey, $mEmployee->primaryKey, $empList, 'md_employee_id', 'value');
 				}
 
-				if ($rowLvl) {
+				if (!empty($rowLvl)) {
 					$list = $this->field->setDataSelect($mLevelling->table, $list, $mLevelling->primaryKey, $rowLvl->getLevellingId(), $rowLvl->getName());
 				}
 
