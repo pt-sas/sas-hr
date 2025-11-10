@@ -274,6 +274,12 @@ class WActivity extends BaseController
                             $dataNotif = $mNotifText->where('name', 'Email Not Approved Line')->first();
                             $subject = $dataNotif->getSubject();
                             $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date))], $dataNotif->getText());
+                        } else if ($table == "trx_assignment" || $table == "trx_overtime") {
+                            $dataNotif = $mNotifText->where('name', 'Email Not Approved Bundling')->first();
+                            $subject = $dataNotif->getSubject();
+                            $branch = $mBranch->find($trx->md_branch_id);
+                            $division = $mDivision->find($trx->md_division_id);
+                            $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
                         } else {
                             $dataNotif = $mNotifText->where('name', 'Email Not Approved')->first();
                             $subject = $dataNotif->getSubject();
@@ -327,6 +333,12 @@ class WActivity extends BaseController
                             $dataNotif = $mNotifText->where('name', 'Email Approved Line')->first();
                             $subject = $dataNotif->getSubject();
                             $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date))], $dataNotif->getText());
+                        } else if ($table == "trx_assignment" || $table == "trx_overtime") {
+                            $dataNotif = $mNotifText->where('name', 'Email Approved Bundling')->first();
+                            $subject = $dataNotif->getSubject();
+                            $branch = $mBranch->find($trx->md_branch_id);
+                            $division = $mDivision->find($trx->md_division_id);
+                            $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
                         } else {
                             $dataNotif = $mNotifText->where('name', 'Email Approved')->first();
                             $subject = $dataNotif->getSubject();
