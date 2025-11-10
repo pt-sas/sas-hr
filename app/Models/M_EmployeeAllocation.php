@@ -138,44 +138,44 @@ class M_EmployeeAllocation extends Model
 
     public function doAfterUpdate(array $rows)
     {
-        $mEmployee = new M_Employee($this->request);
-        $mEmpBranch = new M_EmpBranch($this->request);
-        $mEmpDivision = new M_EmpDivision($this->request);
-        $emEntity = new \App\Entities\Employee();
-        $emBranch = new \App\Entities\EmpBranch();
-        $emDivision = new \App\Entities\EmpDivision();
+        // $mEmployee = new M_Employee($this->request);
+        // $mEmpBranch = new M_EmpBranch($this->request);
+        // $mEmpDivision = new M_EmpDivision($this->request);
+        // $emEntity = new \App\Entities\Employee();
+        // $emBranch = new \App\Entities\EmpBranch();
+        // $emDivision = new \App\Entities\EmpDivision();
 
         try {
-            $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
+            // $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
 
-            $row = $this->find($ID);
+            // $row = $this->find($ID);
 
-            if ($row->docstatus === "CO") {
-                $emEntity->md_levelling_id = $row->levelling_to;
-                $emEntity->md_position_id = $row->position_to;
-                $emEntity->md_employee_id = $row->md_employee_id;
-                $mEmployee->save($emEntity);
+            // if ($row->docstatus === "CO") {
+            //     $emEntity->md_levelling_id = $row->levelling_to;
+            //     $emEntity->md_position_id = $row->position_to;
+            //     $emEntity->md_employee_id = $row->md_employee_id;
+            //     $mEmployee->save($emEntity);
 
-                //TODO: Update branch to 
-                $rowBranch = $mEmpBranch->where([
-                    'md_employee_id'    => $row->md_employee_id,
-                    'md_branch_id'      => $row->md_branch_id
-                ])->first();
+            //     //TODO: Update branch to 
+            //     $rowBranch = $mEmpBranch->where([
+            //         'md_employee_id'    => $row->md_employee_id,
+            //         'md_branch_id'      => $row->md_branch_id
+            //     ])->first();
 
-                $emBranch->md_branch_id = $row->branch_to;
-                $emBranch->{$mEmpBranch->primaryKey} = $rowBranch->{$mEmpBranch->primaryKey};
-                $mEmpBranch->save($emBranch);
+            //     $emBranch->md_branch_id = $row->branch_to;
+            //     $emBranch->{$mEmpBranch->primaryKey} = $rowBranch->{$mEmpBranch->primaryKey};
+            //     $mEmpBranch->save($emBranch);
 
-                //TODO: Update division to
-                $rowDivision = $mEmpDivision->where([
-                    'md_employee_id'    => $row->md_employee_id,
-                    'md_division_id'    => $row->md_division_id
-                ])->first();
+            //     //TODO: Update division to
+            //     $rowDivision = $mEmpDivision->where([
+            //         'md_employee_id'    => $row->md_employee_id,
+            //         'md_division_id'    => $row->md_division_id
+            //     ])->first();
 
-                $emDivision->md_division_id = $row->division_to;
-                $emDivision->{$mEmpDivision->primaryKey} = $rowDivision->{$mEmpDivision->primaryKey};
-                $mEmpDivision->save($emDivision);
-            }
+            //     $emDivision->md_division_id = $row->division_to;
+            //     $emDivision->{$mEmpDivision->primaryKey} = $rowDivision->{$mEmpDivision->primaryKey};
+            //     $mEmpDivision->save($emDivision);
+            // }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

@@ -43,7 +43,7 @@ $routes->get('logout', 'Backend\Auth::logout');
 $routes->post('(:any)/accessmenu/getAccess', 'Backend\AccessMenu::getAccess');
 
 $routes->get('cron-not-approved', 'Backend\WActivity::doNotApproved');
-// $routes->get('cron-update-employee', 'Backend\EmployeeAllocation::updateMasterEmployee');
+$routes->get('cron-update-employee', 'Backend\EmployeeAllocation::updateMasterEmployee');
 $routes->get('cron-approved-realization', 'Backend\Realization::doApprovedRealization');
 $routes->get('cron-absent-alert', 'Backend\Attendance::toDoCheckAbsent');
 $routes->get('cron-send-absent-summary', 'Backend\Attendance::toDoSendAbsentSummary');

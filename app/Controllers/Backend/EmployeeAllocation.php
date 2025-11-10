@@ -5,14 +5,9 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use Config\Services;
 use App\Models\M_Employee;
-use App\Models\M_AccessMenu;
-use App\Models\M_Holiday;
 use App\Models\M_Rule;
-use App\Models\M_WorkDetail;
-use App\Models\M_EmpWorkDay;
 use App\Models\M_Division;
 use App\Models\M_EmployeeAllocation;
-use App\Models\M_RuleDetail;
 use App\Models\M_Branch;
 use App\Models\M_DocumentType;
 use App\Models\M_EmpBranch;
@@ -47,9 +42,6 @@ class EmployeeAllocation extends BaseController
 
     public function showAll()
     {
-        $mAccess = new M_AccessMenu($this->request);
-        $mEmployee = new M_Employee($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -58,6 +50,7 @@ class EmployeeAllocation extends BaseController
                 '', // Hide column
                 '', // Number column
                 'trx_employee_allocation.documentno',
+                'trx_employee_allocation.docstatus',
                 'md_employee.fullname',
                 'trx_employee_allocation.nik',
                 'md_branch.name',
@@ -72,11 +65,11 @@ class EmployeeAllocation extends BaseController
                 'trx_employee_allocation.submissiondate',
                 'trx_employee_allocation.date',
                 'trx_employee_allocation.description',
-                'trx_employee_allocation.docstatus',
                 'sys_user.name'
             ];
             $search = [
                 'trx_employee_allocation.documentno',
+                'trx_employee_allocation.docstatus',
                 'md_employee.fullname',
                 'trx_employee_allocation.nik',
                 'md_branch.name',
@@ -91,59 +84,13 @@ class EmployeeAllocation extends BaseController
                 'trx_employee_allocation.submissiondate',
                 'trx_employee_allocation.date',
                 'trx_employee_allocation.description',
-                'trx_employee_allocation.docstatus',
                 'sys_user.name'
             ];
             $sort = ['trx_employee_allocation.documentno' => 'ASC'];
 
-            /**
-             * Hak akses
-             */
-            $roleEmp = $this->access->getUserRoleName($this->session->get('sys_user_id'), 'W_Emp_All_Data');
-            $empDelegation = $mEmployee->getEmpDelegation($this->session->get('sys_user_id'));
-            $arrAccess = $mAccess->getAccess($this->session->get("sys_user_id"));
-            $arrEmployee = $mEmployee->getChartEmployee($this->session->get('md_employee_id'));
+            $where['md_employee.md_employee_id'] = ['value' => $this->access->getEmployeeData()];
 
-            if (!empty($empDelegation)) {
-                $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
-            }
-
-            if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
-                $arrBranch = $arrAccess["branch"];
-                $arrDiv = $arrAccess["division"];
-
-                $arrEmpBased = $mEmployee->getEmployeeBased($arrBranch, $arrDiv);
-
-                if (!empty($empDelegation)) {
-                    $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
-                }
-
-                if ($roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
-
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrMerge
-                    ];
-                } else if (!$roleEmp && !empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmployee
-                    ];
-                } else if ($roleEmp && empty($this->session->get('md_employee_id'))) {
-                    $where['md_employee.md_employee_id'] = [
-                        'value'     => $arrEmpBased
-                    ];
-                } else {
-                    $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-                }
-            } else if (!empty($this->session->get('md_employee_id'))) {
-                $where['md_employee.md_employee_id'] = [
-                    'value'     => $arrEmployee
-                ];
-            } else {
-                $where['md_employee.md_employee_id'] = $this->session->get('md_employee_id');
-            }
-
-            $where['trx_employee_allocation.submissiontype'] = $this->model->Pengajuan_Mutasi;
+            $where['trx_employee_allocation.submissiontype'] = ['value' => [$this->model->Pengajuan_Mutasi, $this->model->Pengajuan_Rotasi, $this->model->Pengajuan_Promosi, $this->model->Pengajuan_Demosi]];
 
             $data = [];
 
@@ -159,6 +106,7 @@ class EmployeeAllocation extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
                 $row[] = $value->employee_fullname;
                 $row[] = $value->nik;
                 $row[] = $value->branch;
@@ -173,7 +121,6 @@ class EmployeeAllocation extends BaseController
                 $row[] = format_dmy($value->submissiondate, '-');
                 $row[] = format_dmy($value->date, '-');
                 $row[] = $value->description;
-                $row[] = docStatus($value->docstatus);
                 $row[] = $value->createdby;
                 $row[] = $this->template->tableButton($ID, $value->docstatus);
                 $data[] = $row;
@@ -192,32 +139,24 @@ class EmployeeAllocation extends BaseController
 
     public function create()
     {
-        $mHoliday = new M_Holiday($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mRule = new M_Rule($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
+            $mRule = new M_Rule($this->request);
+
+            $listNeccessary = [
+                $this->model->Pengajuan_Mutasi => 'MT',
+                $this->model->Pengajuan_Rotasi => 'MT',
+                $this->model->Pengajuan_Promosi => 'PR',
+                $this->model->Pengajuan_Demosi => 'DM'
+            ];
+
             $post = $this->request->getVar();
 
-            if ($post["submissiontype"] == $this->model->Pengajuan_Mutasi) {
-                $post["necessary"] = 'MT';
-            } else if ($post["submissiontype"] == $this->model->Pengajuan_Rotasi) {
-                $post["necessary"] = 'MT';
-            } else if ($post["submissiontype"] == $this->model->Pengajuan_Promosi) {
-                $post["necessary"] = 'PR';
-            } else if ($post["submissiontype"] == $this->model->Pengajuan_Demosi) {
-                $post["necessary"] = 'DM';
-            }
-
-            $today = date('Y-m-d');
-            $employeeId = $post['md_employee_id'];
+            $post['necessary'] = $listNeccessary[$post['submissiontype']];
 
             try {
                 if (!$this->validation->run($post, 'employee_allo')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $holidays = $mHoliday->getHolidayDate();
                     $date = date('Y-m-d', strtotime($post['date']));
                     $nik = $post['nik'];
                     $submissionDate = $post['submissiondate'];
@@ -230,41 +169,29 @@ class EmployeeAllocation extends BaseController
 
                     $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
 
-                    //TODO : Get work day employee
-                    $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today,
-                        'validto >='        => $today
-                    ])->orderBy('validfrom', 'ASC')->first();
+                    $minDate = date('Y-m-d', strtotime($subDate . "+ {$minDays} days"));
 
-                    if (is_null($workDay)) {
-                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    //TODO : Get submission
+                    $whereClause = "trx_employee_allocation.nik = '{$nik}'";
+                    $whereClause .= " AND trx_employee_allocation.date = '{$date}'";
+                    $whereClause .= " AND trx_employee_allocation.docstatus IN ('{$this->DOCSTATUS_Completed}','{$this->DOCSTATUS_Inprogress}')";
+                    $trx = $this->model->where($whereClause)->first();
+
+                    if ($minDate > $date) {
+                        $response = message('success', false, "Tidak bisa mengajukan mutasi, minimal pengajuan {$minDays} hari sebelum tanggal mutasi");
+                    } else if ($trx) {
+                        $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
                     } else {
-                        $minDate = date('Y-m-d', strtotime($subDate . "+ {$minDays} days"));
+                        $this->entity->fill($post);
 
-                        //TODO : Get submission
+                        if ($this->isNew()) {
+                            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                        $whereClause = "trx_employee_allocation.nik = '{$nik}'";
-                        $whereClause .= " AND trx_employee_allocation.date = '{$date}'";
-                        $whereClause .= " AND trx_employee_allocation.docstatus IN ('{$this->DOCSTATUS_Completed}','{$this->DOCSTATUS_Inprogress}')";
-                        $trx = $this->model->where($whereClause)->first();
-
-                        if ($minDate > $date) {
-                            $response = message('success', false, "Tidak bisa mengajukan mutasi, minimal pengajuan {$minDays} hari sebelum tanggal mutasi");
-                        } else if ($trx) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
-                        } else {
-                            $this->entity->fill($post);
-
-                            if ($this->isNew()) {
-                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Mutasi, $post);
-                                $this->entity->setDocumentNo($docNo);
-                            }
-
-                            $response = $this->save();
+                            $docNo = $this->model->getInvNumber("submissiontype", $post['submissiontype'], $post);
+                            $this->entity->setDocumentNo($docNo);
                         }
+
+                        $response = $this->save();
                     }
                 }
             } catch (\Exception $e) {
@@ -355,11 +282,9 @@ class EmployeeAllocation extends BaseController
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
                         $response = message('success', true, true);
-                    } else if ($_DocAction === $this->DOCSTATUS_Unlock) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
-                    } else if (($_DocAction === $this->DOCSTATUS_Unlock || $_DocAction === $this->DOCSTATUS_Voided)) {
-                        $response = message('error', true, 'Tidak bisa diproses');
                     } else {
                         $this->entity->setDocStatus($_DocAction);
                         $response = $this->save();
@@ -447,34 +372,25 @@ class EmployeeAllocation extends BaseController
         $mEmpBranch = new M_EmpBranch($this->request);
         $mEmpDivision = new M_EmpDivision($this->request);
 
-        // $today = date('Y-m-d');
-        // $tomorrow = date('Y-m-d', strtotime($today . ' +1 day'));
-
-        $where = "date = CURDATE()";
+        $where = "date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)";
         $where .= " AND trx_employee_allocation.docstatus = 'CO'";
         $where .= " AND trx_employee_allocation.isapproved = 'Y'";
+        $where .= " AND trx_employee_allocation.state = 'IP'";
         $list = $this->model->where($where)->findAll();
 
         if ($list) {
             foreach ($list as $value) {
-                // $startdate = date('Y-m-d', strtotime($value->startdate));
-                // $enddate = date('Y-m-d', strtotime($value->enddate));
-
-                // if ($startdate === $tomorrow) {
-                // For Current Branch
                 $branch = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->md_branch_id])->first();
                 $division = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->md_division_id])->first();
-
-
-                // This is if Branch To Exists, doesn't need insert data
-                $branchTo = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->branch_to])->first();
-                $divisionTo = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->division_to])->first();
 
                 if ($value->md_branch_id !== $value->branch_to) {
                     if ($branch)
                         $mEmpBranch->delete($branch->md_employee_branch_id);
 
                     $data = [];
+
+                    // TODO : If Branch To Exists, don't need insert data
+                    $branchTo = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->branch_to])->first();
 
                     if (!$branchTo) {
                         $data = [
@@ -492,6 +408,9 @@ class EmployeeAllocation extends BaseController
                         $mEmpDivision->delete($division->md_employee_division_id);
                     $data = [];
 
+                    // TODO : If Division To Exists, don't need insert data
+                    $divisionTo = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->division_to])->first();
+
                     if (!$divisionTo) {
                         $data = [
                             'created_by' => session()->get('sys_user_id'),
@@ -503,62 +422,20 @@ class EmployeeAllocation extends BaseController
                     }
                 }
 
-                if ($value->md_position_id !== $value->position_to) {
+                if ($value->md_position_id !== $value->position_to || $value->md_levelling_id !== $value->levelling_to) {
                     $empEntity = new \App\Entities\Employee();
 
                     $empEntity->setUpdatedBy(session()->get('sys_user_id'));
                     $empEntity->setEmployeeId($value->md_employee_id);
-                    $empEntity->setPositionId($value->position_to);
+
+                    if ($value->md_position_id !== $value->position_to)
+                        $empEntity->setPositionId($value->position_to);
+
+                    if ($value->md_levelling_id !== $value->levelling_to)
+                        $empEntity->setLevellingId($value->levelling_to);
+
                     $mEmployee->save($empEntity);
                 }
-                // } else if ($enddate === $today) {
-                $this->entity = new \App\Entities\EmployeeAllocation();
-
-                //     $branch = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->branch_to])->first();
-                //     $division = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->division_to])->first();
-
-                //     $branchBef = $mEmpBranch->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_branch_id' => $value->md_branch_id])->first();
-                //     $divisionBef = $mEmpDivision->where([$mEmployee->primaryKey => $value->md_employee_id, 'md_division_id' => $value->md_division_id])->first();
-
-                //     if ($value->md_branch_id !== $value->branch_to) {
-                //         if ($branch)
-                //             $mEmpBranch->delete($branch->md_employee_branch_id);
-                //         $data = [];
-
-                //         if (!$branchBef) {
-                //             $data = [
-                //                 'created_by' => session()->get('sys_user_id'),
-                //                 'updated_by' => session()->get('sys_user_id'),
-                //                 'md_employee_id' => $value->md_employee_id,
-                //                 'md_branch_id'   => $value->md_branch_id
-                //             ];
-
-                //             $mEmpBranch->insert($data);
-                //         }
-                //     }
-
-                //     if ($value->md_division_id !== $value->division_to) {
-                //         if ($division)
-                //             $mEmpDivision->delete($division->md_employee_division_id);
-                //         $data = [];
-
-                //         if (!$divisionBef) {
-                //             $data = [
-                //                 'created_by' => session()->get('sys_user_id'),
-                //                 'updated_by' => session()->get('sys_user_id'),
-                //                 'md_employee_id' => $value->md_employee_id,
-                //                 'md_division_id' => $value->md_division_id
-                //             ];
-
-                //             $mEmpDivision->insert($data);
-                //         }
-                //     }
-
-                // $this->entity->setEmployeeAllocationId($value->trx_employee_allocation_id);
-                // $this->entity->setDocStatus($this->DOCSTATUS_Completed);
-
-                // $this->save();
-                // }
             }
         }
     }
