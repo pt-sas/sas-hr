@@ -1324,7 +1324,7 @@ let formData = new FormData();
   const card = _this.closest('.card');
   const cardBody = card.find("#card-notif");
 
-  let url = CURRENT_URL + DELETE;
+  let url = CURRENT_URL + '/destroy';
   let row = [];
 
   _tableNotification
@@ -1379,7 +1379,11 @@ let formData = new FormData();
               timer: 1000,
             });
             reloadTable();
-            card.find('.checkAll').trigger('click');
+
+            if (card.find('.checkAll').is(':checked')) {
+              card.find('.checkAll').trigger('click');
+            }
+
           } else if (result[0].error) {
             Toast.fire({
               type: "error",
@@ -2438,7 +2442,9 @@ let row = [];
               timer: 1000,
             });
             reloadTable();
-            card.find('.checkAll').trigger('click');
+            if (card.find('.checkAll').is(':checked')) {
+              card.find('.checkAll').trigger('click');
+            }
 
           } else if (result[0].error) {
             Toast.fire({
