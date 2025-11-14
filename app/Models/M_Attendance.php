@@ -37,7 +37,7 @@ class M_Attendance extends Model
 
     public function getSelect()
     {
-        $sql = 'v_attendance.*,
+        $sql = 'v_attendance_series.*,
                 md_employee.md_employee_id,
                 md_employee.fullname';
 
@@ -47,7 +47,7 @@ class M_Attendance extends Model
     public function getJoin()
     {
         $sql = [
-            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = v_attendance.md_employee_id', 'inner'),
+            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = v_attendance_series.md_employee_id', 'inner'),
             $this->setDataJoin('md_employee_branch', 'md_employee_branch.md_employee_id = md_employee.md_employee_id', 'left'),
             $this->setDataJoin('md_employee_division', 'md_employee_division.md_employee_id = md_employee.md_employee_id', 'left')
         ];

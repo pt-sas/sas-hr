@@ -13,6 +13,7 @@ use App\Models\M_Configuration;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
+use App\Models\M_EmployeeDeparture;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Holiday;
 use App\Models\M_WorkDetail;
@@ -59,21 +60,20 @@ class Attendance extends BaseController
 
         if ($this->request->getMethod(true) === 'POST') {
             if (isset($post['form']) && $post['clear'] === 'false') {
-                $table = "v_attendance";
+                $table = "v_attendance_series";
                 $select = $this->model->getSelect();
                 $join = $this->model->getJoin();
                 $order = $this->request->getPost('columns');
                 $search = $this->request->getPost('search');
-                $sort = ['v_attendance.date' => 'ASC', 'v_attendance.nik' => 'ASC'];
+                $sort = ['v_attendance_series.date' => 'ASC', 'v_attendance_series.nik' => 'ASC'];
 
                 // TODO : Get Employee Access
                 $empList = $this->access->getEmployeeData();
-                $where['v_attendance.md_employee_id'] = ['value' => $empList];
+                $where['v_attendance_series.md_employee_id'] = ['value' => $empList];
 
                 $number = $this->request->getPost('start');
                 $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);
 
-                // TODO : Get All Employee Workday
                 foreach ($post['form'] as $value) {
                     if (!empty($value['value'])) {
                         if ($value['name'] === "date") {
