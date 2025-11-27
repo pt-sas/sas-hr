@@ -497,6 +497,15 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('lembur/tableLine', 'Backend\Overtime::tableLine');
     $routes->match(['get', 'post'], 'lembur/print/(:any)', 'Backend\Overtime::exportPDF/$1');
 
+    $routes->add('penyesuaian', 'Backend\Adjustment::index');
+    $routes->match(['get', 'post'], 'penyesuaian/showAll', 'Backend\Adjustment::showAll');
+    $routes->post('penyesuaian/create', 'Backend\Adjustment::create');
+    $routes->get('penyesuaian/show/(:any)', 'Backend\Adjustment::show/$1');
+    $routes->get('penyesuaian/destroy/(:any)', 'Backend\Adjustment::destroy/$1');
+    $routes->get('penyesuaian/processIt', 'Backend\Adjustment::processIt');
+    $routes->match(['get', 'post'], 'penyesuaian/print/(:any)', 'Backend\Adjustment::exportPDF/$1');
+    $routes->post('penyesuaian/getBeginBalance', 'Backend\Adjustment::getBeginBalance');
+
     $routes->get('wactivity/showNotif', 'Backend\WActivity::showNotif');
     $routes->post('wactivity/create', 'Backend\WActivity::create');
     $routes->match(['get', 'post'], 'wactivity/showActivityInfo', 'Backend\WActivity::showActivityInfo');

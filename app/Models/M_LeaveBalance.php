@@ -18,6 +18,7 @@ class M_LeaveBalance extends Model
         'carry_over_expiry_date',
         'submissiondate',
         'startdate',
+        'enddate',
         'description',
         'created_by',
         'updated_by',

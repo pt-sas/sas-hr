@@ -467,7 +467,7 @@ class Realization extends BaseController
                                 ])->first();
 
                                 if (!$balance || ($balance && ($balance->balance_amount <= 0
-                                    && (($balance->carried_over_amount <= 0 && $submissionDate <= date('Y-m-d', strtotime($balance->carry_over_expiry_date)))
+                                    && ($balance->carried_over_amount <= 0
                                         || ($balance->carried_over_amount > 0 && $submissionDate > date('Y-m-d', strtotime($balance->carry_over_expiry_date))))
                                 )))
                                     return $this->response->setJSON(message('success', false, 'Karyawan tidak memiliki Saldo Cuti'));

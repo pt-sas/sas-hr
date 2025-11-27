@@ -294,6 +294,11 @@ class M_Datatable extends Model
                 $model = new M_Overtime($this->request);
                 $model->doAfterUpdate($rows);
             }
+
+            if ($this->table === "trx_adjustment") {
+                $model = new M_Adjustment($this->request);
+                $model->doAfterUpdate($rows);
+            }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

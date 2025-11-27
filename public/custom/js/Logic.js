@@ -1318,13 +1318,13 @@ _tableNotification.on("change", ".check-message", function (e) {
  * Delete Data for Notification
  * **/
 $(".multiple-delete").on("click", function () {
-let formData = new FormData();
+  let formData = new FormData();
   const _this = $(this);
   let oriElement = _this.html();
-  const card = _this.closest('.card');
+  const card = _this.closest(".card");
   const cardBody = card.find("#card-notif");
 
-  let url = CURRENT_URL + '/destroy';
+  let url = CURRENT_URL + "/destroy";
   let row = [];
 
   _tableNotification
@@ -1358,17 +1358,17 @@ let formData = new FormData();
         cache: false,
         dataType: "JSON",
         beforeSend: function () {
-        $(_this)
-          .html(
-            '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
-          )
-          .prop("disabled", true);
-        loadingForm(cardBody.prop("id"), "facebook");
-      },
-      complete: function () {
-        $(_this).html(oriElement).prop("disabled", false);
-        hideLoadingForm(cardBody.prop("id"));
-      },
+          $(_this)
+            .html(
+              '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
+            )
+            .prop("disabled", true);
+          loadingForm(cardBody.prop("id"), "facebook");
+        },
+        complete: function () {
+          $(_this).html(oriElement).prop("disabled", false);
+          hideLoadingForm(cardBody.prop("id"));
+        },
         success: function (result) {
           if (result[0].success) {
             Toast.fire({
@@ -1380,10 +1380,9 @@ let formData = new FormData();
             });
             reloadTable();
 
-            if (card.find('.checkAll').is(':checked')) {
-              card.find('.checkAll').trigger('click');
+            if (card.find(".checkAll").is(":checked")) {
+              card.find(".checkAll").trigger("click");
             }
-
           } else if (result[0].error) {
             Toast.fire({
               type: "error",
@@ -2380,15 +2379,15 @@ _tableReport.on("click", ".btn_input_news", function (e) {
   form.find("input[name=md_employee_id]").val(id);
 });
 
-$(".set-read").on('click', function(e) {
-let formData = new FormData();
-const _this = $(this);
-let oriElement = _this.html();
-const card = _this.closest('.card');
-const cardBody = card.find("#card-notif");
+$(".set-read").on("click", function (e) {
+  let formData = new FormData();
+  const _this = $(this);
+  let oriElement = _this.html();
+  const card = _this.closest(".card");
+  const cardBody = card.find("#card-notif");
 
-let url = CURRENT_URL + '/updateRead';
-let row = [];
+  let url = CURRENT_URL + "/updateRead";
+  let row = [];
 
   _tableNotification
     .rows()
@@ -2421,17 +2420,17 @@ let row = [];
         cache: false,
         dataType: "JSON",
         beforeSend: function () {
-        $(_this)
-          .html(
-            '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
-          )
-          .prop("disabled", true);
-        loadingForm(cardBody.prop("id"), "facebook");
-      },
-      complete: function () {
-        $(_this).html(oriElement).prop("disabled", false);
-        hideLoadingForm(cardBody.prop("id"));
-      },
+          $(_this)
+            .html(
+              '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
+            )
+            .prop("disabled", true);
+          loadingForm(cardBody.prop("id"), "facebook");
+        },
+        complete: function () {
+          $(_this).html(oriElement).prop("disabled", false);
+          hideLoadingForm(cardBody.prop("id"));
+        },
         success: function (result) {
           if (result[0].success) {
             Toast.fire({
@@ -2442,10 +2441,9 @@ let row = [];
               timer: 1000,
             });
             reloadTable();
-            if (card.find('.checkAll').is(':checked')) {
-              card.find('.checkAll').trigger('click');
+            if (card.find(".checkAll").is(":checked")) {
+              card.find(".checkAll").trigger("click");
             }
-
           } else if (result[0].error) {
             Toast.fire({
               type: "error",
@@ -2462,6 +2460,94 @@ let row = [];
     }
   });
 });
+
+$("#form_adjustment").on(
+  "change dp.change",
+  "#submissiontype, #md_employee_id, #date",
+  function (evt) {
+    const form = $(this).closest("form");
+    const md_employee_id = form.find("#md_employee_id").val();
+    const submissionType = form.find("#submissiontype").val();
+    const date = form.find("#date").val();
+
+    form.find("#begin_balance").val("");
+    form.find("#adjustment").val("");
+    form.find("#ending_balance").val("");
+
+    if (md_employee_id !== "" && submissionType !== "" && date !== "") {
+      let formData = new FormData();
+
+      formData.append("md_employee_id", md_employee_id);
+      formData.append("submissiontype", submissionType);
+      formData.append("date", date);
+
+      $.ajax({
+        url: CURRENT_URL + "/getBeginBalance",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+        dataType: "JSON",
+        success: function (result) {
+          if (result.data !== null) {
+            form.find("#begin_balance").val(result.data);
+          }
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+    }
+  }
+);
+
+$("#form_adjustment").on("input", ".adjustment", function () {
+  const form = $(this).closest("form");
+  const isTKH =
+    form.find("#submissiontype option:selected").text().trim() ===
+    "Penyesuaian TKH";
+
+  let v = $(this).val();
+
+  v = v.replace(/[^\d\.\-]/g, "");
+  const hasMinus = v.startsWith("-");
+  v = v.replace(/-/g, "");
+  if (hasMinus) v = "-" + v;
+
+  if (isTKH) {
+    const parts = v.split(".");
+    if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
+
+    if (v === "." || v === "-.") v = "";
+  } else {
+    v = v.replace(/\./g, "");
+  }
+
+  const negative = v.startsWith("-");
+  const raw = negative ? v.substring(1) : v;
+  const limited = raw.substring(0, 3);
+  v = negative ? "-" + limited : limited;
+
+  $(this).val(v);
+
+  $(this).trigger("calculateEndingBalance");
+});
+
+$("#form_adjustment").on(
+  "calculateEndingBalance",
+  "#adjustment",
+  function (evt) {
+    const form = $(this).closest("form");
+
+    const begin = parseFloat(form.find("#begin_balance").val()) || 0;
+    const adj = parseFloat($(this).val()) || 0;
+
+    const ending = begin + adj;
+
+    form.find("#ending_balance").val(Number.isFinite(ending) ? ending : "");
+  }
+);
 
 // $("#saldo_cuti_detail").ready(function () {
 //   const _this = $(this);
