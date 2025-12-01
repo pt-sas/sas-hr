@@ -195,7 +195,7 @@ class WActivity extends BaseController
 
 
             //TODO : Get Approval Notification Text Template
-            if ($docType->isapprovedline == 'Y' && $table == "trx_absent") {
+            if ($docType->isapprovedline == 'Y' && $table == "trx_absent" && $tableLine) {
                 $emp = $mEmployee->find($trx->md_employee_id);
                 $dataNotif = $mNotifText->where('name', 'Email Approval Line')->first();
                 $subject = $dataNotif->getSubject();
