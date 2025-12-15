@@ -67,6 +67,7 @@ class M_AbsentDetail extends Model
     {
         $this->builder->select($this->table . '.*,
             trx_absent.trx_absent_id,
+            trx_absent.md_employee_id,
             trx_absent.nik,
             trx_absent.documentno,
             trx_absent.startdate,
