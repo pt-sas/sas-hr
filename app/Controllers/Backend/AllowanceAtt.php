@@ -509,11 +509,11 @@ class AllowanceAtt extends BaseController
                             $clock_out = !empty($attendance->clock_out) ? $attendance->clock_out : null;
                         } else {
                             $whereIn = "v_attendance_branch.md_employee_id = {$row->md_employee_id}";
-                            $whereIn .= " AND v_attendance_branch.work_date = '{$date}'";
+                            $whereIn .= " AND v_attendance_branch.date = '{$date}'";
                             $whereIn .= " AND v_attendance_branch.clock_in != ''";
 
                             $whereOut = "v_attendance_branch.md_employee_id = {$row->md_employee_id}";
-                            $whereOut .= " AND v_attendance_branch.work_date = '{$date}'";
+                            $whereOut .= " AND v_attendance_branch.date = '{$date}'";
                             $whereOut .= " AND v_attendance_branch.clock_out != ''";
 
                             if ($tugasKunjungan) {
