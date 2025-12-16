@@ -114,4 +114,13 @@ class M_AllowanceAtt extends Model
 
         return !is_null($result->tkh) ? $result->tkh : 0;
     }
+
+    public function getAllTotalAmount($startdate, $enddate)
+    {
+        $this->builder->select('md_employee_id, DATE(submissiondate) as date,SUM(amount) as tkh');
+        $this->builder->where("date(submissiondate) BETWEEN '{$startdate}' AND '{$enddate}'");
+        $this->builder->groupBy(['md_employee_id', 'DATE(submissiondate)'], ',');
+
+        return $this->builder->get()->getResult();
+    }
 }
