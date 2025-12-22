@@ -455,6 +455,7 @@ class AllowanceAtt extends BaseController
         foreach ($sql as $row) {
             $level = $allLevelling[$row->md_levelling_id];
             $empBranch = $mEmpBranch->where('md_employee_id', $row->md_employee_id)->findAll();
+            $branchID = null;
 
             if (count($empBranch) > 1) {
                 $branchID = array_column($empBranch, 'md_branch_id');
@@ -495,8 +496,9 @@ class AllowanceAtt extends BaseController
                 // TODO : Get Attendance
                 $attendance = isset($allAttendance[$row->md_employee_id][$date]) ? $allAttendance[$row->md_employee_id][$date] : null;
 
-                if ((!$work && !$assignment) || (!$work && ($configMNSOD && $row->md_levelling_id <= $lvlManager) && empty($attendance))) {
+                if (!$work && (($configMNSOD && $row->md_levelling_id <= $lvlManager) ? empty($attendance) : !$assignment)) {
                     $styleCell = $style_row_dayoff;
+                    $qty = 0;
                 } else {
                     $trxAbsent = isset($allTrxAbsent[$row->md_employee_id][$date]) ? $allTrxAbsent[$row->md_employee_id][$date] : null;
 
@@ -558,7 +560,7 @@ class AllowanceAtt extends BaseController
 
                         // This Variable for calculating if employee absent clock out less than minAbsentOut then meaning employee is late and will be punished for half TKH
                         $breakStart = $work ? convertToMinutes($work->breakstart) : convertToMinutes('12:00');
-                        // $minAbsentIn = $work ? convertToMinutes($work->startwork) : convertToMinutes('08:30');
+                        $minAbsentIn = $work ? convertToMinutes($work->startwork) : convertToMinutes('08:30');
                         $minAbsentOut = $work ? convertToMinutes($work->endwork) : convertToMinutes('15:30');
 
                         $empClockIn = !empty($clock_in) ? convertToMinutes($clock_in) : null;
@@ -578,6 +580,14 @@ class AllowanceAtt extends BaseController
 
                         if (!$work && ($tugasKunjungan || ($configMNSOD && $row->md_levelling_id <= $lvlManager)) && $empClockOut < $minAbsentOut) {
                             $qty += -0.5;
+                        }
+
+                        if (!$work && $tugasKunjungan && $empClockIn > ($minAbsentIn + 30)) {
+                            $qty += -0.5;
+                        }
+
+                        if (!$work && ($tugasKunjungan || ($configMNSOD && $row->md_levelling_id <= $lvlManager)) && (is_null($empClockIn) || is_null($empClockOut))) {
+                            $qty = 0;
                         }
                     }
 
