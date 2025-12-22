@@ -793,7 +793,7 @@ class Realization extends BaseController
                             $this->entity->realization_in = date('Y-m-d', strtotime($submissionDate)) . " " . $post['starttime_att'];
                             $this->entity->realization_out = date('Y-m-d', strtotime($submissionDate)) . " " . $post['endtime_att'];
                         } else if (in_array($submissionForm, $typeFormHalfDay)) {
-                            $this->entity->date = date('Y-m-d', strtotime($post["enddate_realization"])) . " " . $post['endtime_realization'];
+                            $this->entity->date = $submissionDate . " " . $post['endtime_realization'];
                         } else if (in_array($submissionForm, $typeFormOfficeDuties)) {
                             $img_name = "";
 

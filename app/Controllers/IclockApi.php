@@ -302,14 +302,15 @@ STR;
                     $whereClause .= " AND md_day.name = '$day'";
                     $work = $mEmpWork->getEmpWorkDetail($whereClause)->getRow();
 
-                    $whereClause = "trx_absent.md_employee_id = $emp->md_employee_id";
-                    $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'";
-                    $whereClause .= " AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Ijin}, {$mAbsent->Pengajuan_Sakit}, {$mAbsent->Pengajuan_Cuti}, {$mAbsent->Pengajuan_Tugas_Kantor}, {$mAbsent->Pengajuan_Ijin_Resmi})";
-                    $whereClause .= " AND trx_absent.docstatus IN ('CO', 'IP')";
-                    $whereClause .= " AND trx_absent_detail.isagree IN ('Y', 'M', 'S')";
-                    $trxPresentDay = $mAbsentDetail->getAbsentDetail($whereClause)->getRow();
+                    // $whereClause = "trx_absent.md_employee_id = $emp->md_employee_id";
+                    // $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'";
+                    // $whereClause .= " AND trx_absent.submissiontype IN ({$mAbsent->Pengajuan_Ijin}, {$mAbsent->Pengajuan_Sakit}, {$mAbsent->Pengajuan_Cuti}, {$mAbsent->Pengajuan_Tugas_Kantor}, {$mAbsent->Pengajuan_Ijin_Resmi})";
+                    // $whereClause .= " AND trx_absent.docstatus IN ('CO', 'IP')";
+                    // $whereClause .= " AND trx_absent_detail.isagree IN ('Y', 'M', 'S')";
+                    // $trxPresentDay = $mAbsentDetail->getAbsentDetail($whereClause)->getRow();
 
-                    if (($work || ($configMNSOD && $emp->md_levelling_id <= $lvlManager)) && !$trxPresentDay) {
+                    // if (($work || ($configMNSOD && $emp->md_levelling_id <= $lvlManager)) && !$trxPresentDay) {
+                    if ($work || ($configMNSOD && $emp->md_levelling_id <= $lvlManager)) {
                         //TODO : Insert beginning balance
                         $mAllowance->insertAllowance(null, 'trx_attendance', !empty($work) ? 'S+' : 'A+', $val['checktime'], null, $emp->md_employee_id, 1);
 

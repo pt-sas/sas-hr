@@ -13,7 +13,7 @@ class ModifyViewAttendanceBranch extends Migration
         $this->db->query("CREATE VIEW v_attendance_branch AS 
         Select e.md_employee_id, 
         t.nik,
-        t.work_date  AS work_date,
+        t.work_date  AS date,
         MIN(CASE WHEN TIME(t.checktime) < '12:00:00' THEN TIME(t.checktime) END) AS clock_in,
         MAX(CASE WHEN TIME(t.checktime) > '12:00:00' THEN TIME(t.checktime) END) AS clock_out,
         m.md_branch_id 
