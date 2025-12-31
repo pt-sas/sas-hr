@@ -156,6 +156,7 @@ class SubmissionCancel extends BaseController
                         // TODO : Get Cancel Submission
                         $whereClause = "trx_submission_cancel_detail.md_employee_id = '{$value->md_employee_id}'";
                         $whereClause .= " AND trx_submission_cancel_detail.date = '{$dateClause}'";
+                        $whereClause .= " AND trx_submission_cancel_detail.isagree != 'N'";
                         $whereClause .= " AND trx_submission_cancel.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                         $whereClause .= " AND trx_submission_cancel.ref_submissiontype = {$post['ref_submissiontype']}";
                         $whereClause .= " AND trx_submission_cancel.reference_id = {$post['reference_id']}";
@@ -332,6 +333,7 @@ class SubmissionCancel extends BaseController
                             // TODO : Get Cancel Submission
                             $whereClause = "trx_submission_cancel_detail.md_employee_id = '{$value->md_employee_id}'";
                             $whereClause .= " AND trx_submission_cancel_detail.date = '{$dateClause}'";
+                            $whereClause .= " AND trx_submission_cancel_detail.isagree != 'N'";
                             $whereClause .= " AND trx_submission_cancel.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                             $whereClause .= " AND trx_submission_cancel.ref_submissiontype = {$row->getRefSubmissionType()}";
                             $whereClause .= " AND trx_submission_cancel.reference_id = {$row->getReferenceId()}";
