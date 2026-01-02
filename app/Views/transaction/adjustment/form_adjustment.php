@@ -77,7 +77,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="date">Tanggal <span class="required">*</span></label>
+                    <label for="date">Tanggal Peristiwa<span class="required">*</span></label>
                     <div class="input-icon">
                         <input type="text" class="form-control datepicker" id="date" name="date" autocomplete="off">
                         <span class="input-icon-addon">
