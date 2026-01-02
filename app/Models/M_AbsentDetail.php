@@ -644,8 +644,13 @@ class M_AbsentDetail extends Model
             )->whereIn('isagree', ['M', 'S', 'H'])->first();
 
             if (is_null($list)) {
+                $hadApprovedLine = $this->where(
+                    'trx_absent_id',
+                    $line->{$mAbsent->primaryKey}
+                )->whereIn('isagree', ['Y', 'C'])->first();
+
                 $dataUpdate = [
-                    "docstatus"     => "CO",
+                    "docstatus"     => $hadApprovedLine ? "CO" : "NA",
                     "receiveddate"  => $todayTime,
                     "updated_by"    => $updatedBy
                 ];

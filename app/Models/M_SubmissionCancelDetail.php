@@ -228,9 +228,12 @@ class M_SubmissionCancelDetail extends Model
                     // $hEntity->{$hModel->primaryKey} = $refData->header_id;
 
                     // $hModel->save($hEntity);
+                    $hadApprovedLine = $this->where([
+                        $mSubmissionCancel->primaryKey => $line->{$mSubmissionCancel->primaryKey}
+                    ])->whereIn('isagree', ['Y', 'C'])->first();
 
                     $dataUpdate = [
-                        "docstatus"     => "CO",
+                        "docstatus"     => $hadApprovedLine ? 'CO' : 'NA',
                         "receiveddate"  => date('Y-m-d H:i'),
                         "updated_by"    => $updated_by
                     ];
@@ -258,8 +261,12 @@ class M_SubmissionCancelDetail extends Model
             ])->whereIn('isagree', ['S', 'M', 'H'])->first();
 
             if (is_null($list)) {
+                $hadApprovedLine = $this->where([
+                    $mSubmissionCancel->primaryKey => $line->{$mSubmissionCancel->primaryKey}
+                ])->whereIn('isagree', ['Y', 'C'])->first();
+
                 $dataUpdate = [
-                    "docstatus"     => "CO",
+                    "docstatus"     => $hadApprovedLine ? 'CO' : 'NA',
                     "receiveddate"  => $todayTime,
                     "updated_by"    => $updatedBy
                 ];
