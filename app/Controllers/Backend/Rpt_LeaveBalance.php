@@ -281,7 +281,8 @@ class Rpt_LeaveBalance extends BaseController
                     $jan = $this->model->getBalance([
                         'md_transaction.md_employee_id'             => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'     => 1,
-                        'md_transaction.isprocessed'                => "N"
+                        'md_transaction.isprocessed'                => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useJan = 0;
 
@@ -289,7 +290,8 @@ class Rpt_LeaveBalance extends BaseController
                     $feb = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 2,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useFeb = 0;
 
@@ -297,7 +299,8 @@ class Rpt_LeaveBalance extends BaseController
                     $mar = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 3,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useMar = 0;
 
@@ -305,7 +308,8 @@ class Rpt_LeaveBalance extends BaseController
                     $apr = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 4,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useApr = 0;
 
@@ -313,7 +317,8 @@ class Rpt_LeaveBalance extends BaseController
                     $mei = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 5,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useMei = 0;
 
@@ -321,7 +326,8 @@ class Rpt_LeaveBalance extends BaseController
                     $jun = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 6,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useJun = 0;
 
@@ -329,7 +335,8 @@ class Rpt_LeaveBalance extends BaseController
                     $jul = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 7,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useJul = 0;
 
@@ -337,7 +344,8 @@ class Rpt_LeaveBalance extends BaseController
                     $ags = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 8,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useAgs = 0;
 
@@ -345,7 +353,8 @@ class Rpt_LeaveBalance extends BaseController
                     $sep = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 9,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useSep = 0;
 
@@ -353,7 +362,8 @@ class Rpt_LeaveBalance extends BaseController
                     $okt = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 10,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useOkt = 0;
 
@@ -361,7 +371,8 @@ class Rpt_LeaveBalance extends BaseController
                     $nov = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 11,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useNov = 0;
 
@@ -369,7 +380,8 @@ class Rpt_LeaveBalance extends BaseController
                     $des = $this->model->getBalance([
                         'md_transaction.md_employee_id'           => $value->md_employee_id,
                         'MONTH(md_transaction.transactiondate)'   => 12,
-                        'md_transaction.isprocessed'              => "N"
+                        'md_transaction.isprocessed'              => "N",
+                        'md_transaction.year'      => $year
                     ]);
                     $useDes = 0;
 
