@@ -785,6 +785,9 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('daftar-absent', 'Backend\NoAttendance::reportIndex');
     $routes->match(['get', 'post'], 'daftar-absent/showAll', 'Backend\NoAttendance::reportShowAll');
 
+    $routes->add('hutang-cuti', 'Backend\LeaveDebt::index');
+    $routes->match(['get', 'post'], 'hutang-cuti/showAll', 'Backend\LeaveDebt::reportShowAll');
+
 
 });
 
