@@ -781,6 +781,11 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->add('list-kabar', 'Backend\News::index');
     $routes->post('list-kabar/showAll', 'Backend\News::showAll');
     $routes->post('list-kabar/create', 'Backend\News::create');
+
+    $routes->add('daftar-absent', 'Backend\NoAttendance::reportIndex');
+    $routes->match(['get', 'post'], 'daftar-absent/showAll', 'Backend\NoAttendance::reportShowAll');
+
+
 });
 
 /*
