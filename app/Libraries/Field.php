@@ -285,6 +285,10 @@ class Field
                 $value = $value ?? 0;
 
                 $element .= '<button type="button" title="' . $title . '" class="btn btn-sm btn-round line ' . $class . '" id="' . $id . '" name="' . $name . '" value="' . $value . '" ' . $readonly . '> ' . $value . ' </button>';
+            } else if (in_array('update-period', $arrClass)) {
+                $element .= '<button type="button" class="btn btn-primary btn-xs ' . $class . '" name="' . $name . '" value="' . $value . '" ' . $strAttr . '>
+                                        Open / Close Periode
+                                        </button>';
             }
         }
 

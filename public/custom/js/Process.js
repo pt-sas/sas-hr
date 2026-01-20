@@ -80,7 +80,8 @@ $(document).ready(function (e) {
   const cardMenu = parent.find(".card-action-menu");
   const actionMenu = cardMenu.attr("data-action-menu");
 
-  if (typeof actionMenu === "undefined" && actionMenu !== "F") {
+// if (typeof actionMenu === "undefined" && actionMenu !== "F") {
+  if (typeof actionMenu === "undefined" || actionMenu !== "F") {
     //* Remove class is-loading
     $(".main-panel").removeClass("is-loading");
   } else {
@@ -103,6 +104,8 @@ $(document).ready(function (e) {
     showNotification();
     showNotifMessage();
   });
+
+  const holidayDate = getHolidayDate();
 
   $(".select2").select2({
     placeholder: "Select an option",
@@ -168,7 +171,7 @@ $(document).ready(function (e) {
       showClear: true,
       showClose: true,
       daysOfWeekDisabled: [0, 6],
-      disabledDates: getHolidayDate(),
+      disabledDates: holidayDate,
       useCurrent: false,
     });
 
@@ -177,7 +180,7 @@ $(document).ready(function (e) {
       showTodayButton: true,
       showClear: true,
       showClose: true,
-      disabledDates: getHolidayDate(),
+      disabledDates: holidayDate,
       useCurrent: false,
     });
 
@@ -187,7 +190,7 @@ $(document).ready(function (e) {
       showClear: true,
       showClose: true,
       daysOfWeekDisabled: [0, 6],
-      disabledDates: getHolidayDate(),
+      disabledDates: holidayDate,
       useCurrent: false,
     });
 
@@ -197,7 +200,7 @@ $(document).ready(function (e) {
       showClear: true,
       showClose: true,
       daysOfWeekDisabled: [0, 6],
-      disabledDates: getHolidayDate(),
+      disabledDates: holidayDate,
       useCurrent: false,
     });
 
@@ -207,7 +210,7 @@ $(document).ready(function (e) {
       showClear: true,
       showClose: true,
       daysOfWeekDisabled: [0, 6],
-      disabledDates: getHolidayDate(),
+      disabledDates: holidayDate,
       useCurrent: false,
     });
 
@@ -1283,7 +1286,7 @@ $(".save_form").click(function (evt) {
     }
 
     //? Check in form exists Table Line
-    if (_tableLine.context.length) {
+    if (_tableLine.context.length && !form.hasClass('still-open')) {
       const rows = _tableLine.rows().nodes().to$();
       const th = $(rows).closest("table").find("th");
 
@@ -1410,7 +1413,8 @@ $(".save_form").click(function (evt) {
             if (
               container.find(".modal").length &&
               typeof container.find(".modal").attr("id") !== "undefined" &&
-              container.find(".modal").attr("id") !== "modal_image_slide"
+              container.find(".modal").attr("id") !== "modal_image_slide" &&
+              container.find(".modal").attr("modal-type") !== "not-main"
             ) {
               let modal = parent.find(".modal");
               let modalID = modal.attr("id");
@@ -1460,41 +1464,51 @@ $(".save_form").click(function (evt) {
 
               clearErrorForm(form);
             } else {
-              clearForm(evt);
-              const cardBody = container.find(".card-body");
+              if (
+                form.hasClass('still-open')
+              ) {
+                if(typeof result[0].primarykey !== "undefined") {
+                  ID = result[0].primarykey;
+                }
+                  
+                setSave = "update";
+              } else {
+                clearForm(evt);
+                const cardBody = container.find(".card-body");
 
-              $.each(cardBody, function (idx, elem) {
-                let className = elem.className.split(/\s+/);
-                if (className.includes("card-main")) {
-                  $(this).css("display", "block");
-                  // Remove breadcrumb list
-                  let li = ul.find("li");
-                  $.each(li, function (idx, elem) {
-                    if (idx > 2) elem.remove();
-                  });
-                  if (parent.find("div.filter_page").length > 0) {
-                    parent.find("div.filter_page").css("display", "block");
+                $.each(cardBody, function (idx, elem) {
+                  let className = elem.className.split(/\s+/);
+                  if (className.includes("card-main")) {
+                    $(this).css("display", "block");
+                    // Remove breadcrumb list
+                    let li = ul.find("li");
+                    $.each(li, function (idx, elem) {
+                      if (idx > 2) elem.remove();
+                    });
+                    if (parent.find("div.filter_page").length > 0) {
+                      parent.find("div.filter_page").css("display", "block");
+                    }
                   }
-                }
-                if (className.includes("card-form")) {
-                  const cardHeader = parent.find(".card-header");
-                  cardHeader.find("button").show();
-                  $(this).css("display", "none");
-                }
-              });
+                  if (className.includes("card-form")) {
+                    const cardHeader = parent.find(".card-header");
+                    cardHeader.find("button").show();
+                    $(this).css("display", "none");
+                  }
+                });
 
-              cardBtn.css("display", "none");
+                cardBtn.css("display", "none");
 
-              const cardHeader = parent.find(".card-header");
-              const btnList = cardHeader.find("button").prop("classList");
+                const cardHeader = parent.find(".card-header");
+                const btnList = cardHeader.find("button").prop("classList");
 
-              if (btnList.contains("new_form"))
-                cardHeader.find("button").css("display", "block");
+                if (btnList.contains("new_form"))
+                  cardHeader.find("button").css("display", "block");
 
-              cardTitle.html(oriTitle);
+                cardTitle.html(oriTitle);
 
-              //TODO: Call reloadTable();
-              $(".btn_requery").click();
+                //TODO: Call reloadTable();
+                $(".btn_requery").click();
+              }
             }
           }
         } else if (result[0].error) {
@@ -1742,22 +1756,6 @@ function Edit(id, status, last_url) {
 
                   _tableLine.rows.add(line).draw(false);
 
-                  //? For set Button Sub Detail for tb_childrow
-                  if ($(".tb_childrow").length) {
-                    $(".tb_childrow tbody tr").each(function () {
-                      let $row = $(this);
-                      if (
-                        $row.children("td").length > 1 &&
-                        $row
-                          .find("select[name=md_employee_id]")
-                          .attr("data-subdetail") === "Y"
-                      ) {
-                        $row
-                          .children("td:first-child")
-                          .addClass("details-control");
-                      }
-                    });
-                  }
 
                   let btnAction = _tableLine
                     .rows()
@@ -5679,9 +5677,8 @@ $(".checkAll").on("click", function (e) {
   const thisTable = $(this).closest(".table");
 
   if (thisTable.hasClass("tb_notification")) {
-    
-  const card = $(e.target).closest(".card");
-  const floatRight = card.find(".card-header .float-right");
+    const card = $(e.target).closest(".card");
+    const floatRight = card.find(".card-header .float-right");
 
     const checkbox = _tableNotification
       .rows()
@@ -5689,8 +5686,7 @@ $(".checkAll").on("click", function (e) {
       .to$()
       .find("input.check-wactivity, input.check-message");
 
-      checkbox.prop("checked", isChecked);
-      console.log(isChecked);
+    checkbox.prop("checked", isChecked);
     floatRight.toggleClass("d-none", isChecked == false);
   } else {
     const modalBody = $(this).closest(".modal-body");

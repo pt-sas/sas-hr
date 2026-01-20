@@ -3420,4 +3420,24 @@ class Validation
             ]
         ]
     ];
+
+    public $closing_period = [
+        'year'  => [
+            'label'             => 'tahun',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $create_period = [
+        'startdate'  => [
+            'label'             => 'tanggal mulai',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
 }
