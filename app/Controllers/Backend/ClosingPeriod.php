@@ -465,6 +465,7 @@ class ClosingPeriod extends BaseController
                         } else if ($docType == 100029 || $docType == 100030) {
                             // Block Adjusment
                             $whereClause = "DATE(date) BETWEEN '{$startDate}' AND '{$endDate}'
+                                            AND submissiontype = {$docType}
                                             AND docstatus IN ('{$this->DOCSTATUS_Inprogress}', '{$this->DOCSTATUS_Drafted}')";
 
                             $pendingTrx = $mAdjustment->where($whereClause)->first();
