@@ -15,6 +15,7 @@ use App\Models\M_ReferenceDetail;
 use App\Models\M_Rule;
 use App\Models\M_RuleDetail;
 use App\Models\M_RuleValue;
+use App\Models\M_Year;
 use Config\Services;
 use DateTime;
 use TCPDF;
@@ -185,6 +186,7 @@ class Memo extends BaseController
     public function processIt()
     {
         $cWfs = new WScenario();
+        $mYear = new M_Year($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -197,7 +199,14 @@ class Memo extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $period = $mYear->getPeriodStatus(date('Y-m-d', strtotime($row->memodate)), $row->memotype)->getRow();
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
@@ -314,6 +323,7 @@ class Memo extends BaseController
             $mRuleDetail = new M_RuleDetail($this->request);
             $mRuleValue = new M_RuleValue($this->request);
             $mAbsentDetail = new M_AbsentDetail($this->request);
+            $mYear = new M_Year($this->request);
 
             try {
                 $post = $this->request->getVar();
@@ -361,6 +371,17 @@ class Memo extends BaseController
                 $memoLevel = $memoLastMonthAgo ? $memoLastMonthAgo->getMemoLevel() : 0;
                 $memoContent = "";
                 $number = 1;
+
+                $post['memodate'] = $date->format('Y-m-d');
+
+                // TODO : Checking Period
+                $period = $mYear->getPeriodStatus($post['memodate'], $this->model->Pengajuan_Memo_SDM)->getRow();
+
+                if (empty($period)) {
+                    return $this->response->setJSON(message('success', false, "Periode belum dibuat"));
+                } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                    return $this->response->setJSON(message('success', false, "Periode {$period->name} ditutup"));
+                }
 
                 foreach ($memoList as $memo) {
                     $memoLevel += 1;

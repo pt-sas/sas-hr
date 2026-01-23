@@ -17,18 +17,22 @@ use App\Models\M_EmpWorkDay;
 use App\Models\M_LeaveBalance;
 use App\Models\M_RuleDetail;
 use App\Models\M_WorkDetail;
+use App\Models\M_Year;
 use Config\Services;
 use DateTime;
 use Kint\Zval\Value;
 
 class Alpha extends BaseController
 {
+    protected $baseSubType;
+
     public function __construct()
     {
         $this->request = Services::request();
         $this->model = new M_Absent($this->request);
         $this->modelDetail = new M_AbsentDetail($this->request);
         $this->entity = new \App\Entities\Absent();
+        $this->baseSubType = $this->model->Pengajuan_Alpa;
     }
 
     public function index()
@@ -42,9 +46,6 @@ class Alpha extends BaseController
 
     public function showAll()
     {
-        $mAccess = new M_AccessMenu($this->request);
-        $mEmployee = new M_Employee($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -128,6 +129,7 @@ class Alpha extends BaseController
     public function create()
     {
         $mHoliday = new M_Holiday($this->request);
+        $mYear = new M_Year($this->request);
         $mAttendance = new M_Attendance($this->request);
         $mRule = new M_Rule($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
@@ -138,7 +140,6 @@ class Alpha extends BaseController
 
             $post["submissiontype"] = $this->model->Pengajuan_Alpa;
             $post["necessary"] = 'AL';
-            $today = date('Y-m-d');
             $employeeId = $post['md_employee_id'];
             $day = date('w');
 
@@ -147,8 +148,8 @@ class Alpha extends BaseController
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $holidays = $mHoliday->getHolidayDate();
-                    $startDate = $post['startdate'];
-                    $endDate = $post['enddate'];
+                    $startDate = date('Y-m-d', strtotime($post['startdate']));
+                    $endDate = date('Y-m-d', strtotime($post['enddate']));
                     $nik = $post['nik'];
                     $submissionDate = $post['submissiondate'];
 
@@ -164,8 +165,6 @@ class Alpha extends BaseController
                         'nik'       => $nik,
                         'date'      => $startDate,
                         'absent'    => 'N'
-
-
                     ])->first();
 
                     //TODO : Get next day attendance from enddate
@@ -192,12 +191,10 @@ class Alpha extends BaseController
                     $whereClause .= " AND trx_absent_detail.isagree = 'Y'";
                     $trx = $this->modelDetail->getAbsentDetail($whereClause)->getResult();
 
-                    $subDate = date('Y-m-d', strtotime($submissionDate));
-
                     $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $today,
-                        'validto >='        => $today
+                        'md_employee_id'    => $employeeId,
+                        'validfrom <='      => $startDate,
+                        'validto >='        => $endDate
                     ])->orderBy('validfrom', 'ASC')->first();
 
                     $day = strtoupper(formatDay_idn($day));
@@ -209,11 +206,26 @@ class Alpha extends BaseController
                     $whereClause .= " AND md_day.name = '$day'";
                     $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
-                    if (is_null($workDay)) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($post['startdate'], $post['enddate'], [], 'Y-m-d', "all");
+
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('success', false, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('success', false, "Periode {$period->name} ditutup");
+                    } else if (is_null($workDay)) {
                         $response = message('success', false, 'Hari kerja belum ditentukan');
                     } else if (is_null($work)) {
                         $response = message('success', false, 'Tidak terdaftar dalam hari kerja');
-                    } else if (!is_null($attPresentNextDay) && !($lastDate >= $subDate) && $workDay && $work && $attNotPresent) {
+                    } else if (!is_null($attPresentNextDay) && !($lastDate >= $submissionDate) && $workDay && $work && $attNotPresent) {
                         $response = message('success', false, 'Maksimal tanggal pengajuan pada tanggal : ' . format_dmy($lastDate, '-'));
                     } else if ($trx) {
                         $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
@@ -292,6 +304,7 @@ class Alpha extends BaseController
     public function processIt()
     {
         $cWfs = new WScenario();
+        $mYear = new M_Year($this->request);
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
 
@@ -303,7 +316,21 @@ class Alpha extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
@@ -498,6 +525,7 @@ class Alpha extends BaseController
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mYear = new M_Year($this->request);
 
         try {
             $post = $this->request->getVar();
@@ -513,6 +541,17 @@ class Alpha extends BaseController
             foreach ($attendance as $item) {
                 $item->date = date('Y-m-d', strtotime($item->date));
                 $header[$item->nik][] = $item;
+            }
+
+            // TODO : Checking Period
+            foreach ($attendance as $item) {
+                $period = $mYear->getPeriodStatus(date('Y-m-d', strtotime($item->date)), $this->model->Pengajuan_Alpa)->getRow();
+
+                if (empty($period)) {
+                    return $this->response->setJSON(message('error', true, "Periode belum dibuat"));
+                } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                    return $this->response->setJSON(message('error', true, "Periode {$period->name} ditutup"));
+                }
             }
 
             //TODO: Creating Alpa Header

@@ -1130,16 +1130,27 @@ function getEmployee(elem, employee) {
 $(".tb_childrow").on("click", "td.details-control", function () {
   var tr = $(this).closest("tr");
   var row = _tableLine.row(tr);
-  var id = tr.find("[name=md_employee_id]").data("line-id");
+  var id = $(this).attr("data-line-id");
+
+  const form = $(
+    "#form_office_duties, #form_special_office_duties, #form_closing_period"
+  );
 
   if (row.child.isShown()) {
     row.child.hide();
     tr.removeClass("shown");
   } else {
+    // if (form.is($("#form_office_duties")) || form.is($("#form_special_office_duties"))) {
     getAssignmentDate(id, function (tableHtml) {
       row.child(tableHtml).show();
       tr.addClass("shown");
     });
+    // } else if (form.is($("#form_closing_period"))){
+    //   getPeriodControl(id, function (tableHtml) {
+    //     row.child(tableHtml).show();
+    //     tr.addClass("shown");
+    //   });
+    // }
   }
 });
 
@@ -1216,6 +1227,7 @@ function getAssignmentDate(id, callback) {
     },
   });
 }
+
 $("#form_assignment_realization_sup_agree").on(
   "change",
   "#branch_in, #branch_out",
@@ -2489,6 +2501,18 @@ $("#form_adjustment").on(
         contentType: false,
         cache: false,
         dataType: "JSON",
+        beforeSend: function () {
+          loadingForm(form.prop("id"), "facebook");
+          $(".save_form").prop("disabled", true);
+          $(".x_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+        },
+        complete: function () {
+          hideLoadingForm(form.prop("id"));
+          $(".save_form").removeAttr("disabled");
+          $(".x_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+        },
         success: function (result) {
           if (result.data !== null) {
             form.find("#begin_balance").val(result.data);
@@ -2548,6 +2572,407 @@ $("#form_adjustment").on(
     form.find("#ending_balance").val(Number.isFinite(ending) ? ending : "");
   }
 );
+
+$(".generate-period").click(function (e) {
+  if (ID == "" || ID == null || ID == 0) {
+    Swal.fire({
+      toast: true,
+      type: "error",
+      title: "Mohon Save lebih dahulu",
+      position: "center",
+      showConfirmButton: false,
+      showCloseButton: true,
+      timer: 15000,
+    });
+  } else {
+    $("#modal_generate_period").modal({
+      backdrop: "static",
+      keyboard: false,
+    });
+  }
+});
+
+$(".btn_ok_generate_period").click(function (e) {
+  const _this = $(this);
+  const parent = $(this).closest(".modal");
+  const form = parent.find("form");
+  const field = form.find("input, select, textarea");
+  let formData = new FormData();
+  let action = "create";
+  let checkAccess = isAccess(action, LAST_URL);
+
+  if (checkAccess[0].success && checkAccess[0].message == "Y") {
+  for (let i = 0; i < field.length; i++) {
+    if (field[i].name !== "") {
+      //* Set field and value to formData
+      if (
+        field[i].type == "text" ||
+        field[i].type == "textarea" ||
+        field[i].type == "select-one" ||
+        field[i].type == "password" ||
+        field[i].type == "hidden" ||
+        field[i].type == "file"
+      )
+        formData.append(field[i].name, field[i].value);
+    }
+  }
+
+  if (ID != 0) formData.append("id", ID);
+
+  $.ajax({
+    url: SITE_URL + "/createPeriod",
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    cache: false,
+    dataType: "JSON",
+    beforeSend: function () {
+      _this.prop("disabled", true);
+      $(".close").prop("disabled", true);
+      $(".btn_close_generate_period").prop("disabled", true);
+      loadingForm(form.prop("id"), "facebook");
+    },
+    complete: function () {
+      _this.removeAttr("disabled");
+      $(".close").removeAttr("disabled");
+      $(".btn_close_generate_period").removeAttr("disabled");
+      hideLoadingForm(form.prop("id"));
+    },
+    success: function (result) {
+      if (result[0].success) {
+        Toast.fire({
+          type: "success",
+          title: result[0].message,
+        });
+
+        $(`#${parent.attr("id")}`).modal("hide");
+        clearForm(e);
+        clearErrorForm(form);
+        reloadTableLine();
+      } else if (result[0].error) {
+        errorForm(form, result);
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+
+        clearErrorForm(form);
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+} else if (checkAccess[0].success && checkAccess[0].message == "N") {
+    Toast.fire({
+      type: "warning",
+      title: "You are role don't have permission !!",
+    });
+  } else {
+    Toast.fire({
+      type: "error",
+      title: checkAccess[0].message,
+    });
+  }
+});
+
+function reloadTableLine() {
+  $.ajax({
+    url: SITE_URL + "/refreshTableLine",
+    type: "POST",
+    data: { id: ID },
+    cache: false,
+    dataType: "JSON",
+    success: function (result) {
+      if (result.length) {
+        _tableLine.clear().draw();
+        _tableLine.rows.add(result).draw();
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+}
+
+// TODO : For adding childrow when draw table
+_tableLine.on("draw", function () {
+  if ($(".tb_childrow").length) {
+    $(".tb_childrow tbody tr").each(function () {
+      let $row = $(this);
+      if (
+        $row.children("td").length > 1 &&
+        ($row.find("select[name=md_employee_id]").attr("data-subdetail") ===
+          "Y" ||
+          $row.find(".update-period").attr("data-subdetail") === "Y")
+      ) {
+        let data;
+        if (
+          $row.find("select[name=md_employee_id]").attr("data-subdetail") ===
+          "Y"
+        ) {
+          data = $row.find("select[name=md_employee_id]").attr("data-line-id");
+        } else {
+          data = $row.find(".update-period").attr("data-line-id");
+        }
+
+        $row
+          .children("td:first-child")
+          .addClass("details-control")
+          .attr("data-line-id", data);
+      }
+    });
+  }
+});
+
+_tableLine.on("click", ".update-period", function (e) {
+  $("#modal_period_control").modal({
+    backdrop: "static",
+    keyboard: false,
+  });
+
+  const id = $(this).val();
+  const modal = $("#modal_period_control");
+  const form = modal.find("form");
+  const tableTab = form.find("table.tb_displaytab");
+  const inputForeign = form.find("input.foreignkey");
+  let tableID = tableTab.attr("id");
+
+  _tablePeriod = form.find(`#${tableID}`).DataTable({
+    drawCallback: function (settings) {
+      if ($(this).find(".select2").length)
+        $(this).find(".select2").select2({
+          placeholder: "Select an option",
+          theme: "bootstrap",
+          allowClear: true,
+        });
+    },
+    columnDefs: [
+      {
+        targets: 0,
+        visible: false, //hide column
+      },
+      {
+        targets: 1,
+        className: "text-center",
+        width: "10%",
+      },
+      {
+        targets: 2,
+        width: "75%",
+      },
+    ],
+    lengthChange: false,
+    // pageLength: 5,
+    paging: false,
+    searching: false,
+    ordering: false,
+    autoWidth: false,
+    scrollX: false,
+    scrollY: false,
+    scrollCollapse: false,
+  });
+
+  $.ajax({
+    url: CURRENT_URL + "/showPeriodControl",
+    dataType: "JSON",
+    data: { foreignkey: id },
+    success: function (result) {
+      if (result[0].success) {
+        let arrMsg = result[0].message;
+
+        inputForeign.attr("set-id", id);
+        inputForeign.val(arrMsg.header);
+
+        if (arrMsg.line) {
+          let arrLine = arrMsg.line;
+
+          if (_tablePeriod.context.length) {
+            let line = JSON.parse(arrLine);
+            _tablePeriod.rows.add(line).draw(false);
+          }
+        }
+      } else {
+        Toast.fire({
+          type: "error",
+          title: result[0].message,
+        });
+      }
+    },
+    error: function (jqXHR, exception) {
+      showError(jqXHR, exception);
+    },
+  });
+});
+
+$(".statusaction").on("click", function (e) {
+  const form = $(this).closest("form");
+  const tableTab = form.find("table.tb_displaytab");
+
+  let html = `<div class="d-flex justify-content-center" style="margin-bottom:20px;">
+     <select id="status_action">
+     <option value=""></option>
+             <option value="O">Open</option>
+             <option value="C">Close</option>
+             </select></div>
+    <div class="d-flex flex-column align-items-center" id="subtypecontainer" style="display:none;"></div>
+    </div>`;
+
+  Swal.fire({
+    title: "Pilih Status",
+    html: html,
+    showCancelButton: true,
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Ok",
+    cancelButtonText: "Close",
+    showLoaderOnConfirm: true,
+    reverseButtons: true,
+    onOpen: () => {
+      $("#status_action").select2({
+        placeholder: "Select an option",
+        width: "40%",
+        theme: "bootstrap",
+        dropdownAutoWidth: true,
+        allowClear: true,
+      });
+    },
+    preConfirm: () => {
+      let val = $("#status_action option:selected").val();
+      const rows = tableTab.find("tbody tr");
+
+      if (!val) {
+        Swal.showValidationMessage("Pilih status dahulu");
+      } else {
+        $.each(rows, function (i) {
+          $(this).find('select[name="period_status"]').val(val).change();
+        });
+      }
+    },
+  });
+});
+
+$(".close_period").on("click", function (e) {
+  e.preventDefault();
+  const target = $(e.target);
+  const modal = target.closest(".modal");
+  const form = modal.find("form");
+  const inputForeign = form.find("input.foreignkey");
+  const tableTab = form.find("table");
+
+  if (tableTab.length) {
+    tableTab.DataTable().clear().destroy();
+  }
+
+  if (inputForeign.length) inputForeign.val("");
+
+  modal.modal("hide");
+});
+
+$(".save_period").on("click", function (e) {
+  const _this = $(e.target);
+  let oriElement = _this.html();
+  const modal = _this.closest(".modal");
+  const form = modal.find("form");
+  const tableTab = form.find("table");
+  const foreignkey = form.find("input.foreignkey");
+  let formData = new FormData();
+  let action = "update";
+  let checkAccess = isAccess(action, LAST_URL);
+
+  if (checkAccess[0].success && checkAccess[0].message == "Y") {
+    if (tableTab.length) {
+      const rows = tableTab.find("tbody tr");
+      let output = [];
+
+      $.each(rows, function (i) {
+        const tag = $(this).find("input, select, button, span");
+
+        if (tag.length) {
+          row = {};
+
+          $.each(tag, function () {
+            let name = $(this).attr("name");
+            let value = this.value;
+            row[name] = value;
+
+            if ($(this).is("[data-id]")) {
+              row["id"] = $(this).attr("data-id");
+            }
+          });
+          output[i] = row;
+        }
+      });
+
+      formData.append("table", JSON.stringify(output));
+    }
+
+    if (foreignkey.length)
+      formData.append(foreignkey.attr("name"), foreignkey.attr("set-id"));
+
+    let url = CURRENT_URL + "/updatePeriodControl";
+
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(_this)
+          .html(
+            '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>',
+          )
+          .prop("disabled", true);
+        $(".x_form").prop("disabled", true);
+        $(".close_period").prop("disabled", true);
+        loadingForm(form.prop("id"), "facebook");
+      },
+      complete: function () {
+        $(_this).html(oriElement).prop("disabled", false);
+        $(".x_form").removeAttr("disabled");
+        $(".close_period").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result[0].success) {
+          Toast.fire({
+            type: "success",
+            title: result[0].message,
+          });
+        } else {
+          Swal.fire({
+            toast: true,
+            type: "error",
+            title: result[0].message,
+            position: "center",
+            showConfirmButton: false,
+            showCloseButton: true,
+            timer: 15000,
+          });
+        }
+      },
+    });
+  } else if (checkAccess[0].success && checkAccess[0].message == "N") {
+    Toast.fire({
+      type: "error",
+      title: "You are role don't have permission, please reload !!",
+    });
+  } else {
+    Toast.fire({
+      type: "error",
+      title: checkAccess[0].message,
+    });
+  }
+});
 
 // $("#saldo_cuti_detail").ready(function () {
 //   const _this = $(this);

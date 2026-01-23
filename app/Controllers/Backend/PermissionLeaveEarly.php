@@ -11,7 +11,6 @@ use App\Models\M_Rule;
 use App\Models\M_Assignment;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
-use App\Models\M_AccessMenu;
 use App\Models\M_AssignmentDate;
 use App\Models\M_Attendance;
 use App\Models\M_Division;
@@ -19,6 +18,7 @@ use App\Models\M_Configuration;
 use App\Models\M_DocumentType;
 use App\Models\M_RuleDetail;
 use App\Models\M_SubmissionCancelDetail;
+use App\Models\M_Year;
 use TCPDF;
 use Config\Services;
 use DateTime;
@@ -142,6 +142,7 @@ class PermissionLeaveEarly extends BaseController
         $mAttendance = new M_Attendance($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -267,7 +268,22 @@ class PermissionLeaveEarly extends BaseController
                                     $reopen = true;
                             }
 
-                            if ($trx) {
+                            // TODO : Checking Period
+                            $dateRange = getDatesFromRange($post['startdate'], $post['enddate'], [], 'Y-m-d', "all");
+
+                            foreach ($dateRange as $date) {
+                                $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+
+                                if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                                    break;
+                                }
+                            }
+
+                            if (empty($period)) {
+                                $response = message('success', false, "Periode belum dibuat");
+                            } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                                $response = message('success', false, "Periode {$period->name} ditutup");
+                            } else if ($trx) {
                                 $date = format_dmy($trx->date, '-');
                                 $response = message('success', false, "Tidak bisa mengajukan pada tanggal : {$date}, karena sudah ada pengajuan lain dengan no : {$trx->documentno}");
                             } else if ($endDate > $addDays) {
@@ -360,6 +376,7 @@ class PermissionLeaveEarly extends BaseController
         $mRule = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -376,7 +393,21 @@ class PermissionLeaveEarly extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         //TODO : Get submission Half day

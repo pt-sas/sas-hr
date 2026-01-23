@@ -25,6 +25,7 @@ use App\Models\M_SubmissionCancel;
 use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_User;
 use App\Models\M_UserRole;
+use App\Models\M_Year;
 use Html2Text\Html2Text;
 use Config\Services;
 
@@ -343,6 +344,7 @@ class Realization extends BaseController
             $mUser = new M_User($this->request);
             $mNotifText = new M_NotificationText($this->request);
             $mLeaveBalance = new M_LeaveBalance($this->request);
+            $mYear = new M_Year($this->request);
             $cMessage = new Message();
             $cTelegram = new Telegram();
 
@@ -482,6 +484,8 @@ class Realization extends BaseController
                         $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, $submissionDate], $dataNotif->getText());
 
                         if ($post['submissiontype'] !== 'tidak setuju') {
+
+
                             $this->model = new M_Absent($this->request);
                             $this->entity = new \App\Entities\Absent();
 
@@ -504,6 +508,15 @@ class Realization extends BaseController
                                 [$necessary, $submissionType] = $necessaryMap[$post['submissiontype']];
                                 $this->entity->setNecessary($necessary);
                                 $this->entity->setSubmissionType($submissionType);
+                            }
+
+                            // TODO : Checking Period
+                            $period = $mYear->getPeriodStatus($submissionDate, $submissionType)->getRow();
+
+                            if (empty($period)) {
+                                return $this->response->setJSON(message('success', false, "Periode belum dibuat"));
+                            } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                                return $this->response->setJSON(message('success', false, "Periode {$period->name} ditutup"));
                             }
 
                             if ($post['submissiontype'] == "datang terlambat") {

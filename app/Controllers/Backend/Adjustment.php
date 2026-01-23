@@ -7,10 +7,8 @@ use App\Models\M_Adjustment;
 use App\Models\M_AllowanceAtt;
 use App\Models\M_DocumentType;
 use App\Models\M_Employee;
-use App\Models\M_Holiday;
-use App\Models\M_Rule;
 use App\Models\M_LeaveBalance;
-use App\Models\M_RuleDetail;
+use App\Models\M_Year;
 use Config\Services;
 
 class Adjustment extends BaseController
@@ -87,6 +85,7 @@ class Adjustment extends BaseController
     public function create()
     {
         if ($this->request->getMethod(true) === 'POST') {
+            $mYear = new M_Year($this->request);
             $post = $this->request->getVar();
             $post["necessary"] = $post['submissiontype'] == $this->model->Pengajuan_Adj_Cuti ? 'AC' : 'AT';
 
@@ -94,7 +93,14 @@ class Adjustment extends BaseController
                 if (!$this->validation->run($post, 'penyesuaian')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    if ($post['submissiontype'] == $this->model->Pengajuan_Adj_Cuti && $post['ending_balance'] < 0) {
+                    // TODO : Checking Period
+                    $period = $mYear->getPeriodStatus(date('Y-m-d', strtotime($post['date'])), $post['submissiontype'])->getRow();
+
+                    if (empty($period)) {
+                        $response = message('success', false, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('success', false, "Periode {$period->name} ditutup");
+                    } else if ($post['submissiontype'] == $this->model->Pengajuan_Adj_Cuti && $post['ending_balance'] < 0) {
                         $response = message('success', false, 'Saldo akhir cuti tidak bisa dibawah 0');
                     } else {
                         $this->entity->fill($post);
@@ -165,9 +171,10 @@ class Adjustment extends BaseController
 
     public function processIt()
     {
-        $cWfs = new WScenario();
-
         if ($this->request->isAJAX()) {
+            $cWfs = new WScenario();
+            $mYear = new M_Year($this->request);
+
             $post = $this->request->getVar();
 
             $_ID = $post['id'];
@@ -177,7 +184,14 @@ class Adjustment extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $period = $mYear->getPeriodStatus(date('Y-m-d', strtotime($row->date)), $row->submissiontype)->getRow();
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);

@@ -16,6 +16,7 @@ use App\Models\M_LeaveBalance;
 use App\Models\M_MassLeave;
 use App\Models\M_Transaction;
 use App\Models\M_SubmissionCancelDetail;
+use App\Models\M_Year;
 use Config\Services;
 
 class Leave extends BaseController
@@ -125,6 +126,7 @@ class Leave extends BaseController
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
         $mLeaveBalance = new M_LeaveBalance($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -204,7 +206,20 @@ class Leave extends BaseController
                         $leaveBalance = $mLeaveBalance->getTotalBalance($employeeId, date("Y", strtotime($startDate)));
                         $leaveBalanceNextYear = !empty($amountNextYear) ? $mLeaveBalance->getNextYearBalance($employeeId) : null;
 
-                        if ($trx) {
+                        // TODO : Checking Period
+                        foreach ($dateRange as $date) {
+                            $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+
+                            if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                                break;
+                            }
+                        }
+
+                        if (empty($period)) {
+                            $response = message('success', false, "Periode belum dibuat");
+                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                            $response = message('success', false, "Periode {$period->name} ditutup");
+                        } else if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
                         } else if (empty($leaveBalance) && empty($leaveBalanceNextYear)) {
                             $response = message('success', false, 'Saldo cuti tidak tersedia');
@@ -312,6 +327,7 @@ class Leave extends BaseController
         $mHoliday = new M_Holiday($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -328,7 +344,21 @@ class Leave extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $holidays = $mHoliday->getHolidayDate();
@@ -371,7 +401,7 @@ class Leave extends BaseController
                         $leaveBalanceNextYear = !empty($amountNextYear) ? $mLeaveBalance->getNextYearBalance($row->md_employee_id) : null;
 
                         if ($trx) {
-                            $response = message('success', false, 'Tidak bisa proses pengajuan, karena sudah ada pengajuan lain');
+                            $response = message('error', true, 'Tidak bisa proses pengajuan, karena sudah ada pengajuan lain');
                         } else if (empty($leaveBalance) && empty($leaveBalanceNextYear)) {
                             $response = message('error', true, 'Saldo cuti tidak tersedia');
                         } else {
@@ -389,9 +419,9 @@ class Leave extends BaseController
                             $amountNextYear = count($amountNextYear);
 
                             if (!empty($amountNextYear) && $amountNextYear > $balanceNextYear) {
-                                $response = message('success', false, 'Saldo tahun depan tidak cukup');
+                                $response = message('error', true, 'Saldo tahun depan tidak cukup');
                             } else if (!empty($amountThisYear) && $amountThisYear > $balance) {
-                                $response = message('success', false, 'Saldo cuti tidak cukup atau sudah expired');
+                                $response = message('error', true, 'Saldo cuti tidak cukup atau sudah expired');
                             } else {
                                 $line = $this->modelDetail->where($this->model->primaryKey, $_ID)->find();
 

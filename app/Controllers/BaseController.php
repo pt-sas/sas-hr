@@ -125,6 +125,10 @@ class BaseController extends Controller
 	protected $LINESTATUS_Ditolak = 'N';
 	/** Line Status Pengajuan Dibatalkan */
 	protected $LINESTATUS_Dibatalkan = 'C';
+	/** Period Status Closed */
+	protected $PERIOD_CLOSED = 'C';
+	/** Period Status Open */
+	protected $PERIOD_OPEN = 'O';
 
 	/**
 	 * The column used for primaryKey int

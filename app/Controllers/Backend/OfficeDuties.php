@@ -6,7 +6,6 @@ use App\Controllers\BaseController;
 use App\Models\M_AbsentDetail;
 use Config\Services;
 use App\Models\M_Employee;
-use App\Models\M_AccessMenu;
 use App\Models\M_Absent;
 use App\Models\M_Holiday;
 use App\Models\M_Rule;
@@ -16,7 +15,7 @@ use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_Configuration;
 use App\Models\M_DocumentType;
 use App\Models\M_RuleDetail;
-use TCPDF;
+use App\Models\M_Year;
 use DateTime;
 
 class OfficeDuties extends BaseController
@@ -135,6 +134,7 @@ class OfficeDuties extends BaseController
         $mRuleDetail = new M_RuleDetail($this->request);
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -225,7 +225,22 @@ class OfficeDuties extends BaseController
                                 $reopen = true;
                         }
 
-                        if ($trx) {
+                        // TODO : Checking Period
+                        $dateRange = getDatesFromRange($post['startdate'], $post['enddate'], [], 'Y-m-d', "all");
+
+                        foreach ($dateRange as $date) {
+                            $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+
+                            if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                                break;
+                            }
+                        }
+
+                        if (empty($period)) {
+                            $response = message('success', false, "Periode belum dibuat");
+                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                            $response = message('success', false, "Periode {$period->name} ditutup");
+                        } else if ($trx) {
                             $date = format_dmy($trx->date, '-');
                             $response = message('success', false, "Tidak bisa mengajukan pada tanggal : {$date}, karena sudah ada pengajuan lain dengan no : {$trx->documentno}");
                         } else if ($endDate > $addDays) {
@@ -338,6 +353,7 @@ class OfficeDuties extends BaseController
         $mRule = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -354,7 +370,21 @@ class OfficeDuties extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         //TODO : Get submission one day

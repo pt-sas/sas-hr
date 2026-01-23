@@ -3,7 +3,6 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use App\Models\M_AccessMenu;
 use App\Models\M_Branch;
 use App\Models\M_DelegationTransfer;
 use App\Models\M_DelegationTransferDetail;
@@ -12,6 +11,7 @@ use App\Models\M_EmpDelegation;
 use App\Models\M_Employee;
 use Config\Services;
 use App\Models\M_User;
+use App\Models\M_Year;
 
 class DelegationTransfer extends BaseController
 {
@@ -34,9 +34,6 @@ class DelegationTransfer extends BaseController
 
     public function showAll()
     {
-        $mEmployee = new M_Employee($this->request);
-        $mAccess = new M_AccessMenu($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
             $table = $this->model->table;
             $select = $this->model->getSelect();
@@ -93,8 +90,10 @@ class DelegationTransfer extends BaseController
 
     public function create()
     {
-        $mUser = new M_User($this->request);
         if ($this->request->getMethod(true) === 'POST') {
+            $mUser = new M_User($this->request);
+            $mYear = new M_Year($this->request);
+
             $post = $this->request->getVar();
             $table = json_decode($post['table']);
             //! Mandatory property for detail validation
@@ -109,7 +108,22 @@ class DelegationTransfer extends BaseController
                     $post["necessary"] = 'TD';
                     $user_to = $mUser->where('md_employee_id', $post['employee_to'])->first();
 
-                    if ($post['employee_from'] == $post['employee_to']) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($post['startdate'], $post['enddate'], [], 'Y-m-d', "all");
+
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('success', false, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('success', false, "Periode {$period->name} ditutup");
+                    } else if ($post['employee_from'] == $post['employee_to']) {
                         $response = message('success', false, 'Duta Awal dengan Duta Tujuan tidak boleh sama');
                     } else if (!$user_to) {
                         $response = message('success', false, 'Duta Tujuan tidak memiliki akses pengguna');
@@ -204,9 +218,10 @@ class DelegationTransfer extends BaseController
 
     public function processIt()
     {
-        $cWfs = new WScenario();
-
         if ($this->request->isAJAX()) {
+            $cWfs = new WScenario();
+            $mYear = new M_Year($this->request);
+
             $post = $this->request->getVar();
 
             $_ID = $post['id'];
@@ -217,7 +232,21 @@ class DelegationTransfer extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
