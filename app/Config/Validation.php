@@ -3405,11 +3405,25 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'begin_balance'             => [
+            'label'             => 'saldo awal',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon melakukan penarikan ulang'
+            ]
+        ],
         'adjustment'             => [
             'label'             => 'nilai penyesuaian',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'ending_balance'             => [
+            'label'             => 'saldo akhir',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon melakukan penginputan nilai penyesuaian kembali'
             ]
         ],
         'reason'                => [

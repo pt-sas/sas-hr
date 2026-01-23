@@ -44,4 +44,16 @@ class M_Year extends Model
         $this->request = $request;
         $this->builder = $this->db->table($this->table);
     }
+
+    public function getPeriodStatus($date, $doctype)
+    {
+        $this->builder->select('*');
+        $this->builder->join('md_period', "{$this->table}.md_year_id = md_period.md_year_id");
+        $this->builder->join('md_period_control', 'md_period.md_period_id = md_period_control.md_period_id');
+        $this->builder->where("DATE(md_period.startdate) <= '{$date}' AND DATE(md_period.enddate) >= '{$date}'");
+        $this->builder->where("md_period_control.md_doctype_id", $doctype);
+        $this->builder->where('md_year.isactive', 'Y');
+
+        return $this->builder->get();
+    }
 }
