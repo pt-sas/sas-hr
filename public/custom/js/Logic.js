@@ -2501,6 +2501,18 @@ $("#form_adjustment").on(
         contentType: false,
         cache: false,
         dataType: "JSON",
+        beforeSend: function () {
+          loadingForm(form.prop("id"), "facebook");
+          $(".save_form").prop("disabled", true);
+          $(".x_form").prop("disabled", true);
+          $(".close_form").prop("disabled", true);
+        },
+        complete: function () {
+          hideLoadingForm(form.prop("id"));
+          $(".save_form").removeAttr("disabled");
+          $(".x_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+        },
         success: function (result) {
           if (result.data !== null) {
             form.find("#begin_balance").val(result.data);
@@ -2586,7 +2598,10 @@ $(".btn_ok_generate_period").click(function (e) {
   const form = parent.find("form");
   const field = form.find("input, select, textarea");
   let formData = new FormData();
+  let action = "create";
+  let checkAccess = isAccess(action, LAST_URL);
 
+  if (checkAccess[0].success && checkAccess[0].message == "Y") {
   for (let i = 0; i < field.length; i++) {
     if (field[i].name !== "") {
       //* Set field and value to formData
@@ -2615,13 +2630,13 @@ $(".btn_ok_generate_period").click(function (e) {
     beforeSend: function () {
       _this.prop("disabled", true);
       $(".close").prop("disabled", true);
-      $(".btn_close_realization").prop("disabled", true);
+      $(".btn_close_generate_period").prop("disabled", true);
       loadingForm(form.prop("id"), "facebook");
     },
     complete: function () {
       _this.removeAttr("disabled");
       $(".close").removeAttr("disabled");
-      $(".btn_close_realization").removeAttr("disabled");
+      $(".btn_close_generate_period").removeAttr("disabled");
       hideLoadingForm(form.prop("id"));
     },
     success: function (result) {
@@ -2650,6 +2665,17 @@ $(".btn_ok_generate_period").click(function (e) {
       showError(jqXHR, exception);
     },
   });
+} else if (checkAccess[0].success && checkAccess[0].message == "N") {
+    Toast.fire({
+      type: "warning",
+      title: "You are role don't have permission !!",
+    });
+  } else {
+    Toast.fire({
+      type: "error",
+      title: checkAccess[0].message,
+    });
+  }
 });
 
 function reloadTableLine() {
@@ -2824,7 +2850,7 @@ $(".statusaction").on("click", function (e) {
       if (!val) {
         Swal.showValidationMessage("Pilih status dahulu");
       } else {
-        $.each(rows, function (idx, item) {
+        $.each(rows, function (i) {
           $(this).find('select[name="period_status"]').val(val).change();
         });
       }
@@ -2857,69 +2883,72 @@ $(".save_period").on("click", function (e) {
   const tableTab = form.find("table");
   const foreignkey = form.find("input.foreignkey");
   let formData = new FormData();
+  let action = "update";
+  let checkAccess = isAccess(action, LAST_URL);
 
-  if (tableTab.length) {
-    const rows = tableTab.find("tbody tr");
-    let output = [];
+  if (checkAccess[0].success && checkAccess[0].message == "Y") {
+    if (tableTab.length) {
+      const rows = tableTab.find("tbody tr");
+      let output = [];
 
-    $.each(rows, function (i) {
-      const tag = $(this).find("input, select, button, span");
+      $.each(rows, function (i) {
+        const tag = $(this).find("input, select, button, span");
 
-      if (tag.length) {
-        row = {};
+        if (tag.length) {
+          row = {};
 
-        $.each(tag, function () {
-          let name = $(this).attr("name");
-          let value = this.value;
-          row[name] = value;
+          $.each(tag, function () {
+            let name = $(this).attr("name");
+            let value = this.value;
+            row[name] = value;
 
-          if ($(this).is("[data-id]")) {
-            row["id"] = $(this).attr("data-id");
-          }
-        });
-        output[i] = row;
-      }
-    });
+            if ($(this).is("[data-id]")) {
+              row["id"] = $(this).attr("data-id");
+            }
+          });
+          output[i] = row;
+        }
+      });
 
-    formData.append("table", JSON.stringify(output));
-  }
+      formData.append("table", JSON.stringify(output));
+    }
 
-  if (foreignkey.length)
-    formData.append(foreignkey.attr("name"), foreignkey.attr("set-id"));
+    if (foreignkey.length)
+      formData.append(foreignkey.attr("name"), foreignkey.attr("set-id"));
 
-  let url = CURRENT_URL + "/updatePeriodControl";
+    let url = CURRENT_URL + "/updatePeriodControl";
 
-  $.ajax({
-    url: url,
-    type: "POST",
-    data: formData,
-    processData: false,
-    contentType: false,
-    cache: false,
-    dataType: "JSON",
-    beforeSend: function () {
-      $(_this)
-        .html(
-          '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
-        )
-        .prop("disabled", true);
-      $(".x_form").prop("disabled", true);
-      $(".close_period").prop("disabled", true);
-      loadingForm(form.prop("id"), "facebook");
-    },
-    complete: function () {
-      $(_this).html(oriElement).prop("disabled", false);
-      $(".x_form").removeAttr("disabled");
-      $(".close_period").removeAttr("disabled");
-      hideLoadingForm(form.prop("id"));
-    },
-    success: function (result) {
-      if(result[0].success) {
+    $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+      beforeSend: function () {
+        $(_this)
+          .html(
+            '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>',
+          )
+          .prop("disabled", true);
+        $(".x_form").prop("disabled", true);
+        $(".close_period").prop("disabled", true);
+        loadingForm(form.prop("id"), "facebook");
+      },
+      complete: function () {
+        $(_this).html(oriElement).prop("disabled", false);
+        $(".x_form").removeAttr("disabled");
+        $(".close_period").removeAttr("disabled");
+        hideLoadingForm(form.prop("id"));
+      },
+      success: function (result) {
+        if (result[0].success) {
           Toast.fire({
             type: "success",
             title: result[0].message,
           });
-      } else {
+        } else {
           Swal.fire({
             toast: true,
             type: "error",
@@ -2929,10 +2958,20 @@ $(".save_period").on("click", function (e) {
             showCloseButton: true,
             timer: 15000,
           });
-
-      }
-    },
-  });
+        }
+      },
+    });
+  } else if (checkAccess[0].success && checkAccess[0].message == "N") {
+    Toast.fire({
+      type: "error",
+      title: "You are role don't have permission, please reload !!",
+    });
+  } else {
+    Toast.fire({
+      type: "error",
+      title: checkAccess[0].message,
+    });
+  }
 });
 
 // $("#saldo_cuti_detail").ready(function () {
