@@ -20,6 +20,7 @@ class M_Adjustment extends Model
         'adjustment',
         'ending_balance',
         'date',
+        'md_year_id',
         'reason',
         'docstatus',
         'isapproved',
@@ -140,6 +141,7 @@ class M_Adjustment extends Model
         $mLeaveBalance = new M_LeaveBalance($this->request);
         $mTransaction = new M_Transaction($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
+        $mYear = new M_Year($this->request);
 
         $ID = $rows['id'][0] ?? $rows['id'];
 
@@ -149,10 +151,9 @@ class M_Adjustment extends Model
         if (
             $sql->getIsApproved() === 'Y' && $sql->docstatus === "CO"
         ) {
-            $year = date('Y', strtotime($sql->date));
-
             if ($sql->submissiontype == $this->Pengajuan_Adj_Cuti) {
-                $leaveBalance = $mLeaveBalance->where(['md_employee_id' => $sql->md_employee_id, 'year' => $year])->first();
+                $year = $mYear->find($sql->md_year_id);
+                $leaveBalance = $mLeaveBalance->where(['md_employee_id' => $sql->md_employee_id, 'year' => $year->year])->first();
 
                 $entityBal = new \App\Entities\LeaveBalance();
                 $entityBal->md_employee_id = $sql->md_employee_id;
@@ -165,9 +166,9 @@ class M_Adjustment extends Model
                     $entityBal->submissiondate = date('Y-m-d');
                     $entityBal->annual_allocation = 0;
                     $entityBal->balance_amount = $sql->adjustment;
-                    $entityBal->year = $year;
+                    $entityBal->year = $year->year;
                     $entityBal->startdate = $sql->date;
-                    $entityBal->enddate = $year . '-12-31';
+                    $entityBal->enddate = $year->year . '-12-31';
                     $entityBal->carried_over_amount = 0;
                     $entityBal->carry_over_expiry_date = null;
                     $entityBal->created_by = $updatedBy;
@@ -179,7 +180,7 @@ class M_Adjustment extends Model
                         "table"             => $this->table,
                         "transactiondate"   => $sql->date,
                         "transactiontype"   => $sql->adjustment < 0 ? 'P-' : 'P+',
-                        "year"              => $year,
+                        "year"              => $year->year,
                         "amount"            => $sql->adjustment,
                         "reserved_amount"   => 0,
                         "md_employee_id"    => $sql->md_employee_id,
@@ -191,8 +192,13 @@ class M_Adjustment extends Model
                     $mTransaction->builder->insert($dataLeaveUsage);
                 }
             } else {
-                $transactiontype = $sql->adjustment < 0 ? 'A-' : 'A+';
-                $mAllowance->insertAllowance($sql->{$this->primaryKey}, $this->table, $transactiontype, $sql->date, $sql->submissiontype, $sql->md_employee_id, $sql->adjustment, $updatedBy);
+                $tkh = $mAllowance->getTotalAmount($sql->md_employee_id, date("Y-m-d", strtotime($sql->date)));
+                $amount = $sql->ending_balance - $tkh;
+
+                if ($amount != 0) {
+                    $transactiontype = $amount < 0 ? 'A-' : 'A+';
+                    $mAllowance->insertAllowance($sql->{$this->primaryKey}, $this->table, $transactiontype, $sql->date, $sql->submissiontype, $sql->md_employee_id, $amount, $updatedBy);
+                }
             }
         }
     }

@@ -499,4 +499,35 @@ class ClosingPeriod extends BaseController
             return $this->response->setJSON($response);
         }
     }
+
+    public function getList()
+    {
+        if ($this->request->isAjax()) {
+            $post = $this->request->getVar();
+
+            $response = [];
+
+            try {
+                if (isset($post['search'])) {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->like('year', $post['search'])
+                        ->orderBy('year', 'ASC')
+                        ->findAll();
+                } else {
+                    $list = $this->model->where('isactive', 'Y')
+                        ->orderBy('year', 'ASC')
+                        ->findAll();
+                }
+
+                foreach ($list as $key => $row) :
+                    $response[$key]['id'] = $row->md_year_id;
+                    $response[$key]['text'] = $row->year;
+                endforeach;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
 }

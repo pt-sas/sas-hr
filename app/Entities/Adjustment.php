@@ -17,6 +17,7 @@ class Adjustment extends Entity
     protected $adjustment;
     protected $ending_balance;
     protected $date;
+    protected $md_year_id;
     protected $reason;
     protected $docstatus;
     protected $isapproved;
@@ -141,6 +142,16 @@ class Adjustment extends Entity
     public function setDate($date)
     {
         $this->attributes['date'] = $date;
+    }
+
+    public function getYear()
+    {
+        return $this->attributes['md_year_id'];
+    }
+
+    public function setYear($md_year_id)
+    {
+        $this->attributes['md_year_id'] = $md_year_id;
     }
 
     public function getReason()
