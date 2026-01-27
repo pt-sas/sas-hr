@@ -3405,6 +3405,13 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'begin_balance'             => [
+            'label'             => 'saldo awal',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon melakukan penarikan ulang'
+            ]
+        ],
         'adjustment'             => [
             'label'             => 'nilai penyesuaian',
             'rules'             => 'required',
@@ -3412,8 +3419,35 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'ending_balance'             => [
+            'label'             => 'saldo akhir',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon melakukan penginputan nilai penyesuaian kembali'
+            ]
+        ],
         'reason'                => [
             'label'             => 'alasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $closing_period = [
+        'year'  => [
+            'label'             => 'tahun',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $create_period = [
+        'startdate'  => [
+            'label'             => 'tanggal mulai',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'

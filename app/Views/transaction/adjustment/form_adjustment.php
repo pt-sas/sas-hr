@@ -77,7 +77,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="date">Tanggal <span class="required">*</span></label>
+                    <label for="date">Tanggal Peristiwa<span class="required">*</span></label>
                     <div class="input-icon">
                         <input type="text" class="form-control datepicker" id="date" name="date" autocomplete="off">
                         <span class="input-icon-addon">
@@ -91,6 +91,7 @@
                 <div class="form-group">
                     <label for="begin_balance">Saldo Awal</label>
                     <input type="text" class="form-control" id="begin_balance" name="begin_balance" readonly>
+                    <small class="form-text text-danger" id="error_begin_balance"></small>
                 </div>
             </div>
             <div class="col-md-3">
@@ -104,6 +105,7 @@
                 <div class="form-group">
                     <label for="ending_balance">Saldo Akhir</label>
                     <input type="text" class="form-control" id="ending_balance" name="ending_balance" readonly>
+                    <small class="form-text text-danger" id="error_ending_balance"></small>
                 </div>
             </div>
             <div class="col-md-6">

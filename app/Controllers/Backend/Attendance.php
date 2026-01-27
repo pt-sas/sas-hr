@@ -70,6 +70,7 @@ class Attendance extends BaseController
                 // TODO : Get Employee Access
                 $empList = $this->access->getEmployeeData();
                 $where['v_attendance_series.md_employee_id'] = ['value' => $empList];
+                $where['md_employee.md_status_id'] = ['value' => [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK, $this->Status_MAGANG, $this->Status_FREELANCE]];
 
                 $number = $this->request->getPost('start');
                 $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);

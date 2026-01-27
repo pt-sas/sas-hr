@@ -18,6 +18,7 @@ use App\Models\M_DocumentType;
 use App\Models\M_MedicalCertificate;
 use App\Models\M_RuleDetail;
 use App\Models\M_SubmissionCancelDetail;
+use App\Models\M_Year;
 use TCPDF;
 use Config\Services;
 use DateTime;
@@ -141,6 +142,7 @@ class SickLeave extends BaseController
         $mEmpWork = new M_EmpWorkDay($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
         $mMedical = new M_MedicalCertificate($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -303,7 +305,20 @@ class SickLeave extends BaseController
                             $trxMedical = $mMedical->where(['trx_absent_id' => $post['id']])->whereIn('docstatus', [$this->DOCSTATUS_Completed, $this->DOCSTATUS_Drafted, $this->DOCSTATUS_Inprogress])->first();
                         }
 
-                        if ($trx) {
+                        // TODO : Checking Period
+                        foreach ($dateWorkRange as $date) {
+                            $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+
+                            if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                                break;
+                            }
+                        }
+
+                        if (empty($period)) {
+                            $response = message('success', false, "Periode belum dibuat");
+                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                            $response = message('success', false, "Periode {$period->name} ditutup");
+                        } else if ($trx) {
                             $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
                         } else if ($endDate > $addDays) {
                             $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
@@ -455,6 +470,7 @@ class SickLeave extends BaseController
         $mRule = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
         $mHoliday = new M_Holiday($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -471,7 +487,21 @@ class SickLeave extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         // TODO : Get Document Medical Status In Progress And Draft

@@ -4,7 +4,6 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_Absent;
-use App\Models\M_AccessMenu;
 use App\Models\M_Assignment;
 use App\Models\M_Employee;
 use App\Models\M_Attendance;
@@ -13,6 +12,7 @@ use App\Models\M_EmpBranch;
 use App\Models\M_Rule;
 use App\Models\M_SubmissionCancel;
 use App\Models\M_SubmissionCancelDetail;
+use App\Models\M_Year;
 use Config\Services;
 
 class SubmissionCancel extends BaseController
@@ -96,6 +96,7 @@ class SubmissionCancel extends BaseController
         $mEmployee = new M_Employee($this->request);
         $mEmpBranch = new M_EmpBranch($this->request);
         $mAbsent = new M_Absent($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
@@ -156,6 +157,7 @@ class SubmissionCancel extends BaseController
                         // TODO : Get Cancel Submission
                         $whereClause = "trx_submission_cancel_detail.md_employee_id = '{$value->md_employee_id}'";
                         $whereClause .= " AND trx_submission_cancel_detail.date = '{$dateClause}'";
+                        $whereClause .= " AND trx_submission_cancel_detail.isagree != 'N'";
                         $whereClause .= " AND trx_submission_cancel.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                         $whereClause .= " AND trx_submission_cancel.ref_submissiontype = {$post['ref_submissiontype']}";
                         $whereClause .= " AND trx_submission_cancel.reference_id = {$post['reference_id']}";
@@ -177,9 +179,18 @@ class SubmissionCancel extends BaseController
                             $trx = $mAbsent->getAllSubmission($whereClause)->getResult();
                         }
 
+                        // TODO : Checking Period
+                        $period = $mYear->getPeriodStatus(date('Y-m-d', strtotime($value->date)), $post['submissiontype'])->getRow();
+
                         $dateNow = format_dmy($value->date, '-');
 
-                        if ($dateClause < $subDate) {
+                        if (empty($period)) {
+                            $response = message('success', false, "Periode belum dibuat");
+                            break;
+                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                            $response = message('success', false, "Periode {$period->name} ditutup");
+                            break;
+                        } else if ($dateClause < $subDate) {
                             $response = message('success', false, "Tanggal {$dateNow} tidak bisa dibatalkan karena sudah melebihi batas tanggal pembatalan");
                             break;
                         } else if (($dateClause == $subDate) && is_null($attPresent) && is_null($trx)) {
@@ -319,7 +330,19 @@ class SubmissionCancel extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    foreach ($rowDetail as $val) {
+                        $period = $mYear->getPeriodStatus(date('Y-m-d', strtotime($val->date)), $row->submissiontype)->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $keys = array_keys($rowDetail);
@@ -332,6 +355,7 @@ class SubmissionCancel extends BaseController
                             // TODO : Get Cancel Submission
                             $whereClause = "trx_submission_cancel_detail.md_employee_id = '{$value->md_employee_id}'";
                             $whereClause .= " AND trx_submission_cancel_detail.date = '{$dateClause}'";
+                            $whereClause .= " AND trx_submission_cancel_detail.isagree != 'N'";
                             $whereClause .= " AND trx_submission_cancel.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
                             $whereClause .= " AND trx_submission_cancel.ref_submissiontype = {$row->getRefSubmissionType()}";
                             $whereClause .= " AND trx_submission_cancel.reference_id = {$row->getReferenceId()}";

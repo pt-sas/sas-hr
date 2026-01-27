@@ -22,15 +22,9 @@
                         </div>
                     </div>
                     <div class="form-group row">
-                        <label for="md_employee_id" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Karyawan
-                        </label>
+                        <label for="md_employee_id" class="col-lg-3 col-md-3 col-sm-4 mt-sm-2 text-right">Karyawan </label>
                         <div class="col-lg-6 col-md-9 col-sm-8 select2-input select2-primary">
-                            <select class="form-control multiple-select" name="md_employee_id[]" multiple="multiple"
-                                style="width: 100%;">
-                                <?php foreach ($ref_employee as $row) : ?>
-                                    <option value="<?= $row->md_employee_id; ?>"><?= $row->value; ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <select class="form-control multiple-select-employee access" name="md_employee_id[]"></select>
                         </div>
                     </div>
                     <div class="form-group row">

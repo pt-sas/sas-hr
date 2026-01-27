@@ -67,6 +67,7 @@ class M_AbsentDetail extends Model
     {
         $this->builder->select($this->table . '.*,
             trx_absent.trx_absent_id,
+            trx_absent.md_employee_id,
             trx_absent.nik,
             trx_absent.documentno,
             trx_absent.startdate,
@@ -643,8 +644,13 @@ class M_AbsentDetail extends Model
             )->whereIn('isagree', ['M', 'S', 'H'])->first();
 
             if (is_null($list)) {
+                $hadApprovedLine = $this->where(
+                    'trx_absent_id',
+                    $line->{$mAbsent->primaryKey}
+                )->whereIn('isagree', ['Y', 'C'])->first();
+
                 $dataUpdate = [
-                    "docstatus"     => "CO",
+                    "docstatus"     => $hadApprovedLine ? "CO" : "NA",
                     "receiveddate"  => $todayTime,
                     "updated_by"    => $updatedBy
                 ];

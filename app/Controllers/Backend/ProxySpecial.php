@@ -12,6 +12,7 @@ use App\Models\M_Role;
 use App\Models\M_ProxySwitching;
 use App\Models\M_User;
 use App\Models\M_UserRole;
+use App\Models\M_Year;
 
 class ProxySpecial extends BaseController
 {
@@ -85,6 +86,8 @@ class ProxySpecial extends BaseController
     public function create()
     {
         if ($this->request->getMethod(true) === 'POST') {
+            $mYear = new M_Year($this->request);
+
             $post = $this->request->getVar();
             $table = json_decode($post['table']);
             //! Mandatory property for detail validation
@@ -100,7 +103,22 @@ class ProxySpecial extends BaseController
                     $startDate = $post['startdate'];
                     $today = date('Y-m-d');
 
-                    if ($today > $startDate) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($post['startdate'], $post['enddate'], [], 'Y-m-d', "all");
+
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('success', false, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('success', false, "Periode {$period->name} ditutup");
+                    } else if ($today > $startDate) {
                         $response = message('success', false, 'Tanggal Mulai kurang dari tanggal hari ini');
                     } else {
                         $this->entity->fill($post);
@@ -182,6 +200,7 @@ class ProxySpecial extends BaseController
     public function processIt()
     {
         $cWfs = new WScenario();
+        $mYear = new M_Year($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();
@@ -194,7 +213,21 @@ class ProxySpecial extends BaseController
 
             try {
                 if (!empty($_DocAction)) {
-                    if ($_DocAction === $row->getDocStatus()) {
+                    // TODO : Checking Period
+                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
+                    foreach ($dateRange as $date) {
+                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+
+                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                            break;
+                        }
+                    }
+
+                    if (empty($period)) {
+                        $response = message('error', true, "Periode belum dibuat");
+                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                        $response = message('error', true, "Periode {$period->name} ditutup");
+                    } else if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
                         $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);

@@ -355,7 +355,7 @@ class User extends BaseController
 		$attendanceMap = array_column($attendanceData, null, 'md_employee_id');
 
 		// TODO : Get all submission data for today and make it assosiatif multidimensional array
-		$submissionData = $mAbsent->getAllSubmission("date = '{$today}' AND isagree IN ('Y', 'M', 'H', 'S')")->getResult();
+		$submissionData = $mAbsent->getAllSubmission("DATE(date) = '{$today}' AND isagree IN ('Y', 'M', 'H', 'S')")->getResult();
 		$submissionMap = array_column($submissionData, null, 'employee_id');
 
 		// TODO : Get All User List and make it assosiatif multidimensional array

@@ -782,13 +782,15 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('list-kabar/showAll', 'Backend\News::showAll');
     $routes->post('list-kabar/create', 'Backend\News::create');
 
-    $routes->add('daftar-absent', 'Backend\NoAttendance::reportIndex');
-    $routes->match(['get', 'post'], 'daftar-absent/showAll', 'Backend\NoAttendance::reportShowAll');
-
-    $routes->add('hutang-cuti', 'Backend\LeaveDebt::index');
-    $routes->match(['get', 'post'], 'hutang-cuti/showAll', 'Backend\LeaveDebt::reportShowAll');
-
-
+    $routes->add('closing-period', 'Backend\ClosingPeriod::index');
+    $routes->post('closing-period/showAll', 'Backend\ClosingPeriod::showAll');
+    $routes->post('closing-period/create', 'Backend\ClosingPeriod::create');
+    $routes->get('closing-period/destroy/(:any)', 'Backend\ClosingPeriod::destroy/$1');
+    $routes->get('closing-period/show/(:any)', 'Backend\ClosingPeriod::show/$1');
+    $routes->post('closing-period/createPeriod', 'Backend\ClosingPeriod::generatePeriod');
+    $routes->post('closing-period/refreshTableLine', 'Backend\ClosingPeriod::refreshTableLine');
+    $routes->get('closing-period/showPeriodControl', 'Backend\ClosingPeriod::showPeriodControl');
+    $routes->post('closing-period/updatePeriodControl', 'Backend\ClosingPeriod::processPeriod');
 });
 
 /*
