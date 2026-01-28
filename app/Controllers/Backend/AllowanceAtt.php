@@ -12,6 +12,7 @@ use App\Models\M_Holiday;
 use App\Models\M_Levelling;
 use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
+use App\Models\M_Adjustment;
 use App\Models\M_Configuration;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Assignment;
@@ -174,6 +175,7 @@ class AllowanceAtt extends BaseController
         $mEmpBranch = new M_EmpBranch($this->request);
         $mAllowance = new M_AllowanceAtt($this->request);
         $mConfig = new M_Configuration($this->request);
+        $mAdjustment = new M_Adjustment($this->request);
 
         $md_branch_id = null;
         $md_division_id = null;
@@ -213,7 +215,7 @@ class AllowanceAtt extends BaseController
         $sheet = $excel->setActiveSheetIndex(0);
 
         //** This set header report */
-        $sheet->setCellValue('A1', "LAPORAN ABSENSI HARIAN");
+        $sheet->setCellValue('A1', "LAPORAN SALDO TKH");
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(15);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 
@@ -449,6 +451,18 @@ class AllowanceAtt extends BaseController
             $allTKH[$val->md_employee_id][$val->date] = $val;
         }
 
+        // TODO : Get All Adjustment
+        $whereClause = "DATE(date) BETWEEN '{$prevMonth}' AND '{$nowCutMonth}'
+                    AND submissiontype = {$mAdjustment->Pengajuan_Adj_TKH}
+                    AND docstatus = '{$this->DOCSTATUS_Completed}'";
+
+        $data = $mAdjustment->where($whereClause)->findAll();
+        $allAdjusment = [];
+
+        foreach ($data as $val) {
+            $allAdjusment[$val->md_employee_id][date('Y-m-d', strtotime($val->date))] = $val;
+        }
+
         $number = 1;
         $numrow = 5;
 
@@ -496,13 +510,16 @@ class AllowanceAtt extends BaseController
                 // TODO : Get Attendance
                 $attendance = isset($allAttendance[$row->md_employee_id][$date]) ? $allAttendance[$row->md_employee_id][$date] : null;
 
-                if (!$work && (($configMNSOD && $row->md_levelling_id <= $lvlManager) ? empty($attendance) : !$assignment)) {
+                // TODO : Get Adjusment
+                $adjustment = isset($allAdjusment[$row->md_employee_id][$date]) ? $allAdjusment[$row->md_employee_id][$date] : null;
+
+                if (!$work && !$adjustment && (($configMNSOD && $row->md_levelling_id <= $lvlManager) ? empty($attendance) : !$assignment)) {
                     $styleCell = $style_row_dayoff;
                     $qty = 0;
                 } else {
                     $trxAbsent = isset($allTrxAbsent[$row->md_employee_id][$date]) ? $allTrxAbsent[$row->md_employee_id][$date] : null;
 
-                    if (!$trxAbsent) {
+                    if (!$trxAbsent && !$adjustment) {
                         $tugasKunjungan = isset($allTugasKunjungan[$row->md_employee_id][$date]) ? $allTugasKunjungan[$row->md_employee_id][$date] : null;
 
                         //TODO : Get Attendance if level under Manager and config is nonaktif
@@ -618,10 +635,10 @@ class AllowanceAtt extends BaseController
         // Set orientasi kertas jadi LANDSCAPE
         $sheet->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
         // Set judul file excel nya
-        $sheet->setTitle("Laporan Absensi Harian");
+        $sheet->setTitle("Laporan Saldo TKH");
         // Proses file excel
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="Laporan Absensi Harian.xlsx"'); // Set nama file excel nya
+        header('Content-Disposition: attachment; filename="Laporan Saldo TKH.xlsx"'); // Set nama file excel nya
         header('Cache-Control: max-age=0');
         $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
         $write->save('php://output');

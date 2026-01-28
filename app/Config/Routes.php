@@ -791,6 +791,8 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('closing-period/refreshTableLine', 'Backend\ClosingPeriod::refreshTableLine');
     $routes->get('closing-period/showPeriodControl', 'Backend\ClosingPeriod::showPeriodControl');
     $routes->post('closing-period/updatePeriodControl', 'Backend\ClosingPeriod::processPeriod');
+
+    $routes->match(['get', 'post'], 'year/getList', 'Backend\ClosingPeriod::getList');
 });
 
 /*
