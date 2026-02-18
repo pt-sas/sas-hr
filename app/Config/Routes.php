@@ -49,6 +49,7 @@ $routes->get('cron-absent-alert', 'Backend\Attendance::toDoCheckAbsent');
 $routes->get('cron-send-absent-summary', 'Backend\Attendance::toDoSendAbsentSummary');
 $routes->get('cron-delete-attendance-summary', 'Backend\Attendance::toDoDeleteAttSummary');
 $routes->get('cron-proxy-reguler', 'Backend\User::proxyReguler');
+$routes->get('cron-update-broadcast', 'Backend\Broadcast::cronUpdateBroadcast'); 
 $routes->get('cron-return-proxy', 'Backend\ProxySpecial::proxySwitching');
 $routes->get('cron-delegation-transfer', 'Backend\DelegationTransfer::delegationSwitching');
 $routes->get('cron-delegation-absent', 'Backend\User::sendEmailWhenDelegationAbsent');
@@ -792,6 +793,18 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('closing-period/showPeriodControl', 'Backend\ClosingPeriod::showPeriodControl');
     $routes->post('closing-period/updatePeriodControl', 'Backend\ClosingPeriod::processPeriod');
 
+    $routes->add('daftar-absent', 'Backend\NoAttendance::reportIndex');
+    $routes->match(['get', 'post'], 'daftar-absent/showAll', 'Backend\NoAttendance::reportShowAll');
+
+    $routes->add('hutang-cuti', 'Backend\LeaveDebt::index');
+    $routes->match(['get', 'post'], 'hutang-cuti/showAll', 'Backend\LeaveDebt::reportShowAll');
+
+    $routes->add('broadcast-telegram', 'Backend\Broadcast::index');
+    $routes->match(['get', 'post'], 'broadcast-telegram/showAll', 'Backend\Broadcast::showAll');
+    $routes->post('broadcast-telegram/create', 'Backend\Broadcast::create');
+    $routes->get('broadcast-telegram/show/(:any)', 'Backend\Broadcast::show/$1');
+    $routes->get('broadcast-telegram/destroy/(:any)', 'Backend\Broadcast::destroy/$1');
+    $routes->get('broadcast-telegram/print/(:any)', 'Backend\Broadcast::exportPDF/$1');
     $routes->match(['get', 'post'], 'year/getList', 'Backend\ClosingPeriod::getList');
 });
 
