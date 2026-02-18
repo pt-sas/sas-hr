@@ -1009,7 +1009,7 @@ $(".save_form").click(function (evt) {
   let formData = new FormData();
 
   if (checkAccess[0].success && checkAccess[0].message == "Y") {
-    let field;
+    let field = [];
 
     //* Populate field form header
     $.each(form, function () {
@@ -1049,22 +1049,31 @@ $(".save_form").click(function (evt) {
         }
 
         //* Field type input file and containing class control-upload-image
-        if (
-          field[i].type == "file" &&
-          className.includes("control-upload-image")
-        ) {
-          //? Check condition upload add new image or not upload
+        if (field[i].type == "file" && className.includes("control-upload-image")) {
           if (field[i].files.length > 0) {
             formData.append(field[i].name, field[i].files[0]);
           } else {
             const group = $(field[i]).closest(".form-group");
-            let source = group.find(".img-result").attr("src");
-            let imgSrc = source;
 
-            if (typeof source !== "undefined" && source !== "")
-              imgSrc = source.substr(source.lastIndexOf("/") + 1);
+            const isPreviewVisible = group.find(".form-result").is(":visible") ||
+              group.find(".form-file-result").is(":visible");
 
-            formData.append(field[i].name, imgSrc);
+            if (isPreviewVisible) {
+              let source = group.find(".img-result").attr("src");
+              let imgSrc = source;
+
+              if (typeof source !== "undefined" && source !== "") {
+                imgSrc = source.substr(source.lastIndexOf("/") + 1);
+                formData.append(field[i].name, imgSrc);
+              } else {
+                let documentName = group.find(".file-name").text();
+
+                if (documentName !== "") {
+                  formData.append(field[i].name, documentName);
+                }
+              }
+            }
+            
           }
         }
 
@@ -1086,9 +1095,19 @@ $(".save_form").click(function (evt) {
 
         //* Field type input checkbox
         if (field[i].type == "checkbox") {
-          let checked = field[i].checked ? "Y" : "N";
-
-          formData.append(field[i].name, checked);
+          let className = field[i].className.split(/\s+/);
+          // send method checkboxe
+          if (field[i].name === 'send_email' || 
+              field[i].name === 'send_notification' || 
+              field[i].name === 'send_telegram') {
+            if (field[i].checked) {
+              formData.append(field[i].name, field[i].value);
+            }
+          } else {
+            // checkbox normal
+            let checked = field[i].checked ? "Y" : "N";
+            formData.append(field[i].name, checked);
+          }
         }
 
         //* Field containing class datepicker
@@ -1126,6 +1145,13 @@ $(".save_form").click(function (evt) {
         }
       }
     }
+
+    // It's for broadcast menu
+  let isSend = "N";
+  if (_this.hasClass('save_send_form') || target.hasClass('save_send_form')) {
+      isSend = "Y";
+  }
+  formData.append("issend", isSend);
 
     //? Check in form exists Table role
     if (form.find("table.tb_tree").length > 0) {
@@ -2651,6 +2677,13 @@ $(document).on("click", ".new_form", function (evt) {
 
         if (form.find("input:file.control-upload-image").length)
           form.find(".img-result").attr("src", "");
+
+        if (form.find("input:file").length) {
+          form.find(".file-name").text("");
+          form.find(".form-file-result").hide();
+          form.find(".form-upload-foto").show();
+          form.find('input[type="file"]').val('');
+        }
 
         if (form.find("input.code").length) setSeqCode(form);
 
@@ -4432,6 +4465,123 @@ function previewImage(input, id, src, status = null) {
   }
 }
 
+function previewAll(input, id, src, status = null) {
+  const parent = input.closest(".form-group");
+  const labelUpload = input.closest("label");
+
+  id = id || $(parent).find("img.img-result");
+  src = src == null ? "" : src;
+
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const fileType = file.type;
+    const fileName = file.name;
+
+    loadingForm(labelUpload.id, "pulse");
+    $(".save_form").attr("disabled", true);
+    $(".x_form").attr("disabled", true);
+    $(".close_form").attr("disabled", true);
+
+    if (fileType.startsWith('image/')) {
+      let reader = new FileReader();
+      reader.onload = function (e) {
+        setTimeout(function () {
+          $(id).attr("src", e.target.result).width("auto").height(150);
+          $(parent).find(".form-upload-foto").css("display", "none");
+          $(parent).find(".form-result").css("display", "block");
+          $(parent).find(".form-file-result").css("display", "none");
+
+          hideLoadingForm(labelUpload.id);
+
+          $(".save_form").removeAttr("disabled");
+          $(".x_form").removeAttr("disabled");
+          $(".close_form").removeAttr("disabled");
+        }, 2500);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // non image files show filename
+      setTimeout(function () {
+        $(parent).find(".file-name").text(fileName);
+        $(parent).find(".form-upload-foto").css("display", "none");
+        $(parent).find(".form-result").css("display", "none");
+        $(parent).find(".form-file-result").css("display", "block");
+
+        hideLoadingForm(labelUpload.id);
+
+        $(".save_form").removeAttr("disabled");
+        $(".x_form").removeAttr("disabled");
+        $(".close_form").removeAttr("disabled");
+      }, 500);
+    }
+
+  } else if (src !== "") {
+    src = ORI_URL + "/" + src;
+    
+    const fileExt = src.split('.').pop().toLowerCase();
+    const fileName = src.split('/').pop();
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt);
+
+    if (isImage) {
+      $.ajax({
+        url: src,
+        type: "HEAD",
+        error: function () {
+          $(id).attr("src", "").width("auto").height(150);
+          $(parent).find(".form-upload-foto").css("display", "block");
+          $(parent).find(".form-result").css("display", "none");
+          $(parent).find(".form-file-result").css("display", "none");
+        },
+        success: function () {
+          loadingForm(labelUpload.id, "pulse");
+          $(".save_form").attr("disabled", true);
+          $(".x_form").attr("disabled", true);
+          $(".close_form").attr("disabled", true);
+
+          setTimeout(function () {
+            $(id).attr("src", src).width("auto").height(150);
+            $(parent).find(".form-upload-foto").css("display", "none");
+            $(parent).find(".form-result").css("display", "block");
+            $(parent).find(".form-file-result").css("display", "none");
+
+            hideLoadingForm(labelUpload.id);
+
+            if (setSave !== "detail" && (
+              typeof status === "undefined" ||
+              status === "" ||
+              status === null ||
+              status === "DR" ||
+              status === "IP"
+            ))
+              $(".save_form").removeAttr("disabled");
+
+            $(".x_form").removeAttr("disabled");
+            $(".close_form").removeAttr("disabled");
+          }, 500);
+        },
+      });
+    } else {
+      $(parent).find(".file-name").text(fileName);
+      $(parent).find(".form-upload-foto").css("display", "none");
+      $(parent).find(".form-result").css("display", "none");
+      $(parent).find(".form-file-result").css("display", "block");
+    }
+  } else {
+    $(id).attr("src", "").width("auto").height(150);
+    $(parent).find(".form-upload-foto").css("display", "block");
+    $(parent).find(".form-result").css("display", "none");
+    $(parent).find(".form-file-result").css("display", "none");
+  }
+}
+
+$(document).on('click', '.close-file', function() {
+  const parent = $(this).closest('.form-group');
+  parent.find('input[type="file"]').val('');
+  parent.find('.form-result').css('display', 'none');
+  parent.find('.form-file-result').css('display', 'none');
+  parent.find('.form-upload-foto').css('display', 'block');
+});
+
 /**
  *
  * @param {*} input action "create, update, delete"
@@ -5388,7 +5538,26 @@ function putFieldData(form, data, status = null) {
           }
 
           if (field[i].type === "checkbox") {
-            if (label === "Y")
+          // send method checkboxes
+          if (fieldName === 'send_email' || 
+              fieldName === 'send_notification' || 
+              fieldName === 'send_telegram') {
+            if (label === field[i].value) {
+              form
+                .find("input[name=" + fieldName + "]")
+                .not(".line")
+                .prop("checked", true)
+                .change();
+            } else {
+              form
+                .find("input[name=" + fieldName + "]")
+                .not(".line")
+                .prop("checked", false)
+                .change();
+            }
+          }
+          // normal Y/N checkboxes
+            else if (label === "Y")
               form
                 .find("input[name=" + fieldName + "]")
                 .not(".line")
@@ -5416,7 +5585,15 @@ function putFieldData(form, data, status = null) {
 
           // Pass data form input file to function previewImage
           if (field[i].type === "file") {
-            if (className.includes("control-upload-image")) {
+            if (className.includes("control-upload-image") && form.is('#form_broadcast')){
+              previewAll(
+                form.find("input[name=" + fieldName + "]")[0],
+                "",
+                label,
+                status
+              );
+            }
+            else if (className.includes("control-upload-image")) {
               previewImage(
                 form.find("input[name=" + fieldName + "]")[0],
                 "",

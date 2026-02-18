@@ -172,8 +172,14 @@ class Template
         //* Button for Table Form 
         $btnTableForm = '<div class="card-action card-button">
                         <button type="button" class="btn btn-outline-danger btn-round ml-auto close_form">Close</button>
-                        <button type="button" class="btn btn-primary btn-round ml-auto save_form">Save changes</button>
-                    </div>';
+                        <button type="button" class="btn btn-primary btn-round ml-auto save_form">Save changes</button>';
+
+        // Send button for broadcast telegram
+        if ($uri === 'broadcast-telegram') {
+            $btnTableForm .= '<button type="button" class="btn btn-success btn-round save_form save_send_form" style="float: right;">Send Now</button>';
+        }
+
+        $btnTableForm .= '</div';
 
         //* Button for Parameter Form 
         $btnParamForm = '<div class="card-action d-flex justify-content-center">
