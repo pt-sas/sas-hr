@@ -109,6 +109,8 @@ class Mail extends BaseController
 
         $email = $this->initializeEmail();
 
+        $email->setMailType('html');
+
         if (is_null($from))
             $from = $row->getSmtpUser();
 
@@ -117,8 +119,15 @@ class Mail extends BaseController
 
         if (!is_null($attach)) {
             $email->clear(true);
-            $email->attach($attach);
-        } else {
+
+            if (is_array($attach)) {
+                foreach ($attach as $attachment) {
+                    $email->attach($attachment);
+                }
+            } else {
+
+                $email->attach($attach);
+            }
             $email->clear();
         }
 
