@@ -805,6 +805,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('broadcast-telegram/show/(:any)', 'Backend\Broadcast::show/$1');
     $routes->get('broadcast-telegram/destroy/(:any)', 'Backend\Broadcast::destroy/$1');
     $routes->get('broadcast-telegram/print/(:any)', 'Backend\Broadcast::exportPDF/$1');
+    $routes->match(['get', 'post'], 'year/getList', 'Backend\ClosingPeriod::getList');
 });
 
 /*

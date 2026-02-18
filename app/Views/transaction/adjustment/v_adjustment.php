@@ -15,7 +15,7 @@
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Tanggal Pembuatan</th>
-                <th>Tanggal</th>
+                <th>Tanggal Peristiwa</th>
                 <th>Alasan</th>
                 <th>Createdby</th>
                 <th>Aksi</th>

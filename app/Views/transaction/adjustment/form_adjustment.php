@@ -12,10 +12,11 @@
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
                 </div>
             </div>
+
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="submissiontype">Tipe Form <span class="required">*</span></label>
-                    <select class="form-control select2" id="submissiontype" name="submissiontype">
+                    <select class="form-control select2" id="submissiontype" name="submissiontype" hide-field="md_year_id">
                         <option value="">Select Tipe Form</option>
                         <?php foreach ($type as $row) : ?>
                             <option value="<?= $row->md_doctype_id ?>"><?= $row->name ?> </option>
@@ -24,7 +25,16 @@
                     <small class="form-text text-danger" id="error_submissiontype"></small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="md_year_id">Tahun Saldo Cuti <span class="required">*</span></label>
+                    <select class="form-control select-data" id="md_year_id" name="md_year_id"
+                        data-url="year/getList">
+                    </select>
+                    <small class="form-text text-danger" id="error_md_year_id"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
                     <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
