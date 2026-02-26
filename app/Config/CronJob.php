@@ -136,7 +136,7 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
         // $schedule->url(env("app.baseURL") . "cron-update-employee")->named("CronUpdateEmployee")->daily("11:50 pm");
         $schedule->url(env("app.baseURL") . "cron-approved-realization")->named("CronApprovedRealization")->daily("11:59 pm");
         $schedule->url(env("app.baseURL") . "cron-absent-alert")->named("CronAbsentAlert")->daily("08:20 am");
-        $schedule->url(env("app.baseURL") . "cron-send-absent-summary")->named("CronAbsentSummary")->daily("12:01");
+        $schedule->url(env("app.baseURL") . "cron-send-absent-summary")->named("CronAbsentSummary")->daily("00:01 pm");
         $schedule->url(env("app.baseURL") . "cron-delete-attendance-summary")->named("CronDeleteAttSummary")->sundays("11:40 pm");
 
         // Proxy
@@ -149,8 +149,5 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
 
         // Broadcast
         $schedule->url(env("app.baseURL") . "/cron-update-broadcast")->named("CronUpdateBroadcast")->everyMinute(1);
-
-        // Promosi/Demosi
-        $schedule->url(env("app.baseURL") . "/cron-update-promodemo")->named("CronUpdatePromoDemo")->daily("00:30");
     }
 }
