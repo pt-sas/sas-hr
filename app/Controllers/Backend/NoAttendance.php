@@ -213,12 +213,13 @@ class NoAttendance extends BaseController
         $holidays = $mHoliday->getHolidayDate();
 
         $attendanceMap = [];
-        $attendances = $mAttendance->getAttendance([
-            'DATE(v_attendance.date) >=' => $startDate,
-            'DATE(v_attendance.date) <=' => $endDate
-        ], 'ASC');
-
-        foreach ($attendances->getResult() as $a) {
+        foreach (
+            $mAttendance
+                ->where('DATE(work_date) >=', $startDate)
+                ->where('DATE(work_date) <=', $endDate)
+                ->findAll()
+            as $a
+        ) {
             $attendanceMap[$a->nik][$a->date] = true;
         }
         
