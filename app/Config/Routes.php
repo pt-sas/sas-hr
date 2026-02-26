@@ -793,6 +793,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('closing-period/refreshTableLine', 'Backend\ClosingPeriod::refreshTableLine');
     $routes->get('closing-period/showPeriodControl', 'Backend\ClosingPeriod::showPeriodControl');
     $routes->post('closing-period/updatePeriodControl', 'Backend\ClosingPeriod::processPeriod');
+    $routes->match(['get', 'post'], 'year/getList', 'Backend\ClosingPeriod::getList');
 
     $routes->add('daftar-absent', 'Backend\NoAttendance::reportIndex');
     $routes->match(['get', 'post'], 'daftar-absent/showAll', 'Backend\NoAttendance::reportShowAll');

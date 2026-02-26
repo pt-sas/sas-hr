@@ -2376,8 +2376,8 @@ _tableReport.on("click", ".btn_input_news", function (e) {
   let reason;
   let id = this.id;
 
-  date = tr.find("td:eq(3)").text();
-  reason = tr.find("td:eq(4)").text();
+  date = tr.find("td:eq(5)").text();
+  reason = tr.find("td:eq(6)").text();
 
   const form = $("#form_input_news");
 
@@ -2475,18 +2475,26 @@ $(".set-read").on("click", function (e) {
 
 $("#form_adjustment").on(
   "change dp.change",
-  "#submissiontype, #md_employee_id, #date",
+  "#submissiontype, #md_employee_id, #md_year_id, #date",
   function (evt) {
+    if(isLoadingForm == true) return;
+    
     const form = $(this).closest("form");
     const md_employee_id = form.find("#md_employee_id").val();
     const submissionType = form.find("#submissiontype").val();
-    const date = form.find("#date").val();
+    let date;
 
     form.find("#begin_balance").val("");
     form.find("#adjustment").val("");
     form.find("#ending_balance").val("");
 
-    if (md_employee_id !== "" && submissionType !== "" && date !== "") {
+    if (submissionType == "100029") {
+      date = form.find("#md_year_id").val();
+    } else {
+      date = form.find("#date").val();
+    }
+
+    if (md_employee_id !== "" && submissionType !== "" && (date !== "" && date !== null)) {
       let formData = new FormData();
 
       formData.append("md_employee_id", md_employee_id);
@@ -2973,6 +2981,23 @@ $(".save_period").on("click", function (e) {
     });
   }
 });
+
+$("#form_adjustment").on(
+  "change",
+  "select[name=submissiontype]",
+  function (e) {
+    const _this = $(this);
+    const target = $(e.target);
+    const form = target.closest("form");
+    let value = this.value;
+
+    //? Condition field and contain attribute hide-field
+    if (_this.attr("hide-field"))
+      if (value === "100029")
+        form.find("select[name=md_year_id]").closest(".form-group").show();
+      else form.find("select[name=resigndate]").closest(".form-group").hide();
+  }
+);
 
 // $("#saldo_cuti_detail").ready(function () {
 //   const _this = $(this);
