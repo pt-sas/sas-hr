@@ -369,21 +369,32 @@ class WScenario extends BaseController
                 } else {
                     $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, null, $trx->ref_submissiontype);
                 }
-            } else if ($table === "trx_adjustment") {
-                $totalTKH = null;
-
-                if ($trx->submissiontype == $this->model->Pengajuan_Adj_TKH) {
-                    if (abs($trx->adjustment) > 1) {
-                        $totalTKH = 2;
-                    } else {
-                        $totalTKH = 1;
-                    }
-                }
-
-                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null, null, $totalTKH, $trx->submissiontype);
-            } else if ($table === "trx_proxy_special" || $table == "trx_employee_allocation") {
+            } else if ($table === "trx_proxy_special" || $table == "trx_adjustment") {
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, null, null, null, null, null, $trx->submissiontype);
-            } else {
+            }
+
+            else if ($table === "trx_employee_allocation") {
+
+                if ($trx->submissiontype == 100023 || $trx->submissiontype == 100024) {
+
+                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, null, $trx->submissiontype);
+
+                } else {
+                    $this->sys_wfscenario_id = $mWfs->getScenario(
+                        $menu,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        $trx->submissiontype
+                    );
+                }
+            }
+
+            else {
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
             }
 

@@ -49,6 +49,7 @@ $routes->get('cron-absent-alert', 'Backend\Attendance::toDoCheckAbsent');
 $routes->get('cron-send-absent-summary', 'Backend\Attendance::toDoSendAbsentSummary');
 $routes->get('cron-delete-attendance-summary', 'Backend\Attendance::toDoDeleteAttSummary');
 $routes->get('cron-proxy-reguler', 'Backend\User::proxyReguler');
+$routes->get('cron-update-promodemo', 'Backend\PromoDemo::updateMasterEmployee'); 
 $routes->get('cron-update-broadcast', 'Backend\Broadcast::cronUpdateBroadcast'); 
 $routes->get('cron-return-proxy', 'Backend\ProxySpecial::proxySwitching');
 $routes->get('cron-delegation-transfer', 'Backend\DelegationTransfer::delegationSwitching');
@@ -792,6 +793,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('closing-period/refreshTableLine', 'Backend\ClosingPeriod::refreshTableLine');
     $routes->get('closing-period/showPeriodControl', 'Backend\ClosingPeriod::showPeriodControl');
     $routes->post('closing-period/updatePeriodControl', 'Backend\ClosingPeriod::processPeriod');
+    $routes->match(['get', 'post'], 'year/getList', 'Backend\ClosingPeriod::getList');
 
     $routes->add('daftar-absent', 'Backend\NoAttendance::reportIndex');
     $routes->match(['get', 'post'], 'daftar-absent/showAll', 'Backend\NoAttendance::reportShowAll');
@@ -805,7 +807,14 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('broadcast-telegram/show/(:any)', 'Backend\Broadcast::show/$1');
     $routes->get('broadcast-telegram/destroy/(:any)', 'Backend\Broadcast::destroy/$1');
     $routes->get('broadcast-telegram/print/(:any)', 'Backend\Broadcast::exportPDF/$1');
-    $routes->match(['get', 'post'], 'year/getList', 'Backend\ClosingPeriod::getList');
+
+    $routes->add('promo-demo', 'Backend\PromoDemo::index');
+    $routes->match(['get', 'post'], 'promo-demo/showAll', 'Backend\PromoDemo::showAll');
+    $routes->post('promo-demo/create', 'Backend\PromoDemo::create');
+    $routes->get('promo-demo/show/(:any)', 'Backend\PromoDemo::show/$1');
+    $routes->get('promo-demo/destroy/(:any)', 'Backend\PromoDemo::destroy/$1');
+    $routes->get('promo-demo/processIt', 'Backend\PromoDemo::processIt');
+    $routes->get('promo-demo/print/(:any)', 'Backend\PromoDemo::exportPDF/$1');
 });
 
 /*
