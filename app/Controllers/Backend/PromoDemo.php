@@ -1,0 +1,456 @@
+<?php
+
+namespace App\Controllers\Backend;
+
+use App\Controllers\BaseController;
+use Config\Services;
+use App\Models\M_Employee;
+use App\Models\M_Rule;
+use App\Models\M_Division;
+use App\Models\M_EmployeeAllocation;
+use App\Models\M_Branch;
+use App\Models\M_DocumentType;
+use App\Models\M_EmpBranch;
+use App\Models\M_EmpDivision;
+use App\Models\M_Levelling;
+use App\Models\M_Position;
+use App\Models\M_Year;
+use TCPDF;
+
+class PromoDemo extends BaseController
+{
+    public function __construct()
+    {
+        $this->request = Services::request();
+        $this->model = new M_EmployeeAllocation($this->request);
+        $this->entity = new \App\Entities\EmployeeAllocation();
+    }
+
+    public function index()
+    {
+        $mDocType = new M_DocumentType($this->request);
+
+        $data = [
+            'today'     => date('d-M-Y'),
+            'type'      => $mDocType->where('isactive', 'Y')
+                ->whereIn('md_doctype_id', [100023, 100024])
+                ->orderBy('name', 'ASC')
+                ->findAll()
+        ];
+
+        return $this->template->render('transaction/promodemo/v_promo_demo', $data);
+    }
+
+    public function showAll()
+    {
+        if ($this->request->getMethod(true) === 'POST') {
+            $table = $this->model->table;
+            $select = $this->model->getSelect();
+            $join = $this->model->getJoin();
+            
+            $order = [
+                '', // Hide column
+                '', // Number column
+                'trx_employee_allocation.documentno',
+                'trx_employee_allocation.docstatus',
+                'md_employee.fullname',
+                'trx_employee_allocation.nik',
+                'md_branch.name',
+                'md_division.name',
+                'md_levelling.name',
+                'md_position.name',
+                // 'bto.name',
+                // 'dto.name',
+                'lto.name',
+                'pto.name',
+                'md_doctype.name',
+                'trx_employee_allocation.submissiondate',
+                'trx_employee_allocation.date',
+                'trx_employee_allocation.description',
+                'sys_user.name'
+            ];
+            $search = [
+                'trx_employee_allocation.documentno',
+                'trx_employee_allocation.docstatus',
+                'md_employee.fullname',
+                'trx_employee_allocation.nik',
+                'md_branch.name',
+                'md_division.name',
+                'md_levelling.name',
+                'md_position.name',
+                // 'bto.name',
+                // 'dto.name',
+                'lto.name',
+                'pto.name',
+                'md_doctype.name',
+                'trx_employee_allocation.submissiondate',
+                'trx_employee_allocation.date',
+                'trx_employee_allocation.description',
+                'sys_user.name'
+            ];
+            $sort = ['trx_employee_allocation.documentno' => 'ASC'];
+
+            $where['md_employee.md_employee_id'] = ['value' => $this->access->getEmployeeData()];
+
+            $where['trx_employee_allocation.submissiontype'] = ['value' => [$this->model->Pengajuan_Mutasi, $this->model->Pengajuan_Rotasi, $this->model->Pengajuan_Promosi, $this->model->Pengajuan_Demosi]];
+
+            $data = [];
+
+            $number = $this->request->getPost('start');
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+
+            foreach ($list as $value) :
+                $row = [];
+                $ID = $value->trx_employee_allocation_id;
+
+                $number++;
+
+                $row[] = $ID;
+                $row[] = $number;
+                $row[] = $value->documentno;
+                $row[] = docStatus($value->docstatus);
+                $row[] = $value->employee_fullname;
+                $row[] = $value->nik;
+                $row[] = $value->branch;
+                $row[] = $value->division;
+                $row[] = $value->level;
+                $row[] = $value->position;
+                // $row[] = $value->branch_to;
+                // $row[] = $value->division_to;
+                $row[] = $value->level_to;
+                $row[] = $value->position_to;
+                $row[] = $value->formtype;
+                $row[] = format_dmy($value->submissiondate, '-');
+                $row[] = format_dmy($value->date, '-');
+                $row[] = $value->description;
+                $row[] = $value->createdby;
+                $row[] = $this->template->tableButton($ID, $value->docstatus);
+                $data[] = $row;
+            endforeach;
+
+            $result = [
+                'draw'              => $this->request->getPost('draw'),
+                'recordsTotal'      => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
+                'recordsFiltered'   => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
+                'data'              => $data
+            ];
+
+            return $this->response->setJSON($result);
+        }
+    }
+
+public function create()
+{
+    $mEmployee = new M_Employee($this->request);
+
+    if ($this->request->getMethod(true) === 'POST') {
+        $mRule = new M_Rule($this->request);
+
+        $listNeccessary = [
+            $this->model->Pengajuan_Mutasi => 'MT',
+            $this->model->Pengajuan_Rotasi => 'MT',
+            $this->model->Pengajuan_Promosi => 'PR',
+            $this->model->Pengajuan_Demosi => 'DM'
+        ];
+
+        $post = $this->request->getVar();
+
+        try {
+            if (!$this->validation->run($post, 'promo_demo')) {
+                $response = $this->field->errorValidation($this->model->table, $post);
+            } else {
+
+                $employee = $mEmployee->find($post['md_employee_id']);
+                
+                if (!$employee) {
+                    $response = message('success', false, 'Data karyawan tidak ditemukan');
+                } else {
+                    $currentLevellingId = $employee->md_levelling_id;
+                    $newLevellingId = $post['levelling_to'];
+                    $submissionType = $post['submissiontype'];
+
+                    if ($newLevellingId === $currentLevellingId) {
+                        $response = message('success', false, 'Level tujuan tidak boleh sama dengan level sekarang.');
+                    } else if ($submissionType == $this->model->Pengajuan_Promosi && $newLevellingId > $currentLevellingId) {
+                        $response = message('success', false, 'Untuk promosi, jabatan baru harus lebih tinggi dari jabatan saat ini');
+                    } else if ($submissionType == $this->model->Pengajuan_Demosi && $newLevellingId < $currentLevellingId) {
+                        $response = message('success', false, 'Untuk demosi, jabatan baru harus lebih rendah dari jabatan saat ini');
+                    } else {
+                        // TODO : Get Reopen Status
+                        $reopen = false;
+                        $ID = $post['id'] ?? null;
+                        if ($ID) {
+                            $trxReopen = $this->model->find($ID);
+
+                            if ($trxReopen && $trxReopen->isreopen == "Y")
+                                $reopen = true;
+                        }
+
+                        $post['necessary'] = $listNeccessary[$post['submissiontype']];
+                        $date = date('Y-m-d', strtotime($post['date']));
+                        $nik = $post['nik'];
+                        $submissionDate = $post['submissiondate'];
+                        $subDate = date('Y-m-d', strtotime($submissionDate));
+
+                        $mYear = new M_Year($this->request);
+                        // TODO : Checking Period
+                        $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+
+                        if (empty($period)) {
+                            $response = message('success', false, "Periode belum dibuat");
+                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                            $response = message('success', false, "Periode {$period->name} ditutup");
+                        } else {
+                            $rule = $mRule->where([
+                                'name'      => 'Perbantuan',
+                                'isactive'  => 'Y'
+                            ])->first();
+
+                            $minDays = $rule && !empty($rule->min) ? $rule->min : 0;
+
+                            $minDate = date('Y-m-d', strtotime($subDate . "+ {$minDays} days"));
+
+                            //TODO : Get submission
+                            $whereClause = "trx_employee_allocation.nik = '{$nik}'";
+                            $whereClause .= " AND trx_employee_allocation.date = '{$date}'";
+                            $whereClause .= " AND trx_employee_allocation.docstatus IN ('{$this->DOCSTATUS_Completed}','{$this->DOCSTATUS_Inprogress}')";
+                            $trx = $this->model->where($whereClause)->first();
+
+                            if ($minDate > $date && !$reopen) {
+                                $response = message('success', false, "Tidak bisa mengajukan mutasi, minimal pengajuan {$minDays} hari sebelum tanggal mutasi");
+                            } else if ($trx) {
+                                $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
+                            } else {
+                                $this->entity->fill($post);
+
+                                if ($this->isNew()) {
+                                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+
+                                    $docNo = $this->model->getInvNumber("submissiontype", $post['submissiontype'], $post);
+                                    $this->entity->setDocumentNo($docNo);
+                                }
+
+                                $response = $this->save();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            $response = message('error', false, $e->getMessage());
+        }
+
+        return $this->response->setJSON($response);
+    }
+}
+
+    public function show($id)
+    {
+        $mEmployee = new M_Employee($this->request);
+        // $mBranch = new M_Branch($this->request);
+        // $mDivision = new M_Division($this->request);
+        $mLevelling = new M_Levelling($this->request);
+        $mPosition = new M_Position($this->request);
+
+        if ($this->request->isAJAX()) {
+            try {
+                $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+
+                $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
+                $rowLevelling = $mLevelling->where($mLevelling->primaryKey, $list[0]->getLevellingId())->first();
+                $rowPosition = $mPosition->where($mPosition->primaryKey, $list[0]->getPositionId())->first();
+                // $rowBranchTo = $mBranch->where($mBranch->primaryKey, $list[0]->getBranchTo())->first();
+                // $rowDivisionTo = $mDivision->where($mDivision->primaryKey, $list[0]->getDivisionTo())->first();
+                $rowLevellingTo = $mLevelling->where($mLevelling->primaryKey, $list[0]->getLevellingTo())->first();
+                $rowPositionTo = $mPosition->where($mPosition->primaryKey, $list[0]->getPositionTo())->first();
+
+                $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
+                // $list = $this->field->setDataSelect($mBranch->table, $list, 'branch_to', $rowBranchTo->getBranchId(), $rowBranchTo->getName());
+                // $list = $this->field->setDataSelect($mDivision->table, $list, 'division_to', $rowDivisionTo->getDivisionId(), $rowDivisionTo->getName());
+                $list = $this->field->setDataSelect($mLevelling->table, $list, $mLevelling->primaryKey, $rowLevelling->getLevellingId(), $rowLevelling->getName());
+                $list = $this->field->setDataSelect($mPosition->table, $list, $mPosition->primaryKey, $rowPosition->getPositionId(), $rowPosition->getName());
+                $list = $this->field->setDataSelect($mLevelling->table, $list, 'levelling_to', $rowLevellingTo->getLevellingId(), $rowLevellingTo->getName());
+                $list = $this->field->setDataSelect($mPosition->table, $list, 'position_to', $rowPositionTo->getPositionId(), $rowPositionTo->getName());
+
+                $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
+
+                //* Need to set data into date field in form
+                $list[0]->setDate(format_dmy($list[0]->date, "-"));
+
+                $fieldHeader = new \App\Entities\Table();
+                $fieldHeader->setTitle($title);
+                $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setList($list);
+
+                $result = [
+                    'header'    => $this->field->store($fieldHeader)
+                ];
+
+            logMessage('debug Result being sent: ' . print_r($result, true));
+
+                $response = message('success', true, $result);
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    public function destroy($id)
+    {
+        if ($this->request->isAJAX()) {
+            try {
+                $result = $this->delete($id);
+                $response = message('success', true, $result);
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    public function processIt()
+    {
+        $cWfs = new WScenario();
+        $mYear = new M_Year($this->request);
+
+        if ($this->request->isAJAX()) {
+            $post = $this->request->getVar();
+
+            $_ID = $post['id'];
+            $_DocAction = $post['docaction'];
+
+            $row = $this->model->find($_ID);
+            $menu = $this->request->uri->getSegment(2);
+
+            try {
+                if (!empty($_DocAction)) {
+                    // TODO : Checking Period
+                    $period = $mYear->getPeriodStatus($row->date, $row->submissiontype)->getRow();
+        
+                if (empty($period)) {
+                    $response = message('error', true, "Periode belum dibuat");
+                } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                    $response = message('error', true, "Periode {$period->name} ditutup");
+                } else if ($_DocAction === $row->getDocStatus()) {
+                    $response = message('error', true, 'Silahkan refresh terlebih dahulu');
+                } else if ($_DocAction === $this->DOCSTATUS_Completed) {
+                    $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
+                    $response = message('success', true, true);
+                } else if ($_DocAction === $this->DOCSTATUS_Voided) {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Voided);
+                    $response = $this->save();
+                } else {
+                    $this->entity->setDocStatus($_DocAction);
+                    $response = $this->save();
+                }
+            } else {
+                $response = message('error', true, 'Silahkan pilih tindakan terlebih dahulu.');
+            }
+        } catch (\Exception $e) {
+            $response = message('error', false, $e->getMessage());
+        }
+
+        return $this->response->setJSON($response);
+        }
+    }
+
+    public function exportPDF($id)
+    {
+        $mEmployee = new M_Employee($this->request);
+        $mDivision = new M_Division($this->request);
+        $list = $this->model->find($id);
+        $employee = $mEmployee->where($mEmployee->primaryKey, $list->md_employee_id)->first();
+        $division = $mDivision->where($mDivision->primaryKey, $list->md_division_id)->first();
+        $tglpenerimaan = '';
+
+        if ($list->receiveddate !== null) {
+            $tglpenerimaan = format_dmy($list->receiveddate, '-');
+        };
+
+        //bagian PF
+        $pdf = new TCPDF('L', PDF_UNIT, 'A5', true, 'UTF-8', false);
+
+        $pdf->setPrintHeader(false);
+        $pdf->AddPage();
+        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(50, 0, 'No Form : ' . $list->documentno, 0, 1, 'L', false, '', 0, false);
+        $pdf->setFont('helvetica', 'B', 20);
+        $pdf->Cell(0, 25, 'FORM TUGAS KANTOR', 0, 1, 'C');
+        $pdf->setFont('helvetica', '', 12);
+        //Ini untuk bagian field nama dan tanggal pengajuan
+        $pdf->Cell(30, 0, 'Nama ', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . $employee->fullname, 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, 'Tanggal Pengajuan', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(30, 0, ': ' . format_dmy($list->submissiondate, '-'), 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(2);
+        //Ini untuk bagian field divisi dan Tanggal diterima
+        $pdf->Cell(30, 0, 'Divisi ', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . $division->name, 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, 'Tanggal Diterima', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(30, 0, ': ' . $tglpenerimaan, 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(10);
+        //Ini bagian tanggal ijin dan jam
+        $pdf->Cell(30, 0, 'Tanggal', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(40, 0, ': ' . format_dmy($list->startdate, '-') . ' s/d ' . format_dmy($list->enddate, '-'), 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(2);
+        //Ini bagian Alasan
+        $pdf->Cell(30, 0, 'Alasan', 0, 0, 'L');
+        $pdf->Cell(3, 0, ':', 0, 0, 'L');
+        $pdf->MultiCell(0, 20, $list->reason, 0, '', false, 1, null, null, false, 0, false, false, 20);
+        $pdf->Ln(2);
+        //Bagian ttd
+        $pdf->setFont('helvetica', '', 10);
+        $pdf->Cell(63, 0, 'Dibuat oleh,', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Disetujui oleh,', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Diketahui oleh,', 0, 0, 'C');
+        $pdf->Ln(25);
+        $pdf->Cell(63, 0, $employee->fullname, 0, 0, 'C');
+        $pdf->Cell(63, 0, '(                          )', 0, 0, 'C');
+        $pdf->Cell(63, 0, '(                          )', 0, 1, 'C');
+        $pdf->Cell(63, 0, 'Karyawan Ybs', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'Mgr. Dept. Ybs', 0, 0, 'C');
+        $pdf->Cell(63, 0, 'HRD', 0, 0, 'C');
+
+        $this->response->setContentType('application/pdf');
+        $pdf->IncludeJS("print();");
+        $pdf->Output('pengajuan.pdf', 'I');
+    }
+
+    public function updateMasterEmployee()
+    {
+        $this->session->set([
+            'sys_user_id'       => 100000,
+        ]);
+
+        $mEmployee = new M_Employee($this->request);
+
+        $where = "date = CURDATE()";
+        $where .= " AND docstatus = 'CO'";
+        $where .= " AND isapproved = 'Y'";
+
+        $list = $this->model->where($where)->findAll();
+
+        if ($list) {
+            foreach ($list as $value) {
+
+                if ($value->md_position_id !== $value->position_to || $value->md_levelling_id !== $value->levelling_to) {
+                    $empEntity = new \App\Entities\Employee();
+
+                    $empEntity->setUpdatedBy(session()->get('sys_user_id'));
+                    $empEntity->setEmployeeId($value->md_employee_id);
+
+                    if ($value->md_position_id !== $value->position_to)
+                        $empEntity->setPositionId($value->position_to);
+
+                    if ($value->md_levelling_id !== $value->levelling_to)
+                        $empEntity->setLevellingId($value->levelling_to);
+
+                    $mEmployee->save($empEntity);
+                }
+            }
+        }
+    }
+}
