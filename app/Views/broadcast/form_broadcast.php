@@ -52,6 +52,11 @@
                     </div>
                     <small class="form-text text-danger" id="error_effective_date"></small>
                 </div>
+                <div class="form-group">
+                    <label for="lastupdate">Terakhir Dikirim</label>
+                    <input type="text" class="form-control datepicker" id="lastupdate" name="lastupdate" disabled>
+                    <small class="form-text text-danger" id="error_lastupdate"></small>
+                </div>
             </div>
 
             <div class="col-md-3">
@@ -64,9 +69,15 @@
                     <small class="form-text text-danger" id="error_md_division_id"></small>
                 </div>
                 <div class="form-group">
-                    <label for="lastupdate">Terakhir Dikirim <span class="required">*</span></label>
-                    <input type="text" class="form-control datepicker" id="lastupdate" name="lastupdate" disabled>
-                    <small class="form-text text-danger" id="error_lastupdate"></small>
+                    <label for="effective_time">Jam Efektif</span></label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control timepicker-start" name="effective_time"
+                            placeholder="Jam Efektif">
+                        <div class="input-icon-addon">
+                            <i class="fa fa-clock"></i>
+                        </div>
+                    </div>
+                    <small class="form-text text-danger" id="error_starttime"></small>
                 </div>
             </div>
 
@@ -138,7 +149,7 @@
                     <div class="form-upload">
                         <label class="col-md-4 form-upload-foto" id="image-upload">
                             <input type="file" class="control-upload-image" id="attachment" name="attachment"
-                                onchange="previewAll(this, '', '')"  accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
+                                onchange="previewAll(this, '', '')" accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
                         <small class="form-text text-danger" id="error_image"></small>
@@ -169,7 +180,7 @@
                     <div class="form-upload">
                         <label class="col-md-4 form-upload-foto" id="image2-upload">
                             <input type="file" class="control-upload-image" id="attachment2" name="attachment2"
-                                onchange="previewAll(this, '', '')"  accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
+                                onchange="previewAll(this, '', '')" accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
                         <small class="form-text text-danger" id="error_image2"></small>
@@ -200,7 +211,7 @@
                     <div class="form-upload">
                         <label class="col-md-4 form-upload-foto" id="image3-upload">
                             <input type="file" class="control-upload-image" id="attachment3" name="attachment3"
-                                onchange="previewAll(this, '', '')"  accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
+                                onchange="previewAll(this, '', '')" accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
                         <small class="form-text text-danger" id="error_image3"></small>

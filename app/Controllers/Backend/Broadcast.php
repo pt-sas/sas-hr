@@ -155,7 +155,50 @@ class Broadcast extends BaseController
                     isset($post['send_email']) ? 'E' : null,
                     isset($post['send_notification']) ? 'N' : null,
                     isset($post['send_telegram']) ? 'T' : null,
-                ]); 
+                ]);
+
+                $hasEffectiveDate = !empty($post['effective_date']);
+                $hasEffectiveTime = !empty($post['effective_time']);
+
+                if ($hasEffectiveDate || $hasEffectiveTime) {
+                    if ($isSend === 'Y') {
+                        $response = message(
+                            'error',
+                            false,
+                            'Tidak bisa mengirim sekarang jika anda set Tanggal/Jam Efektif'
+                        );
+                        return $this->response->setJSON($response);
+                    }
+
+                    if ($hasEffectiveDate && !$hasEffectiveTime) {
+                        $response = message('error', false, 'Jam Efektif harus diisi jika Tanggal Efektif sudah diisi');
+                        return $this->response->setJSON($response);
+                    }
+
+                    if (!$hasEffectiveDate && $hasEffectiveTime) {
+                        $response = message('error', false, 'Tanggal Efektif harus diisi jika Jam Efektif sudah diisi');
+                        return $this->response->setJSON($response);
+                    }
+
+                    if ($hasEffectiveDate && $hasEffectiveTime) {
+                        $effectiveDateTime = date('Y-m-d', strtotime($post["effective_date"])) . " " . $post['effective_time'];
+                        $currentDateTime = date('Y-m-d H:i:s');
+
+                        if ($effectiveDateTime <= $currentDateTime) {
+                            $response = message(
+                                'error',
+                                false,
+                                'Tanggal/Jam Efektif tidak boleh kurang atau sama persis dengan waktu sekarang'
+                            );
+                            return $this->response->setJSON($response);
+                        }
+                    }
+
+                }
+
+                if (!empty($post['effective_date']) && !empty($post['effective_time'])) {
+                    $post["effective_date"] = date('Y-m-d', strtotime($post["effective_date"])) . " " . $post['effective_time'];
+                }
 
                 if (!$this->validation->run($post, 'broadcast_bb')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
@@ -322,10 +365,19 @@ class Broadcast extends BaseController
                 // Handle third attachment
                 $this->handleAttachmentForShow($list[0], 'attachment3', $path, $PATH_Broadcast);
 
+                if ($list[0]->getEffectiveDate() && $list[0]->getEffectiveDate() != '0000-00-00 00:00:00') {
+                    $list[0]->effective_time = format_time($list[0]->getEffectiveDate());
+                    $list[0]->effective_date = format_dmy($list[0]->getEffectiveDate(), "-");
+                } else {
+                    $list[0]->effective_time = '';
+                    $list[0]->effective_date = '';
+                }
+
                 $title = $list[0]->getTitle();
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setField(["effective_time"]); // Apa diperlukan?
                 $fieldHeader->setList($list);
 
                 $headerData = $this->field->store($fieldHeader);
@@ -412,9 +464,10 @@ class Broadcast extends BaseController
 
     public function cronUpdateBroadcast()
     {
+        $now = date('Y-m-d H:i:s');
         $broadcasts = $this->model
             ->where('is_sent', 'N')
-            ->where('effective_date <=', date('Y-m-d'))
+            ->where('effective_date <=', $now)
             ->findAll();
         foreach ($broadcasts as $broadcast) {
             $this->sendBroadcastNow($broadcast->getBroadcastId());
