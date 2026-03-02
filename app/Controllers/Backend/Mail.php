@@ -109,7 +109,11 @@ class Mail extends BaseController
 
         $email = $this->initializeEmail();
 
-        $email->setMailType('html');
+        $email->clear(true);
+
+        if (str_contains($this->request->uri->getPath(), 'broadcast-telegram')) {
+            $email->setMailType('html');
+        }
 
         if (is_null($from))
             $from = $row->getSmtpUser();
@@ -120,13 +124,17 @@ class Mail extends BaseController
         if (!is_null($attach)) {
             $email->clear(true);
 
-            if (is_array($attach)) {
-                foreach ($attach as $attachment) {
+            if (!is_array($attach)) {
+                $attach = [$attach];
+            }
+
+            foreach ($attach as $attachment) {
+
+                if (is_array($attachment) && isset($attachment['path']) && isset($attachment['name'])) {
+                    $email->attach($attachment['path'], 'attachment', $attachment['name']);
+                } else if (is_string($attachment)) {
                     $email->attach($attachment);
                 }
-            } else {
-
-                $email->attach($attach);
             }
             $email->clear();
         }
