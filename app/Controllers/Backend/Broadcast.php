@@ -622,7 +622,8 @@ class Broadcast extends BaseController
                         $messageHtml,
                         null,
                         null,
-                        $attachments
+                        $attachments,
+                        true
                     );
 
                     if (!$sent) {

@@ -103,15 +103,13 @@ class Mail extends BaseController
         }
     }
 
-    public function sendEmail($to, $subject, $message, $from = null, $yourName = null, $attach = null)
+    public function sendEmail($to, $subject, $message, $from = null, $yourName = null, $attach = null, $isHtml = false)
     {
         $row = $this->model->first();
 
         $email = $this->initializeEmail();
 
-        $email->clear(true);
-
-        if (str_contains($this->request->uri->getPath(), 'broadcast-telegram')) {
+        if ($isHtml) {
             $email->setMailType('html');
         }
 
@@ -153,6 +151,51 @@ class Mail extends BaseController
 
         return $data;
     }
+
+    // public function sendEmail($to, $subject, $message, $from = null, $yourName = null, $attach = null)
+    // {
+    //     $row = $this->model->first();
+
+    //     $email = $this->initializeEmail();
+
+    //     if (str_contains($this->request->uri->getPath(), 'broadcast-telegram')) {
+    //         $email->setMailType('html');
+    //     }
+
+    //     if (is_null($from))
+    //         $from = $row->getSmtpUser();
+
+    //     if (is_null($yourName))
+    //         $yourName = $row->getSmtpUser();
+
+    //     if (!is_null($attach)) {
+    //         $email->clear(true);
+
+    //         if (is_array($attach)) {
+    //             foreach ($attach as $attachment) {
+    //                 $email->attach($attachment);
+    //             }
+    //         } else {
+
+    //             $email->attach($attach);
+    //         }
+    //         $email->clear();
+    //     }
+
+    //     $email->setFrom($from, $yourName);
+    //     $email->setTo($to);
+    //     $email->setSubject($subject);
+    //     $email->setMessage($message);
+
+    //     if ($email->send()) {
+    //         $data = true;
+    //     } else {
+    //         $data = false;
+    //         log_message('error', $email->printDebugger(['headers']));
+    //     }
+
+    //     return $data;
+    // }
 
     private function initializeEmail()
     {
