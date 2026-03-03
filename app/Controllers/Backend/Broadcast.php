@@ -207,10 +207,6 @@ class Broadcast extends BaseController
                     if (!empty($sendMethods)) {
                         
                         $post['sentmethod'] = implode(',', $sendMethods);
-
-                        $title    = $post['title'] ?? '';
-                        $imgTitle = url_title($title, '-', true);
-                        $imgTitle = substr($imgTitle, 0, 50);
                         $ymd = date('YmdHis');
                         $PATH_Broadcast = "broadcast";
                         $path = $this->PATH_UPLOAD . $PATH_Broadcast . '/';
@@ -221,13 +217,16 @@ class Broadcast extends BaseController
                         }
 
                         $attachments = ['attachment', 'attachment2', 'attachment3'];
-                        foreach ($attachments as $attachmentKey) {
+                        $tempBroadcastId = !empty($post['id']) ? $post['id'] : 'temp';
+
+                        foreach ($attachments as $index => $attachmentKey) {
                             $file = $this->request->getFile($attachmentKey); 
                             $getterMethod = 'get' . $attachmentKey; 
                             $oldFileName = $existingRecord 
                                 ? $existingRecord->$getterMethod() 
                                 : null;
 
+                            $slotNumber = $index + 1;
                             $suffix = '';
                             if ($attachmentKey !== 'attachment') {
                                 $number = str_replace('attachment', '', $attachmentKey);
@@ -259,8 +258,9 @@ class Broadcast extends BaseController
                                     }
                                 }
 
+                                $originalName = pathinfo($file->getClientName(), PATHINFO_FILENAME);
                                 $ext = $file->getClientExtension();
-                                $img_name = $this->model->Broadcast . $suffix . '_' . $imgTitle . '_' . $ymd . '.' . $ext;
+                                $img_name = "Broadcast_{$tempBroadcastId}_{$slotNumber}_[{$originalName}]_{$ymd}.{$ext}";
 
                                 uploadFile($file, $path, $img_name);
 
@@ -284,11 +284,20 @@ class Broadcast extends BaseController
 
                         $response = $this->save();
 
-                        if ($response && $isSend === 'Y') {
+                        if ($response) {
+
                             $ID = $this->isNew() ? $this->model->getInsertID() : $post['id'];
-                            $this->sendBroadcastNow($ID); 
-                            $response = message('success', true, 'Pesan sudah dikirim');
+
+                            if ($this->isNew() && $tempBroadcastId === 'temp') {
+                                $this->updateFilenamesWithId($ID, $path);
+                            }
+
+                            if ($isSend === 'Y') {
+                                $this->sendBroadcastNow($ID);
+                                $response = message('success', true, 'Pesan sudah dikirim');
+                            }
                         }
+
                     } else {
                         $response = message('error', false, 'Mohon pilih minimal satu metode pengiriman (Email, Notification, atau Telegram)');
                     }
@@ -377,7 +386,7 @@ class Broadcast extends BaseController
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
-                $fieldHeader->setField(["effective_time"]); // Apa diperlukan?
+                $fieldHeader->setField(["effective_time"]);
                 $fieldHeader->setList($list);
 
                 $headerData = $this->field->store($fieldHeader);
@@ -435,6 +444,45 @@ class Broadcast extends BaseController
         } else {
             $listItem->$setterMethod(null);
         }
+    }
+
+    private function updateFilenamesWithId($broadcastId, $path)
+    {
+        $broadcast = $this->model->find($broadcastId); 
+
+        $attachments = ['attachment', 'attachment2', 'attachment3'];
+        
+        foreach ($attachments as $index => $attachmentKey) {
+            $getterMethod = 'get' . $attachmentKey;
+            $oldFileName = $broadcast->$getterMethod(); 
+            
+            if ($oldFileName && str_starts_with($oldFileName, 'Broadcast_temp_')) {
+                $slotNumber = $index + 1;
+                $newFileName = str_replace('Broadcast_temp_', "Broadcast_{$broadcastId}_", $oldFileName);
+                
+                $oldPath = $path . $oldFileName; //uploads/broadcast/oldfilename
+                $newPath = $path . $newFileName; //uploads/broadcast/newfilename
+                
+                // Jika terdapat oldfilename maka rename
+                if (file_exists($oldPath)) {
+                    rename($oldPath, $newPath);
+                    
+                    $this->model->update($broadcastId, [$attachmentKey => $newFileName]);
+                }
+            }
+        }
+    }
+
+    private function extractOriginalFilename($storedFilename)
+    {
+        
+        if (preg_match('/\[(.+?)\]/', $storedFilename, $matches)) {
+            $originalName = $matches[1];
+            $extension = pathinfo($storedFilename, PATHINFO_EXTENSION);
+            return $originalName . '.' . $extension;
+        }
+        
+        return $storedFilename;
     }
 
     public function tableLine($set = null, $detail = [])
@@ -534,7 +582,10 @@ class Broadcast extends BaseController
             as $file
         ) {
             if ($file && file_exists($basePath . $file)) {
-                $attachments[] = $basePath . $file;
+                $attachments[] = [
+                    'path' => $basePath . $file,
+                    'name' => $this->extractOriginalFilename($file)
+                ];
             }
         }
 
@@ -571,7 +622,8 @@ class Broadcast extends BaseController
                         $messageHtml,
                         null,
                         null,
-                        $attachments ?: null
+                        $attachments,
+                        true
                     );
 
                     if (!$sent) {
@@ -618,14 +670,19 @@ class Broadcast extends BaseController
                                 $response['description'] ?? 'Unknown telegram error'
                             );
                         } else {
-                            foreach ($attachments as $file) {
-                                $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                            foreach ($attachments as $att) {
+                                $ext = strtolower(pathinfo($att['path'], PATHINFO_EXTENSION));
                                 $attachmentExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                            
+
                                 try {
-                                    in_array($ext, $attachmentExts)
-                                        ? $telegram->sendPhoto($employee->telegram_id, $file)
-                                        : $telegram->sendDocument($employee->telegram_id, $file);
+                                    if (in_array($ext, $attachmentExts)) {
+                                        $telegram->sendPhoto($employee->telegram_id, $att['path']);
+                                    } else {
+                                        $telegram->sendDocument(
+                                            $employee->telegram_id,
+                                            $att,
+                                        );
+                                    }
                                 } catch (\Exception $e) {
                                     $mBroadcastLog->logBroadcast(
                                         $broadcastId,

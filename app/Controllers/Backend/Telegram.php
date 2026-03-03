@@ -82,20 +82,26 @@ class Telegram extends BaseController
         return $response;
     }
 
-    public function sendDocument($chat_id, $document_path, $caption = '')
+    public function sendDocument($chat_id, $document_path)
     {
         $mConfig = new M_Configuration($this->request);
         $token = $mConfig->where('name', 'TOKEN_BOT_TELEGRAM')->first();
         $url = "https://api.telegram.org/bot{$token->value}/sendDocument";
 
+        if (is_array($document_path) && isset($document_path['path']) && isset($document_path['name'])) {
+            $curlFile = new \CURLFile(
+                $document_path['path'],
+                mime_content_type($document_path['path']),
+                $document_path['name']
+            );
+        } else {
+            $curlFile = new \CURLFile($document_path);
+        }
+
         $data = [
             'chat_id' => $chat_id,
-            'document' => new \CURLFile($document_path)
+            'document' => $curlFile
         ];
-        
-        if (!empty($caption)) {
-            $data['caption'] = $caption;
-        }
 
         $ch = curl_init();
         curl_setopt_array($ch, [
