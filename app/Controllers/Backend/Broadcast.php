@@ -155,7 +155,50 @@ class Broadcast extends BaseController
                     isset($post['send_email']) ? 'E' : null,
                     isset($post['send_notification']) ? 'N' : null,
                     isset($post['send_telegram']) ? 'T' : null,
-                ]); 
+                ]);
+
+                $hasEffectiveDate = !empty($post['effective_date']);
+                $hasEffectiveTime = !empty($post['effective_time']);
+
+                if ($hasEffectiveDate || $hasEffectiveTime) {
+                    if ($isSend === 'Y') {
+                        $response = message(
+                            'error',
+                            false,
+                            'Tidak bisa mengirim sekarang jika anda set Tanggal/Jam Efektif'
+                        );
+                        return $this->response->setJSON($response);
+                    }
+
+                    if ($hasEffectiveDate && !$hasEffectiveTime) {
+                        $response = message('error', false, 'Jam Efektif harus diisi jika Tanggal Efektif sudah diisi');
+                        return $this->response->setJSON($response);
+                    }
+
+                    if (!$hasEffectiveDate && $hasEffectiveTime) {
+                        $response = message('error', false, 'Tanggal Efektif harus diisi jika Jam Efektif sudah diisi');
+                        return $this->response->setJSON($response);
+                    }
+
+                    if ($hasEffectiveDate && $hasEffectiveTime) {
+                        $effectiveDateTime = date('Y-m-d', strtotime($post["effective_date"])) . " " . $post['effective_time'];
+                        $currentDateTime = date('Y-m-d H:i:s');
+
+                        if ($effectiveDateTime <= $currentDateTime) {
+                            $response = message(
+                                'error',
+                                false,
+                                'Tanggal/Jam Efektif tidak boleh kurang atau sama persis dengan waktu sekarang'
+                            );
+                            return $this->response->setJSON($response);
+                        }
+                    }
+
+                }
+
+                if (!empty($post['effective_date']) && !empty($post['effective_time'])) {
+                    $post["effective_date"] = date('Y-m-d', strtotime($post["effective_date"])) . " " . $post['effective_time'];
+                }
 
                 if (!$this->validation->run($post, 'broadcast_bb')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
@@ -164,10 +207,6 @@ class Broadcast extends BaseController
                     if (!empty($sendMethods)) {
                         
                         $post['sentmethod'] = implode(',', $sendMethods);
-
-                        $title    = $post['title'] ?? '';
-                        $imgTitle = url_title($title, '-', true);
-                        $imgTitle = substr($imgTitle, 0, 50);
                         $ymd = date('YmdHis');
                         $PATH_Broadcast = "broadcast";
                         $path = $this->PATH_UPLOAD . $PATH_Broadcast . '/';
@@ -178,13 +217,16 @@ class Broadcast extends BaseController
                         }
 
                         $attachments = ['attachment', 'attachment2', 'attachment3'];
-                        foreach ($attachments as $attachmentKey) {
+                        $tempBroadcastId = !empty($post['id']) ? $post['id'] : 'temp';
+
+                        foreach ($attachments as $index => $attachmentKey) {
                             $file = $this->request->getFile($attachmentKey); 
                             $getterMethod = 'get' . $attachmentKey; 
                             $oldFileName = $existingRecord 
                                 ? $existingRecord->$getterMethod() 
                                 : null;
 
+                            $slotNumber = $index + 1;
                             $suffix = '';
                             if ($attachmentKey !== 'attachment') {
                                 $number = str_replace('attachment', '', $attachmentKey);
@@ -216,8 +258,9 @@ class Broadcast extends BaseController
                                     }
                                 }
 
+                                $originalName = pathinfo($file->getClientName(), PATHINFO_FILENAME);
                                 $ext = $file->getClientExtension();
-                                $img_name = $this->model->Broadcast . $suffix . '_' . $imgTitle . '_' . $ymd . '.' . $ext;
+                                $img_name = "Broadcast_{$tempBroadcastId}_{$slotNumber}_[{$originalName}]_{$ymd}.{$ext}";
 
                                 uploadFile($file, $path, $img_name);
 
@@ -241,11 +284,20 @@ class Broadcast extends BaseController
 
                         $response = $this->save();
 
-                        if ($response && $isSend === 'Y') {
+                        if ($response) {
+
                             $ID = $this->isNew() ? $this->model->getInsertID() : $post['id'];
-                            $this->sendBroadcastNow($ID); 
-                            $response = message('success', true, 'Pesan sudah dikirim');
+
+                            if ($this->isNew() && $tempBroadcastId === 'temp') {
+                                $this->updateFilenamesWithId($ID, $path);
+                            }
+
+                            if ($isSend === 'Y') {
+                                $this->sendBroadcastNow($ID);
+                                $response = message('success', true, 'Pesan sudah dikirim');
+                            }
                         }
+
                     } else {
                         $response = message('error', false, 'Mohon pilih minimal satu metode pengiriman (Email, Notification, atau Telegram)');
                     }
@@ -322,10 +374,19 @@ class Broadcast extends BaseController
                 // Handle third attachment
                 $this->handleAttachmentForShow($list[0], 'attachment3', $path, $PATH_Broadcast);
 
+                if ($list[0]->getEffectiveDate() && $list[0]->getEffectiveDate() != '0000-00-00 00:00:00') {
+                    $list[0]->effective_time = format_time($list[0]->getEffectiveDate());
+                    $list[0]->effective_date = format_dmy($list[0]->getEffectiveDate(), "-");
+                } else {
+                    $list[0]->effective_time = '';
+                    $list[0]->effective_date = '';
+                }
+
                 $title = $list[0]->getTitle();
                 $fieldHeader = new \App\Entities\Table();
                 $fieldHeader->setTitle($title);
                 $fieldHeader->setTable($this->model->table);
+                $fieldHeader->setField(["effective_time"]);
                 $fieldHeader->setList($list);
 
                 $headerData = $this->field->store($fieldHeader);
@@ -385,6 +446,45 @@ class Broadcast extends BaseController
         }
     }
 
+    private function updateFilenamesWithId($broadcastId, $path)
+    {
+        $broadcast = $this->model->find($broadcastId); 
+
+        $attachments = ['attachment', 'attachment2', 'attachment3'];
+        
+        foreach ($attachments as $index => $attachmentKey) {
+            $getterMethod = 'get' . $attachmentKey;
+            $oldFileName = $broadcast->$getterMethod(); 
+            
+            if ($oldFileName && str_starts_with($oldFileName, 'Broadcast_temp_')) {
+                $slotNumber = $index + 1;
+                $newFileName = str_replace('Broadcast_temp_', "Broadcast_{$broadcastId}_", $oldFileName);
+                
+                $oldPath = $path . $oldFileName; //uploads/broadcast/oldfilename
+                $newPath = $path . $newFileName; //uploads/broadcast/newfilename
+                
+                // Jika terdapat oldfilename maka rename
+                if (file_exists($oldPath)) {
+                    rename($oldPath, $newPath);
+                    
+                    $this->model->update($broadcastId, [$attachmentKey => $newFileName]);
+                }
+            }
+        }
+    }
+
+    private function extractOriginalFilename($storedFilename)
+    {
+        
+        if (preg_match('/\[(.+?)\]/', $storedFilename, $matches)) {
+            $originalName = $matches[1];
+            $extension = pathinfo($storedFilename, PATHINFO_EXTENSION);
+            return $originalName . '.' . $extension;
+        }
+        
+        return $storedFilename;
+    }
+
     public function tableLine($set = null, $detail = [])
     {
         $table = [];
@@ -412,9 +512,10 @@ class Broadcast extends BaseController
 
     public function cronUpdateBroadcast()
     {
+        $now = date('Y-m-d H:i:s');
         $broadcasts = $this->model
             ->where('is_sent', 'N')
-            ->where('effective_date <=', date('Y-m-d'))
+            ->where('effective_date <=', $now)
             ->findAll();
         foreach ($broadcasts as $broadcast) {
             $this->sendBroadcastNow($broadcast->getBroadcastId());
@@ -481,7 +582,10 @@ class Broadcast extends BaseController
             as $file
         ) {
             if ($file && file_exists($basePath . $file)) {
-                $attachments[] = $basePath . $file;
+                $attachments[] = [
+                    'path' => $basePath . $file,
+                    'name' => $this->extractOriginalFilename($file)
+                ];
             }
         }
 
@@ -518,7 +622,8 @@ class Broadcast extends BaseController
                         $messageHtml,
                         null,
                         null,
-                        $attachments ?: null
+                        $attachments,
+                        true
                     );
 
                     if (!$sent) {
@@ -565,14 +670,19 @@ class Broadcast extends BaseController
                                 $response['description'] ?? 'Unknown telegram error'
                             );
                         } else {
-                            foreach ($attachments as $file) {
-                                $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                            foreach ($attachments as $att) {
+                                $ext = strtolower(pathinfo($att['path'], PATHINFO_EXTENSION));
                                 $attachmentExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                            
+
                                 try {
-                                    in_array($ext, $attachmentExts)
-                                        ? $telegram->sendPhoto($employee->telegram_id, $file)
-                                        : $telegram->sendDocument($employee->telegram_id, $file);
+                                    if (in_array($ext, $attachmentExts)) {
+                                        $telegram->sendPhoto($employee->telegram_id, $att['path']);
+                                    } else {
+                                        $telegram->sendDocument(
+                                            $employee->telegram_id,
+                                            $att,
+                                        );
+                                    }
                                 } catch (\Exception $e) {
                                     $mBroadcastLog->logBroadcast(
                                         $broadcastId,
