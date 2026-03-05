@@ -817,6 +817,17 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('promo-demo/print/(:any)', 'Backend\PromoDemo::exportPDF/$1');
 });
 
+$routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
+    $routes->post('auth/login', 'Auth::login');
+    $routes->post('auth/refresh', 'Auth::refreshAccessToken');
+    $routes->post('auth/logout', 'Auth::logout');
+});
+
+$routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 'cors'], function ($routes) {
+    $routes->resource('user');
+    $routes->resource('wactivity');
+});
+
 /*
  * --------------------------------------------------------------------
  * Additional Routing
