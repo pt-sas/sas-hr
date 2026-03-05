@@ -316,6 +316,7 @@ class SubmissionCancel extends BaseController
         $cWfs = new WScenario();
         $mAttendance = new M_Attendance($this->request);
         $mAbsent = new M_Absent($this->request);
+        $mYear = new M_Year($this->request);
 
         if ($this->request->isAJAX()) {
             $post = $this->request->getVar();

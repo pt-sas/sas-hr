@@ -49,8 +49,8 @@ $routes->get('cron-absent-alert', 'Backend\Attendance::toDoCheckAbsent');
 $routes->get('cron-send-absent-summary', 'Backend\Attendance::toDoSendAbsentSummary');
 $routes->get('cron-delete-attendance-summary', 'Backend\Attendance::toDoDeleteAttSummary');
 $routes->get('cron-proxy-reguler', 'Backend\User::proxyReguler');
-$routes->get('cron-update-promodemo', 'Backend\PromoDemo::updateMasterEmployee'); 
-$routes->get('cron-update-broadcast', 'Backend\Broadcast::cronUpdateBroadcast'); 
+$routes->get('cron-update-promodemo', 'Backend\PromoDemo::updateMasterEmployee');
+$routes->get('cron-update-broadcast', 'Backend\Broadcast::cronUpdateBroadcast');
 $routes->get('cron-return-proxy', 'Backend\ProxySpecial::proxySwitching');
 $routes->get('cron-delegation-transfer', 'Backend\DelegationTransfer::delegationSwitching');
 $routes->get('cron-delegation-absent', 'Backend\User::sendEmailWhenDelegationAbsent');
@@ -815,6 +815,17 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('promo-demo/destroy/(:any)', 'Backend\PromoDemo::destroy/$1');
     $routes->get('promo-demo/processIt', 'Backend\PromoDemo::processIt');
     $routes->get('promo-demo/print/(:any)', 'Backend\PromoDemo::exportPDF/$1');
+});
+
+$routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
+    $routes->post('auth/login', 'Auth::login');
+    $routes->post('auth/refresh', 'Auth::refreshAccessToken');
+    $routes->post('auth/logout', 'Auth::logout');
+});
+
+$routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 'cors'], function ($routes) {
+    $routes->resource('user');
+    $routes->resource('wactivity');
 });
 
 /*
