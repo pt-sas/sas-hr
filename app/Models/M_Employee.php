@@ -237,26 +237,21 @@ class M_Employee extends Model
 		if (!empty($id)) {
 			$row = $this->find($id);
 
-			$sql = "SELECT e.md_employee_id
-					FROM md_employee e
-					LEFT JOIN md_employee_division ed ON ed.md_employee_id = e.md_employee_id
-					LEFT JOIN md_employee_branch eb ON eb.md_employee_id = e.md_employee_id
-					WHERE e.isactive IN ('Y', 'N')";
+			$sql = "WITH RECURSIVE emp_tree AS (
+    				SELECT md_employee_id, superior_id
+    				FROM md_employee
+    				WHERE md_employee_id = $id
 
-			if ($row->getLevellingId() == 100004) {
-				$sql .= "AND (e.superior_id = " . $id . "
-					OR e.md_employee_id = " . $id . ")";
-			} else {
-				$sql .= "AND eb.md_branch_id IN (SELECT x.md_branch_id 
-								FROM md_employee em
-								LEFT JOIN md_employee_branch x ON x.md_employee_id = em.md_employee_id
-								WHERE em.md_employee_id = $id)";
-				$sql .= "AND (ed.md_division_id IN (SELECT v.md_division_id 
-								FROM md_employee em
-								LEFT JOIN md_employee_division v ON v.md_employee_id = em.md_employee_id
-								WHERE em.superior_id = $id)
-						OR e.md_employee_id = $id)";
-			}
+    				UNION ALL
+
+    				SELECT e.md_employee_id, e.superior_id
+    				FROM md_employee e
+    				INNER JOIN emp_tree et ON e.superior_id = et.md_employee_id)
+
+					SELECT e.md_employee_id
+					FROM md_employee e
+					WHERE e.isactive IN ('Y', 'N')
+					AND e.md_employee_id IN (SELECT md_employee_id FROM emp_tree)";
 
 			$result = $this->db->query($sql)->getResult();
 
