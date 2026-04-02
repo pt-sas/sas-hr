@@ -11,16 +11,17 @@
         "ext-json": "*",
         "ext-mbstring": "*",
         "kint-php/kint": "^4.0",
-        "laminas/laminas-escaper": "^2.9",
+        "laminas/laminas-escaper": "~2.11",
         "psr/log": "^1.1",
         "tecnickcom/tcpdf": "^6.6",
         "html2text/html2text": "^4.3",
         "pusher/pusher-php-server": "^7.2",
-        "daycry/cronjob": "^2.2"
+        "daycry/cronjob": "^2.2",
+        "firebase/php-jwt": "5.5"
     },
     "require-dev": {
         "codeigniter/coding-standard": "^1.1",
-        "fakerphp/faker": "^1.9",
+        "fakerphp/faker": "^1.19",
         "friendsofphp/php-cs-fixer": "^3.1",
         "mikey179/vfsstream": "^1.6",
         "nexusphp/cs-config": "^3.3",
