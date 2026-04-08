@@ -92,8 +92,9 @@ class Broadcast extends BaseController
                 $row = [];
                 $ID = $value->trx_broadcast_id;
                 $number++;
-
-                $plainTextMessage = (new Html2Text($value->message))->getText();
+                $plainTextMessage = (new Html2Text(
+                html_entity_decode($value->message, ENT_QUOTES, 'UTF-8')
+                ))->getText();
                 if (strlen($plainTextMessage) > 50) {
                     $plainTextMessage = substr($plainTextMessage, 0, 50) . '...';
                 }
@@ -205,6 +206,12 @@ class Broadcast extends BaseController
                 } else {
 
                     if (!empty($sendMethods)) {
+
+                        $post['message'] = htmlentities(
+                            $post['message'],
+                            ENT_QUOTES,
+                            'UTF-8'
+                        );
                         
                         $post['sentmethod'] = implode(',', $sendMethods);
                         $ymd = date('YmdHis');
@@ -388,6 +395,7 @@ class Broadcast extends BaseController
                 $fieldHeader->setTable($this->model->table);
                 $fieldHeader->setField(["effective_time"]);
                 $fieldHeader->setList($list);
+                $list[0]->message = html_entity_decode($list[0]->getMessage(), ENT_QUOTES, 'UTF-8');
 
                 $headerData = $this->field->store($fieldHeader);
                 $sentMethod = $list[0]->getSentMethod();
@@ -512,16 +520,23 @@ class Broadcast extends BaseController
 
     public function cronUpdateBroadcast()
     {
+        set_time_limit(0);
         $now = date('Y-m-d H:i:s');
-        $broadcasts = $this->model
-            ->where('is_sent', 'N')
-            ->where('effective_date <=', $now)
-            ->findAll();
-        foreach ($broadcasts as $broadcast) {
-            $this->sendBroadcastNow($broadcast->getBroadcastId());
+
+            $broadcasts = $this->model
+                ->where('is_sent', 'N')
+                ->where('effective_date IS NOT NULL')
+                ->where('YEAR(effective_date) > 1970')
+                ->where('effective_date <=', $now)
+                ->findAll();
+
+        if (empty($broadcasts)) {
+            return;
         }
 
-        return;
+        foreach ($broadcasts as $val) {
+            $this->sendBroadcastNow($val->trx_broadcast_id);
+        }
     }
 
     public function sendBroadcastNow($broadcastId)
@@ -531,6 +546,11 @@ class Broadcast extends BaseController
         if (!$broadcast) {
             throw new \Exception("Broadcast {$broadcastId} is not found");
         }
+
+        $this->model->update($broadcastId, [
+            'is_sent'    => 'Y',
+            'lastupdate' => date('Y-m-d H:i:s')
+        ]);
 
         $mEmployee      = new M_Employee($this->request);
         $mUser          = new M_User($this->request);
@@ -571,7 +591,8 @@ class Broadcast extends BaseController
         }
 
         $subject     = $broadcast->getTitle();
-        $messageHtml = $broadcast->getMessage();
+        $messageEncoded = $broadcast->getMessage(); //Encoded
+        $messageHtml = html_entity_decode($messageEncoded, ENT_QUOTES, 'UTF-8');
 
         // Attachments
         $attachments = [];
@@ -599,13 +620,13 @@ class Broadcast extends BaseController
                 ->first();
 
         // Email
-        if ($sendEmail) {
-            if (!$user || empty($user->email)) {
+        if ($sendEmail && $user) {
+            if (empty($user->email)) {
                 $mBroadcastLog->logBroadcast(
                     $broadcastId,
                     $employeeId,
                     'Email',
-                    "No sys_user account or email"
+                    "No email account"
                 );
             } elseif (!filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
                 $mBroadcastLog->logBroadcast(
@@ -706,15 +727,7 @@ class Broadcast extends BaseController
 
 
             // Notification
-            if ($sendNotif) {
-                if (!$user) {
-                    $mBroadcastLog->logBroadcast(
-                        $broadcastId,
-                        $employeeId,
-                        'Notification',
-                        "No sys_user account"
-                    );
-                } else {
+            if ($sendNotif && $user) {
                     try {
                         $sent = $messageCon->sendNotification(
                             $user->sys_user_id,
@@ -739,13 +752,7 @@ class Broadcast extends BaseController
                         );
                     }
                 }
-            }
         }
-
-        $this->model->update($broadcastId, [
-            'is_sent'    => 'Y',
-            'lastupdate' => date('Y-m-d H:i:s')
-        ]);
     }
 
 
