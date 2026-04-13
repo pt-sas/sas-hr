@@ -68,7 +68,7 @@ class WActivityServices extends BaseServices
         return $output;
     }
 
-    protected function setActivity($sys_wfactivity_id, $sys_wfscenario_id, $sys_wfresponsible_id, $user_by, $state, $processed, $textmsg, $table, $record_id, $menu, $isanswer = null, $tableLine = null, $recordLine_id = null)
+    public function setActivity($sys_wfactivity_id, $sys_wfscenario_id, $sys_wfresponsible_id, $user_by, $state, $processed, $textmsg, $table, $record_id, $menu, $isanswer = null, $tableLine = null, $recordLine_id = null)
     {
         $mWResponsible = new M_Responsible($this->request);
         $mWEvent = new M_WEvent($this->request);

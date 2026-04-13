@@ -826,6 +826,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
 $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 'cors'], function ($routes) {
     $routes->resource('user');
     $routes->resource('wactivity');
+    $routes->post('leave/processIt', 'Leave::proccessSubmission');
+    $routes->resource('leave');
 });
 
 /*
