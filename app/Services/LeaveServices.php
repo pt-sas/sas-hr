@@ -180,35 +180,67 @@ class LeaveServices extends BaseServices
         return $this->respondService(true, $this->save());
     }
 
-    public function getData(int $id)
+    public function show(int $id)
     {
         //* Call Models
         $mEmployee = new M_Employee($this->request);
         $mBranch = new M_Branch($this->request);
         $mDivision = new M_Division($this->request);
 
-        $trx = $this->model->find($id);
+        $fieldsAllowed = [
+            'trx_absent_id',
+            'documentno',
+            'md_employee_id',
+            'nik',
+            'md_branch_id',
+            'md_division_id',
+            'submissiondate',
+            'receiveddate',
+            'submissiontype',
+            'startdate',
+            'enddate',
+            'reason',
+            'docstatus',
+            'approveddate',
+            'created_by',
+            'updated_by',
+            'leavebalance',
+            'availableleavedays',
+            'totaldays',
+            'isreopen'
+        ];
 
-        if (empty($trx))
+        $list = $this->model->select($fieldsAllowed)->where($this->model->primaryKey, $id)->findAll();
+
+        //* Validate if transaction exists
+        if (empty($list))
             throw new NotFoundException("Pengajuan tidak ditemukan");
 
-        $employee = $mEmployee->find($trx->md_employee_id);
-        $branch = $mBranch->find($trx->md_branch_id);
-        $division = $mDivision->find($trx->md_division_id);
+        //* Data select
+        $rowEmp = $mEmployee->where($mEmployee->primaryKey, $list[0]->getEmployeeId())->first();
+        $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
+
+        $rowBranch = $mBranch->where($mBranch->primaryKey, $list[0]->getBranchId())->first();
+        $list = $this->field->setDataSelect($mBranch->table, $list, $mBranch->primaryKey, $rowBranch->getBranchId(), $rowBranch->getName());
+
+        $rowDiv = $mDivision->where($mDivision->primaryKey, $list[0]->getDivisionId())->first();
+        $list = $this->field->setDataSelect($mDivision->table, $list, $mDivision->primaryKey, $rowDiv->getDivisionId(), $rowDiv->getName());
+
+        //* Get Detail
+        $fieldsAllowed = [
+            'trx_absent_detail_id',
+            'trx_absent_id',
+            'lineno',
+            'date',
+            'isagree',
+            'ref_absent_detail_id',
+            'table'
+        ];
+        $detail = $this->modelDetail->select($fieldsAllowed)->where($this->model->primaryKey, $id)->findAll();
 
         $data = [
-            'trx_absent_id' => $trx->trx_absent_id,
-            'md_employee_id' => ['id' => $employee->md_employee_id, 'text' => $employee->value],
-            'nik' => $trx->nik,
-            'md_branch_id' => ['id' => $branch->md_branch_id, 'text' => $branch->name],
-            'md_division_id' => ['id' => $division->md_division_id, 'text' => $division->name],
-            'submissiondate' => $trx->submissiondate,
-            'startdate' => $trx->startdate,
-            'enddate' => $trx->enddate,
-            'reason' => $trx->reason,
-            'leavebalance' => $trx->leavebalance,
-            'availabledays' => $trx->availableleavedays,
-            'totaldays' => $trx->totaldays
+            'header' => $list,
+            'line' => $detail
         ];
 
         return $data;

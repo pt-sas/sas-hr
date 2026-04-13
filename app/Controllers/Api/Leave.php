@@ -58,7 +58,8 @@ class Leave extends ApiController
                 $response = apiResponse(false, "", [], $this->validation->getErrors());
                 $status_code = 422;
             } else {
-                $response = $service->create($data);
+                $service->create($data);
+                $response = apiResponse(true, "Data berhasil disimpan");
             }
         } catch (\App\Exceptions\BaseException $e) {
             $response = apiResponse(false, $e->getMessage());
@@ -73,14 +74,15 @@ class Leave extends ApiController
         return $this->respond($response, $status_code);
     }
 
-    //* For preparing data to edited
-    public function edit($id = null)
+    //* For get data
+    public function show($id = null)
     {
         $service = new LeaveServices($this->jwt->sys_user_id);
         $status_code = null;
 
         try {
-            $response = $service->getData($id);
+            $result = $service->show($id);
+            $response = apiResponse(true, "Success", $result);
         } catch (\App\Exceptions\BaseException $e) {
             $response = apiResponse(false, $e->getMessage());
             $status_code = $e->getStatusCode();
