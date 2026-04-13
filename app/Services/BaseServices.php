@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Libraries\Field;
 use App\Models\M_ChangeLog;
 use CodeIgniter\Exceptions\ModelException;
 use Config\Services;
@@ -18,6 +19,9 @@ class BaseServices
     protected $entity;
     protected $table;
     protected $email;
+
+    //* LIBRARY
+    protected $field;
 
     //EVENT
     /** Insert = I */
@@ -209,6 +213,9 @@ class BaseServices
     {
         helper(['action_helper', 'url', 'date_helper']);
         $this->request = Services::request();
+
+        //* Load Libraries
+        $this->field = new Field();
     }
 
     public function save()

@@ -92,7 +92,7 @@ class Auth extends ApiController
                             $refresh_token = $this->generateRefreshToken($user->sys_user_id, $user_agent);
                             $model->revokeToken($hashed_ref_token);
 
-                            $response = apiResponse(true, "Login Success", ['token' => $access_token, 'refresh_token' => $refresh_token]);
+                            $response = apiResponse(true, "Refresh Success", ['token' => $access_token, 'refresh_token' => $refresh_token]);
                         } else {
                             $response    = apiResponse(false, "User Not Exists");
                             $status_code = 400;
