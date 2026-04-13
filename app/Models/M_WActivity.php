@@ -39,13 +39,14 @@ class M_WActivity extends Model
 		$this->builder = $this->db->table($this->table);
 	}
 
-	private function getRole()
+	private function getRole($sys_user_id = null)
 	{
+		$userID = $sys_user_id ?? session()->get('sys_user_id');
 		$sql = "SELECT sys_user_role.sys_role_id 
 				FROM sys_user_role
 				WHERE sys_user_role.sys_user_id = ?";
 
-		$query = $this->db->query($sql, [session()->get('sys_user_id')]);
+		$query = $this->db->query($sql, [$userID]);
 
 		$role = [];
 
@@ -58,9 +59,9 @@ class M_WActivity extends Model
 		return $role;
 	}
 
-	public function getActivity(string $type = null, string $where = null)
+	public function getActivity(string $type = null, string $where = null, string $sys_user_id = null)
 	{
-		$role = $this->getRole();
+		$role = $this->getRole($sys_user_id);
 
 		$this->builder->select($this->table . '.*,
 				sys_wfscenario.name as scenario,
