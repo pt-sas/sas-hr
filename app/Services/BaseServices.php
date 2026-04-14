@@ -463,7 +463,7 @@ class BaseServices
                 $dataUpdate = $this->doSetField($this->updatedField, $this->setDate(), $dataUpdate);
 
                 //* Set Updated_By Field 
-                $dataUpdate = $this->doSetField($this->updatedByField, $userID, $dataUpdate);
+                $dataUpdate = $this->doSetField($this->updatedByField, $this->userID, $dataUpdate);
 
                 //TODO: Populate data old value and new value 
                 $arrChangeData = [];

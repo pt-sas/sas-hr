@@ -827,6 +827,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
     $routes->resource('user');
     $routes->resource('wactivity');
     $routes->post('leave/processIt', 'Leave::proccessSubmission');
+    $routes->get('leave/getAvailableLeaves', 'Leave::getAvailableLeaves');
     $routes->resource('leave');
 });
 

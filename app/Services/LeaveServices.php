@@ -75,7 +75,7 @@ class LeaveServices extends BaseServices
 
         $data = $builder->limit($limit, $offset)->get()->getResultArray();
 
-        return $this->respondService(true, [
+        return [
             'data' => $data,
             'meta' => [
                 'page' => $page,
@@ -84,7 +84,7 @@ class LeaveServices extends BaseServices
                 'total_page' => ceil($total / $limit),
                 'sort_by' => 'documentno'
             ]
-        ]);
+        ];
     }
 
     public function create(array $data)
@@ -177,7 +177,7 @@ class LeaveServices extends BaseServices
             $this->entity->setAbsentId($data[$this->model->primaryKey]);
         }
 
-        return $this->respondService(true, $this->save());
+        return $this->save();
     }
 
     public function show(int $id)
@@ -318,14 +318,46 @@ class LeaveServices extends BaseServices
 
             $WScenarioServices->setScenario($this->entity, $this->model, $this->modelDetail, $id, $docaction, $docType->url, null, true);
 
-            return $this->respondService(true, 'Document Processed');
+            return 'Pengajuan berhasil Diproses';
         } else if ($docaction === $this->DOCSTATUS_Voided) {
             $this->entity->setDocStatus($this->DOCSTATUS_Voided);
-            return $this->respondService(true, $this->save());
+            return 'Pengajuan berhasil Divoid';
         } else {
             $this->entity->setDocStatus($docaction);
-            return $this->respondService(true, $this->save());
+            return "Process Succeded";
         }
+    }
+
+    public function getAvailableDays(int $md_employee_id, $startDate)
+    {
+        $mLeaveBalance = new M_LeaveBalance($this->request);
+
+        $startOfYear = date('Y', strtotime($startDate));
+        $nextYear = date('Y', strtotime('+1 year'));
+
+        $balance = 0;
+        $availableleave = 0;
+        if ($startOfYear == $nextYear) {
+            $leaveBalance = $mLeaveBalance->getNextYearBalance($md_employee_id);
+
+            $balance = $leaveBalance->saldo_cuti;
+            $availableleave = $leaveBalance->balance;
+        } else {
+            $leaveBalance = $mLeaveBalance->getTotalBalance($md_employee_id, $startOfYear);
+
+            if ($leaveBalance) {
+                $carryOverValid = ($leaveBalance->carry_over_expiry_date && $startDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+
+                $balance = $leaveBalance->balance_amount;
+                $availableleave = $carryOverValid ? $leaveBalance->carried_over_amount + $leaveBalance->balance_amount : $leaveBalance->balance_amount;
+                $availableleave = $availableleave - $leaveBalance->reserved;
+            }
+        }
+
+        return [
+            "balance" => intval($balance),
+            "availableleave" => intval($availableleave)
+        ];
     }
 
     private function validateLeaveBalance(int $md_employee_id, $startDate, $endDate, $holidays, $daysOff)
