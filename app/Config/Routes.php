@@ -825,10 +825,17 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 'cors'], function ($routes) {
     $routes->resource('user');
+
     $routes->resource('wactivity');
+
+    $routes->get('employee/getEmployeeDetail', 'Employee::getDetail');
+
     $routes->post('leave/processIt', 'Leave::proccessSubmission');
     $routes->get('leave/getAvailableLeaves', 'Leave::getAvailableLeaves');
     $routes->resource('leave');
+
+    $routes->post('officeduties/processIt', 'OfficeDuties::proccessSubmission');
+    $routes->resource('officeduties');
 });
 
 /*
