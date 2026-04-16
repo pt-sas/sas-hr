@@ -182,6 +182,13 @@ class BaseServices
     protected $userID = 0;
 
     /**
+     * Integer of field for get employee session
+     *
+     * @var int
+     */
+    protected $employeeID = 0;
+
+    /**
      * Boolean of field for identification record is new or update
      *
      * @var boolean
@@ -463,7 +470,7 @@ class BaseServices
                 $dataUpdate = $this->doSetField($this->updatedField, $this->setDate(), $dataUpdate);
 
                 //* Set Updated_By Field 
-                $dataUpdate = $this->doSetField($this->updatedByField, $userID, $dataUpdate);
+                $dataUpdate = $this->doSetField($this->updatedByField, $this->userID, $dataUpdate);
 
                 //TODO: Populate data old value and new value 
                 $arrChangeData = [];
@@ -729,18 +736,6 @@ class BaseServices
      */
     protected function isNew()
     {
-        //* Get Request POST From View 
-        // $post = $this->request->getVar();
-
-        // //? Check property id or object primaryKey
-        // if (((isset($post['id']) && !empty($post['id']) && isset($this->entity->{$this->primaryKey})) ||
-        //         (isset($post['id']) && !empty($post['id'])) ||
-        //         isset($this->entity->{$this->primaryKey}))
-        //     && !$this->isNewRecord
-        // ) {
-        //     return false;
-        // }
-
         if (isset($this->entity->{$this->primaryKey}) && !empty($this->entity->{$this->primaryKey}))
             return false;
 

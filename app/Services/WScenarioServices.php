@@ -12,11 +12,14 @@ class WScenarioServices extends BaseServices
 {
     protected $sys_wfscenario_id = 0;
 
-    public function __construct(int $userID)
+    public function __construct(int $userID, int $employeeID)
     {
         parent::__construct();
 
+        //* Set User & Employee Session
         $this->userID = $userID;
+        $this->employeeID = $employeeID;
+
         $this->model = new M_WScenario($this->request);
         $this->modelDetail = new M_WScenarioDetail($this->request);
         $this->entity = new \App\Entities\WScenario();
@@ -25,7 +28,7 @@ class WScenarioServices extends BaseServices
     public function setScenario($entity, $model, $modelDetail = null, $trxID, $docStatus, $menu, $modelSubDetail = null, $isSubmission = false)
     {
         //* Call Services
-        $WActivityServices = new WActivityServices($this->userID);
+        $WActivityServices = new WActivityServices($this->userID, $this->employeeID);
 
         //* Call Models
         $mWfs = new M_WScenario($this->request);

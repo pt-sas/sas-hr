@@ -14,7 +14,7 @@ class Leave extends ApiController
     {
         $status_code = null;
         try {
-            $service = new LeaveServices($this->jwt->sys_user_id);
+            $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
 
             //* Settle up parameter
             $params = [
@@ -32,7 +32,7 @@ class Leave extends ApiController
 
             $result = $service->getPaginated($params, $this->jwt->md_employee_id);
 
-            $response = apiResponse($result['status'], "success", $result['message']['data'], [], $result['message']['meta']);
+            $response = apiResponse(true, "success", $result['data'], [], $result['meta']);
         } catch (\Exception $e) {
             log_message('error', 'Leave [index] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
@@ -46,7 +46,7 @@ class Leave extends ApiController
     //* For create new data
     public function create()
     {
-        $service = new LeaveServices($this->jwt->sys_user_id);
+        $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
         $data = $this->request->getJSON(true);
         $status_code = null;
 
@@ -77,17 +77,17 @@ class Leave extends ApiController
     //* For get data
     public function show($id = null)
     {
-        $service = new LeaveServices($this->jwt->sys_user_id);
+        $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
         $status_code = null;
 
         try {
-            $result = $service->show($id);
-            $response = apiResponse(true, "Success", $result);
+            $data = $service->show($id);
+            $response = apiResponse(true, "Success", $data);
         } catch (\App\Exceptions\BaseException $e) {
             $response = apiResponse(false, $e->getMessage());
             $status_code = $e->getStatusCode();
         } catch (\Exception $e) {
-            log_message('error', 'Leave [create] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+            log_message('error', 'Leave [show] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
             $response = apiResponse(false, 'Internal Server Error');
             $status_code = 500;
@@ -99,7 +99,7 @@ class Leave extends ApiController
     //* For Process Submission
     public function proccessSubmission()
     {
-        $service = new LeaveServices($this->jwt->sys_user_id);
+        $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
         $data = $this->request->getJSON(true);
         $status_code = null;
 
@@ -111,12 +111,48 @@ class Leave extends ApiController
             if (empty($data['docaction']))
                 throw new ValidationException("Silahkan pilih tindakan terlebih dahulu");
 
-            $response = $service->proccessTransaction($data['id'], $data['docaction']);
+            $message = $service->proccessTransaction($data['id'], $data['docaction']);
+
+            $response = apiResponse(true, $message);
         } catch (\App\Exceptions\BaseException $e) {
             $response = apiResponse(false, $e->getMessage());
             $status_code = $e->getStatusCode();
         } catch (\Exception $e) {
-            log_message('error', 'Leave [create] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+            log_message('error', 'Leave [ProcessSubmission] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+
+            $response = apiResponse(false, 'Internal Server Error');
+            $status_code = 500;
+        }
+
+        return $this->respond($response, $status_code);
+    }
+
+    public function getAvailableLeaves()
+    {
+        $status_code = null;
+
+        try {
+            $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
+
+            //* Settle up parameter
+            $md_employee_id = $this->request->getGet('md_employee_id');
+            $startDate = $this->request->getGet('startdate');
+
+            //* Validation parameter
+            if (empty($md_employee_id))
+                throw new ValidationException("Mohon mengisi karyawan");
+
+            if (empty($startDate))
+                throw new ValidationException("Mohon mengisi tanggal mulai");
+
+            $data = $service->getAvailableDays($md_employee_id, date('Y-m-d', strtotime($startDate)));
+
+            $response = apiResponse(true, "Success", $data);
+        } catch (\App\Exceptions\BaseException $e) {
+            $response = apiResponse(false, $e->getMessage());
+            $status_code = $e->getStatusCode();
+        } catch (\Exception $e) {
+            log_message('error', 'Leave [getAvailableLeaves] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
             $response = apiResponse(false, 'Internal Server Error');
             $status_code = 500;

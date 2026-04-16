@@ -22,11 +22,14 @@ class WActivityServices extends BaseServices
     protected $wfScenarioId = 0;
     protected $wfResponsibleId = [];
 
-    public function __construct(int $userID)
+    public function __construct(int $userID, int $employeeID)
     {
         parent::__construct();
 
+        //* Set User & Employee Session
         $this->userID = $userID;
+        $this->employeeID = $employeeID;
+
         $this->model = new M_WActivity($this->request);
         $this->entity = new \App\Entities\WActivity();
     }

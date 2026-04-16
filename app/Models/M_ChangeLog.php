@@ -39,8 +39,10 @@ class M_ChangeLog extends Model
         $this->entity = new \App\Entities\ChangeLog();
     }
 
-    public function insertLog($table, $column, $recordID, $oldValue, $newValue, $event, $description = null)
+    public function insertLog($table, $column, $recordID, $oldValue, $newValue, $event, $userBy = null, $description = null)
     {
+        $user_by = $userBy ?? session()->get('sys_user_id');
+
         $this->entity->setTable($table);
         $this->entity->setColumn($column);
         $this->entity->setRecordId($recordID);
@@ -48,8 +50,8 @@ class M_ChangeLog extends Model
         $this->entity->setNewValue($newValue);
         $this->entity->setEventChangeLog($event);
         $this->entity->setDescription($description);
-        $this->entity->setCreatedBy(session()->get('sys_user_id'));
-        $this->entity->setUpdatedBy(session()->get('sys_user_id'));
+        $this->entity->setCreatedBy($user_by);
+        $this->entity->setUpdatedBy($user_by);
 
         return $this->save($this->entity);
     }
