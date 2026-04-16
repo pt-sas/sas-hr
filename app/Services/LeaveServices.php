@@ -22,11 +22,14 @@ class LeaveServices extends BaseServices
 {
     protected $baseSubType;
 
-    public function __construct(int $userID)
+    public function __construct(int $userID, int $employeeID)
     {
         parent::__construct();
 
+        //* Set User & Employee Session
         $this->userID = $userID;
+        $this->employeeID = $employeeID;
+
         $this->model = new M_Absent($this->request);
         $this->modelDetail = new M_AbsentDetail($this->request);
         $this->entity = new \App\Entities\Absent();
@@ -90,8 +93,8 @@ class LeaveServices extends BaseServices
     public function create(array $data)
     {
         //* Call services
-        $eWorkDayServices = new EmpWorkDayServices($this->userID);
-        $periodServices = new PeriodServices($this->userID);
+        $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
+        $periodServices = new PeriodServices($this->userID, $this->employeeID);
 
         //* Call model
         $mHoliday = new M_Holiday($this->request);
@@ -144,14 +147,7 @@ class LeaveServices extends BaseServices
             throw new ValidationException("Tidak bisa mengajukan pada tanggal ' . format_dmy($startDate, " - ") . ', karena tidak sesuai dengan batas pengajuan");
 
         //* Validate submission one day
-        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
-        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
-        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
-        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-        $trx = $this->model->getAllSubmission($whereClause)->getRow();
-
-        if ($trx)
-            throw new BusinessException("Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain");
+        $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
 
         //* Validate Max Days for Submission Future
         $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
@@ -246,12 +242,12 @@ class LeaveServices extends BaseServices
         return $data;
     }
 
-    public function proccessTransaction(int $id, String $docaction)
+    public function proccessTransaction(int $id, String $docaction, int $subTypeTarget = null)
     {
         //* Call Services
-        $WScenarioServices = new WScenarioServices($this->userID);
-        $periodServices = new PeriodServices($this->userID);
-        $eWorkDayServices = new EmpWorkDayServices($this->userID);
+        $WScenarioServices = new WScenarioServices($this->userID, $this->employeeID);
+        $periodServices = new PeriodServices($this->userID, $this->employeeID);
+        $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
 
         //* Call Models
         $mDocType = new M_DocumentType($this->request);
@@ -259,7 +255,7 @@ class LeaveServices extends BaseServices
         $mWorkDetail = new M_WorkDetail($this->request);
 
         //* Get Data Transaction
-        $row = $this->model->find($id);
+        $row = $this->model->where('submissiontype', $this->baseSubType)->find($id);
 
         if (empty($row))
             throw new NotFoundException("Pengajuan tidak ditemukan");
@@ -267,6 +263,7 @@ class LeaveServices extends BaseServices
         if ($docaction === $row->getDocStatus())
             throw new ValidationException("Silahkan refresh terlebih dahulu");
 
+        //* Get menu URL
         $docType = $mDocType->getDocTypeMenu($row->submissiontype);
 
         if (empty($docType->sys_submenu_id))
@@ -287,21 +284,16 @@ class LeaveServices extends BaseServices
 
         $daysOff = getDaysOff($workDetail);
 
+        //* Validate Period
         $periodServices->validatePeriod($row->submissiontype, $startDate, $endDate, $holidays, $daysOff);
 
+        //* Checking docaction condition
         if ($docaction === $this->DOCSTATUS_Completed) {
             //* Validate Leave Balance
             $this->validateLeaveBalance($row->md_employee_id, $startDate, $endDate, $holidays, $daysOff);
 
             //* Validate submission one day
-            $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}";
-            $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
-            $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
-            $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-            $trx = $this->model->getAllSubmission($whereClause)->getRow();
-
-            if ($trx)
-                throw new BusinessException("Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain");
+            $this->validateDuplicateSubmission($row->md_employee_id, $startDate, $endDate);
 
             //* Check line, if not exists then create line
             $line = $this->modelDetail->where($this->model->primaryKey, $id)->first();
@@ -323,8 +315,7 @@ class LeaveServices extends BaseServices
             $this->entity->setDocStatus($this->DOCSTATUS_Voided);
             return 'Pengajuan berhasil Divoid';
         } else {
-            $this->entity->setDocStatus($docaction);
-            return "Process Succeded";
+            throw new BusinessException("Dokumen aksi ini tidak tersedia pada tipe pengajuan ini");
         }
     }
 
@@ -360,6 +351,7 @@ class LeaveServices extends BaseServices
         ];
     }
 
+    //** This Section is Validate Function */
     private function validateLeaveBalance(int $md_employee_id, $startDate, $endDate, $holidays, $daysOff)
     {
         $mLeaveBalance = new M_LeaveBalance($this->request);
@@ -404,5 +396,18 @@ class LeaveServices extends BaseServices
             throw new BusinessException("Saldo tahun depan tidak cukup");
         else if (!empty($amountThisYear) && $amountThisYear > $balance)
             throw new BusinessException('Saldo cuti tidak cukup atau sudah expired');
+    }
+
+    private function validateDuplicateSubmission(int $md_employee_id, $startDate, $endDate)
+    {
+        $whereClause = "v_all_submission.md_employee_id = {$md_employee_id}";
+        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+        $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
+        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
+        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+        $trx = $this->model->getAllSubmission($whereClause)->getRow();
+
+        if ($trx)
+            throw new BusinessException("Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain");
     }
 }

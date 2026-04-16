@@ -50,4 +50,17 @@ class M_DocumentType extends Model
         $this->request = $request;
         $this->builder = $this->db->table($this->table);
     }
+
+    public function getDocTypeMenu(int $md_doctype_id)
+    {
+        $builder = $this->builder;
+
+        $builder->select("{$this->table}.*,
+        sys_submenu.url");
+
+        $builder->join('sys_submenu', "sys_submenu.sys_submenu_id = {$this->table}.sys_submenu_id", 'left');
+        $builder->where('md_doctype_id', $md_doctype_id);
+
+        return $builder->get()->getRow();
+    }
 }

@@ -14,7 +14,7 @@ class Leave extends ApiController
     {
         $status_code = null;
         try {
-            $service = new LeaveServices($this->jwt->sys_user_id);
+            $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
 
             //* Settle up parameter
             $params = [
@@ -46,7 +46,7 @@ class Leave extends ApiController
     //* For create new data
     public function create()
     {
-        $service = new LeaveServices($this->jwt->sys_user_id);
+        $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
         $data = $this->request->getJSON(true);
         $status_code = null;
 
@@ -77,7 +77,7 @@ class Leave extends ApiController
     //* For get data
     public function show($id = null)
     {
-        $service = new LeaveServices($this->jwt->sys_user_id);
+        $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
         $status_code = null;
 
         try {
@@ -99,7 +99,7 @@ class Leave extends ApiController
     //* For Process Submission
     public function proccessSubmission()
     {
-        $service = new LeaveServices($this->jwt->sys_user_id);
+        $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
         $data = $this->request->getJSON(true);
         $status_code = null;
 
@@ -132,7 +132,7 @@ class Leave extends ApiController
         $status_code = null;
 
         try {
-            $service = new LeaveServices($this->jwt->sys_user_id);
+            $service = new LeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
 
             //* Settle up parameter
             $md_employee_id = $this->request->getGet('md_employee_id');
