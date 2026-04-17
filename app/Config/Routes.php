@@ -836,6 +836,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
 
     $routes->post('officeduties/processIt', 'OfficeDuties::proccessSubmission');
     $routes->resource('officeduties');
+
+    $routes->post('tugas-kantor-fka/processIt', 'HalfDayOfficeDuties::proccessSubmission');
+    $routes->resource('tugas-kantor-fka', ['controller' => 'HalfDayOfficeDuties']);
 });
 
 /*
