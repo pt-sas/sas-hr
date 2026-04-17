@@ -16,7 +16,6 @@ use App\Models\M_Rule;
 use App\Models\M_RuleDetail;
 use App\Models\M_WorkDetail;
 use DateTime;
-use Kint\Zval\Value;
 
 class OfficeDutiesServices extends BaseServices
 {
@@ -119,7 +118,7 @@ class OfficeDutiesServices extends BaseServices
 
         if (!empty($data[$this->model->primaryKey])) {
             //* Validation for check docstatus when update
-            $sql = $this->modelwhere([$this->model->primaryKey => $data[$this->model->primaryKey], 'submissiontype' => $this->baseSubType])->first();
+            $sql = $this->model->where([$this->model->primaryKey => $data[$this->model->primaryKey], 'submissiontype' => $this->baseSubType])->first();
 
             if ($sql->docstatus != $this->DOCSTATUS_Drafted)
                 throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
@@ -175,7 +174,7 @@ class OfficeDutiesServices extends BaseServices
             throw new ValidationException('Maksimal jam pengajuan ' . $ruleDetail->condition);
 
         //* Validate Period
-        $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate, $holidays, $daysOff);
+        $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate);
 
         //* Upload Images
         $file = $this->request->getFile('image');
