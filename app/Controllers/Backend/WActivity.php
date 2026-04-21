@@ -18,6 +18,7 @@ use App\Models\M_NotificationText;
 use App\Models\M_DocumentType;
 use App\Models\M_Employee;
 use App\Models\M_Holiday;
+use App\Services\WActivityServices;
 use Config\Services;
 use Pusher\Pusher;
 use Html2Text\Html2Text;
@@ -111,298 +112,298 @@ class WActivity extends BaseController
         }
     }
 
-    public function setActivity($sys_wfactivity_id, $sys_wfscenario_id, $sys_wfresponsible_id, $user_by, $state, $processed, $textmsg, $table, $record_id, $menu, $isanswer = null, $tableLine = null, $recordLine_id = null)
-    {
-        $mWResponsible = new M_Responsible($this->request);
-        $mWEvent = new M_WEvent($this->request);
-        $mUser = new M_User($this->request);
-        $mMenu = new M_Menu($this->request);
-        $mWfsD = new M_WScenarioDetail($this->request);
-        $mNotifText = new M_NotificationText($this->request);
-        $mDocType = new M_DocumentType($this->request);
-        $mEmployee = new M_Employee($this->request);
-        $mDivision = new M_Division($this->request);
-        $mBranch = new M_Branch($this->request);
-        $cTelegram = new Telegram();
-        $cMessage = new Message();
+    // public function setActivity($sys_wfactivity_id, $sys_wfscenario_id, $sys_wfresponsible_id, $user_by, $state, $processed, $textmsg, $table, $record_id, $menu, $isanswer = null, $tableLine = null, $recordLine_id = null)
+    // {
+    //     $mWResponsible = new M_Responsible($this->request);
+    //     $mWEvent = new M_WEvent($this->request);
+    //     $mUser = new M_User($this->request);
+    //     $mMenu = new M_Menu($this->request);
+    //     $mWfsD = new M_WScenarioDetail($this->request);
+    //     $mNotifText = new M_NotificationText($this->request);
+    //     $mDocType = new M_DocumentType($this->request);
+    //     $mEmployee = new M_Employee($this->request);
+    //     $mDivision = new M_Division($this->request);
+    //     $mBranch = new M_Branch($this->request);
+    //     $cTelegram = new Telegram();
+    //     $cMessage = new Message();
 
-        $modelAct = new M_WActivity($this->request);
-        $entityAct = new \App\Entities\WActivity();
+    //     $modelAct = new M_WActivity($this->request);
+    //     $entityAct = new \App\Entities\WActivity();
 
-        $this->model = new M_Datatable($this->request);
-        $this->entity = new \App\Entities\DataTable();
+    //     $this->model = new M_Datatable($this->request);
+    //     $this->entity = new \App\Entities\DataTable();
 
-        try {
-            $modelAct->db->transBegin();
+    //     try {
+    //         $modelAct->db->transBegin();
 
-            $entityAct->setWfScenarioId($sys_wfscenario_id);
-            $entityAct->setTable($table);
-            $entityAct->setRecordId($record_id);
-            $entityAct->setMenu($menu);
-            $entityAct->setTableLine($tableLine);
-            $entityAct->setRecordLineId($recordLine_id);
+    //         $entityAct->setWfScenarioId($sys_wfscenario_id);
+    //         $entityAct->setTable($table);
+    //         $entityAct->setRecordId($record_id);
+    //         $entityAct->setMenu($menu);
+    //         $entityAct->setTableLine($tableLine);
+    //         $entityAct->setRecordLineId($recordLine_id);
 
-            $user_id = $mWResponsible->getUserByResponsible($sys_wfresponsible_id);
+    //         $user_id = $mWResponsible->getUserByResponsible($sys_wfresponsible_id);
 
-            //TODO : Get data responsible 
-            $dataResp = $mWResponsible->find($sys_wfresponsible_id);
+    //         //TODO : Get data responsible 
+    //         $dataResp = $mWResponsible->find($sys_wfresponsible_id);
 
-            //TODO : Get data user based on role from responsible 
-            $dataUser = $mUser->detail(['sr.sys_role_id' => $dataResp->getRoleId()])->getResult();
+    //         //TODO : Get data user based on role from responsible 
+    //         $dataUser = $mUser->detail(['sr.sys_role_id' => $dataResp->getRoleId()])->getResult();
 
-            $employee = null;
+    //         $employee = null;
 
-            if ($tableLine) {
-                $model = new M_Datatable($this->request);
+    //         if ($tableLine) {
+    //             $model = new M_Datatable($this->request);
 
-                //TODO : Initialize modeling data table 
-                $trxModel = $model->initDataTable($table);
+    //             //TODO : Initialize modeling data table 
+    //             $trxModel = $model->initDataTable($table);
 
-                //TODO : Call data transaction
-                $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
+    //             //TODO : Call data transaction
+    //             $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
 
-                $docType = $mDocType->find($trx->submissiontype);
+    //             $docType = $mDocType->find($trx->submissiontype);
 
-                // if ($docType->getIsRealization() === "Y") {
-                //     //TODO : Initialize modeling data table 
-                //     $trxModel = $this->model->initDataTable($table);
+    //             // if ($docType->getIsRealization() === "Y") {
+    //             //     //TODO : Initialize modeling data table 
+    //             //     $trxModel = $this->model->initDataTable($table);
 
-                //     //TODO : Call data transaction
-                //     $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
+    //             //     //TODO : Call data transaction
+    //             //     $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
 
-                //     $this->entity->{$this->model->primaryKey} = $record_id;
-                //     $this->entity->approveddate = date("Y-m-d H:i:s");
-                // } else {
-                $trxModelLine = $this->model->initDataTable($tableLine);
+    //             //     $this->entity->{$this->model->primaryKey} = $record_id;
+    //             //     $this->entity->approveddate = date("Y-m-d H:i:s");
+    //             // } else {
+    //             $trxModelLine = $this->model->initDataTable($tableLine);
 
-                $trxLine = $trxModelLine->where($trxModelLine->primaryKey, $recordLine_id)->first();
+    //             $trxLine = $trxModelLine->where($trxModelLine->primaryKey, $recordLine_id)->first();
 
-                $this->entity->{$this->model->primaryKey} = $recordLine_id;
-                $this->entity->{$trxModel->primaryKey} = $record_id;
-                // }
-            } else {
-                //TODO : Initialize modeling data table 
-                $trxModel = $this->model->initDataTable($table);
+    //             $this->entity->{$this->model->primaryKey} = $recordLine_id;
+    //             $this->entity->{$trxModel->primaryKey} = $record_id;
+    //             // }
+    //         } else {
+    //             //TODO : Initialize modeling data table 
+    //             $trxModel = $this->model->initDataTable($table);
 
-                //TODO : Call data transaction
-                $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
+    //             //TODO : Call data transaction
+    //             $trx = $trxModel->where($trxModel->primaryKey, $record_id)->first();
 
-                $docType = $mDocType->find($trx->submissiontype);
+    //             $docType = $mDocType->find($trx->submissiontype);
 
-                $this->entity->{$this->model->primaryKey} = $record_id;
-                $this->entity->approveddate = date("Y-m-d H:i:s");
-            }
+    //             $this->entity->{$this->model->primaryKey} = $record_id;
+    //             $this->entity->approveddate = date("Y-m-d H:i:s");
+    //         }
 
 
-            //TODO : Get Approval Notification Text Template
-            if ($docType->isapprovedline == 'Y' && $table == "trx_absent" && $tableLine) {
-                $emp = $mEmployee->find($trx->md_employee_id);
-                $dataNotif = $mNotifText->where('name', 'Email Approval Line')->first();
-                $subject = $dataNotif->getSubject();
-                $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date)), $emp->fullname], $dataNotif->getText());
-            } else if ($table == "trx_assignment" || $table == "trx_overtime") {
-                $dataNotif = $mNotifText->where('name', 'Email Approval Bundling')->first();
-                $subject = $dataNotif->getSubject();
-                $branch = $mBranch->find($trx->md_branch_id);
-                $division = $mDivision->find($trx->md_division_id);
-                $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
-            } else {
-                $dataNotif = $mNotifText->where('name', 'Email Approval')->first();
-                $subject = $dataNotif->getSubject();
-                $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
-            }
+    //         //TODO : Get Approval Notification Text Template
+    //         if ($docType->isapprovedline == 'Y' && $table == "trx_absent" && $tableLine) {
+    //             $emp = $mEmployee->find($trx->md_employee_id);
+    //             $dataNotif = $mNotifText->where('name', 'Email Approval Line')->first();
+    //             $subject = $dataNotif->getSubject();
+    //             $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date)), $emp->fullname], $dataNotif->getText());
+    //         } else if ($table == "trx_assignment" || $table == "trx_overtime") {
+    //             $dataNotif = $mNotifText->where('name', 'Email Approval Bundling')->first();
+    //             $subject = $dataNotif->getSubject();
+    //             $branch = $mBranch->find($trx->md_branch_id);
+    //             $division = $mDivision->find($trx->md_division_id);
+    //             $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
+    //         } else {
+    //             $dataNotif = $mNotifText->where('name', 'Email Approval')->first();
+    //             $subject = $dataNotif->getSubject();
+    //             $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
+    //         }
 
-            if (empty($sys_wfactivity_id)) {
-                $entityAct->setWfResponsibleId($sys_wfresponsible_id);
-                $entityAct->setSysUserId($user_id);
-                $entityAct->setState($state);
-                $entityAct->setTextMsg($textmsg);
-                $entityAct->setProcessed($processed);
-                $entityAct->setCreatedBy($user_by);
-                $entityAct->setUpdatedBy($user_by);
-                $result = $modelAct->save($entityAct);
+    //         if (empty($sys_wfactivity_id)) {
+    //             $entityAct->setWfResponsibleId($sys_wfresponsible_id);
+    //             $entityAct->setSysUserId($user_id);
+    //             $entityAct->setState($state);
+    //             $entityAct->setTextMsg($textmsg);
+    //             $entityAct->setProcessed($processed);
+    //             $entityAct->setCreatedBy($user_by);
+    //             $entityAct->setUpdatedBy($user_by);
+    //             $result = $modelAct->save($entityAct);
 
-                $sys_wfactivity_id = $modelAct->getInsertID();
-                $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
-            } else {
-                if (!empty($this->getNextResponsible())) {
-                    $newWfResponsibleId = $this->getNextResponsible();
-                    $user_id = $mWResponsible->getUserByResponsible($newWfResponsibleId);
+    //             $sys_wfactivity_id = $modelAct->getInsertID();
+    //             $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
+    //         } else {
+    //             if (!empty($this->getNextResponsible())) {
+    //                 $newWfResponsibleId = $this->getNextResponsible();
+    //                 $user_id = $mWResponsible->getUserByResponsible($newWfResponsibleId);
 
-                    //TODO : Update event audit the previous data
-                    $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, true, $tableLine, $recordLine_id);
+    //                 //TODO : Update event audit the previous data
+    //                 $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, true, $tableLine, $recordLine_id);
 
-                    //TODO : Set data sys_wfresponsible_id the next responsible
-                    $sys_wfresponsible_id = $newWfResponsibleId;
+    //                 //TODO : Set data sys_wfresponsible_id the next responsible
+    //                 $sys_wfresponsible_id = $newWfResponsibleId;
 
-                    //TODO : Get data user based on session user
-                    $dataUser = $mUser->where($mUser->primaryKey, $user_by)->findAll();
+    //                 //TODO : Get data user based on session user
+    //                 $dataUser = $mUser->where($mUser->primaryKey, $user_by)->findAll();
 
-                    //TODO : Get data responsible 
-                    $dataResp = $mWResponsible->find($sys_wfresponsible_id);
-                    $msg = 'Approved By : ' . $dataUser[0]->getUserName() . ' </br> ';
-                    $msg .= 'Next Approver : ' . $dataResp->getName() . ' </br> ';
-                    $msg .= $textmsg;
+    //                 //TODO : Get data responsible 
+    //                 $dataResp = $mWResponsible->find($sys_wfresponsible_id);
+    //                 $msg = 'Approved By : ' . $dataUser[0]->getUserName() . ' </br> ';
+    //                 $msg .= 'Next Approver : ' . $dataResp->getName() . ' </br> ';
+    //                 $msg .= $textmsg;
 
-                    $entityAct->setTextMsg($msg);
+    //                 $entityAct->setTextMsg($msg);
 
-                    //TODO : For getting user new reponsible
-                    $dataUser = $mUser->detail(['sr.sys_role_id' => $dataResp->getRoleId()])->getResult();
+    //                 //TODO : For getting user new reponsible
+    //                 $dataUser = $mUser->detail(['sr.sys_role_id' => $dataResp->getRoleId()])->getResult();
 
-                    if ($state === $this->DOCSTATUS_Completed && $processed) {
-                        $state = $this->DOCSTATUS_Suspended;
-                        $processed = false;
+    //                 if ($state === $this->DOCSTATUS_Completed && $processed) {
+    //                     $state = $this->DOCSTATUS_Suspended;
+    //                     $processed = false;
 
-                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
-                    }
-                } else {
-                    if ($state === $this->DOCSTATUS_Aborted && $processed) {
-                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
+    //                     $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
+    //                 }
+    //             } else {
+    //                 if ($state === $this->DOCSTATUS_Aborted && $processed) {
+    //                     $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
 
-                        if ($trx->docstatus === $this->DOCSTATUS_Requested) {
-                            $this->entity->docstatus = $this->DOCSTATUS_Completed;
-                        } else {
-                            $this->entity->docstatus = $this->DOCSTATUS_NotApproved;
-                        }
+    //                     if ($trx->docstatus === $this->DOCSTATUS_Requested) {
+    //                         $this->entity->docstatus = $this->DOCSTATUS_Completed;
+    //                     } else {
+    //                         $this->entity->docstatus = $this->DOCSTATUS_NotApproved;
+    //                     }
 
-                        $this->entity->isagree = "N";
-                        $this->entity->isapproved = "N";
+    //                     $this->entity->isagree = "N";
+    //                     $this->entity->isapproved = "N";
 
-                        //TODO : Get data Notification Not Approved Text Template
-                        if ($docType->isapprovedline == 'Y' && $table == "trx_absent" && $tableLine) {
-                            $employee = $mEmployee->find($trx->md_employee_id);
-                            $dataNotif = $mNotifText->where('name', 'Email Not Approved Line')->first();
-                            $subject = $dataNotif->getSubject();
-                            $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date))], $dataNotif->getText());
-                        } else if ($table == "trx_assignment" || $table == "trx_overtime") {
-                            $dataNotif = $mNotifText->where('name', 'Email Not Approved Bundling')->first();
-                            $subject = $dataNotif->getSubject();
-                            $branch = $mBranch->find($trx->md_branch_id);
-                            $division = $mDivision->find($trx->md_division_id);
-                            $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
-                        } else {
-                            $dataNotif = $mNotifText->where('name', 'Email Not Approved')->first();
-                            $subject = $dataNotif->getSubject();
-                            $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
-                        }
-                    } else {
-                        $state = $this->DOCSTATUS_Completed;
-                        $processed = true;
+    //                     //TODO : Get data Notification Not Approved Text Template
+    //                     if ($docType->isapprovedline == 'Y' && $table == "trx_absent" && $tableLine) {
+    //                         $employee = $mEmployee->find($trx->md_employee_id);
+    //                         $dataNotif = $mNotifText->where('name', 'Email Not Approved Line')->first();
+    //                         $subject = $dataNotif->getSubject();
+    //                         $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date))], $dataNotif->getText());
+    //                     } else if ($table == "trx_assignment" || $table == "trx_overtime") {
+    //                         $dataNotif = $mNotifText->where('name', 'Email Not Approved Bundling')->first();
+    //                         $subject = $dataNotif->getSubject();
+    //                         $branch = $mBranch->find($trx->md_branch_id);
+    //                         $division = $mDivision->find($trx->md_division_id);
+    //                         $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
+    //                     } else {
+    //                         $dataNotif = $mNotifText->where('name', 'Email Not Approved')->first();
+    //                         $subject = $dataNotif->getSubject();
+    //                         $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
+    //                     }
+    //                 } else {
+    //                     $state = $this->DOCSTATUS_Completed;
+    //                     $processed = true;
 
-                        $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
+    //                     $mWEvent->setEventAudit($sys_wfactivity_id, $sys_wfresponsible_id, $user_id, $state, $processed, $table, $record_id, $user_by, false, $tableLine, $recordLine_id);
 
-                        //! SAS Form Realisasi 
-                        if ($docType->getIsRealization() === "Y") {
-                            $this->entity->isapproved = "Y";
-                            $this->entity->approved_by = $user_by;
+    //                     //! SAS Form Realisasi 
+    //                     if ($docType->getIsRealization() === "Y") {
+    //                         $this->entity->isapproved = "Y";
+    //                         $this->entity->approved_by = $user_by;
 
-                            $subType = [
-                                100001 => 'S', // Sakit
-                                100003 => 'S', // Cuti
-                                100004 => 'S', // Ijin
-                                100005 => 'S', // Ijin Resmi
-                                100007 => 'M', // Tugas Kantor
-                                100008 => 'M', // Penugasan
-                                100014 => 'M', // Lembur
-                                100010 => 'M', // Lupa Absen Masuk
-                                100011 => 'M', // Lupa Absen Pulang
-                                100018 => 'S', // Pembatalan
-                                100013 => 'M', // Pulang Cepat
-                                100009 => 'M'  // Tugas Kantor 1/2 Hari
-                            ];
+    //                         $subType = [
+    //                             100001 => 'S', // Sakit
+    //                             100003 => 'S', // Cuti
+    //                             100004 => 'S', // Ijin
+    //                             100005 => 'S', // Ijin Resmi
+    //                             100007 => 'M', // Tugas Kantor
+    //                             100008 => 'M', // Penugasan
+    //                             100014 => 'M', // Lembur
+    //                             100010 => 'M', // Lupa Absen Masuk
+    //                             100011 => 'M', // Lupa Absen Pulang
+    //                             100018 => 'S', // Pembatalan
+    //                             100013 => 'M', // Pulang Cepat
+    //                             100009 => 'M'  // Tugas Kantor 1/2 Hari
+    //                         ];
 
-                            $this->entity->isagree = $subType[$docType->getDocTypeId()];
+    //                         $this->entity->isagree = $subType[$docType->getDocTypeId()];
 
-                            if ($isanswer === "W")
-                                $this->entity->comment = $textmsg;
-                        } else {
-                            $this->entity->docstatus = $state;
-                            $this->entity->receiveddate = date("Y-m-d H:i:s");
-                            $this->entity->isagree = "Y";
-                            $this->entity->approved_by = $user_by;
-                            $this->entity->isapproved = "Y";
-                        }
+    //                         if ($isanswer === "W")
+    //                             $this->entity->comment = $textmsg;
+    //                     } else {
+    //                         $this->entity->docstatus = $state;
+    //                         $this->entity->receiveddate = date("Y-m-d H:i:s");
+    //                         $this->entity->isagree = "Y";
+    //                         $this->entity->approved_by = $user_by;
+    //                         $this->entity->isapproved = "Y";
+    //                     }
 
-                        if ($trx->docstatus === $this->DOCSTATUS_Requested) {
-                            $this->entity->docstatus = $this->DOCSTATUS_Voided;
-                        }
+    //                     if ($trx->docstatus === $this->DOCSTATUS_Requested) {
+    //                         $this->entity->docstatus = $this->DOCSTATUS_Voided;
+    //                     }
 
-                        //TODO : Get data Notification Approved Text Template
-                        if ($docType->isapprovedline == 'Y' && $table == "trx_absent" && $tableLine) {
-                            $employee = $mEmployee->find($trx->md_employee_id);
-                            $dataNotif = $mNotifText->where('name', 'Email Approved Line')->first();
-                            $subject = $dataNotif->getSubject();
-                            $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date))], $dataNotif->getText());
-                        } else if ($table == "trx_assignment" || $table == "trx_overtime") {
-                            $dataNotif = $mNotifText->where('name', 'Email Approved Bundling')->first();
-                            $subject = $dataNotif->getSubject();
-                            $branch = $mBranch->find($trx->md_branch_id);
-                            $division = $mDivision->find($trx->md_division_id);
-                            $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
-                        } else {
-                            $dataNotif = $mNotifText->where('name', 'Email Approved')->first();
-                            $subject = $dataNotif->getSubject();
-                            $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
-                        }
-                    }
+    //                     //TODO : Get data Notification Approved Text Template
+    //                     if ($docType->isapprovedline == 'Y' && $table == "trx_absent" && $tableLine) {
+    //                         $employee = $mEmployee->find($trx->md_employee_id);
+    //                         $dataNotif = $mNotifText->where('name', 'Email Approved Line')->first();
+    //                         $subject = $dataNotif->getSubject();
+    //                         $message = str_replace(['(Var1)', '(Var2)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date))], $dataNotif->getText());
+    //                     } else if ($table == "trx_assignment" || $table == "trx_overtime") {
+    //                         $dataNotif = $mNotifText->where('name', 'Email Approved Bundling')->first();
+    //                         $subject = $dataNotif->getSubject();
+    //                         $branch = $mBranch->find($trx->md_branch_id);
+    //                         $division = $mDivision->find($trx->md_division_id);
+    //                         $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->description))], $dataNotif->getText());
+    //                     } else {
+    //                         $dataNotif = $mNotifText->where('name', 'Email Approved')->first();
+    //                         $subject = $dataNotif->getSubject();
+    //                         $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
+    //                     }
+    //                 }
 
-                    //TODO: Save data update 
-                    $this->entity->updated_by = $user_by;
-                    $this->entity->approve_date = date("Y-m-d H:i:s");
-                    $result = $this->save();
+    //                 //TODO: Save data update 
+    //                 $this->entity->updated_by = $user_by;
+    //                 $this->entity->approve_date = date("Y-m-d H:i:s");
+    //                 $result = $this->save();
 
-                    //TODO : Get data user based on createdby
-                    $dataUser = $mUser->where($mUser->primaryKey, $trx->created_by)->findAll();
-                }
+    //                 //TODO : Get data user based on createdby
+    //                 $dataUser = $mUser->where($mUser->primaryKey, $trx->created_by)->findAll();
+    //             }
 
-                $entityAct->setWfResponsibleId($sys_wfresponsible_id);
-                $entityAct->setSysUserId($user_id);
-                $entityAct->setState($state);
-                $entityAct->setProcessed($processed);
-                $entityAct->setUpdatedBy($user_by);
-                $entityAct->setWfActivityId($sys_wfactivity_id);
-                $result = $modelAct->save($entityAct);
-            }
+    //             $entityAct->setWfResponsibleId($sys_wfresponsible_id);
+    //             $entityAct->setSysUserId($user_id);
+    //             $entityAct->setState($state);
+    //             $entityAct->setProcessed($processed);
+    //             $entityAct->setUpdatedBy($user_by);
+    //             $entityAct->setWfActivityId($sys_wfactivity_id);
+    //             $result = $modelAct->save($entityAct);
+    //         }
 
-            /**
-             * TODO: Send information
-             */
+    //         /**
+    //          * TODO: Send information
+    //          */
 
-            foreach ($dataUser as $users) {
-                $sendTelegram = true;
+    //         foreach ($dataUser as $users) {
+    //             $sendTelegram = true;
 
-                if (!empty($employee) && $users->md_employee_id == $employee->md_employee_id)
-                    $sendTelegram = false;
+    //             if (!empty($employee) && $users->md_employee_id == $employee->md_employee_id)
+    //                 $sendTelegram = false;
 
-                $cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, $sendTelegram, true);
-            }
+    //             $cMessage->sendInformation($users, $subject, $message, 'HARMONY SAS', null, null, true, $sendTelegram, true);
+    //         }
 
-            if (!empty($employee) && !empty($employee->telegram_id)) {
-                $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
-            }
+    //         if (!empty($employee) && !empty($employee->telegram_id)) {
+    //             $cTelegram->sendMessage($employee->telegram_id, (new Html2Text($message))->getText());
+    //         }
 
-            $options = array(
-                'cluster' => 'ap1',
-                'useTLS' => true
-            );
-            $pusher = new Pusher(
-                '8ae4540d78a7d493226a',
-                '808c4eb78d03842672ca',
-                '1490113',
-                $options
-            );
+    //         $options = array(
+    //             'cluster' => 'ap1',
+    //             'useTLS' => true
+    //         );
+    //         $pusher = new Pusher(
+    //             '8ae4540d78a7d493226a',
+    //             '808c4eb78d03842672ca',
+    //             '1490113',
+    //             $options
+    //         );
 
-            $data['message'] = 'hello world';
-            $pusher->trigger('my-channel', 'my-event', $data);
+    //         $data['message'] = 'hello world';
+    //         $pusher->trigger('my-channel', 'my-event', $data);
 
-            $this->model->db->transCommit();
-        } catch (\Exception $e) {
-            $this->model->db->transRollback();
-            throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
-        }
+    //         $this->model->db->transCommit();
+    //     } catch (\Exception $e) {
+    //         $this->model->db->transRollback();
+    //         throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
+    //     }
 
-        return $result;
-    }
+    //     return $result;
+    // }
 
     public function create()
     {
@@ -410,6 +411,7 @@ class WActivity extends BaseController
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $services = new WActivityServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
             $isAnswer = $post['isanswer'];
             $_ID = json_decode($post['record_id']);
             $txtMsg = $post['textmsg'];
@@ -440,9 +442,11 @@ class WActivity extends BaseController
 
                             $this->wfScenarioId = $activity->getWfScenarioId();
 
-                            $result = $this->setActivity($val->id, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Completed, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
+                            // $result = $services->setActivity($val->id, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Completed, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
+                            $result = $services->processActivity($val->id, $post);
                         } else {
-                            $result = $this->setActivity($val->id, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Aborted, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
+                            $result = $services->processActivity($val->id, $post);
+                            // $result = $services->setActivity($val->id, $activity->getWfScenarioId(), $activity->getWfResponsibleId(), $this->access->getSessionUser(), $this->DOCSTATUS_Aborted, true, $txtMsg, $activity->getTable(), $activity->getRecordId(), $activity->getMenu(), $isAnswer, $activity->getTableLine(), $activity->getRecordLineId());
                         }
                     }
 
@@ -460,6 +464,8 @@ class WActivity extends BaseController
     {
         $mDocType = new M_DocumentType($this->request);
         $mHoliday = new M_Holiday($this->request);
+
+        $services = new WActivityServices(100000, 0);
 
         $this->session->set([
             'sys_user_id'       => 100000,
@@ -489,7 +495,7 @@ class WActivity extends BaseController
                     );
 
                     if ($dateNotApproved <= $today) {
-                        $this->setActivity($row->sys_wfactivity_id, $row->sys_wfscenario_id, $row->sys_wfresponsible_id, session()->get('sys_user_id'), $this->DOCSTATUS_Aborted, true, "Not Approved By System", $row->table, $row->record_id, $row->menu, null, $row->tableline, $row->recordline_id);
+                        $services->processActivity($row->sys_wfactivity_id, ['isanswer' => 'N', 'textmsg' => '']);
                     }
                 } else {
                     log_message('info', "Data transaction not found for sys_wactivity_id: {$row->sys_wfactivity_id}");

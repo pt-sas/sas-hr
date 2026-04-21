@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Controllers\Backend\Telegram;
 use CodeIgniter\Model;
 use CodeIgniter\HTTP\RequestInterface;
+use Html2Text\Html2Text;
 
 class M_Assignment extends Model
 {
@@ -249,6 +251,36 @@ class M_Assignment extends Model
                     $entity->approve_date = date('Y-m-d H:i:s');
 
                     $mAssignmentDate->save($entity);
+                }
+            }
+
+            //* Send Notification to list employees
+            if ($sql->docstatus === "IP") {
+                $mBranch = new M_Branch($this->request);
+                $mDivision = new M_Division($this->request);
+                $mEmployee = new M_Employee($this->request);
+                $mNotifText = new M_NotificationText($this->request);
+                $cTelegram = new Telegram;
+
+                $employeeIds = array_column($line, 'md_employee_id');
+                $listEmployees = $mEmployee->select('md_employee_id, value, telegram_id')->whereIn($mEmployee->primaryKey, $employeeIds)->findAll();
+
+                $dataNotif = $mNotifText->where('name', "Email Approved Bundling")->first();
+                $branch = $mBranch->find($sql->md_branch_id);
+                $division = $mDivision->find($sql->md_division_id);
+
+                $listNames = implode(", ", array_column($listEmployees, 'value'));
+
+                $message = str_replace(['(Var1)', '(Var2)', '(Var3)', '(Var4)', '(Var5)'], [$sql->documentno, date('Y-m-d', strtotime($sql->startdate)) . ' s/d ' . date('Y-m-d', strtotime($sql->enddate)), ucwords(strtolower($branch->name)), $division->name, $listNames], $dataNotif->getText());
+
+                $msg = (new Html2Text($message))->getText();
+
+                //* Send telegram to list employee on Assignment
+                if (!empty($listEmployees)) {
+                    foreach ($listEmployees as $emp) {
+                        if (!empty($emp->telegram_id))
+                            $cTelegram->sendMessage($emp->telegram_id, $msg);
+                    }
                 }
             }
         }
