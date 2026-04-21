@@ -15,6 +15,7 @@ use App\Models\M_Division;
 use App\Models\M_DocumentType;
 use App\Models\M_Employee;
 use App\Models\M_Levelling;
+use App\Services\WActivityServices;
 use Config\Services;
 
 class WScenario extends BaseController
@@ -301,10 +302,11 @@ class WScenario extends BaseController
     public function setScenario($entity, $model, $modelDetail = null, $trxID, $docStatus, $menu, $session, $modelSubDetail = null, $isSubmission = false)
     {
         $mWfs = new M_WScenario($this->request);
-        $cWfa = new WActivity();
         $mDocType = new M_DocumentType($this->request);
         $mEmployee = new M_Employee($this->request);
         $mAbsent = new M_Absent($this->request);
+
+        $services = new WActivityServices($session->get('sys_user_id'), $session->get('md_employee_id'));
 
         $this->model = $model;
         $this->entity = $entity;
@@ -385,7 +387,7 @@ class WScenario extends BaseController
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, null, null, null, null, null, $trx->submissiontype);
             } else if ($table === "trx_employee_allocation") {
                 if ($trx->submissiontype == 100023 || $trx->submissiontype == 100024) {
-                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, null, $trx->submissiontype);
+                    $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, $employee->md_levelling_id, null, null, $trx->submissiontype);
                 } else {
                     $this->sys_wfscenario_id = $mWfs->getScenario(
                         $menu,
@@ -399,8 +401,9 @@ class WScenario extends BaseController
                         $trx->submissiontype
                     );
                 }
+            } else {
+                $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);
             }
-            else {$this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null);}
 
             if ($this->sys_wfscenario_id && !$reopen) {
                 $this->entity->setDocStatus($this->DOCSTATUS_Inprogress);
@@ -442,10 +445,10 @@ class WScenario extends BaseController
                 $primaryKey = $this->modelDetail->primaryKey;
 
                 foreach ($trxLine as $line) {
-                    $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu, null, $tableLine, $line->{$primaryKey});
+                    $services->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu, null, $tableLine, $line->{$primaryKey});
                 }
             } else {
-                $cWfa->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);
+                $services->setActivity(null, $this->sys_wfscenario_id, $this->getScenarioResponsible($this->sys_wfscenario_id), $sessionUserId, $this->DOCSTATUS_Suspended, false, null, $table, $trxID, $menu);
             }
 
             // TODO : Update line status to Waiting Approval
