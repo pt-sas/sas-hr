@@ -826,16 +826,16 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
 $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 'cors'], function ($routes) {
     $routes->resource('user');
 
-    $routes->resource('wactivity');
+    $routes->resource('wactivity', ['controller' => 'WActivity']);
 
     $routes->get('employee/getEmployeeDetail', 'Employee::getDetail');
 
-    $routes->post('leave/processIt', 'Leave::proccessSubmission');
-    $routes->get('leave/getAvailableLeaves', 'Leave::getAvailableLeaves');
-    $routes->resource('leave');
+    $routes->post('cuti/processIt', 'Leave::proccessSubmission');
+    $routes->get('cuti/getAvailableLeaves', 'Leave::getAvailableLeaves');
+    $routes->resource('cuti', ['controller' => 'Leave']);
 
-    $routes->post('officeduties/processIt', 'OfficeDuties::proccessSubmission');
-    $routes->resource('officeduties');
+    $routes->post('tugas-kantor/processIt', 'OfficeDuties::proccessSubmission');
+    $routes->resource('tugas-kantor', ['controller' => 'OfficeDuties']);
 
     $routes->post('tugas-kantor-fka/processIt', 'HalfDayOfficeDuties::proccessSubmission');
     $routes->resource('tugas-kantor-fka', ['controller' => 'HalfDayOfficeDuties']);
