@@ -656,7 +656,7 @@ class M_AbsentDetail extends Model
                 ];
 
                 $mAbsent->builder->update($dataUpdate, [$mAbsent->primaryKey => $header->trx_absent_id]);
-                $changeLog->insertLog($mAbsent->table, 'docstatus', $header->trx_absent_id, $header->docstatus, "CO", 'U');
+                $changeLog->insertLog($mAbsent->table, 'docstatus', $header->trx_absent_id, $header->docstatus, "CO", 'U', '', $updatedBy);
             }
 
             //TODO : Update Isapproved if there's no line to Approved

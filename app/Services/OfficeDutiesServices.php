@@ -103,6 +103,7 @@ class OfficeDutiesServices extends BaseServices
         $mRuleDetail = new M_RuleDetail($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
 
+        $_ID = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
         $holidays = $mHoliday->getHolidayDate();
         $startDate = date("Y-m-d", strtotime($data['startdate']));
         $endDate = date('Y-m-d', strtotime($data['enddate']));
@@ -116,9 +117,9 @@ class OfficeDutiesServices extends BaseServices
         //* Add submission & necessary to variable data when update data
         $sql = null;
 
-        if (!empty($data[$this->model->primaryKey])) {
+        if ($_ID) {
             //* Validation for check docstatus when update
-            $sql = $this->model->where([$this->model->primaryKey => $data[$this->model->primaryKey], 'submissiontype' => $this->baseSubType])->first();
+            $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
 
             if ($sql->docstatus != $this->DOCSTATUS_Drafted)
                 throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
@@ -189,12 +190,12 @@ class OfficeDutiesServices extends BaseServices
         //* Do Insert or update Data
         $this->entity->fill($data);
 
-        if ($this->isNew()) {
+        if (!$_ID) {
             $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
             $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
             $this->entity->setDocumentNo($docNo);
         } else {
-            $this->entity->setAbsentId($data[$this->model->primaryKey]);
+            $this->entity->setAbsentId($_ID);
         }
 
         return $this->save();

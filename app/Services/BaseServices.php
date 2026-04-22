@@ -237,6 +237,7 @@ class BaseServices
         $beforeUpdate = $this->model->beforeUpdate;
         $afterUpdate = $this->model->afterUpdate;
         $isChange = false;
+        logMessage('check new kedua');
         $newRecord = $this->isNew();
 
         //* Set column is allowedFields 
@@ -736,7 +737,9 @@ class BaseServices
      */
     protected function isNew()
     {
-        if (isset($this->entity->{$this->primaryKey}) && !empty($this->entity->{$this->primaryKey}))
+        logMessage($this->primaryKey);
+        logMessage($this->entity->{$this->primaryKey});
+        if (!empty($this->entity->{$this->primaryKey}))
             return false;
 
         return true;
@@ -748,7 +751,7 @@ class BaseServices
      */
     protected function getID()
     {
-        if (isset($this->entity->{$this->primaryKey}) && !empty($this->entity->{$this->primaryKey}))
+        if (!empty($this->entity->{$this->primaryKey}))
             return $this->entity->{$this->primaryKey};
 
         return 0;
@@ -931,10 +934,10 @@ class BaseServices
         foreach ($rows as $row) {
             if ($event == $this->EVENTCHANGELOG_Delete && !empty($fields)) {
                 foreach ($fields as $column) {
-                    $changeLog->insertLog($table, $column, $row->{$primaryKey}, $row->{$column}, null, $event, $this->userID);
+                    $changeLog->insertLog($table, $column, $row->{$primaryKey}, $row->{$column}, null, $event, '', $this->userID);
                 }
             } else {
-                $changeLog->insertLog($table, $row->column, $row->record_id, $row->old_value, $row->new_value, $event, $this->userID);
+                $changeLog->insertLog($table, $row->column, $row->record_id, $row->old_value, $row->new_value, $event, '', $this->userID);
             }
         }
     }
