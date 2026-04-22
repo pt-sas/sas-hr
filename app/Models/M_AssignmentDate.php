@@ -184,7 +184,7 @@ class M_AssignmentDate extends Model
                 ];
 
                 $mAssignment->builder->update($dataUpdate, [$mAssignment->primaryKey => $header->trx_assignment_id]);
-                $changeLog->insertLog($mAssignment->table, 'docstatus', $header->trx_assignment_id, $header->docstatus, "CO", 'U');
+                $changeLog->insertLog($mAssignment->table, 'docstatus', $header->trx_assignment_id, $header->docstatus, "CO", 'U', '', $updatedBy);
             }
 
             if ($subLine->isagree === "Y")

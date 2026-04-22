@@ -6,7 +6,7 @@ use App\Controllers\ApiController;
 use App\Models\M_Menu;
 use App\Models\M_User;
 use App\Models\M_WActivity;
-use App\Services\WActivityServices as ServicesWActivityServices;
+use App\Services\WActivityServices;
 
 class WActivity extends ApiController
 {
@@ -79,7 +79,7 @@ class WActivity extends ApiController
         $status_code = null;
         try {
             if (!empty($data)) {
-                $services = new ServicesWActivityServices($this->jwt->sys_user_id);
+                $services = new WActivityServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
 
                 $result = $services->processActivity($id, $data);
 
