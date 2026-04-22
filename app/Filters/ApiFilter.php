@@ -29,7 +29,12 @@ class ApiFilter implements FilterInterface
     public function before(RequestInterface $request, $arguments = null)
     {
         $key = getenv('JWT_SECRET');
-        $header = $request->getHeader("Authorization");
+        // $header = $request->getHeader("Authorization");
+        //* Menggunakan cara ini karena Authorization dihilangkan oleh cloudflare dilevel Cpanel
+        $header = $_SERVER['HTTP_AUTHORIZATION']
+            ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+            ?? $_SERVER['Authorization']
+            ?? null;
         $token = null;
 
         if (!empty($header)) {

@@ -24,7 +24,13 @@ class ApiController extends ResourceController
     private function decodeJWT()
     {
         $key = getenv('JWT_SECRET');
-        $header = $this->request->getHeaderLine('Authorization');
+        // $header = $this->request->getHeaderLine('Authorization');
+        //* Menggunakan cara ini karena Authorization dihilangkan oleh cloudflare dilevel Cpanel
+        $header = $_SERVER['HTTP_AUTHORIZATION']
+            ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+            ?? $_SERVER['Authorization']
+            ?? null;
+
         $token = null;
 
         if (!empty($header)) {
