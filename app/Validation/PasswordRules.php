@@ -8,18 +8,17 @@ use Config\Services;
 
 class PasswordRules
 {
-    public function match()
+    public function match(string $value, string $params)
     {
+        $params = explode(',', $params);
+        $sys_user_id = trim($params[0]);
+
         $request = Services::request();
 
         $user = new M_User($request);
-        $post = $request->getVar();
+        $row = $user->find($sys_user_id);
 
-        $user_id = session()->get('sys_user_id');
-
-        $row = $user->find($user_id);
-
-        if (password_verify($post['password'], $row->password))
+        if (password_verify($value, $row->password))
             return true;
 
         return false;

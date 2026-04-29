@@ -83,6 +83,8 @@ class Auth extends BaseController
 			try {
 				$this->entity->setPassword($post['new_password']);
 
+				$post['sys_user_id'] = session()->get('sys_user_id');
+
 				if (!$this->validation->run($post, 'change_password')) {
 					$errors = [
 						'password'		=> $this->validation->getError('password'),

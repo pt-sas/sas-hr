@@ -5,6 +5,7 @@ namespace App\Controllers\API;
 use App\Controllers\ApiController;
 use App\Models\M_RefreshToken;
 use App\Models\M_User;
+use App\Services\UserServices;
 use Firebase\JWT\JWT;
 
 class Auth extends ApiController
@@ -113,6 +114,37 @@ class Auth extends ApiController
             log_message('error', '[refreshAccessToken] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
             $response    = apiResponse(false, "Internal Server Error");
+            $status_code = 500;
+        }
+
+        return $this->respond($response, $status_code);
+    }
+
+    public function changePassword()
+    {
+
+        $data = $this->request->getJSON(true);
+        $status_code = null;
+
+        try {
+            $service = new UserServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
+
+            $data['sys_user_id'] = $this->jwt->sys_user_id;
+            if (!$this->validation->run($data, 'change_password')) {
+                $response = apiResponse(false, "Validation Rules", [], $this->validation->getErrors());
+                $status_code = 422;
+            } else {
+                $service->changePassword($data['password']);
+
+                $response = apiResponse(true, "Password berhasil dirubah");
+            }
+        } catch (\App\Exceptions\BaseException $e) {
+            $response = apiResponse(false, $e->getMessage());
+            $status_code = $e->getStatusCode();
+        } catch (\Exception $e) {
+            log_message('error', 'Auth [changePassword] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+
+            $response = apiResponse(false, 'Internal Server Error');
             $status_code = 500;
         }
 

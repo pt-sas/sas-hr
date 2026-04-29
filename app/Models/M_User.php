@@ -94,40 +94,42 @@ class M_User extends Model
 	{
 		$post = $this->request->getVar();
 
-		if (isset($post['sys_role_id'])) {
-			$userRole = new M_UserRole($this->request);
+		if (is_array($post)) {
+			if (isset($post['sys_role_id'])) {
+				$userRole = new M_UserRole($this->request);
 
-			$post['sys_role_id'] = explode(',', $post['sys_role_id']);
-			$post['sys_user_id'] = $rows['id'];
+				$post['sys_role_id'] = explode(',', $post['sys_role_id']);
+				$post['sys_user_id'] = $rows['id'];
 
-			$userRole->create($post);
-		}
+				$userRole->create($post);
+			}
 
-		if (isset($post['md_branch_id'])) {
-			$branchAccess = new M_BranchAccess($this->request);
+			if (isset($post['md_branch_id'])) {
+				$branchAccess = new M_BranchAccess($this->request);
 
-			$post['md_branch_id'] = explode(',', $post['md_branch_id']);
-			$post['sys_user_id'] = $rows['id'];
+				$post['md_branch_id'] = explode(',', $post['md_branch_id']);
+				$post['sys_user_id'] = $rows['id'];
 
-			$branchAccess->create($post);
-		}
+				$branchAccess->create($post);
+			}
 
-		if (isset($post['md_division_id'])) {
-			$divAccess = new M_DivAccess($this->request);
+			if (isset($post['md_division_id'])) {
+				$divAccess = new M_DivAccess($this->request);
 
-			$post['md_division_id'] = explode(',', $post['md_division_id']);
-			$post['sys_user_id'] = $rows['id'];
+				$post['md_division_id'] = explode(',', $post['md_division_id']);
+				$post['sys_user_id'] = $rows['id'];
 
-			$divAccess->create($post);
-		}
+				$divAccess->create($post);
+			}
 
-		if (isset($post['sys_emp_delegation_id'])) {
-			$empDelegation = new M_EmpDelegation($this->request);
+			if (isset($post['sys_emp_delegation_id'])) {
+				$empDelegation = new M_EmpDelegation($this->request);
 
-			$post['md_employee_id'] = explode(',', $post['sys_emp_delegation_id']);
-			$post['sys_user_id'] = $rows['id'];
+				$post['md_employee_id'] = explode(',', $post['sys_emp_delegation_id']);
+				$post['sys_user_id'] = $rows['id'];
 
-			$empDelegation->create($post);
+				$empDelegation->create($post);
+			}
 		}
 	}
 
