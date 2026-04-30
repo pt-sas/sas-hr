@@ -825,10 +825,11 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 'cors'], function ($routes) {
     $routes->resource('user');
+    $routes->post('auth/changePassword', 'Auth::changePassword');
 
     $routes->resource('wactivity', ['controller' => 'WActivity']);
 
-    $routes->get('employee/getEmployeeDetail', 'Employee::getDetail');
+    $routes->get('my-profile', 'Employee::getProfile');
 
     $routes->post('cuti/processIt', 'Leave::proccessSubmission');
     $routes->get('cuti/getAvailableLeaves', 'Leave::getAvailableLeaves');

@@ -220,6 +220,7 @@ class Rpt_Employee extends BaseController
         $arrEmpStr = implode(" ,", $arrEmployee);
         $employee = $this->model->find($this->session->get('md_employee_id'));
         $whereClause = "isactive = 'Y'";
+        $whereClause .= " AND md_status_id NOT IN ({$this->Status_RESIGN}, {$this->Status_OUTSOURCING})";
 
         if (isset($md_branch_id)) {
             $whereClause .= " AND md_branch_id IN ($md_branch_id)";

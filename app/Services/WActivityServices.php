@@ -296,7 +296,7 @@ class WActivityServices extends BaseServices
                 $dataNotif = $mNotifText->where('name', "Email {$notifType} Line")->first();
                 $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, date('Y-m-d', strtotime($trxLine->date)), $employee->fullname], $dataNotif->getText());
             } else {
-                $dataNotif = $mNotifText->where('name', "Email {$dataNotif}")->first();
+                $dataNotif = $mNotifText->where('name', "Email {$notifType}")->first();
                 $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
             }
         } else if ($table == "trx_assignment" || $table == "trx_overtime") {
@@ -321,7 +321,7 @@ class WActivityServices extends BaseServices
                 $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->name))], $dataNotif->getText());
             }
         } else {
-            $dataNotif = $mNotifText->where('name', "Email {$dataNotif}")->first();
+            $dataNotif = $mNotifText->where('name', "Email {$notifType}")->first();
             $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());
         }
 

@@ -136,7 +136,7 @@ class Validation
     public $change_password = [
         'password'        => [
             'label'        => 'old password',
-            'rules'        => 'required|match',
+            'rules'        => 'required|match[{sys_user_id}]',
             'errors'    => [
                 'match'    => 'The {field} does not match'
             ]
@@ -3505,6 +3505,26 @@ class Validation
         ],
         'reason'                => [
             'label'             => 'alasan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $closing_period = [
+        'year'  => [
+            'label'             => 'tahun',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $create_period = [
+        'startdate'  => [
+            'label'             => 'tanggal mulai',
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'

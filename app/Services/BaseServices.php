@@ -237,7 +237,6 @@ class BaseServices
         $beforeUpdate = $this->model->beforeUpdate;
         $afterUpdate = $this->model->afterUpdate;
         $isChange = false;
-        logMessage('check new kedua');
         $newRecord = $this->isNew();
 
         //* Set column is allowedFields 
@@ -737,8 +736,6 @@ class BaseServices
      */
     protected function isNew()
     {
-        logMessage($this->primaryKey);
-        logMessage($this->entity->{$this->primaryKey});
         if (!empty($this->entity->{$this->primaryKey}))
             return false;
 
