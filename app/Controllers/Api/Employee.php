@@ -8,21 +8,14 @@ use App\Services\EmployeeServices;
 
 class Employee extends ApiController
 {
-    public function getDetail()
+    public function getProfile()
     {
         $status_code = null;
 
         try {
             $service = new EmployeeServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
 
-            //* Settle up parameter
-            $md_employee_id = $this->request->getGet('md_employee_id');
-
-            //* Validation parameter
-            if (empty($md_employee_id))
-                throw new ValidationException("Mohon mengisi karyawan");
-
-            $data = $service->getEmployeeDetail($md_employee_id);
+            $data = $service->getProfile();
 
             $response = apiResponse(true, "Success", $data);
         } catch (\App\Exceptions\BaseException $e) {
