@@ -314,6 +314,8 @@ class LeaveServices extends BaseServices
             return 'Pengajuan berhasil Diproses';
         } else if ($docaction === $this->DOCSTATUS_Voided) {
             $this->entity->setDocStatus($this->DOCSTATUS_Voided);
+            $this->entity->setAbsentId($id);
+            $this->save();
             return 'Pengajuan berhasil Divoid';
         } else {
             throw new BusinessException("Dokumen aksi ini tidak tersedia pada tipe pengajuan ini");
