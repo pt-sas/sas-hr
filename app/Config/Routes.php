@@ -840,6 +840,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
 
     $routes->post('tugas-kantor-fka/processIt', 'HalfDayOfficeDuties::proccessSubmission');
     $routes->resource('tugas-kantor-fka', ['controller' => 'HalfDayOfficeDuties']);
+
+    $routes->get('holiday/get-holiday', 'Holiday::getHoliday');
 });
 
 /*
