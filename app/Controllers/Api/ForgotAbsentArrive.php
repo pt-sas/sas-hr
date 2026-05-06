@@ -3,16 +3,18 @@
 namespace App\Controllers\API;
 
 use App\Controllers\ApiController;
-use App\Services\HalfDayOfficeDutiesServices;
+use App\Exceptions\UnSupportedException;
+use App\Exceptions\ValidationException;
+use App\Services\ForgotAbsentArriveServices;
 
-class HalfDayOfficeDuties extends ApiController
+class ForgotAbsentArrive extends ApiController
 {
     //* Show all data
     public function index()
     {
         $status_code = null;
         try {
-            $service = new HalfDayOfficeDutiesServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
+            $service = new ForgotAbsentArriveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
 
             //* Settle up parameter
             $params = [
@@ -32,7 +34,7 @@ class HalfDayOfficeDuties extends ApiController
 
             $response = apiResponse(true, "success", $result['data'], [], $result['meta']);
         } catch (\Exception $e) {
-            log_message('error', 'HalfDayOfficeDuties [index] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+            log_message('error', 'ForgotAbsentArrive [index] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
             $response = apiResponse(false, 'Internal Server Error');
             $status_code = 500;
@@ -44,15 +46,15 @@ class HalfDayOfficeDuties extends ApiController
     //* For create new data
     public function create()
     {
-        $service = new HalfDayOfficeDutiesServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
-        $data = $this->request->getPost();
+        $service = new ForgotAbsentArriveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
+        $data = $this->request->getJSON(true);
         $status_code = null;
 
         try {
             if (empty($data))
                 throw new UnSupportedException("Unsupported Media");
 
-            if (!$this->validation->run($data, 'pengajuantugas')) {
+            if (!$this->validation->run($data, 'pengajuan')) {
                 $response = apiResponse(false, "Validation Rules", [], $this->validation->getErrors());
                 $status_code = 422;
             } else {
@@ -63,7 +65,7 @@ class HalfDayOfficeDuties extends ApiController
             $response = apiResponse(false, $e->getMessage());
             $status_code = $e->getStatusCode();
         } catch (\Exception $e) {
-            log_message('error', 'HalfDayOfficeDuties [create] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+            log_message('error', 'ForgotAbsentArrive [create] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
             $response = apiResponse(false, 'Internal Server Error');
             $status_code = 500;
@@ -75,7 +77,7 @@ class HalfDayOfficeDuties extends ApiController
     //* For get data
     public function show($id = null)
     {
-        $service = new HalfDayOfficeDutiesServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
+        $service = new ForgotAbsentArriveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
         $status_code = null;
 
         try {
@@ -85,7 +87,7 @@ class HalfDayOfficeDuties extends ApiController
             $response = apiResponse(false, $e->getMessage());
             $status_code = $e->getStatusCode();
         } catch (\Exception $e) {
-            log_message('error', 'HalfDayOfficeDuties [show] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+            log_message('error', 'ForgotAbsentArrive [show] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
             $response = apiResponse(false, 'Internal Server Error');
             $status_code = 500;
@@ -97,7 +99,7 @@ class HalfDayOfficeDuties extends ApiController
     //* For Process Submission
     public function proccessSubmission()
     {
-        $service = new HalfDayOfficeDutiesServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
+        $service = new ForgotAbsentArriveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
         $data = $this->request->getJSON(true);
         $status_code = null;
 
@@ -116,7 +118,7 @@ class HalfDayOfficeDuties extends ApiController
             $response = apiResponse(false, $e->getMessage());
             $status_code = $e->getStatusCode();
         } catch (\Exception $e) {
-            log_message('error', 'HalfDayOfficeDuties [ProcessSubmission] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+            log_message('error', 'ForgotAbsentArrive [ProcessSubmission] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
             $response = apiResponse(false, 'Internal Server Error');
             $status_code = 500;

@@ -842,6 +842,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
     $routes->resource('tugas-kantor-fka', ['controller' => 'HalfDayOfficeDuties']);
 
     $routes->get('holiday/get-holiday', 'Holiday::getHoliday');
+
+    $routes->post('lupa-absen-masuk/processIt', 'ForgotAbsentArrive::proccessSubmission');
+    $routes->resource('lupa-absen-masuk', ['controller' => 'ForgotAbsentArrive']);
 });
 
 /*
