@@ -8,6 +8,7 @@ use App\Exceptions\ValidationException;
 use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
 use App\Models\M_Branch;
+use App\Models\M_Configuration;
 use App\Models\M_Division;
 use App\Models\M_DocumentType;
 use App\Models\M_Employee;
@@ -286,6 +287,7 @@ class OfficeDutiesServices extends BaseServices
         $mHoliday = new M_Holiday($this->request);
         $mRule = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
+        $mConfig = new M_Configuration($this->request);
 
         //* Get Data Transaction
         $row = $this->model->where([$this->model->primaryKey => $id, 'submissiontype' => $this->baseSubType])->first();
