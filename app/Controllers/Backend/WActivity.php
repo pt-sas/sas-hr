@@ -411,7 +411,6 @@ class WActivity extends BaseController
 
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
-            $services = new WActivityServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
             $isAnswer = $post['isanswer'];
             $_ID = json_decode($post['record_id']);
             $txtMsg = $post['textmsg'];
@@ -422,6 +421,7 @@ class WActivity extends BaseController
                 } else {
                     $result = false;
                     foreach ($_ID as $val) {
+                        $services = new WActivityServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
                         $this->model = new M_WActivity($this->request);
 
                         $activity = $this->model->find($val->id);
