@@ -18,7 +18,7 @@ class Auth extends ApiController
         try {
             if (!empty($data)) {
                 if (!$this->validation->run($data, 'login')) {
-                    $response = apiResponse(false, "", [], $this->validation->getErrors());
+                    $response = apiResponse(false, "Validation Rules", [], $this->validation->getErrors());
                     $status_code = 400;
                 } else {
                     $model = new M_User($this->request);

@@ -53,7 +53,7 @@ class OfficeDuties extends ApiController
                 throw new UnSupportedException("Unsupported Media");
 
             if (!$this->validation->run($data, 'tugasKantor')) {
-                $response = apiResponse(false, "", [], $this->validation->getErrors());
+                $response = apiResponse(false, "Validation Rules", [], $this->validation->getErrors());
                 $status_code = 422;
             } else {
                 $service->create($data);
