@@ -1036,12 +1036,15 @@ $(".save_form").click(function (evt) {
         //* Set field and value to formData
         if (
           field[i].type == "text" ||
-          field[i].type == "textarea" ||
+          (field[i].type == "textarea" && !className.includes("summernote")) ||
           field[i].type == "select-one" ||
           field[i].type == "password" ||
           field[i].type == "hidden"
         )
           formData.append(field[i].name, field[i].value);
+
+        if (field[i].type == "textarea" && className.includes("summernote"))
+          formData.append(field[i].name, encodeBase64(field[i].value));
 
         //* Field type input radio
         if (field[i].type == "radio") {
@@ -1049,33 +1052,34 @@ $(".save_form").click(function (evt) {
         }
 
         //* Field type input file and containing class control-upload-image
-        if (field[i].type == "file" && className.includes("control-upload-image")) {
-          if (field[i].files.length > 0) {
-            formData.append(field[i].name, field[i].files[0]);
-          } else {
-            const group = $(field[i]).closest(".form-group");
+        if (field[i].type === "file" && className.includes("control-upload-image")) {
+        const input = field[i];
+        const files = input.files;
 
-            const isPreviewVisible = group.find(".form-result").is(":visible") ||
-              group.find(".form-file-result").is(":visible");
+        if (files.length > 0) {
+          const originalFile = files[0];
+          const safeName = originalFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+          const safeFile = new File([originalFile],safeName,{type: originalFile.type});
 
-            if (isPreviewVisible) {
-              let source = group.find(".img-result").attr("src");
-              let imgSrc = source;
+          formData.append(input.name, safeFile);
+        } else {
+          const group = $(input).closest(".form-group");
+          const isPreviewVisible = group.find(".form-result").is(":visible") || group.find(".form-file-result").is(":visible");
 
-              if (typeof source !== "undefined" && source !== "") {
-                imgSrc = source.substr(source.lastIndexOf("/") + 1);
-                formData.append(field[i].name, imgSrc);
-              } else {
-                let documentName = group.find(".file-name").text();
+          if (isPreviewVisible) {
+            const source = group.find(".img-result").attr("src");
 
-                if (documentName !== "") {
-                  formData.append(field[i].name, documentName);
-                }
-              }
+            if (source) {
+              const cleanSource = source.split("?")[0].split("#")[0];
+              const fileName = decodeURIComponent(cleanSource.substring(cleanSource.lastIndexOf("/") + 1));
+              formData.append(input.name, fileName);
+            } else {
+              const documentName = group.find(".file-name").text().trim();
+              if (documentName !== "") {formData.append(input.name, documentName);}
             }
-            
           }
         }
+      }
 
         //* Field type textarea class summernote isEmpty to set value null
         if (
@@ -6615,3 +6619,19 @@ _tableUnprocessed.on("click", ".btn_record", function (e) {
 
   window.open(ADMIN_URL + menu);
 });
+
+//* Encode String to Base64
+function encodeBase64(str) {
+
+    const bytes =
+        new TextEncoder().encode(str);
+
+    let binary = '';
+
+    bytes.forEach(byte => {
+
+        binary += String.fromCharCode(byte);
+    });
+
+    return btoa(binary);
+}

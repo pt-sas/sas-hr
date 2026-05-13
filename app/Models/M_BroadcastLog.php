@@ -16,6 +16,14 @@ class M_BroadcastLog extends Model
         'error_message'
     ];
     protected $useTimestamps = false;
+    protected $builder;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->db = db_connect();
+        $this->builder = $this->db->table($this->table);
+    }
 
     public function logBroadcast($broadcastId, $employeeId, $method, $errorMessage)
     {
@@ -28,5 +36,4 @@ class M_BroadcastLog extends Model
 
         return $this->insert($data);
     }
-    
 }
