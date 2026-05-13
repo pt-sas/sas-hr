@@ -13,7 +13,7 @@ use App\Models\M_Branch;
 use App\Models\M_Broadcast;
 use App\Models\M_User;
 use App\Models\M_BroadcastLog;
-
+use App\Models\M_BroadcastQueue;
 use Config\Services;
 use Html2Text\Html2Text;
 
@@ -93,7 +93,7 @@ class Broadcast extends BaseController
                 $ID = $value->trx_broadcast_id;
                 $number++;
                 $plainTextMessage = (new Html2Text(
-                html_entity_decode($value->message, ENT_QUOTES, 'UTF-8')
+                    html_entity_decode($value->message, ENT_QUOTES, 'UTF-8')
                 ))->getText();
                 if (strlen($plainTextMessage) > 50) {
                     $plainTextMessage = substr($plainTextMessage, 0, 50) . '...';
@@ -145,145 +145,95 @@ class Broadcast extends BaseController
     public function create()
     {
         if ($this->request->getMethod(true) === 'POST') {
+            $mBroadcastQueue = new M_BroadcastQueue($this->request);
+
             $post = $this->request->getVar();
+            $file = $this->request->getFile('attachment');
+            $file2 = $this->request->getFile('attachment2');
+            $file3 = $this->request->getFile('attachment3');
 
             try {
                 $isSend = isset($post['issend']) ? $post['issend'] : 'N';
+                $post['message'] = htmlentities(base64_decode($post['message']), ENT_QUOTES, 'UTF-8');
+                $ymd = date('YmdHis');
 
-                $sendMethods = [];
-
-                $sendMethods = array_filter([
-                    isset($post['send_email']) ? 'E' : null,
-                    isset($post['send_notification']) ? 'N' : null,
-                    isset($post['send_telegram']) ? 'T' : null,
-                ]);
-
-                $hasEffectiveDate = !empty($post['effective_date']);
-                $hasEffectiveTime = !empty($post['effective_time']);
-
-                if ($hasEffectiveDate || $hasEffectiveTime) {
-                    if ($isSend === 'Y') {
-                        $response = message(
-                            'error',
-                            false,
-                            'Tidak bisa mengirim sekarang jika anda set Tanggal/Jam Efektif'
-                        );
-                        return $this->response->setJSON($response);
-                    }
-
-                    if ($hasEffectiveDate && !$hasEffectiveTime) {
-                        $response = message('error', false, 'Jam Efektif harus diisi jika Tanggal Efektif sudah diisi');
-                        return $this->response->setJSON($response);
-                    }
-
-                    if (!$hasEffectiveDate && $hasEffectiveTime) {
-                        $response = message('error', false, 'Tanggal Efektif harus diisi jika Jam Efektif sudah diisi');
-                        return $this->response->setJSON($response);
-                    }
-
-                    if ($hasEffectiveDate && $hasEffectiveTime) {
-                        $effectiveDateTime = date('Y-m-d', strtotime($post["effective_date"])) . " " . $post['effective_time'];
-                        $currentDateTime = date('Y-m-d H:i:s');
-
-                        if ($effectiveDateTime <= $currentDateTime) {
-                            $response = message(
-                                'error',
-                                false,
-                                'Tanggal/Jam Efektif tidak boleh kurang atau sama persis dengan waktu sekarang'
-                            );
-                            return $this->response->setJSON($response);
-                        }
-                    }
-
+                if ($file && $file->isValid()) {
+                    $ext = $file->getClientExtension();
+                    $img_name = 'Broadcast1' . '_' . $ymd . '.' . $ext;
+                    $post['attachment'] = $img_name;
                 }
 
-                if (!empty($post['effective_date']) && !empty($post['effective_time'])) {
-                    $post["effective_date"] = date('Y-m-d', strtotime($post["effective_date"])) . " " . $post['effective_time'];
+                if ($file2 && $file2->isValid()) {
+                    $ext2 = $file2->getClientExtension();
+                    $img2_name = "Broadcast2" . '_' . $ymd . '.' . $ext2;
+                    $post['attachment2'] = $img2_name;
+                }
+
+                if ($file3 && $file3->isValid()) {
+                    $ext3 = $file3->getClientExtension();
+                    $img3_name = "Broadcast3" . '_' . $ymd . '.' . $ext3;
+                    $post['attachment3'] = $img3_name;
                 }
 
                 if (!$this->validation->run($post, 'broadcast_bb')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $sendMethods = array_filter([
+                        isset($post['send_email']) ? 'E' : null,
+                        isset($post['send_notification']) ? 'N' : null,
+                        isset($post['send_telegram']) ? 'T' : null,
+                    ]);
 
-                    if (!empty($sendMethods)) {
+                    $hasEffectiveDate = !empty($post['effective_date']);
+                    $hasEffectiveTime = !empty($post['effective_time']);
+                    $currentDateTime = date('Y-m-d H:i:s');
 
-                        $post['message'] = htmlentities(
-                            $post['message'],
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-                        
+                    if ($hasEffectiveDate && $hasEffectiveTime) {
+                        $effectiveDateTime = date('Y-m-d', strtotime($post["effective_date"])) . " " . $post['effective_time'];
+                        $post["effective_date"] = date('Y-m-d', strtotime($post["effective_date"])) . " " . $post['effective_time'];
+                    }
+
+                    if (($hasEffectiveDate || $hasEffectiveTime) && $isSend == "Y") {
+                        $response = message('error', false, 'Tidak bisa mengirim sekarang jika anda set Tanggal/Jam Efektif');
+                    } else if (($hasEffectiveDate && !$hasEffectiveTime) || (!$hasEffectiveDate && $hasEffectiveTime)) {
+                        $response = message('error', false, 'Jam Efektif dan Tanggal Efektif harus diisi');
+                    } else if (!empty($effectiveDateTime) && $effectiveDateTime <= $currentDateTime) {
+                        $response = message('error', false, 'Tanggal/Jam Efektif tidak boleh kurang atau sama persis dengan waktu sekarang');
+                    } else if (empty($sendMethods)) {
+                        $response = message('error', false, 'Mohon pilih minimal satu metode pengiriman (Email, Notification, atau Telegram)');
+                    } else {
                         $post['sentmethod'] = implode(',', $sendMethods);
-                        $ymd = date('YmdHis');
-                        $PATH_Broadcast = "broadcast";
-                        $path = $this->PATH_UPLOAD . $PATH_Broadcast . '/';
 
-                        $existingRecord = null;
-                        if (!empty($post['id'])) {
-                            $existingRecord = $this->model->find($post['id']);
-                        }
+                        $path = $this->PATH_UPLOAD . "broadcast" . '/';
 
-                        $attachments = ['attachment', 'attachment2', 'attachment3'];
-                        $tempBroadcastId = !empty($post['id']) ? $post['id'] : 'temp';
-
-                        foreach ($attachments as $index => $attachmentKey) {
-                            $file = $this->request->getFile($attachmentKey); 
-                            $getterMethod = 'get' . $attachmentKey; 
-                            $oldFileName = $existingRecord 
-                                ? $existingRecord->$getterMethod() 
-                                : null;
-
-                            $slotNumber = $index + 1;
-                            $suffix = '';
-                            if ($attachmentKey !== 'attachment') {
-                                $number = str_replace('attachment', '', $attachmentKey);
-                                $suffix = '_' . $number;
-                            }
-
-                            $maxFileSize = 2097152;
-
-                            if ($file && $file->isValid() && !$file->hasMoved()) {
-
-                                if ($file->getSize() > $maxFileSize) {
-
-                                    $fileSizeMB = round($file->getSize() / 1048576, 2);
-                                    $maxSizeMB  = round($maxFileSize / 1048576, 2);
-
-                                    $response = message(
-                                        'error',
-                                        false,
-                                        "Ukuran file {$attachmentKey} terlalu besar ({$fileSizeMB}MB). Maksimal {$maxSizeMB}MB"
-                                    );
-
-                                    return $this->response->setJSON($response);
-                                }
-
-                                if ($oldFileName) {
-                                    $oldPath = $path . $oldFileName;
-                                    if (file_exists($oldPath)) {
-                                        unlink($oldPath);
-                                    }
-                                }
-
-                                $originalName = pathinfo($file->getClientName(), PATHINFO_FILENAME);
-                                $ext = $file->getClientExtension();
-                                $img_name = "Broadcast_{$tempBroadcastId}_{$slotNumber}_[{$originalName}]_{$ymd}.{$ext}";
-
+                        if ($this->isNew()) {
+                            if ($file && $file->isValid())
                                 uploadFile($file, $path, $img_name);
 
-                                $post[$attachmentKey] = $img_name;
+                            if ($file2 && $file2->isValid())
+                                uploadFile($file2, $path, $img2_name);
+
+                            if ($file3 && $file3->isValid())
+                                uploadFile($file3, $path, $img3_name);
+                        } else {
+                            $row = $this->model->find($this->getID());
+
+                            if (empty($post['attachment']) && !empty($row->getAttachment()) && file_exists($path . $row->getAttachment())) {
+                                unlink($path . $row->getAttachment());
+                            } else  if ($file && $file->isValid()) {
+                                uploadFile($file, $path, $img_name);
                             }
 
-                            elseif (empty($post[$attachmentKey])) {
+                            if (empty($post['attachment2']) && !empty($row->getAttachment2()) && file_exists($path . $row->getAttachment2())) {
+                                unlink($path . $row->getAttachment2());
+                            } else if ($file2 && $file2->isValid()) {
+                                uploadFile($file2, $path, $img2_name);
+                            }
 
-                                if ($oldFileName) {
-                                    $oldPath = $path . $oldFileName;
-                                    if (file_exists($oldPath)) {
-                                        unlink($oldPath);
-                                    }
-                                }
-
-                                $post[$attachmentKey] = null;
+                            if (empty($post['attachment3']) && !empty($row->getAttachment3()) && file_exists($path . $row->getAttachment3())) {
+                                unlink($path . $row->getAttachment3());
+                            } else if ($file3 && $file3->isValid()) {
+                                uploadFile($file3, $path, $img3_name);
                             }
                         }
 
@@ -291,22 +241,25 @@ class Broadcast extends BaseController
 
                         $response = $this->save();
 
-                        if ($response) {
-
+                        if ($isSend === 'Y') {
                             $ID = $this->isNew() ? $this->model->getInsertID() : $post['id'];
 
-                            if ($this->isNew() && $tempBroadcastId === 'temp') {
-                                $this->updateFilenamesWithId($ID, $path);
-                            }
+                            //* Insert to queue
+                            $queueEntity = new \App\Entities\BroadcastQueue();
+                            $queueEntity->trx_broadcast_id = $ID;
+                            $queueEntity->status = 'PE';
+                            $queueEntity->starttime = date('Y-m-d H:i:s');
+                            $queueEntity->created_by = session()->get('sys_user_id');
+                            $queueEntity->updated_by = session()->get('sys_user_id');
+                            $mBroadcastQueue->save($queueEntity);
 
-                            if ($isSend === 'Y') {
-                                $this->sendBroadcastNow($ID);
-                                $response = message('success', true, 'Pesan sudah dikirim');
-                            }
+                            //* Update is Sent to Yes
+                            $this->entity->setBroadcastId($ID);
+                            $this->entity->setIsSent('Y');
+                            $this->save();
+
+                            $response = message('success', true, 'Pesan sudah dikirim');
                         }
-
-                    } else {
-                        $response = message('error', false, 'Mohon pilih minimal satu metode pengiriman (Email, Notification, atau Telegram)');
                     }
                 }
             } catch (\Exception $e) {
@@ -399,7 +352,7 @@ class Broadcast extends BaseController
 
                 $headerData = $this->field->store($fieldHeader);
                 $sentMethod = $list[0]->getSentMethod();
-                $methods = !empty($sentMethod) ? explode(',', $sentMethod) : []; 
+                $methods = !empty($sentMethod) ? explode(',', $sentMethod) : [];
 
                 $headerData[] = [
                     'field' => 'send_email',
@@ -420,7 +373,7 @@ class Broadcast extends BaseController
                 ];
 
                 $result = [
-                    'header' => $headerData,  
+                    'header' => $headerData,
                     'line'   => $this->tableLine('edit', $detail)
                 ];
 
@@ -438,7 +391,7 @@ class Broadcast extends BaseController
         $getterMethod = 'get' . $fieldName;
         $setterMethod = 'set' . $fieldName;
 
-        $filename = $listItem->$getterMethod(); 
+        $filename = $listItem->$getterMethod();
 
         if (!empty($filename) && file_exists($fullPath . $filename)) {
             $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
@@ -454,42 +407,15 @@ class Broadcast extends BaseController
         }
     }
 
-    private function updateFilenamesWithId($broadcastId, $path)
-    {
-        $broadcast = $this->model->find($broadcastId); 
-
-        $attachments = ['attachment', 'attachment2', 'attachment3'];
-        
-        foreach ($attachments as $index => $attachmentKey) {
-            $getterMethod = 'get' . $attachmentKey;
-            $oldFileName = $broadcast->$getterMethod(); 
-            
-            if ($oldFileName && str_starts_with($oldFileName, 'Broadcast_temp_')) {
-                $slotNumber = $index + 1;
-                $newFileName = str_replace('Broadcast_temp_', "Broadcast_{$broadcastId}_", $oldFileName);
-                
-                $oldPath = $path . $oldFileName; //uploads/broadcast/oldfilename
-                $newPath = $path . $newFileName; //uploads/broadcast/newfilename
-                
-                // Jika terdapat oldfilename maka rename
-                if (file_exists($oldPath)) {
-                    rename($oldPath, $newPath);
-                    
-                    $this->model->update($broadcastId, [$attachmentKey => $newFileName]);
-                }
-            }
-        }
-    }
-
     private function extractOriginalFilename($storedFilename)
     {
-        
+
         if (preg_match('/\[(.+?)\]/', $storedFilename, $matches)) {
             $originalName = $matches[1];
             $extension = pathinfo($storedFilename, PATHINFO_EXTENSION);
             return $originalName . '.' . $extension;
         }
-        
+
         return $storedFilename;
     }
 
@@ -520,69 +446,98 @@ class Broadcast extends BaseController
 
     public function cronUpdateBroadcast()
     {
+        //* Set Process time limit to zero or no limit
         set_time_limit(0);
+
+        $mBroadcastQueue = new M_BroadcastQueue($this->request);
         $now = date('Y-m-d H:i:s');
 
-            $broadcasts = $this->model
-                ->where('is_sent', 'N')
-                ->where('effective_date IS NOT NULL')
-                ->where('YEAR(effective_date) > 1970')
-                ->where('effective_date <=', $now)
-                ->findAll();
-
-        if (empty($broadcasts)) {
-            return;
-        }
+        // * Insert to queue first
+        $broadcasts = $this->model->select('trx_broadcast_id')
+            ->where('is_sent', 'N')
+            ->where('effective_date IS NOT NULL')
+            ->where('YEAR(effective_date) > 1970')
+            ->where('effective_date <=', $now)
+            ->findAll();
 
         foreach ($broadcasts as $val) {
-            $this->sendBroadcastNow($val->trx_broadcast_id);
+            $queue = $mBroadcastQueue->where('trx_broadcast_id', $val->trx_broadcast_id)->first();
+
+            if (!$queue) {
+                //* Insert to queue
+                $queueEntity = new \App\Entities\BroadcastQueue();
+                $queueEntity->trx_broadcast_id = $val->trx_broadcast_id;
+                $queueEntity->status = 'PE';
+                $queueEntity->starttime = $now;
+                $queueEntity->created_by = 100000;
+                $queueEntity->updated_by = 100000;
+                $mBroadcastQueue->save($queueEntity);
+            }
+        }
+
+        //* Running broadcast base on queue
+        $queueList = $mBroadcastQueue->where(['status' => 'PE', 'starttime <=' => date('Y-m-d H:i:s')])->findAll();
+
+        if (!empty($queueList)) {
+            //* Update to inprogress 
+            $allQueueID = array_column($queueList, 'trx_broadcast_queue_id');
+            $mBroadcastQueue->whereIn('trx_broadcast_queue_id', $allQueueID)->set(['status' => 'IP'])->update();
+
+            //* Do Send Broadcast
+            foreach ($queueList as $val) {
+                $this->sendBroadcastNow($val->trx_broadcast_id);
+            }
         }
     }
 
-    public function sendBroadcastNow($broadcastId)
+    public function sendBroadcastNow(int $broadcastId)
     {
-        $broadcast = $this->model->find($broadcastId);
+        $mBroadcastQueue = new M_BroadcastQueue($this->request);
+        $mEmployee      = new M_Employee($this->request);
+        $mUser          = new M_User($this->request);
+        $mBroadcastLog  = new M_BroadcastLog();
+        $telegram       = new Telegram();
+        $mail           = new Mail();
+        $messageCon     = new Message();
 
-        if (!$broadcast) {
+        $trx = $this->model->find($broadcastId);
+
+        if (!$trx) {
             throw new \Exception("Broadcast {$broadcastId} is not found");
         }
 
+        //* Set isSent to yes
         $this->model->update($broadcastId, [
             'is_sent'    => 'Y',
             'lastupdate' => date('Y-m-d H:i:s')
         ]);
 
-        $mEmployee      = new M_Employee($this->request);
-        $mUser          = new M_User($this->request);
-        $mBroadcastLog  = new M_BroadcastLog();
-        $telegram       = new Telegram($this->request);
-        $mail           = new Mail($this->request);
-        $messageCon     = new Message();
-
-        $methods = explode(',', (string) $broadcast->getSentMethod());
+        //* Get Send Method
+        $methods = explode(',', (string) $trx->getSentMethod());
 
         $sendEmail    = in_array('E', $methods);
         $sendTelegram = in_array('T', $methods);
         $sendNotif    = in_array('N', $methods);
 
-        $employeeIds = [];
+        //* Get Employee List
+        $employeeIds = null;
 
-        if ($broadcast->getMdEmployeeId()) {
-            $employeeIds[] = $broadcast->getMdEmployeeId();
+        if ($trx->getMdEmployeeId()) {
+            $employeeIds = [$trx->getMdEmployeeId()];
         } else {
-            $arrB = $broadcast->getMdBranchId()   ? [$broadcast->getMdBranchId()]   : [];
-            $arrD = $broadcast->getMdDivisionId() ? [$broadcast->getMdDivisionId()] : [];
+            $arrB = $trx->getMdBranchId()   ? [$trx->getMdBranchId()]   : [];
+            $arrD = $trx->getMdDivisionId() ? [$trx->getMdDivisionId()] : [];
 
             if ($arrB || $arrD) {
                 $employeeIds = $mEmployee->getEmployeeBased($arrB, $arrD);
-            } 
+            }
         }
 
-        $mEmployee->whereIn('md_status_id', [100001, 100002, 100008]);
+        $mEmployee->whereIn('md_status_id', [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK]);
 
         if (!empty($employeeIds)) {
             $mEmployee->whereIn('md_employee_id', $employeeIds);
-        } 
+        }
 
         $employees = $mEmployee->findAll();
 
@@ -590,91 +545,95 @@ class Broadcast extends BaseController
             throw new \Exception("No employees found for broadcast {$broadcastId}");
         }
 
-        $subject     = $broadcast->getTitle();
-        $messageEncoded = $broadcast->getMessage(); //Encoded
+        //* Preparing Broadcast Data
+        $subject     = $trx->getTitle();
+        $messageEncoded = $trx->getMessage(); //Encoded
         $messageHtml = html_entity_decode($messageEncoded, ENT_QUOTES, 'UTF-8');
 
         // Attachments
         $attachments = [];
-        $basePath = $this->PATH_UPLOAD . "broadcast/";
+        $path = $this->PATH_UPLOAD . "broadcast" . '/';
 
         foreach (
-            [$broadcast->getattachment(), $broadcast->getattachment2(),$broadcast->getattachment3()] 
+            [$trx->getattachment(), $trx->getattachment2(), $trx->getattachment3()]
             as $file
         ) {
-            if ($file && file_exists($basePath . $file)) {
+            if ($file && file_exists($path . $file)) {
                 $attachments[] = [
-                    'path' => $basePath . $file,
+                    'path' => $path . $file,
                     'name' => $this->extractOriginalFilename($file)
                 ];
             }
         }
 
+        //* Populate Users
+        $whereClause = "isactive = 'Y' AND (md_employee_id IS NOT NULL OR md_employee_id != 0)";
+        $allUsers = $mUser->where($whereClause)->findAll();
+        $userMap = array_column($allUsers, null, 'md_employee_id');
+
+        $logging_data = [];
+
         // Employee
         foreach ($employees as $employee) {
-
             $employeeId = $employee->md_employee_id;
+            $user = isset($userMap[$employeeId]) ? $userMap[$employeeId] : null;
 
-            $user = $mUser
-                ->where('md_employee_id', $employeeId)
-                ->first();
-
-        // Email
-        if ($sendEmail && $user) {
-            if (empty($user->email)) {
-                $mBroadcastLog->logBroadcast(
-                    $broadcastId,
-                    $employeeId,
-                    'Email',
-                    "No email account"
-                );
-            } elseif (!filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
-                $mBroadcastLog->logBroadcast(
-                    $broadcastId,
-                    $employeeId,
-                    'Email',
-                    "Invalid email format ({$user->email})"
-                );
-            } else {
-                try {
-                    $sent = $mail->sendEmail(
-                        $user->email,
-                        $subject,
-                        $messageHtml,
-                        null,
-                        null,
-                        $attachments,
-                        true
-                    );
-
-                    if (!$sent) {
-                        $mBroadcastLog->logBroadcast(
-                            $broadcastId,
-                            $employeeId,
-                            'Email',
-                            "Email failed to send ({$user->email})"
+            // Email
+            if ($sendEmail && $user) {
+                if (empty($user->email)) {
+                    $logging_data[] = [
+                        'trx_broadcast_id' => $broadcastId,
+                        'md_employee_id' => $employeeId,
+                        'sentmethod' => 'Email',
+                        'error_message' => 'No email account'
+                    ];
+                } elseif (!filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                    $logging_data[] = [
+                        'trx_broadcast_id' => $broadcastId,
+                        'md_employee_id' => $employeeId,
+                        'sentmethod' => 'Email',
+                        'error_message' => "Invalid email format ({$user->email})"
+                    ];
+                } else {
+                    try {
+                        $sent = $mail->sendEmail(
+                            $user->email,
+                            $subject,
+                            $messageHtml,
+                            null,
+                            null,
+                            $attachments,
+                            true
                         );
+
+                        if (!$sent) {
+                            $logging_data[] = [
+                                'trx_broadcast_id' => $broadcastId,
+                                'md_employee_id' => $employeeId,
+                                'sentmethod' => 'Email',
+                                'error_message' => "Email failed to send ({$user->email})"
+                            ];
+                        }
+                    } catch (\Exception $e) {
+                        $logging_data[] = [
+                            'trx_broadcast_id' => $broadcastId,
+                            'md_employee_id' => $employeeId,
+                            'sentmethod' => 'Email',
+                            'error_message' => $e->getMessage()
+                        ];
                     }
-                } catch (\Exception $e) {
-                    $mBroadcastLog->logBroadcast(
-                        $broadcastId,
-                        $employeeId,
-                        'Email',
-                        $e->getMessage()
-                    );
                 }
             }
-        }
 
             // Telegram
             if ($sendTelegram) {
                 if (empty($employee->telegram_id)) {
-                    $mBroadcastLog->logBroadcast(
-                        $broadcastId,
-                        $employeeId,
-                        'Telegram',
-                        "No telegram_id"
-                    );
+                    $logging_data[] = [
+                        'trx_broadcast_id' => $broadcastId,
+                        'md_employee_id' => $employeeId,
+                        'sentmethod' => 'Telegram',
+                        'error_message' => "No telegram_id"
+                    ];
                 } else {
                     try {
                         $telegramMessage = $telegram->prepareHtmlForTelegram($messageHtml);
@@ -684,12 +643,12 @@ class Broadcast extends BaseController
                         );
 
                         if (empty($response['ok'])) {
-                            $mBroadcastLog->logBroadcast(
-                                $broadcastId,
-                                $employeeId,
-                                'Telegram',
-                                $response['description'] ?? 'Unknown telegram error'
-                            );
+                            $logging_data[] = [
+                                'trx_broadcast_id' => $broadcastId,
+                                'md_employee_id' => $employeeId,
+                                'sentmethod' => 'Telegram',
+                                'error_message' => $response['description'] ?? 'Unknown telegram error'
+                            ];
                         } else {
                             foreach ($attachments as $att) {
                                 $ext = strtolower(pathinfo($att['path'], PATHINFO_EXTENSION));
@@ -705,54 +664,66 @@ class Broadcast extends BaseController
                                         );
                                     }
                                 } catch (\Exception $e) {
-                                    $mBroadcastLog->logBroadcast(
-                                        $broadcastId,
-                                        $employeeId,
-                                        'Telegram',
-                                        $e->getMessage()
-                                    );
+                                    $logging_data[] = [
+                                        'trx_broadcast_id' => $broadcastId,
+                                        'md_employee_id' => $employeeId,
+                                        'sentmethod' => 'Telegram',
+                                        'error_message' => $e->getMessage()
+                                    ];
                                 }
                             }
                         }
                     } catch (\Exception $e) {
-                        $mBroadcastLog->logBroadcast(
-                            $broadcastId,
-                            $employeeId,
-                            'Telegram',
-                            $e->getMessage()
-                        );
+                        $logging_data[] = [
+                            'trx_broadcast_id' => $broadcastId,
+                            'md_employee_id' => $employeeId,
+                            'sentmethod' => 'Telegram',
+                            'error_message' => $e->getMessage()
+                        ];
                     }
                 }
             }
 
-
             // Notification
             if ($sendNotif && $user) {
-                    try {
-                        $sent = $messageCon->sendNotification(
-                            $user->sys_user_id,
-                            $subject,
-                            $messageHtml
-                        );
+                try {
+                    $sent = $messageCon->sendNotification(
+                        $user->sys_user_id,
+                        $subject,
+                        $messageHtml
+                    );
 
-                        if (!$sent) {
-                            $mBroadcastLog->logBroadcast(
-                                $broadcastId,
-                                $employeeId,
-                                'Notification',
-                                "Notification failed"
-                            );
-                        }
-                    } catch (\Exception $e) {
-                        $mBroadcastLog->logBroadcast(
-                            $broadcastId,
-                            $employeeId,
-                            'Notification',
-                            $e->getMessage()
-                        );
+                    if (!$sent) {
+                        $logging_data[] = [
+                            'trx_broadcast_id' => $broadcastId,
+                            'md_employee_id' => $employeeId,
+                            'sentmethod' => 'Notification',
+                            'error_message' => "Notification failed"
+                        ];
                     }
+                } catch (\Exception $e) {
+                    $logging_data[] = [
+                        'trx_broadcast_id' => $broadcastId,
+                        'md_employee_id' => $employeeId,
+                        'sentmethod' => 'Notification',
+                        'error_message' => $e->getMessage()
+                    ];
                 }
+            }
         }
+
+        if (!empty($logging_data))
+            $mBroadcastLog->builder->insertBatch($logging_data);
+
+        //* Update Broadcast Queue
+        $queue = $mBroadcastQueue->where('trx_broadcast_id', $broadcastId)->first();
+
+        $queueEntity = new \App\Entities\BroadcastQueue();
+        $queueEntity->trx_broadcast_queue_id = $queue->trx_broadcast_queue_id;
+        $queueEntity->status = 'CO';
+        $queueEntity->endtime = date('Y-m-d H:i:s');
+        $queueEntity->updated_by = 100000;
+        $mBroadcastQueue->save($queueEntity);
     }
 
 
@@ -769,5 +740,4 @@ class Broadcast extends BaseController
             return $this->response->setJSON($response);
         }
     }
-
 }

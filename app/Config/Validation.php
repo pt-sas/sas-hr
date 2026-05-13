@@ -2603,7 +2603,31 @@ class Validation
             'errors' => [
                 'required' => 'Mohon mengisi {field} dahulu'
             ]
-        ]
+        ],
+        'attachment'            => [
+            'label'             => 'attachment 1',
+            'rules'             => 'max_size[attachment, 3024]|mime_in[attachment,image/jpg,image/jpeg,image/png,application/pdf]',
+            'errors'            => [
+                'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
+        'attachment2'                 => [
+            'label'             => 'attachment 2',
+            'rules'             => 'max_size[attachment2, 3024]|mime_in[attachment2,image/jpg,image/jpeg,image/png,application/pdf]',
+            'errors'            => [
+                'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
+        'attachment3'                 => [
+            'label'             => 'attachment 3',
+            'rules'             => 'max_size[attachment3, 3024]|mime_in[attachment3,image/jpg,image/jpeg,image/png,application/pdf]',
+            'errors'            => [
+                'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
+                'mime_in'       => 'Format file {field} wajib {param}',
+            ]
+        ],
     ];
 
     public $resign = [

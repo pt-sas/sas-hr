@@ -45,7 +45,7 @@
                     <div class="input-icon">
                         <input type="text"
                             class="form-control datepicker"
-                            name="effective_date">
+                            name="effective_date" placeholder="Tanggal Efektif">
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -71,8 +71,7 @@
                 <div class="form-group">
                     <label for="effective_time">Jam Efektif</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control timepicker-start" name="effective_time"
-                            placeholder="Jam Efektif">
+                        <input type="text" class="form-control timepicker-start" name="effective_time" placeholder="Jam Efektif">
                         <div class="input-icon-addon">
                             <i class="fa fa-clock"></i>
                         </div>
@@ -80,12 +79,9 @@
                     <small class="form-text text-danger" id="error_starttime"></small>
                 </div>
             </div>
-
-            <!-- Send Method -->
             <div class="col-md-6">
                 <div class="form-group">
                     <label>Send Method</label><br>
-
                     <div class="form-check d-inline-block mr-2">
                         <label class="form-check-label">
                             <input type="checkbox" class="form-check-input" id="send_email" name="send_email" value="E">
@@ -110,8 +106,6 @@
                     <small class="form-text text-danger" id="error_sentmethod"></small>
                 </div>
             </div>
-
-            <!-- Publish Status -->
             <div class="col-md-6">
                 <div class="form-group">
                     <label>Publish Status</label><br>
@@ -123,9 +117,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- <div class='col-md-6'></div> -->
-
             <!-- Attachment 1 -->
             <div class="col-md-4">
                 <div class="form-group">
@@ -152,11 +143,10 @@
                                 onchange="previewAll(this, '', '')" accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
-                        <small class="form-text text-danger" id="error_image"></small>
+                        <small class="form-text text-danger" id="error_attachment"></small>
                     </div>
                 </div>
             </div>
-
             <!-- Attachment 2 -->
             <div class="col-md-4">
                 <div class="form-group">
@@ -183,11 +173,10 @@
                                 onchange="previewAll(this, '', '')" accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
-                        <small class="form-text text-danger" id="error_image2"></small>
+                        <small class="form-text text-danger" id="error_attachment2"></small>
                     </div>
                 </div>
             </div>
-
             <!-- Attachment 3 -->
             <div class="col-md-4">
                 <div class="form-group">
@@ -214,13 +203,11 @@
                                 onchange="previewAll(this, '', '')" accept="image/jpeg, image/png, application/pdf, .xls, .xlsx, .doc, .docx"></input>
                             <img class="img-upload" src="<?= base_url('custom/image/cameraroll.png') ?>" />
                         </label>
-                        <small class="form-text text-danger" id="error_image3"></small>
+                        <small class="form-text text-danger" id="error_attachment3"></small>
                     </div>
                 </div>
             </div>
-
         </div>
-
         <div class="row">
             <div class="col-md-12">
                 <div class="form-group table-responsive">
@@ -238,6 +225,5 @@
                 </div>
             </div>
         </div>
-
     </form>
 </div>
