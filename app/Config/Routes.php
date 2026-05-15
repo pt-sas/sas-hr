@@ -845,6 +845,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
 
     $routes->post('lupa-absen-masuk/processIt', 'ForgotAbsentArrive::proccessSubmission');
     $routes->resource('lupa-absen-masuk', ['controller' => 'ForgotAbsentArrive']);
+
+    $routes->post('lupa-absen-pulang/processIt', 'ForgotAbsentLeave::proccessSubmission');
+    $routes->resource('lupa-absen-pulang', ['controller' => 'ForgotAbsentLeave']);
 });
 
 /*
