@@ -184,3 +184,63 @@ function addBusinessDays($startDate, $daysToAdd, $holidays = [], $backwards = fa
 
     return $date->format('Y-m-d');
 }
+
+function formatMonth_idn($month)
+{
+    switch ($month) {
+        case 1: {
+                $month = 'Januari'; //Sunday
+            }
+            break;
+        case 2: {
+                $month = 'Februari'; // Monday
+            }
+            break;
+        case 3: {
+                $month = 'Maret'; //Tuesday
+            }
+            break;
+        case 4: {
+                $month = 'April'; //Wednesday
+            }
+            break;
+        case 5: {
+                $month = 'Mei'; //Thursday
+            }
+            break;
+        case 6: {
+                $month = "Juni"; //Friday
+            }
+            break;
+        case 7: {
+                $month = 'Juli';  //Saturday
+            }
+            break;
+        case 8: {
+                $month = 'Agustus';  //Saturday
+            }
+            break;
+        case 9: {
+                $month = 'September';  //Saturday
+            }
+            break;
+        case 10: {
+                $month = 'Oktober';  //Saturday
+            }
+            break;
+        case 11: {
+                $month = 'November';  //Saturday
+            }
+            break;
+        case 12: {
+                $month = 'Desember';  //Saturday
+            }
+            break;
+        default: {
+                $month = 'UnKnown';
+            }
+            break;
+    }
+
+    return $month;
+}

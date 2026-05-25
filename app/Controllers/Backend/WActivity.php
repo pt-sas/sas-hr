@@ -465,8 +465,6 @@ class WActivity extends BaseController
         $mDocType = new M_DocumentType($this->request);
         $mHoliday = new M_Holiday($this->request);
 
-        $services = new WActivityServices(100000, 0);
-
         $this->session->set([
             'sys_user_id'       => 100000,
         ]);
@@ -481,6 +479,7 @@ class WActivity extends BaseController
 
         if ($list) {
             foreach ($list as $row) {
+
                 $trx = $this->model
                     ->builder($row->table)
                     ->where($row->table . '_id', $row->record_id)
@@ -495,6 +494,7 @@ class WActivity extends BaseController
                     );
 
                     if ($dateNotApproved <= $today) {
+                        $services = new WActivityServices(100000, 0);
                         $services->processActivity($row->sys_wfactivity_id, ['isanswer' => 'N', 'textmsg' => '']);
                     }
                 } else {

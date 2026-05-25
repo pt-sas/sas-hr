@@ -848,6 +848,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
 
     $routes->post('lupa-absen-pulang/processIt', 'ForgotAbsentLeave::proccessSubmission');
     $routes->resource('lupa-absen-pulang', ['controller' => 'ForgotAbsentLeave']);
+
+    $routes->get('today-attendance', 'Attendance::getTodayAttendance');
 });
 
 /*
