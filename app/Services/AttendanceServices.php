@@ -78,12 +78,11 @@ class AttendanceServices extends BaseServices
             $clockIn = $this->model->getAttBranch("{$where} AND v_attendance_branch.md_branch_id IN ($branchIn)")->getRow();
             $clockOut = $this->model->getAttBranch("{$where} AND v_attendance_branch.md_branch_id IN ($branchOut)")->getRow();
         }
-        logMessage($clockIn);
-        logMessage($clockOut);
+
         $output = [
-            'date' => formatDay_idn(date('w')) . ', ' . date('d') . ' ' . formatMonth_idn(date('m')),
-            'clock_in' =>  $clockIn && !empty($clockIn->clock_in) ? format_time($clockIn->clock_in) : null,
-            'clock_out' => $clockOut && !empty($clockOut->clock_out) ? format_time($clockOut->clock_out) : null
+            'date' => formatDay_idn(date('w')) . ', ' . format_idn($today),
+            'clock_in' =>  $clockIn && !empty($clockIn->clock_in) ? $clockIn->clock_in : null,
+            'clock_out' => $clockOut && !empty($clockOut->clock_out) ? $clockOut->clock_out : null
         ];
 
         return $output;
