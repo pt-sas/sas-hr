@@ -5,15 +5,22 @@ namespace App\Controllers\API;
 use App\Controllers\ApiController;
 use App\Exceptions\UnSupportedException;
 use App\Exceptions\ValidationException;
+use App\Services\AuthServices;
 use App\Services\ForgotAbsentLeaveServices;
 
 class ForgotAbsentLeave extends ApiController
 {
+    protected $menuURL = 'lupa-absen-pulang';
+
     //* Show all data
     public function index()
     {
         $status_code = null;
         try {
+            //* Check Access
+            $authServices = new AuthServices($this->jwt->sys_user_id, $this->jwt->md_employee_id, $this->jwt->sys_role_id);
+            $authServices->checkAccess($this->menuURL, $this->Method_VIEW);
+
             $service = new ForgotAbsentLeaveServices($this->jwt->sys_user_id, $this->jwt->md_employee_id);
 
             //* Settle up parameter
@@ -33,6 +40,9 @@ class ForgotAbsentLeave extends ApiController
             $result = $service->getPaginated($params, $this->jwt->md_employee_id);
 
             $response = apiResponse(true, "success", $result['data'], [], $result['meta']);
+        } catch (\App\Exceptions\BaseException $e) {
+            $response = apiResponse(false, $e->getMessage());
+            $status_code = $e->getStatusCode();
         } catch (\Exception $e) {
             log_message('error', 'ForgotAbsentLeave [index] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
 
@@ -53,6 +63,10 @@ class ForgotAbsentLeave extends ApiController
         try {
             if (empty($data))
                 throw new UnSupportedException("Unsupported Media");
+
+            //* Check Access
+            $authServices = new AuthServices($this->jwt->sys_user_id, $this->jwt->md_employee_id, $this->jwt->sys_role_id);
+            empty($data['trx_absent_id']) ? $authServices->checkAccess($this->menuURL, $this->Method_CREATE) : $authServices->checkAccess($this->menuURL, $this->Method_UPDATE);
 
             if (!$this->validation->run($data, 'pengajuan')) {
                 $response = apiResponse(false, "Validation Rules", [], $this->validation->getErrors());
@@ -81,6 +95,10 @@ class ForgotAbsentLeave extends ApiController
         $status_code = null;
 
         try {
+            //* Check Access
+            $authServices = new AuthServices($this->jwt->sys_user_id, $this->jwt->md_employee_id, $this->jwt->sys_role_id);
+            $authServices->checkAccess($this->menuURL, $this->Method_VIEW);
+
             $data = $service->show($id);
             $response = apiResponse(true, "Success", $data);
         } catch (\App\Exceptions\BaseException $e) {
@@ -104,6 +122,10 @@ class ForgotAbsentLeave extends ApiController
         $status_code = null;
 
         try {
+            //* Check Access
+            $authServices = new AuthServices($this->jwt->sys_user_id, $this->jwt->md_employee_id, $this->jwt->sys_role_id);
+            $authServices->checkAccess($this->menuURL, $this->Method_UPDATE);
+
             if (empty($data))
                 throw new UnSupportedException("Unsupported Media");
 

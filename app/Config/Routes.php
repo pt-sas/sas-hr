@@ -824,6 +824,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
 });
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 'cors'], function ($routes) {
+    $routes->get('my-access', 'Auth::getAccessMenu');
+
     $routes->resource('user');
     $routes->post('auth/changePassword', 'Auth::changePassword');
 

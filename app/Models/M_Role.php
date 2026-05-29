@@ -63,8 +63,10 @@ class M_Role extends Model
                     am.isview,
                     am.iscreate,
                     am.isupdate,
-                    am.isdelete');
+                    am.isdelete,
+                    submenu.url');
         $this->builder->join('sys_access_menu am', 'am.sys_role_id = ' . $this->table . '.sys_role_id', 'left');
+        $this->builder->join('sys_submenu submenu', 'am.sys_submenu_id = submenu.sys_submenu_id', 'left');
 
         if (count($param) > 0)
             $this->builder->where($param);

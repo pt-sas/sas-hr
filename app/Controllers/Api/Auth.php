@@ -3,7 +3,9 @@
 namespace App\Controllers\API;
 
 use App\Controllers\ApiController;
+use App\Exceptions\NotFoundException;
 use App\Models\M_RefreshToken;
+use App\Models\M_Role;
 use App\Models\M_User;
 use App\Services\UserServices;
 use Firebase\JWT\JWT;
@@ -27,9 +29,9 @@ class Auth extends ApiController
                     ])->getRow();
 
                     if ($dataUser) {
-                        if ($dataUser->isactive === "Y" && !empty($dataUser->role)) {
+                        if ($dataUser->isactive === "Y" && !empty($dataUser->role) && !empty($dataUser->md_employee_id)) {
                             if (password_verify($data['password'], $dataUser->password)) {
-                                $access_token = $this->generateAccessToken($dataUser->sys_user_id, $dataUser->md_employee_id);
+                                $access_token = $this->generateAccessToken($dataUser->sys_user_id, $dataUser->md_employee_id, $dataUser->role);
                                 $refresh_token = $this->generateRefreshToken($dataUser->sys_user_id, $this->request->getHeader('User-Agent'));
 
                                 $apiData = ["token" => $access_token, "refresh_token" => $refresh_token];
@@ -39,7 +41,7 @@ class Auth extends ApiController
                                 $response = apiResponse(false, "Wrong Username or Password");
                                 $status_code = 401;
                             }
-                        } else if ($dataUser->isactive !== "Y" || empty($dataUser->role)) {
+                        } else {
                             $response = apiResponse(false, "User don't have access");
                             $status_code = 403;
                         }
@@ -86,10 +88,10 @@ class Auth extends ApiController
                         ->first();
 
                     if ($ref_token_data) {
-                        $user = $mUser->where(['sys_user_id' => $ref_token_data->sys_user_id, 'isactive' => 'Y'])->first();
+                        $user = $mUser->detail(['sys_user.sys_user_id' => $ref_token_data->sys_user_id])->getRow();
 
                         if ($user) {
-                            $access_token = $this->generateAccessToken($user->sys_user_id, $user->md_employee_id);
+                            $access_token = $this->generateAccessToken($user->sys_user_id, $user->md_employee_id, $user->role);
                             $refresh_token = $this->generateRefreshToken($user->sys_user_id, $user_agent);
                             $model->revokeToken($hashed_ref_token);
 
@@ -175,7 +177,52 @@ class Auth extends ApiController
         return $this->respond($response, $status_code);
     }
 
-    private function generateAccessToken($sys_user_id, $md_employee_id)
+    public function getAccessMenu()
+    {
+        $status_code = null;
+
+        try {
+            $mRole = new M_Role($this->request);
+
+            //* get data access menu submission only
+            $userAccess = $mRole->detail(['am.sys_role_id' => $this->jwt->sys_role_id, 'submenu.isactive' => 'Y', 'submenu.sys_menu_id' => 3])->getResult();
+
+            //* If user access not found, throw error
+            if (!$userAccess) throw new NotFoundException('Akses user tidak ditemukan');
+
+            $data = [
+                'sys_role_id' => $userAccess[0]->sys_role_id,
+                'name'  => $userAccess[0]->name,
+                'isactive'  => $userAccess[0]->isactive
+            ];
+
+            foreach ($userAccess as $access) {
+                if (!empty($access->sys_submenu_id)) {
+                    $data['menu'][] = [
+                        'url'  => $access->url,
+                        'isview' => $access->isview,
+                        'iscreate' => $access->iscreate,
+                        'isupdate' => $access->isupdate,
+                        'isdelete' => $access->isdelete
+                    ];
+                }
+            }
+
+            $response = apiResponse(true, "success", $data);
+        } catch (\App\Exceptions\BaseException $e) {
+            $response = apiResponse(false, $e->getMessage());
+            $status_code = $e->getStatusCode();
+        } catch (\Exception $e) {
+            log_message('error', 'Auth [getAccessMenu] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+
+            $response = apiResponse(false, 'Internal Server Error');
+            $status_code = 500;
+        }
+
+        return $this->respond($response, $status_code);
+    }
+
+    private function generateAccessToken($sys_user_id, $md_employee_id, $sys_role_id)
     {
         $key = getenv('JWT_SECRET');
         $access_ttl = getenv('JWT_ACCESS_TTL');
@@ -185,7 +232,8 @@ class Auth extends ApiController
             "iat" => $iat,
             "exp" => $iat + $access_ttl,
             "sys_user_id" => $sys_user_id,
-            "md_employee_id" => $md_employee_id
+            "md_employee_id" => $md_employee_id,
+            "sys_role_id" => $sys_role_id,
         ];
 
         return JWT::encode($payload, $key);
