@@ -14,6 +14,12 @@ class ApiController extends ResourceController
     protected $request;
     protected $jwt;
 
+    //* RBAC Method
+    protected $Method_VIEW = 'isview';
+    protected $Method_CREATE = 'iscreate';
+    protected $Method_UPDATE = 'isupdate';
+    protected $Method_DELETE = 'isdelete';
+
     public function __construct()
     {
         $this->request = Services::request();

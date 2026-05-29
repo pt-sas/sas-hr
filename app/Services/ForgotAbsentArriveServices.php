@@ -352,6 +352,8 @@ class ForgotAbsentArriveServices extends BaseServices
             return 'Pengajuan berhasil Diproses';
         } else if ($docaction === $this->DOCSTATUS_Voided) {
             $this->entity->setDocStatus($this->DOCSTATUS_Voided);
+            $this->entity->setAbsentId($id);
+            $this->save();
             return 'Pengajuan berhasil Divoid';
         } else if ($docaction === $this->DOCSTATUS_Reopen) {
             $config = $mConfig->where('name', "MAX_DATE_REOPEN")->first();
