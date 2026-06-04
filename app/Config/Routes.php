@@ -852,6 +852,17 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
     $routes->resource('lupa-absen-pulang', ['controller' => 'ForgotAbsentLeave']);
 
     $routes->get('today-attendance', 'Attendance::getTodayAttendance');
+
+    $routes->post('pulang-cepat/processIt', 'PermissionLeaveEarly::proccessSubmission');
+    $routes->resource('pulang-cepat', ['controller' => 'PermissionLeaveEarly']);
+
+    $routes->get('monthly-attendance', 'Attendance::getMonthlyAttendance');
+
+    $routes->post('sakit/processIt', 'SickLeave::proccessSubmission');
+    $routes->resource('sakit', ['controller' => 'SickLeave']);
+
+    $routes->post('ijin/processIt', 'Permission::proccessSubmission');
+    $routes->resource('ijin', ['controller' => 'Permission']);
 });
 
 /*

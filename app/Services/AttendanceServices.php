@@ -9,6 +9,9 @@ use App\Models\M_Configuration;
 use App\Models\M_EmpBranch;
 use App\Models\M_Employee;
 use App\Services\BaseServices;
+use App\Models\M_Absent;
+use App\Models\M_Holiday;
+use App\Models\M_WorkDetail;
 
 class AttendanceServices extends BaseServices
 {
@@ -86,5 +89,107 @@ class AttendanceServices extends BaseServices
         ];
 
         return $output;
+    }
+
+    public function getMonthlyAttendance(int $md_employee_id)
+    {
+        $mAbsent = new M_Absent($this->request);
+        $mHoliday = new M_Holiday($this->request);
+        $mWorkDetail = new M_WorkDetail($this->request);
+
+        $firstDate = date('Y-m-01');
+        $lastDate = date('Y-m-t');
+
+        $holiday = $mHoliday->getHolidayDate();
+        $holidays = implode(", ", $holiday);
+
+        $whereClause = "md_work_detail.isactive = 'Y'";
+        $whereClause .= " AND md_employee_work.md_employee_id = {$md_employee_id}";
+        $whereClause .= " AND (md_employee_work.validfrom <= '{$firstDate}' AND md_employee_work.validto >= '{$lastDate}')";
+        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+        $daysOff = getDaysOff($workDetail);
+        $daysOffStr = implode(", ", $daysOff);
+
+        // $whereClause = "v_attendance.md_employee_id = {$md_employee_id}";
+        // $whereClause .= " AND MONTH(v_attendance.date) = MONTH(CURDATE())";
+        // $whereClause .= " AND YEAR(v_attendance.date) = YEAR(CURDATE())";
+        // $hadir = count($this->model->getAttendance($whereClause)->getResult());
+
+        $whereClause = "v_attendance.clock_in > '08:00'";
+        $whereClause .= " AND v_attendance.md_employee_id = {$md_employee_id}";
+        $whereClause .= " AND MONTH(v_attendance.date) = MONTH(CURDATE())";
+        $whereClause .= " AND YEAR(v_attendance.date) = YEAR(CURDATE())";
+        $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
+        $whereClause .= " AND DATE(v_attendance.date) NOT IN ({$holidays})";
+        $terlambat = count($this->model->getAttendance($whereClause)->getResult());
+
+        $baseClause = "v_all_submission.md_employee_id = {$md_employee_id}"
+            . " AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'"
+            . " AND MONTH(v_all_submission.date) = MONTH(CURDATE())"
+            . " AND YEAR(v_all_submission.date) = YEAR(CURDATE())";
+
+        $sakit = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Sakit}"
+        )->getResult());
+
+        $cuti = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Cuti}"
+        )->getResult());
+
+        $ijin = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Ijin}"
+        )->getResult());
+
+        $ijinResmi = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Ijin_Resmi}"
+        )->getResult());
+
+        $alpa = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Alpa}"
+        )->getResult());
+
+        $tk1Hari = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Tugas_Kantor}"
+        )->getResult());
+
+        $penugasan = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Penugasan}"
+        )->getResult());
+
+        $tkSetengahHari = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}"
+        )->getResult());
+
+        $pulangCepat = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Pulang_Cepat}"
+        )->getResult());
+
+        $lupaAbsenMasuk = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Lupa_Absen_Masuk}"
+        )->getResult());
+
+        $lupaAbsenPulang = count($mAbsent->getAllSubmission(
+            $baseClause . " AND v_all_submission.submissiontype = {$mAbsent->Pengajuan_Lupa_Absen_Pulang}"
+        )->getResult());
+
+        $periodParts = explode(' ', format_idn(date('Y-m-01')));
+        array_shift($periodParts);
+
+        return [
+            'period'            => implode(' ', $periodParts),
+            // 'hadir'             => $hadir,
+            'terlambat'         => $terlambat,
+            'sakit'             => $sakit,
+            'cuti'              => $cuti,
+            'ijin'              => $ijin,
+            'ijin_resmi'        => $ijinResmi,
+            'alpa'              => $alpa,
+            'tk_1_hari'         => $tk1Hari,
+            'penugasan'         => $penugasan,
+            'tk_setengah_hari'  => $tkSetengahHari,
+            'pulang_cepat'      => $pulangCepat,
+            'lupa_absen_masuk'  => $lupaAbsenMasuk,
+            'lupa_absen_pulang' => $lupaAbsenPulang,
+        ];
     }
 }

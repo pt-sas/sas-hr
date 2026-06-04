@@ -17,7 +17,7 @@ class UploadServices extends BaseServices
         $this->employeeID = $employeeID;
     }
 
-    public function saveImage($file, int $md_employee_id, int $submissionType)
+    public function saveImage($file, int $md_employee_id, int $submissionType, string $suffix = '')
     {
         //* Call Models
         $mEmployee = new M_Employee($this->request);
@@ -31,7 +31,7 @@ class UploadServices extends BaseServices
 
         if ($file && $file->isValid()) {
             $ext = $file->getClientExtension();
-            $img_name = $submissionType . '_' . $value . '_' . $ymd . '.' . $ext;
+            $img_name = $submissionType . '_' . $value . $suffix . '_' . $ymd . '.' . $ext;
         }
 
         $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
