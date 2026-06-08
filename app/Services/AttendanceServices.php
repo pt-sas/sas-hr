@@ -192,4 +192,21 @@ class AttendanceServices extends BaseServices
             'lupa_absen_pulang' => $lupaAbsenPulang,
         ];
     }
+
+    public function getInProgressSubmissions($employeeId)
+        {
+            $mAbsent = new M_Absent($this->request);
+            
+            $baseClause = "v_all_submission.md_employee_id = {$employeeId}"
+                . " AND v_all_submission.docstatus = '{$this->DOCSTATUS_Inprogress}'";
+
+            $submissions = $mAbsent->getAllSubmission($baseClause)->getResult();
+
+            $documentNumbers = [];
+            foreach ($submissions as $submission) {
+                $documentNumbers[] = $submission->documentno;
+            }
+
+            return $documentNumbers;
+        }
 }

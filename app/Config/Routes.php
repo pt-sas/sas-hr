@@ -863,6 +863,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
 
     $routes->post('ijin/processIt', 'Permission::proccessSubmission');
     $routes->resource('ijin', ['controller' => 'Permission']);
+
+    $routes->get('in-progress-submissions', 'Attendance::getInProgressSubmissions');
 });
 
 /*
