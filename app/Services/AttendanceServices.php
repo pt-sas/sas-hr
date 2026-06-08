@@ -206,6 +206,7 @@ class AttendanceServices extends BaseServices
             foreach ($submissions as $submission) {
                 $documentNumbers[] = $submission->documentno;
             }
+            $documentNumbers = array_values(array_unique($documentNumbers));
 
             return $documentNumbers;
         }
