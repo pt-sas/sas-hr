@@ -65,6 +65,7 @@
                     <select class="form-control select2" id="md_leavetype_id" name="md_leavetype_id">
                         <option value="">Pilih Ijin Khusus</option>
                     </select>
+                    <small class="form-text text-danger" id="error_md_leavetype_id"></small>
                 </div>
             </div>
             <div class="col-md-3">
