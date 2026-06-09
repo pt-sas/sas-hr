@@ -17,6 +17,8 @@
                             <th>No</th>
                             <th>NIK</th>
                             <th>Karyawan</th>
+                            <th>Cabang</th>
+                            <th>Divisi</th>
                             <th>Tanggal Tidak Absen</th>
                             <th>Kabar</th>
                             <th class="text-center">Aksi</th>

@@ -17,6 +17,7 @@ class Interview extends Entity
     protected $md_division_id;
     protected $md_position_id;
     protected $terminatedate;
+    protected $registerdate;
     protected $description;
     protected $docstatus;
     protected $isapproved;
@@ -122,6 +123,19 @@ class Interview extends Entity
     public function setTerminateDate($terminatedate)
     {
         $this->attributes['terminatedate'] = $terminatedate;
+    }
+
+    public function getRegisterDate()
+    {
+        // if (!empty($this->attributes['startdate']))
+        // return format_dmy($this->attributes['startdate'], "-");
+
+        return $this->attributes['registerdate'];
+    }
+
+    public function setRegisterDate($registerdate)
+    {
+        $this->attributes['registerdate'] = $registerdate;
     }
 
     public function getSubmissionDate()

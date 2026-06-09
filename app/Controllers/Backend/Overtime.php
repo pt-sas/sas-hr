@@ -3,6 +3,8 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Bundling;
+use App\Models\M_BundlingParticipant;
 use App\Models\M_Overtime;
 use App\Models\M_OvertimeDetail;
 use App\Models\M_Division;
@@ -373,6 +375,7 @@ class Overtime extends BaseController
     public function tableLine($set = null, $detail = [])
     {
         $employee = new M_Employee($this->request);
+        $mBundlingParticipant = new M_BundlingParticipant($this->request);
 
         $post = $this->request->getPost();
 
@@ -433,15 +436,14 @@ class Overtime extends BaseController
             if (!$this->validation->run($post, 'lemburAddRow')) {
                 $table = $this->field->errorValidation($this->model->table, $post);
             } else {
-
                 if ($post['md_branch_id'] !== null || $post['md_division_id'] !== null) {
                     $empId = $post['md_employee_id'];
-                    $empList = $this->access->getEmployeeData(false, true);
+                    $isBundling = !empty($post['trx_bundling_id']) ? true : false;
+                    $empList = $isBundling ? $mBundlingParticipant->getEmployeeList($post['trx_bundling_id']) : $this->access->getEmployeeData(false, true);
 
                     $whereClause = "md_employee.isactive = 'Y'";
-                    $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
-                    $whereClause .= " AND md_benefit_detail.status = 'Y'";
                     $whereClause .= " AND md_employee_branch.md_branch_id = {$post['md_branch_id']}";
+                    $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
 
                     if ($empList) {
                         $whereClause .= " AND md_employee.md_employee_id IN (" . implode(", ", $empList) . ")";
@@ -451,12 +453,15 @@ class Overtime extends BaseController
                         $whereClause .= " OR md_employee.superior_id = $empId)";
                     }
 
-                    $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
+                    if (!$isBundling) {
+                        $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
+                        $whereClause .= " AND md_benefit_detail.status = 'Y'";
 
-                    if (!empty($post['md_supplier_id']))
-                        $whereClause .= " AND md_employee.md_supplier_id = {$post['md_supplier_id']}";
-                    else
-                        $whereClause .= " AND md_employee.md_status_id <> {$this->Status_OUTSOURCING}";
+                        if (!empty($post['md_supplier_id']))
+                            $whereClause .= " AND md_employee.md_supplier_id = {$post['md_supplier_id']}";
+                        else
+                            $whereClause .= " AND md_employee.md_status_id <> {$this->Status_OUTSOURCING}";
+                    }
 
                     $dataEmployee = $employee->getEmployee($whereClause);
 
@@ -478,15 +483,14 @@ class Overtime extends BaseController
 
         //? Update
         if (!empty($set) && count($detail) > 0) {
-            foreach ($detail as $row) :
-                $id = $row->getOvertimeId();
-                $header = $this->model->where('trx_overtime_id', $id)->first();
-                $empList = $this->access->getEmployeeData(false, true);
+            $header = $this->model->where('trx_overtime_id', $detail[0]->getOvertimeId())->first();
+            $isBundling = !empty($header->trx_bundling_id) ? true : false;
+            $empList = $isBundling ? $mBundlingParticipant->getEmployeeList($header->trx_bundling_id) : $this->access->getEmployeeData(false, true);
 
+            foreach ($detail as $row) :
                 $whereClause = "md_employee.isactive = 'Y'";
-                $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
-                $whereClause .= " AND md_benefit_detail.status = 'Y'";
                 $whereClause .= " AND md_employee_branch.md_branch_id = {$header->md_branch_id}";
+                $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
 
                 if ($empList) {
                     $whereClause .= " AND md_employee.md_employee_id IN (" . implode(", ", $empList) . ")";
@@ -494,12 +498,15 @@ class Overtime extends BaseController
                     $whereClause .= " AND md_employee.md_employee_id = " . $row->getEmployeeID();
                 }
 
-                $whereClause .= " AND md_employee.md_status_id <> {$this->Status_RESIGN}";
+                if (!$isBundling) {
+                    $whereClause .= " AND md_benefit_detail.benefit = 'LEMBUR'";
+                    $whereClause .= " AND md_benefit_detail.status = 'Y'";
 
-                if (!empty($header->md_supplier_id))
-                    $whereClause .= " AND md_employee.md_supplier_id = {$header->md_supplier_id}";
-                else
-                    $whereClause .= " AND md_employee.md_status_id <> {$this->Status_OUTSOURCING}";
+                    if (!empty($header->md_supplier_id))
+                        $whereClause .= " AND md_employee.md_supplier_id = {$header->md_supplier_id}";
+                    else
+                        $whereClause .= " AND md_employee.md_status_id <> {$this->Status_OUTSOURCING}";
+                }
 
                 $dataEmployee = $employee->getEmployee($whereClause);
                 $fieldEmployee->setList($dataEmployee);

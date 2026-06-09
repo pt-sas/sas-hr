@@ -4,11 +4,12 @@
             <tr>
                 <th>No</th>
                 <th>Karyawan</th>
+                <th>No Dokumen</th>
                 <th>Tanggal</th>
-                <th>Saldo</th>
-                <th>Pengajuan</th>
-                <th>Saldo Tahun Lalu</th>
-                <th>Keterangan</th>
+                <th>Jumlah</th>
+                <th>Reserve Cuti</th>
+                <th>Tersedia</th>
+                <th>Saldo Cuti</th>
             </tr>
         </thead>
     </table>

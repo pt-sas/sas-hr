@@ -14,8 +14,33 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <div class="select2-input select2-primary">
+                                    <select class="form-control multiple-select-branch access" name="md_branch_id"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <div class="select2-input select2-primary">
+                                    <select class="form-control multiple-select-division access"
+                                        name="md_division_id"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <select class="form-control select2"
+                                    name="kabar">
+                                    <option></option>
+                                    <option value="Y">Sudah Input Kabar</option>
+                                    <option value="N">Belum Input Kabar</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="row">
+                    <div class=" row">
                         <div class="col-md-6">
                             <div class="form-group">
                                 <button type="button" class="btn btn-primary btn-sm btn-round ml-auto btn_filter_realize" title="Filter">

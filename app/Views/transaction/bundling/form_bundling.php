@@ -1,7 +1,33 @@
 <div class="card-body card-form">
-    <form class="form-horizontal form-absent" id="form_overtime">
+    <form class="form-horizontal form-absent" id="form_bundling">
         <?= csrf_field(); ?>
         <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="name">Nama Paket <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="name" name="name">
+                    <small class="form-text text-danger" id="error_name"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="bundling_type">Tipe Paket <span class="required">*</span></label>
+                    <select class="form-control select2" id="bundling_type" name="bundling_type">
+                        <option value="">Pilih Paket</option>
+                        <?php foreach ($ref_list as $row) : ?>
+                            <option value="<?= $row->name ?>"><?= $row->name ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-text text-danger" id="error_bundling_type"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="documentno">No Form</label>
+                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
+                        readonly>
+                </div>
+            </div>
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_employee_id">Pemohon <span class="required">*</span></label>
@@ -14,41 +40,20 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="trx_bundling_id">No Paket <span class="required">*</span></label>
-                    <select class="form-control select2" id="trx_bundling_id" name="trx_bundling_id">
-                        <option value="">Pilih Paket</option>
-                    </select>
-                    <small class="form-text text-danger" id="error_trx_bundling_id"></small>
+                    <label for="estimate_time">Estimasi Jam <span class="required">*</span></label>
+                    <div class="input-icon">
+                        <input type="text" class="form-control number" id="estimate_time" name="estimate_time" autocomplete="off">
+                        <div class="input-icon-addon">
+                            <i class="fa fa-clock"></i>
+                        </div>
+                    </div>
+                    <small class="form-text text-danger" id="error_estimate_time"></small>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="documentno">No Form</label>
-                    <input type="text" class="form-control" id="documentno" name="documentno" placeholder="[auto]"
-                        readonly>
-                </div>
-            </div>
+
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="md_branch_id">Cabang <span class="required">*</span></label>
-                    <select class="form-control select2" id="md_branch_id" name="md_branch_id">
-                        <option value="">Select Cabang</option>
-                    </select>
-                    <small class="form-text text-danger" id="error_md_division_id"></small>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="md_division_id">Divisi <span class="required">*</span></label>
-                    <select class="form-control select2" id="md_division_id" name="md_division_id">
-                        <option value="">Select Divisi</option>
-                    </select>
-                    <small class="form-text text-danger" id="error_md_division_id"></small>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="submissiondate">Tanggal Pembuatan <span class="required">*</span></label>
+                    <label for="submissiondate">Tanggal Pembuatan</label>
                     <div class="input-icon">
                         <input type="text" class="form-control datepicker" id="submissiondate" name="submissiondate"
                             value=<?= $today ?> disabled>
@@ -72,42 +77,41 @@
                     <small class="form-text text-danger" id="error_approveddate"></small>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <div class="form-group">
-                    <label for="description">Deskripsi <span class="required">*</span></label>
-                    <textarea type="text" class="form-control" name="description" rows="4"></textarea>
-                    <small class="form-text text-danger" id="error_description"></small>
+                    <label for="md_branch_id">Cabang <span class="required">*</span></label>
+                    <select class="form-control select2" id="md_branch_id" name="md_branch_id" disabled>
+                        <option value="">Select Cabang</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_md_branch_id"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="md_division_id">Divisi <span class="required">*</span></label>
+                    <select class="form-control select2" id="md_division_id" name="md_division_id" disabled>
+                        <option value="">Select Divisi</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_md_division_id"></small>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal Mulai <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepicker-lembur" name="startdate">
+                        <input type="text" class="form-control date-start" name="startdate" autocomplete="off">
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
                     </div>
                     <small class="form-text text-danger" id="error_startdate"></small>
-                </div>
-                <div class="form-check">
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" name="isemployee" checked
-                            hide-field="md_supplier_id">
-                        <span class=" form-check-sign">Karyawan</span>
-                    </label>
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" name="ispacket"
-                            show-field="trx_bundling_id">
-                        <span class=" form-check-sign">Paket</span>
-                    </label>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="date">Tanggal Selesai <span class="required">*</span></label>
                     <div class="input-icon">
-                        <input type="text" class="form-control datepicker" name="enddate" readonly>
+                        <input type="text" class="form-control date-end" name="enddate" autocomplete="off">
                         <span class="input-icon-addon">
                             <i class="fa fa-calendar"></i>
                         </span>
@@ -115,14 +119,11 @@
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <div class="form-group">
-                    <label for="md_supplier_id">Asal Outsourcing <span class="required">*</span></label>
-                    <select class="form-control select-data" id="md_supplier_id" name="md_supplier_id"
-                        data-url="supplier/getList">
-                        <option value="">Select Supplier</option>
-                    </select>
-                    <small class="form-text text-danger" id="error_md_supplier_id"></small>
+                    <label for="description">Deskripsi</label>
+                    <textarea type="text" class="form-control" name="description" rows="4"></textarea>
+                    <small class="form-text text-danger" id="error_description"></small>
                 </div>
             </div>
         </div>
@@ -137,16 +138,13 @@
             </div>
             <div class="col-md-12">
                 <div class="form-group">
-                    <table class="table table-light table-hover tb_displayline" id="table_overtime" style="width: 100%">
+                    <table class="table table-light table-hover tb_displayline tb_childrow" id="table_overtime" style="width: 100%">
                         <thead>
                             <tr>
+                                <th></th>
                                 <th>Karyawan</th>
-                                <th>Jam Mulai</th>
-                                <th>Jam Selesai</th>
-                                <th>Waktu Realisasi</th>
-                                <th>Saldo Lembur</th>
-                                <th>Deskripsi</th>
-                                <th>Status</th>
+                                <th>Total Jam</th>
+                                <th>Total Rupiah</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>

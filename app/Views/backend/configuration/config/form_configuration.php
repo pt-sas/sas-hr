@@ -43,6 +43,16 @@
                     <small class="form-text text-danger" id="error_token_bot_telegram"></small>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Hitung Jam Kerja</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" data-toggle="toggle" data-onstyle="primary" data-style="btn-round"
+                        name="based_on_work_hour" id="based_on_work_hour">
+                    <small class="form-text text-muted">Efeknya ke perhitungan keterlambatan karyawan</small>
+                </div>
+            </div>
         </div>
 </div>
 </form>

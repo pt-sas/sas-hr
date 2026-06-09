@@ -5,6 +5,8 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Absent;
 use App\Models\M_Attendance;
+use App\Models\M_EmpBranch;
+use App\Models\M_EmpDivision;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Holiday;
 use App\Models\M_WorkDetail;
@@ -25,7 +27,7 @@ class News extends BaseController
 
     public function index()
     {
-        $start_date = format_dmy(date('Y-m-d', strtotime('first day of this month')), "-");
+        $start_date = format_dmy(date('Y-m-d'), "-");
         $end_date = format_dmy(date('Y-m-d'), "-");
 
         $data = [
@@ -46,27 +48,34 @@ class News extends BaseController
             $mAbsent = new M_Absent($this->request);
             $mRule = new M_Rule($this->request);
             $mRuleDetail = new M_RuleDetail($this->request);
+            $mEmpBranch = new M_EmpBranch($this->request);
+            $mEmpDiv = new M_EmpDivision($this->request);
 
             $post = $this->request->getVar();
             $today = date('Y-m-d');
             $holiday = $mHoliday->getHolidayDate();
 
-            $rule = $mRule->where('name', 'List Alpa')->first();
+            $rule = $mRule->where('name', 'List Kabar')->first();
             $ruleDetail = $mRuleDetail->where(['name' => 'Included Level', 'md_rule_id' => $rule->md_rule_id])->first();
             $operation = getOperation($ruleDetail->operation);
 
             $table = $mEmployee->table;
-            $select = "*";
+            $select = "distinct(md_employee.md_employee_id), md_employee.nik, md_employee.fullname";
             $order = [];
             $search = [];
+            $join = [
+                ['tableJoin' => 'md_employee_branch', 'columnJoin' => 'md_employee.md_employee_id = md_employee_branch.md_employee_id', 'typeJoin' => 'left'],
+                ['tableJoin' => 'md_employee_division', 'columnJoin' => 'md_employee.md_employee_id = md_employee_division.md_employee_id', 'typeJoin' => 'left']
+            ];
+
             $sort = ['nik' => 'ASC'];
 
-            $where["isactive"] = 'Y';
-            $where["md_status_id"] = ["value" => [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK]];
-            $where["md_levelling_id {$operation}"] = $ruleDetail->condition;
+            $where["md_employee.isactive"] = 'Y';
+            $where["md_employee.md_status_id"] = ["value" => [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK]];
+            $where["md_employee.md_levelling_id {$operation}"] = $ruleDetail->condition;
 
             $empList = $this->access->getEmployeeData();
-            $where["md_employee_id"] = ["value" => $empList];
+            $where["md_employee.md_employee_id"] = ["value" => $empList];
 
             foreach ($post['form'] as $value) :
                 if ($value['name'] === "date") {
@@ -77,13 +86,18 @@ class News extends BaseController
                     }
                 }
 
+                if ($value['name'] === "kabar") {
+                    if (!empty($value['value'])) {
+                        $filterKabar = $value['value'];
+                    }
+                }
+
             endforeach;
 
             $date_range = getDatesFromRange($dateRange[0], $dateRange[1], $holiday, 'Y-m-d H:i:s', 'all');
-            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, [], $where);
+            $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
 
-            // TODO : Preparing data before looping
-            // Get All Submission and Stored in array
+            // TODO : Preparing data before looping\
             $dateStart = date('Y-m-d', strtotime($dateRange[0]));
             $dateEnd = date('Y-m-d', strtotime($dateRange[1]));
             $whereClause = "DATE(v_all_submission.date) BETWEEN '{$dateStart}' AND '{$dateEnd}'";
@@ -119,6 +133,9 @@ class News extends BaseController
             $data = [];
             $number = $this->request->getPost('start');
             foreach ($list as $emp) {
+                $empBranch = $mEmpBranch->getBranchDetail("md_employee_id = {$emp->md_employee_id}")->getRow();
+                $empDivision = $mEmpDiv->getDivisionDetail("md_employee_id = {$emp->md_employee_id}")->getRow();
+
                 $workDay = $mEmpWork->where([
                     'md_employee_id'    => $emp->md_employee_id,
                     'validfrom <='      => $dateStart,
@@ -154,9 +171,19 @@ class News extends BaseController
 
                         $news = isset($allNews[$emp->md_employee_id][$date]) ? ($allNews[$emp->md_employee_id][$date]) : null;
 
+                        if (!empty($filterKabar)) {
+                            if ($filterKabar == "Y" && empty($news))
+                                continue;
+
+                            if ($filterKabar == "N" && !empty($news))
+                                continue;
+                        }
+
                         $row[] = $number;
                         $row[] = $emp->nik;
                         $row[] = $emp->fullname;
+                        $row[] = !empty($empBranch) ? $empBranch->branch_name : '';
+                        $row[] = !empty($empDivision) ? $empDivision->division_name : '';
                         $row[] = format_dmy($date, "-");
                         $row[] = !empty($news) ? $news->reason : '';
                         $row[] = $this->template->buttonNews($ID);
@@ -186,10 +213,15 @@ class News extends BaseController
             $md_employee_id = $post['md_employee_id'];
             $date = date('Y-m-d', strtotime($post['date']));
             $reason = $post['reason'];
+            $today = date('Y-m-d');
+            $maxTime = convertToMinutes("17:00");
+            $nowTime = convertToMinutes(date('H:m'));
 
             try {
                 if (!$this->validation->run($post, 'news')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
+                } else if ($nowTime > $maxTime || $today > $date) {
+                    $response = message('success', false, 'Tidak bisa menginput kabar karena sudah lewat batas penginputan');
                 } else {
                     $trxNews = $this->model->where(['md_employee_id' => $md_employee_id, 'DATE(date)' => $date])->first();
                     if ($trxNews && !empty($reason)) {

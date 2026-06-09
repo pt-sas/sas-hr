@@ -21,6 +21,7 @@ class M_Interview extends Model
         'md_division_id',
         'md_position_id',
         'terminatedate',
+        'registerdate',
         'description',
         'docstatus',
         'isapproved',
@@ -44,6 +45,9 @@ class M_Interview extends Model
 
     /** Pengajuan Resign */
     protected $Pengajuan_Exit_Interview = 100019;
+
+    /** Pengajuan Onboarding */
+    protected $Pengajuan_Onboarding = 100028;
 
     public function __construct(RequestInterface $request)
     {

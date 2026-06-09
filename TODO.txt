@@ -1,0 +1,14 @@
+List Error :
+1. Handle fungsi getHolidayDate() jika tidak ada tanggal libur agar tetap berjalan dan tidak error;
+2. pembatalan bisa lebih luas
+3. Ketika Medical di Batalkan, maka menghapus kolom img_medical di absent
+5. Perhitungan saldo cuti di menu cuti agar ditampilkan dengan benar. perlu di blank dlu baru narik
+6. Tombol Share Telegram dan Whatsapp
+7. Memperbaiki agar master employee di pengajuan Lembur dan Penugasan agar tidak perlu check akses lagi di line nya saat orang lain membuka pengajuan tersebut
+8. Menambah validasi agar tidak double dua kali saat pengambilan karyawan di lembur
+9. DP Change pada menu adjustment tidak reset ketika close, sehingga event tarik begin balance tidak berjalan
+10. Menambah fungsi create di period control agar ketika ada submissiontype baru, cukup menambahkan saja tidak perlu generate semua dari awal
+11. Perhitungan telat di laporan kehadiran rekap, jika absensi diatas 12:00 masih belum kecatat ditelat > 30 menit
+12. Flow Reopen pada table M_Absent masih belum bisa dikarenakan tidak mengupdate line menjadi isagree ''
+13. Pada reguler proxy, jika manager tidak ada kabar, dan pak GM tidak ada absensi namun ada tugas kantor 1 & 1/2 hari dan penugasan, maka tetap akan memindahakan proxy ke GM
+14. Saat foto nama-nya ada special karakter, suka error, ini perlu handle di JS agar muncul error tidak boleh ada special karakter

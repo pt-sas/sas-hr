@@ -815,6 +815,16 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('promo-demo/destroy/(:any)', 'Backend\PromoDemo::destroy/$1');
     $routes->get('promo-demo/processIt', 'Backend\PromoDemo::processIt');
     $routes->get('promo-demo/print/(:any)', 'Backend\PromoDemo::exportPDF/$1');
+
+    $routes->add('paket', 'Backend\Bundling::index');
+    $routes->post('paket/showAll', 'Backend\Bundling::showAll');
+    $routes->get('paket/show/(:any)', 'Backend\Bundling::show/$1');
+    $routes->post('paket/create', 'Backend\Bundling::create');
+    $routes->get('paket/destroy/(:any)', 'Backend\Bundling::destroy/$1');
+    $routes->get('paket/processIt', 'Backend\Bundling::processIt');
+    $routes->post('paket/tableLine', 'Backend\Bundling::tableLine');
+    $routes->post('paket/getList', 'Backend\Bundling::getList');
+    $routes->post('paket/getSubData', 'Backend\Bundling::getSubData');
 });
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
@@ -865,6 +875,10 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
     $routes->resource('ijin', ['controller' => 'Permission']);
 
     $routes->get('in-progress-submissions', 'Attendance::getInProgressSubmissions');
+
+    $routes->post('fcm/register', 'FCM::registerToken');
+    $routes->delete('fcm/remove', 'FCM::removeToken');
+    $routes->post('fcm/sendMessage', 'FCM::sendTestMessage');
 });
 
 /*
