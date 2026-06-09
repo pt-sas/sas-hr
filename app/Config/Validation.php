@@ -3427,6 +3427,13 @@ class Validation
                 'required'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'md_leavetype_id'        => [
+            'label'              => 'Ijin Khusus',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
         'md_division_id'        => [
             'label'             => 'divisi',
             'rules'             => 'required',
