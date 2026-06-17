@@ -194,20 +194,26 @@ class AttendanceServices extends BaseServices
     }
 
     public function getInProgressSubmissions($employeeId)
-        {
-            $mAbsent = new M_Absent($this->request);
-            
-            $baseClause = "v_all_submission.md_employee_id = {$employeeId}"
-                . " AND v_all_submission.docstatus = '{$this->DOCSTATUS_Inprogress}'";
+    {
+        $mAbsent = new M_Absent($this->request);
+        
+        $baseClause = "v_all_submission.md_employee_id = {$employeeId}"
+            . " AND v_all_submission.docstatus = '{$this->DOCSTATUS_Inprogress}'";
 
-            $submissions = $mAbsent->getAllSubmission($baseClause)->getResult();
+        $submissions = $mAbsent->getAllSubmission($baseClause)->getResult();
 
-            $documentNumbers = [];
-            foreach ($submissions as $submission) {
-                $documentNumbers[] = $submission->documentno;
+        $seen = [];
+        $result = [];
+        foreach ($submissions as $submission) {
+            if (!in_array($submission->documentno, $seen)) {
+                $seen[] = $submission->documentno;
+                $result[] = [
+                    'id'         => (int) $submission->header_id,
+                    'documentno' => $submission->documentno,
+                ];
             }
-            $documentNumbers = array_values(array_unique($documentNumbers));
-
-            return $documentNumbers;
         }
+
+        return $result;
+    }
 }
