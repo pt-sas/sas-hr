@@ -865,6 +865,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
     $routes->resource('ijin', ['controller' => 'Permission']);
 
     $routes->get('in-progress-submissions', 'Attendance::getInProgressSubmissions');
+
+    $routes->put('notifikasi/updateRead/(:num)', 'Notification::updateRead/$1');
+    $routes->resource('notifikasi', ['controller' => 'Notification']);
 });
 
 /*
