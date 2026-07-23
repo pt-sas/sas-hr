@@ -455,6 +455,11 @@ class Attendance extends BaseController
             $whereClause .= " AND md_day.name = '{$day}'";
             $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
+            // TODO : Skip when runtime cronjob not same as starwork hour
+            if (!empty($workDetail) && date('H') != date('H', strtotime($workDetail->startwork))) {
+                continue;
+            }
+
             // TODO : Get Submission Assignment
             $whereClause = "DATE(trx_assignment_date.date) = '{$today}'
                     AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
