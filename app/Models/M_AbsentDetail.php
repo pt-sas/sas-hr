@@ -489,7 +489,7 @@ class M_AbsentDetail extends Model
                     if ($rule) {
                         $amount = $rule->condition ?: $rule->value;
 
-                        $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+                        $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->orderBy('condition', 'ASC')->findAll();
 
                         if ($ruleDetail) {
                             //TODO : Get work day employee
@@ -504,7 +504,7 @@ class M_AbsentDetail extends Model
                                 $breakStart =  $workHour + $ruleDetail[1]->condition;
                                 $workEndHour = $workHour + $ruleDetail[0]->condition;
                             } else {
-                                $day = strtoupper(formatDay_idn(date('W', strtotime($line->date))));
+                                $day = strtoupper(formatDay_idn(date('w', strtotime($line->date))));
 
                                 //TODO: Get Work Detail by day 
                                 $work = null;
@@ -516,8 +516,9 @@ class M_AbsentDetail extends Model
                                 $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
 
                                 $workHour = empty($work) ? convertToMinutes("08:00") : convertToMinutes($work->startwork);
-                                $breakStart =  empty($work) ? $workHour + $ruleDetail[1]->condition : convertToMinutes($work->breakstart);
-                                $workEndHour = empty($work) ? $workHour + $ruleDetail[0]->condition : convertToMinutes($work->endwork);
+                                // $breakStart =  empty($work) ? $workHour + $ruleDetail[0]->condition : convertToMinutes($work->breakstart);
+                                $breakStart =  $workHour + $ruleDetail[0]->condition;
+                                $workEndHour = empty($work) ? $workHour + $ruleDetail[1]->condition : convertToMinutes($work->endwork);
                             }
 
                             $workTime = convertToMinutes($sql->startdate);
