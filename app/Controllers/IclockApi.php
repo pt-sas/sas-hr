@@ -57,14 +57,14 @@ STR;
             $content = trim($this->request->getBody());
             $arr = preg_split('/\\r\\n|\\r|,|\\n/', $content, -1, PREG_SPLIT_NO_EMPTY);
             $jml = 0;
-            logMessage($arr);
+
             if (isset($get['table']) && $get['table'] === "ATTLOG") {
                 $data = [];
 
                 foreach ($arr as $val) {
                     $row = [];
                     $req = preg_split('/\\t\\n|\\t|,|\\n/', $val);
-                    logMessage($req);
+
                     $row['created_by'] = 100000;
                     $row['updated_by'] = 100000;
                     $row['nik'] = $req[0];
