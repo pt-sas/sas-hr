@@ -52,7 +52,7 @@ class Attendance extends BaseController
     public function reportShowAll()
     {
         $post = $this->request->getVar();
-        $mWorkDetail = new M_WorkDetail($this->request);
+        $mEmployee = new M_Employee($this->request);
 
         $recordTotal = 0;
         $recordsFiltered = 0;
@@ -60,20 +60,8 @@ class Attendance extends BaseController
 
         if ($this->request->getMethod(true) === 'POST') {
             if (isset($post['form']) && $post['clear'] === 'false') {
-                $table = "v_attendance_series";
-                $select = $this->model->getSelect();
-                $join = $this->model->getJoin();
-                $order = $this->request->getPost('columns');
-                $search = $this->request->getPost('search');
-                $sort = ['v_attendance_series.date' => 'ASC', 'v_attendance_series.nik' => 'ASC'];
-
                 // TODO : Get Employee Access
                 $empList = $this->access->getEmployeeData();
-                $where['v_attendance_series.md_employee_id'] = ['value' => $empList];
-                $where['md_employee.md_status_id'] = ['value' => [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK, $this->Status_MAGANG, $this->Status_FREELANCE]];
-
-                $number = $this->request->getPost('start');
-                $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);
 
                 foreach ($post['form'] as $value) {
                     if (!empty($value['value'])) {
@@ -81,59 +69,75 @@ class Attendance extends BaseController
                             $datetime = urldecode($value['value']);
                             $date = explode(" - ", $datetime);
                         }
+
+                        if ($value['name'] === "md_employee_id") {
+                            $empList = $value['value'];
+                        }
                     }
                 }
 
+                $table = "v_attendance";
+                $select = $this->model->getSelect();
+                $join = $this->model->getJoin();
+                $order = $this->request->getPost('columns');
+                $search = $this->request->getPost('search');
+                $sort = ['v_attendance.date' => 'ASC', 'v_attendance.nik' => 'ASC'];
+
+                $where['v_attendance.md_employee_id'] = ['value' => $empList];
+                $where['md_employee.md_status_id'] = ['value' => [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK, $this->Status_MAGANG, $this->Status_FREELANCE]];
+
+                $number = $this->request->getPost('start');
+                $list = array_unique($this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where), SORT_REGULAR);
+
+                $dataAttendance = [];
+                foreach ($list as $val) {
+                    $dataAttendance[$val->md_employee_id][$val->date] = $val;
+                }
+
+                //* Get Date Range
                 $dateStart = isset($date) ? date('Y-m-d', strtotime($date[0])) : date('Y-m-d');
                 $dateEnd = isset($date) ? date('Y-m-d', strtotime($date[1])) : date('Y-m-d');
+                $dateRange = getDatesFromRange($dateStart, $dateEnd, [], 'Y-m-d', 'all');
 
-                $whereClause = "md_work_detail.isactive = 'Y'";
-                $whereClause .= " AND DATE(md_employee_work.validfrom) <= '{$dateStart}'";
-                $whereClause .= " AND DATE(md_employee_work.validto) >= '{$dateEnd}'";
-                $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                $empList = $mEmployee->whereIn('md_status_id', [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK, $this->Status_MAGANG, $this->Status_FREELANCE])
+                    ->whereIn('md_employee_id', $empList)->findAll();
 
-                $allWorkDay = [];
-                foreach ($workDetail as $val) {
-                    $allWorkDay[$val->md_employee_id][$val->day] = $val;
-                }
+                foreach ($empList as $employee) :
+                    foreach ($dateRange as $date) {
+                        $row = [];
+                        $number++;
 
-                foreach ($list as $val) :
-                    $row = [];
+                        $clock_in = '';
+                        $clock_out = '';
 
-                    $number++;
+                        if (isset($dataAttendance[$employee->md_employee_id][$date])) {
+                            $att = $dataAttendance[$employee->md_employee_id][$date];
 
-                    $day = strtoupper(formatDay_idn(date('w', strtotime($val->date))));
+                            if (!empty($att->clock_in)) {
+                                if ($att->is_late == 'Y') {
+                                    $clock_in = "<small class='text-danger'>$att->clock_in</small>";
+                                } else {
+                                    $clock_in = $att->clock_in;
+                                }
+                            }
 
-                    // TODO : Get Workday Employee
-                    $minAbsentIn = isset($allWorkDay[$val->md_employee_id][$day]) ? $allWorkDay[$val->md_employee_id][$day]->startwork : "08:30";
-                    $minAbsentOut = isset($allWorkDay[$val->md_employee_id][$day]) ? $allWorkDay[$val->md_employee_id][$day]->endwork : "15:30";
-
-                    $clock_in = '';
-                    $clock_out = '';
-
-                    if (!empty($val->clock_in)) {
-                        if (convertToMinutes($val->clock_in) > convertToMinutes($minAbsentIn)) {
-                            $clock_in = "<small class='text-danger'>$val->clock_in</small>";
-                        } else {
-                            $clock_in = $val->clock_in;
+                            if (!empty($att->clock_out)) {
+                                if ($att->is_leave_early == 'Y') {
+                                    $clock_out = "<small class='text-danger'>$att->clock_out</small>";
+                                } else {
+                                    $clock_out = $att->clock_out;
+                                }
+                            }
                         }
-                    }
 
-                    if (!empty($val->clock_out)) {
-                        if (convertToMinutes($val->clock_out) < convertToMinutes($minAbsentOut)) {
-                            $clock_out = "<small class='text-danger'>$val->clock_out</small>";
-                        } else {
-                            $clock_out = $val->clock_out;
-                        }
+                        $row[] = $number;
+                        $row[] = $employee->nik;
+                        $row[] = $employee->fullname;
+                        $row[] = format_dmy($date, "-");
+                        $row[] = $clock_in;
+                        $row[] = $clock_out;
+                        $data[] = $row;
                     }
-
-                    $row[] = $number;
-                    $row[] = $val->nik;
-                    $row[] = $val->fullname;
-                    $row[] = format_dmy($val->date, "-");
-                    $row[] = $clock_in;
-                    $row[] = $clock_out;
-                    $data[] = $row;
                 endforeach;
 
                 $recordTotal = count($data);
@@ -168,7 +172,6 @@ class Attendance extends BaseController
         $mAbsent = new M_Absent($this->request);
         $mHoliday = new M_Holiday($this->request);
         $mAttendance = new M_Attendance($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
 
         $periode = date('m-Y', strtotime($post['periode']));
         $md_branch_id = isset($post['md_branch_id']) ? $post['md_branch_id'] : null;
@@ -265,9 +268,6 @@ class Attendance extends BaseController
 
         $holiday = $mHoliday->getHolidayDate();
         $holidays = implode(", ", $holiday);
-        $date = DateTime::createFromFormat('m-Y', $periode);
-        $firstDate = $date->format('Y-m-01');
-        $lastDate = $date->modify('last day of this month')->format('Y-m-d');
 
         $number = 1;
         $numrow = 5;
@@ -283,14 +283,6 @@ class Attendance extends BaseController
             $sheet->setCellValue('C' . $numrow, $row->fullname);
             $sheet->getStyle('C' . $numrow)->applyFromArray($style_row);
 
-            // TODO : Get Employee Days Off
-            $whereClause = "md_work_detail.isactive = 'Y'";
-            $whereClause .= " AND md_employee_work.md_employee_id = {$row->md_employee_id}";
-            $whereClause .= " AND (md_employee_work.validfrom <= '{$firstDate}' and md_employee_work.validto >= '{$lastDate}')";
-            $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-            $daysOff = getDaysOff($workDetail);
-            $daysOffStr = implode(", ", $daysOff);
-
             foreach ($headers as $cell => $info) {
                 if (($info['text'] != "Telat < 30 MNT" && $info['text'] != "Telat > 30 MNT") && !isset($info['submissiontype'])) continue;
 
@@ -302,15 +294,15 @@ class Attendance extends BaseController
                     $trx = count($mAbsent->getAllSubmission($whereClause)->getResult());
                 } else {
                     if ($info['text'] == "Telat < 30 MNT") {
-                        $whereClause = "(v_attendance.clock_in >= '08:01' and v_attendance.clock_in < '08:31')";
+                        $whereClause = "(v_attendance.clock_in >= COALESCE(ADDTIME(mwd.startwork, '00:01:00'), '08:01:00') AND v_attendance.clock_in < COALESCE(ADDTIME(mwd.startwork, '00:31:00'), '08:31:00'))";
                     } else {
-                        $whereClause = "v_attendance.clock_in >= '08:31'";
+                        $whereClause = "v_attendance.clock_in >= COALESCE(ADDTIME(mwd.startwork, '00:31:00'), '08:31:00')";
                     }
 
                     $whereClause .= " AND v_attendance.md_employee_id = {$row->md_employee_id}
                                       AND MONTH(v_attendance.date) = '{$periode}'
-                                      AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})
                                       AND DATE(v_attendance.date) NOT IN ({$holidays})
+                                      AND mwd.md_work_detail_id IS NOT NULL
                                       AND NOT EXISTS (SELECT 1
                                                       FROM trx_absent a
                                                       LEFT JOIN trx_absent_detail ad ON a.trx_absent_id = ad.trx_absent_id

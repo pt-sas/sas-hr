@@ -37,9 +37,17 @@ class M_Attendance extends Model
 
     public function getSelect()
     {
-        $sql = 'v_attendance_series.*,
+        $sql = "v_attendance.*,
                 md_employee.md_employee_id,
-                md_employee.fullname';
+                md_employee.fullname,
+                CASE
+                WHEN v_attendance.clock_in >= COALESCE(ADDTIME(mwd.startwork, '00:01:00'), '08:01:00')
+                THEN 'Y'
+                ELSE 'N' END AS is_late,
+                CASE
+                WHEN v_attendance.clock_out < COALESCE(mwd.endwork, '17:00:00') THEN 'Y' 
+                ELSE 'N'
+                END AS is_leave_early";
 
         return $sql;
     }
@@ -47,9 +55,11 @@ class M_Attendance extends Model
     public function getJoin()
     {
         $sql = [
-            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = v_attendance_series.md_employee_id', 'inner'),
+            $this->setDataJoin('md_employee', 'md_employee.md_employee_id = v_attendance.md_employee_id', 'inner'),
             $this->setDataJoin('md_employee_branch', 'md_employee_branch.md_employee_id = md_employee.md_employee_id', 'left'),
-            $this->setDataJoin('md_employee_division', 'md_employee_division.md_employee_id = md_employee.md_employee_id', 'left')
+            $this->setDataJoin('md_employee_division', 'md_employee_division.md_employee_id = md_employee.md_employee_id', 'left'),
+            $this->setDataJoin('md_employee_work mew', 'mew.md_employee_id = v_attendance.md_employee_id AND (mew.validfrom <= v_attendance.date and mew.validto >= v_attendance.date)', 'left'),
+            $this->setDataJoin('md_work_detail mwd', 'mew.md_work_id = mwd.md_work_id AND (WEEKDAY(v_attendance.date) + 1) = mwd.md_day_id', 'left'),
         ];
 
         return $sql;
@@ -81,6 +91,8 @@ class M_Attendance extends Model
         }
 
         $builder->join('md_employee', 'md_employee.nik = v_attendance.nik', 'left');
+        $builder->join('md_employee_work mew', 'mew.md_employee_id = v_attendance.md_employee_id AND (mew.validfrom <= v_attendance.date and mew.validto >= v_attendance.date)', 'left');
+        $builder->join('md_work_detail mwd', 'mew.md_work_id = mwd.md_work_id AND (WEEKDAY(v_attendance.date) + 1) = mwd.md_day_id', 'left');
 
         if ($where)
             $builder->where($where);

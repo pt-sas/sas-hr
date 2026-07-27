@@ -50,7 +50,7 @@ class ModifyViewAttendanceSubmission extends Migration
                 AND mwd.md_day_id  = WEEKDAY(va.date) + 1
                 LEFT JOIN excluded_dates ex ON ex.startdate = va.date
                 left join officeduties_submission os on os.md_employee_id = va.md_employee_id and va.date = os.date
-                WHERE (va.clock_in is null OR date_format(va.clock_in, '%H:%i') > date_format(mwd.startwork , '%H:%i'))
+                WHERE (va.clock_in is null OR va.clock_in >= ADDTIME(mwd.startwork, '00:01:00'))
                 AND ex.startdate IS null
                 and os.trx_absent_id is null
                 GROUP BY va.md_employee_id, DATE_FORMAT(va.date, '%m-%Y')
@@ -72,7 +72,7 @@ class ModifyViewAttendanceSubmission extends Migration
                 AND mwd.md_day_id  = WEEKDAY(va.date) + 1
                 LEFT JOIN excluded_dates ex ON ex.startdate = va.date
                 left join officeduties_submission os on os.md_employee_id = va.md_employee_id and va.date = os.date
-                WHERE (va.clock_out is null OR date_format(va.clock_out, '%H:%i') < date_format(mwd.endwork, '%H:%i'))
+                WHERE (va.clock_out is null OR va.clock_out < mwd.endwork)
                 AND ex.startdate IS null
                 and os.trx_absent_id is null
                 GROUP BY va.md_employee_id, DATE_FORMAT(va.date, '%m-%Y')
