@@ -821,6 +821,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('master-paket/show/(:any)', 'Backend\MasterBundling::show/$1');
     $routes->post('master-paket/create', 'Backend\MasterBundling::create');
     $routes->match(['get', 'post'], 'master-paket/getList', 'Backend\MasterBundling::getList');
+    $routes->post('master-paket/getDetail', 'Backend\MasterBundling::getPacketDetail');
 
     $routes->add('paket', 'Backend\Bundling::index');
     $routes->post('paket/showAll', 'Backend\Bundling::showAll');
