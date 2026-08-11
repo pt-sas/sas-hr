@@ -28,6 +28,8 @@ class M_Overtime extends Model
         'isoutsourcing',
         'md_supplier_id',
         'receiveddate',
+        'trx_bundling_id',
+        'ispacket'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Overtime';
