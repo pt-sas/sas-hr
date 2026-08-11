@@ -18,7 +18,7 @@ use App\Models\M_Year;
 use TCPDF;
 use Config\Services;
 
-class Overtime extends BaseController
+class ExecuteBundling extends BaseController
 {
     public function __construct()
     {
@@ -34,7 +34,7 @@ class Overtime extends BaseController
             'today'     => date('d-M-Y')
         ];
 
-        return $this->template->render('transaction/overtime/v_overtime', $data);
+        return $this->template->render('transaction/executebundling/v_execute_bundling', $data);
     }
 
     public function showAll()
@@ -47,9 +47,7 @@ class Overtime extends BaseController
             $search = $this->model->column_search;
             $sort = $this->model->order;
 
-            $where['md_employee.md_employee_id'] = [
-                'value'     => $this->access->getEmployeeData()
-            ];
+            $where['LEFT(trx_overtime.documentno, 2)'] = "PP";
 
             $data = [];
 
@@ -104,7 +102,8 @@ class Overtime extends BaseController
             $table = json_decode($post['table']);
 
             $post['submissiontype'] = $this->model->Pengajuan_Lembur;
-            $post["necessary"] = 'LB';
+            $post["necessary"] = 'PP';
+            $post["enddate"] = $post['startdate'];
 
             //! Mandatory property for detail validation
             $post['line'] = countLine($table);
@@ -118,129 +117,129 @@ class Overtime extends BaseController
                 $employeeId = $post['md_employee_id'];
                 $day = date('w', strtotime($post['startdate']));
 
-                if (!$this->validation->run($post, 'lembur')) {
-                    $response = $this->field->errorValidation($this->model->table, $post);
-                } else {
-                    // $holidays = $mHoliday->getHolidayDate();
-                    $startDate = date('Y-m-d', strtotime($post['startdate']));
-                    $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
+                // if (!$this->validation->run($post, 'lembur')) {
+                //     $response = $this->field->errorValidation($this->model->table, $post);
+                // } else {
+                //     // $holidays = $mHoliday->getHolidayDate();
+                //     $startDate = date('Y-m-d', strtotime($post['startdate']));
+                //     $endDate = date('Y-m-d', strtotime($post['enddate']));
+                //     $subDate = date('Y-m-d', strtotime($post['submissiondate']));
 
-                    $rule = $mRule->where([
-                        'name'      => 'Lembur',
-                        'isactive'  => 'Y'
-                    ])->first();
+                //     $rule = $mRule->where([
+                //         'name'      => 'Lembur',
+                //         'isactive'  => 'Y'
+                //     ])->first();
 
-                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
+                //     $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
+                //     $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
 
-                    //TODO : Get work day employee
-                    $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $employeeId,
-                        'validfrom <='      => $startDate,
-                        'validto >='        => $endDate
-                    ])->orderBy('validfrom', 'ASC')->first();
+                //     //TODO : Get work day employee
+                //     $workDay = $mEmpWork->where([
+                //         'md_employee_id'    => $employeeId,
+                //         'validfrom <='      => $startDate,
+                //         'validto >='        => $endDate
+                //     ])->orderBy('validfrom', 'ASC')->first();
 
-                    if (is_null($workDay)) {
-                        $response = message('success', false, 'Hari kerja belum ditentukan');
-                    } else {
-                        //TODO : Get Work Detail
-                        // $whereClause = "md_work_detail.isactive = 'Y'";
-                        // $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                        // $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                        // $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+                //     if (is_null($workDay)) {
+                //         $response = message('success', false, 'Hari kerja belum ditentukan');
+                //     } else {
+                //         //TODO : Get Work Detail
+                //         // $whereClause = "md_work_detail.isactive = 'Y'";
+                //         // $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+                //         // $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+                //         // $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
 
-                        // $daysOff = getDaysOff($workDetail);
+                //         // $daysOff = getDaysOff($workDetail);
 
-                        //* last index of array from variable nextDate
-                        $nextDate = lastWorkingDays($startDate, [], $minDays, false, [], true);
-                        $lastDate = end($nextDate);
+                //         //* last index of array from variable nextDate
+                //         $nextDate = lastWorkingDays($startDate, [], $minDays, false, [], true);
+                //         $lastDate = end($nextDate);
 
-                        //* last index of array from variable addDays
-                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-                        $addDays = end($addDays);
+                //         //* last index of array from variable addDays
+                //         $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
+                //         $addDays = end($addDays);
 
-                        $operation = null;
-                        $submissionMaxTime = null;
+                //         $operation = null;
+                //         $submissionMaxTime = null;
 
-                        if ($rule) {
-                            $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
+                //         if ($rule) {
+                //             $ruleDetail = $mRuleDetail->where($mRule->primaryKey, $rule->md_rule_id)->findAll();
 
-                            if ($ruleDetail) {
-                                foreach ($ruleDetail as $detail) {
-                                    if ($detail->name === "Batas Waktu Pengajuan") {
-                                        $operation = $detail->operation;
-                                        $submissionMaxTime = $detail->condition;
-                                    }
-                                }
-                            }
-                        }
+                //             if ($ruleDetail) {
+                //                 foreach ($ruleDetail as $detail) {
+                //                     if ($detail->name === "Batas Waktu Pengajuan") {
+                //                         $operation = $detail->operation;
+                //                         $submissionMaxTime = $detail->condition;
+                //                     }
+                //                 }
+                //             }
+                //         }
 
-                        $arrEmpId = array_map(function ($value) {
-                            return $value->md_employee_id;
-                        }, $table);
+                //         $arrEmpId = array_map(function ($value) {
+                //             return $value->md_employee_id;
+                //         }, $table);
 
-                        // $empWork = $mEmployee
-                        //     ->whereIn("md_employee_id", $arrEmpId)
-                        //     ->where("NOT EXISTS (SELECT 1 
-                        //                         FROM md_employee_work mew
-                        //                         WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
-                        //                         AND (date_format(validto, '%Y-%m-%d') >= '{$startDate}' AND date_format(validfrom, '%Y-%m-%d') <= '{$endDate}')
-                        //                         AND (SELECT mwd.md_day_id
-                        //                             FROM md_work_detail mwd
-                        //                             WHERE mwd.md_work_id = mew.md_work_id
-                        //                             AND mwd.md_day_id = {$day}))")
-                        //     ->findAll();
+                //         // $empWork = $mEmployee
+                //         //     ->whereIn("md_employee_id", $arrEmpId)
+                //         //     ->where("NOT EXISTS (SELECT 1 
+                //         //                         FROM md_employee_work mew
+                //         //                         WHERE mew.md_employee_id = {$mEmployee->table}.md_employee_id
+                //         //                         AND (date_format(validto, '%Y-%m-%d') >= '{$startDate}' AND date_format(validfrom, '%Y-%m-%d') <= '{$endDate}')
+                //         //                         AND (SELECT mwd.md_day_id
+                //         //                             FROM md_work_detail mwd
+                //         //                             WHERE mwd.md_work_id = mew.md_work_id
+                //         //                             AND mwd.md_day_id = {$day}))")
+                //         //     ->findAll();
 
-                        //TODO : Get submission one day
-                        $whereClause = "md_employee_id IN (" . implode(" ,", $arrEmpId) . ")";
-                        $whereClause .= " AND DATE_FORMAT(startdate, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
-                        $whereClause .= " AND isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                        $trx = $this->modelDetail->where($whereClause)->first();
+                //         //TODO : Get submission one day
+                //         $whereClause = "md_employee_id IN (" . implode(" ,", $arrEmpId) . ")";
+                //         $whereClause .= " AND DATE_FORMAT(startdate, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                //         $whereClause .= " AND isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                //         $trx = $this->modelDetail->where($whereClause)->first();
 
-                        // TODO : Checking Period
-                        $dateRange = getDatesFromRange($post['startdate'], $post['enddate'], [], 'Y-m-d', "all");
+                //         // TODO : Checking Period
+                //         $dateRange = getDatesFromRange($post['startdate'], $post['enddate'], [], 'Y-m-d', "all");
 
-                        foreach ($dateRange as $date) {
-                            $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
+                //         foreach ($dateRange as $date) {
+                //             $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
 
-                            if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
-                                break;
-                            }
-                        }
+                //             if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                //                 break;
+                //             }
+                //         }
 
-                        if (empty($period)) {
-                            $response = message('success', false, "Periode belum dibuat");
-                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
-                            $response = message('success', false, "Periode {$period->name} ditutup");
-                        } else if ($trx) {
-                            $response = message('success', false, "Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain");
-                        } else if ($endDate > $addDays) {
-                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if ($lastDate < $subDate) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
-                        } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $startDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
-                            $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
-                            // } else if ($empWork) {
-                            //     $value = implode(", ", array_map(function ($row) {
-                            //         return $row->value;
-                            //     }, $empWork));
+                // if (empty($period)) {
+                //     $response = message('success', false, "Periode belum dibuat");
+                // } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                //     $response = message('success', false, "Periode {$period->name} ditutup");
+                // } else if ($trx) {
+                //     $response = message('success', false, "Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain");
+                // } else if ($endDate > $addDays) {
+                //     $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
+                // } else if ($lastDate < $subDate) {
+                //     $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan');
+                // } else if (!is_null($operation) && !is_null($submissionMaxTime) && $today == $startDate && !getOperationResult($time, $submissionMaxTime, $operation)) {
+                //     $response = message('success', false, 'Sudah melewati batas waktu pengajuan');
+                //     // } else if ($empWork) {
+                //     //     $value = implode(", ", array_map(function ($row) {
+                //     //         return $row->value;
+                //     //     }, $empWork));
 
-                            //     $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
-                        } else {
-                            $this->entity->fill($post);
+                //     //     $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
+                // } else {
+                $this->entity->fill($post);
 
-                            if ($this->isNew()) {
-                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                if ($this->isNew()) {
+                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Lembur, $post);
-                                $this->entity->setDocumentNo($docNo);
-                            }
-
-                            $response = $this->save();
-                        }
-                    }
+                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Lembur, $post);
+                    $this->entity->setDocumentNo($docNo);
                 }
+
+                $response = $this->save();
+                // }
+                //     }
+                // }
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -252,6 +251,7 @@ class Overtime extends BaseController
     public function show($id)
     {
         $mEmployee = new M_Employee($this->request);
+        $mBundling = new M_Bundling($this->request);
 
         if ($this->request->isAJAX()) {
             try {
@@ -260,6 +260,10 @@ class Overtime extends BaseController
                 $detail = $this->modelDetail->where($this->model->primaryKey, $id)->findAll();
 
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
+
+                $rowBundling = $mBundling->where($mBundling->primaryKey, $list[0]->trx_bundling_id)->first();
+
+                $list = $this->field->setDataSelect($mBundling->table, $list, $mBundling->primaryKey, $rowBundling->getBundlingId(), $rowBundling->getDocumentNo() . '-' . $rowBundling->getName());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
                 $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));
@@ -316,44 +320,45 @@ class Overtime extends BaseController
             try {
                 if (!empty($_DocAction)) {
                     // TODO : Checking Period
-                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
-                    foreach ($dateRange as $date) {
-                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+                    // $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
+                    // foreach ($dateRange as $date) {
+                    //     $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
 
-                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
-                            break;
-                        }
-                    }
+                    //     if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
+                    //         break;
+                    //     }
+                    // }
 
-                    if (empty($period)) {
-                        $response = message('error', true, "Periode belum dibuat");
-                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
-                        $response = message('error', true, "Periode {$period->name} ditutup");
-                    } else if ($_DocAction === $row->getDocStatus()) {
+                    // if (empty($period)) {
+                    //     $response = message('error', true, "Periode belum dibuat");
+                    // } else if ($period->period_status == $this->PERIOD_CLOSED) {
+                    //     $response = message('error', true, "Periode {$period->name} ditutup");
+                    // } else 
+                    if ($_DocAction === $row->getDocStatus()) {
                         $response = message('error', true, 'Silahkan refresh terlebih dahulu');
                     } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $startDate = date('Y-m-d', strtotime($row->startdate));
-                        $endDate = date('Y-m-d', strtotime($row->enddate));
+                        // $startDate = date('Y-m-d', strtotime($row->startdate));
+                        // $endDate = date('Y-m-d', strtotime($row->enddate));
 
-                        $arrEmpId = array_map(function ($value) {
-                            return $value->md_employee_id;
-                        }, $line);
+                        // $arrEmpId = array_map(function ($value) {
+                        //     return $value->md_employee_id;
+                        // }, $line);
 
-                        //TODO : Get submission one day
-                        $whereClause = "md_employee_id IN (" . implode(" ,", $arrEmpId) . ")";
-                        $whereClause .= " AND DATE_FORMAT(startdate, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
-                        $whereClause .= " AND isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                        $trx = $this->modelDetail->where($whereClause)->first();
+                        // //TODO : Get submission one day
+                        // $whereClause = "md_employee_id IN (" . implode(" ,", $arrEmpId) . ")";
+                        // $whereClause .= " AND DATE_FORMAT(startdate, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
+                        // $whereClause .= " AND isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
+                        // $trx = $this->modelDetail->where($whereClause)->first();
 
-                        if ($trx) {
-                            $response = message('error', true, 'Tidak bisa proses pengajuan, karena sudah ada pengajuan lain');
-                        } else if (empty($line)) {
-                            $response = message('error', true, 'Line Kosong');
-                        } else {
-                            $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
+                        // if ($trx) {
+                        //     $response = message('error', true, 'Tidak bisa proses pengajuan, karena sudah ada pengajuan lain');
+                        // } else if (empty($line)) {
+                        //     $response = message('error', true, 'Line Kosong');
+                        // } else {
+                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session, null, true);
 
-                            $response = message('success', true, true);
-                        }
+                        $response = message('success', true, true);
+                        // }
                     } else if ($_DocAction === $this->DOCSTATUS_Voided) {
                         $this->entity->setDocStatus($this->DOCSTATUS_Voided);
                         $response = $this->save();
@@ -544,104 +549,5 @@ class Overtime extends BaseController
         }
 
         return json_encode($table);
-    }
-
-    public function exportPDF($id)
-    {
-        $mEmployee = new M_Employee($this->request);
-        $mDivision = new M_Division($this->request);
-
-        $list = $this->model->find($id);
-        $mOvertimeDetail = new M_OvertimeDetail($this->request);
-        $employee = $mEmployee->where($mEmployee->primaryKey, $list->md_employee_id)->first();
-        $division = $mDivision->where($mDivision->primaryKey, $list->md_division_id)->first();
-        $tglpenerimaan = '';
-
-        if ($list->receiveddate !== null) {
-            $tglpenerimaan = format_dmy($list->receiveddate, '-');
-        };
-
-        //bagian PF
-        $pdf = new TCPDF('P', PDF_UNIT, 'A4', true, 'UTF-8', false);
-
-        $pdf->setPrintHeader(false);
-        $pdf->AddPage();
-        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera', 0, 0, 'L', false, '', 0, false);
-        $pdf->Cell(50, 0, 'No Form : ' . $list->documentno, 0, 1, 'L', false, '', 0, false);
-        $pdf->setFont('helvetica', 'B', 20);
-        $pdf->Cell(0, 25, 'SURAT PERINTAH LEMBUR', 0, 1, 'C');
-        $pdf->setFont('helvetica', '', 12);
-        //Ini untuk bagian field nama dan tanggal pengajuan
-        $pdf->Ln(2);
-        //Ini untuk bagian field divisi dan Tanggal diterima
-        $pdf->Cell(30, 0, 'Divisi ', 0, 0, 'L', false, '', 0, false);
-        $pdf->Cell(90, 0, ': ' . $division->name, 0, 0, 'L', false, '', 0, false);
-        $pdf->Cell(40, 0, 'Tanggal Diterima', 0, 0, 'L', false, '', 0, false);
-        $pdf->Cell(30, 0, ': ' . $tglpenerimaan, 0, 1, 'L', false, '', 0, false);
-        $pdf->Ln(2);
-        //Ini bagian tanggal ijin dan jam
-        $pdf->Cell(30, 0, 'Tanggal', 0, 0, 'L', false, '', 0, false);
-        $pdf->Cell(40, 0, ': ' . format_dmy($list->startdate, '-'), 0, 1, 'L', false, '', 0, false);
-        $pdf->Ln(2);
-        //Ini bagian Alasan
-        $pdf->Cell(30, 0, 'Alasan', 0, 0, 'L');
-        $pdf->Cell(3, 0, ':', 0, 0, 'L');
-        $pdf->MultiCell(0, 20, $list->description, 0, '', false, 1, null, null, false, 0, false, false, 20);
-        $pdf->Ln(2);
-
-        $header = ['No', 'Karyawan', 'Keterangan', 'Jam Mulai', 'Jam Selesai'];
-
-        $detail = $mOvertimeDetail->where('trx_overtime_id', $list->trx_overtime_id)->find();
-
-        // Colors, line width and bold font
-        $pdf->SetFillColor(255, 255, 255);
-        $pdf->SetTextColor(0);
-        $pdf->SetDrawColor(0, 0, 0);
-        $pdf->SetLineWidth(0.3);
-        $pdf->SetFont('', 'B');
-        // Header
-        $w = array(10, 50, 70, 30, 30);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $pdf->Cell($w[$i], 7, $header[$i], 1, 0, 'C', 1);
-        }
-        $pdf->Ln();
-        // Color and font restoration
-        $pdf->SetFillColor(224, 235, 255);
-        $pdf->SetTextColor(0);
-        $pdf->SetFont('');
-
-
-        // Data table line
-        $number = 1;
-        foreach ($detail as $row) {
-            $employeeDetail = $mEmployee->where('md_employee_id', $row->md_employee_id)->first();
-
-            $pdf->Cell($w[0], 6, $number, 1, 0, 'C');
-            $pdf->Cell($w[1], 6, $employeeDetail->value, 1, 0, 'L');
-            $pdf->Cell($w[2], 6, $row->description, 1, 0, 'L', false, '', 1);
-            $pdf->Cell($w[3], 6, format_time($row->startdate), 1, 0, 'C');
-            $pdf->Cell($w[4], 6, format_time($row->enddate), 1, 0, 'C');
-            $pdf->Ln();
-            $number++;
-        }
-        // $pdf->Cell(array_sum($w), 0, '', 'T');
-
-        //Bagian ttd
-        $pdf->Ln(10);
-        $pdf->setFont('helvetica', '', 10);
-        $pdf->Cell(63, 0, 'Dibuat oleh,', 0, 0, 'C');
-        $pdf->Cell(63, 0, 'Disetujui oleh,', 0, 0, 'C');
-        $pdf->Cell(63, 0, 'Diketahui oleh,', 0, 0, 'C');
-        $pdf->Ln(25);
-        $pdf->Cell(63, 0, $employee->fullname, 0, 0, 'C');
-        $pdf->Cell(63, 0, '(                          )', 0, 0, 'C');
-        $pdf->Cell(63, 0, '(                          )', 0, 1, 'C');
-        // $pdf->Cell(63, 0, 'Karyawan Ybs', 0, 0, 'C');
-        // $pdf->Cell(63, 0, 'Mgr. Dept. Ybs', 0, 0, 'C');
-        // $pdf->Cell(63, 0, 'HRD', 0, 0, 'C');
-
-        $this->response->setContentType('application/pdf');
-        $pdf->Output('detail-laporan,pdf', 'I');
     }
 }

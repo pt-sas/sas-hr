@@ -81,7 +81,7 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="date">Tanggal Mulai <span class="required">*</span></label>
+                    <label for="date">Tanggal Pelaksanaan <span class="required">*</span></label>
                     <div class="input-icon">
                         <input type="text" class="form-control datepicker-lembur" name="startdate">
                         <span class="input-icon-addon">
@@ -91,14 +91,14 @@
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
                 <div class="form-check">
-                    <label class="form-check-label">
+                    <!-- <label class="form-check-label">
                         <input type="checkbox" class="form-check-input" name="isemployee" checked
                             hide-field="md_supplier_id">
                         <span class=" form-check-sign">Karyawan</span>
-                    </label>
+                    </label> -->
                     <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" name="ispacket"
-                            show-field="trx_bundling_id">
+                        <input type="checkbox" class="form-check-input" name="ispacket" checked
+                            show-field="trx_bundling_id" hide-field="isemployee, enddate" disabled>
                         <span class=" form-check-sign">Paket</span>
                     </label>
                 </div>
@@ -115,7 +115,7 @@
                     <small class="form-text text-danger" id="error_startdate"></small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <!-- <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_supplier_id">Asal Outsourcing <span class="required">*</span></label>
                     <select class="form-control select-data" id="md_supplier_id" name="md_supplier_id"
@@ -124,7 +124,7 @@
                     </select>
                     <small class="form-text text-danger" id="error_md_supplier_id"></small>
                 </div>
-            </div>
+            </div> -->
         </div>
         <div class="row">
             <div class="col-md-12">

@@ -669,8 +669,8 @@ class Realization extends BaseController
 
                 if (!$this->validation->run($post, 'realisasi_lembur_agree') && $isAgree == $this->LINESTATUS_Disetujui) {
                     $response = $this->field->errorValidation($this->model->table, $post);
-                } else if ($today < $realizeDate) {
-                    $response = message('success', false, 'tanggal realisasi belum terpenuhi');
+                    // } else if ($today < $realizeDate) {
+                    //     $response = message('success', false, 'tanggal realisasi belum terpenuhi');
                 } else {
                     $this->model = new M_OvertimeDetail($this->request);
                     $this->entity = new \App\Entities\OvertimeDetail();

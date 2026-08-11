@@ -31,6 +31,7 @@ class M_OvertimeDetail extends Model
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\OvertimeDetail';
+    protected $afterUpdate = ['doAfterUpdate'];
     protected $request;
     protected $db;
     protected $builder;
@@ -77,5 +78,61 @@ class M_OvertimeDetail extends Model
             $builder->where($where);
 
         return $builder->get();
+    }
+
+    public function doAfterUpdate(array $rows)
+    {
+        $mOvertime = new M_Overtime($this->request);
+
+        $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
+        $line = $this->find($ID);
+        $header = $mOvertime->find($line->trx_overtime_id);
+
+        if ($header->ispacket == 'Y' && !empty($header->trx_bundling_id) && $line->isagree == 'Y' && !empty($line->overtime_balance)) {
+            $this->db->transBegin();
+            try {
+                $mBundling = new M_Bundling($this->request);
+                $mBundlingParticipant = new M_BundlingParticipant($this->request);
+                $mBundlingEvent = new M_BundlingEvent($this->request);
+
+                $bundling = $mBundling->find($header->trx_bundling_id);
+                $participantIDs = $mBundlingParticipant->select('trx_bundling_participant_id')
+                    ->where('trx_bundling_id', $header->trx_bundling_id)
+                    ->findColumn('trx_bundling_participant_id');
+
+                $totalTime = 0;
+
+                if (!empty($participantIDs)) {
+                    $result = $mBundlingEvent
+                        ->selectSum('time', 'total_time_sum')
+                        ->whereIn('trx_bundling_participant_id', $participantIDs)
+                        ->first();
+
+                    $totalTime = $result->total_time_sum ?? 0;
+                }
+
+                $timeLeft = max($bundling->estimate_time - $totalTime, 0);
+
+                $insertTime = min($line->overtime_balance, $timeLeft);
+                if ($timeLeft > 0 && $insertTime > 0) {
+                    $bundlingParticipant = $mBundlingParticipant->where(['trx_bundling_id' => $header->trx_bundling_id, 'md_employee_id' => $line->md_employee_id])->first();
+
+                    $entity = new \App\Entities\BundlingEvent();
+                    $entity->created_by = $line->updated_by;
+                    $entity->updated_by = $line->updated_by;
+                    $entity->trx_overtime_detail_id = $ID;
+                    $entity->trx_bundling_participant_id = $bundlingParticipant->trx_bundling_participant_id;
+                    $entity->date = date('Y-m-d', strtotime($line->startdate));
+                    $entity->time = $insertTime;
+
+                    $mBundlingEvent->save($entity);
+                }
+
+                $this->db->transCommit();
+            } catch (\Exception $e) {
+                $this->db->transRollback();
+                throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
+            }
+        }
     }
 }

@@ -2420,62 +2420,37 @@ $("#form_employee, #form_outsourcing").on(
   }
 );
 
-$("#form_overtime").on("change", "input[name=isemployee]", function (e) {
+$("#form_overtime").on("change", "input[name=isemployee], input[name=ispacket]", function (e) {
   const _this = $(this);
-  const target = $(e.target);
-  const form = target.closest("form");
+  const form = $(e.target).closest("form");
+  const isEmployee = _this.attr('name') === 'isemployee';
+  const isChecked = _this.is(':checked');
+  
+  const attributeName = isEmployee ? 'hide-field' : 'show-field';
+  const shouldShow = isEmployee ? !isChecked : isChecked;
+  
+  const fields = _this.attr(attributeName)?.split(",").map(f => f.trim()) || [];
 
-  const fields = _this
-    .attr("hide-field")
-    .split(",")
-    .map((element) => element.trim());
-
-  if (_this.is(":checked")) {
-    for (let i = 0; i < fields.length; i++) {
-      form
-        .find(
-          "input[name=" +
-            fields[i] +
-            "], textarea[name=" +
-            fields[i] +
-            "], select[name=" +
-            fields[i] +
-            "]"
-        )
-        .not(".line")
-        .closest(".form-group")
-        .val(null)
-        .hide();
-
-      if (form.find("select[name=" + fields[i] + "]").length)
-        form
-          .find("select[name=" + fields[i] + "]")
-          .val(null)
-          .change();
-    }
-  } else {
-    for (let i = 0; i < fields.length; i++) {
-      form
-        .find(
-          "input[name=" +
-            fields[i] +
-            "], textarea[name=" +
-            fields[i] +
-            "], select[name=" +
-            fields[i] +
-            "]"
-        )
-        .not(".line")
-        .closest(".form-group")
-        .show();
-
-      if (form.find("select[name=" + fields[i] + "]").length)
-        form
-          .find("select[name=" + fields[i] + "]")
-          .val(null)
-          .change();
-    }
+  if (!isEmployee && isChecked) {
+    form.find('input[name=isemployee]').prop({'disabled': true, 'checked' : true}).change();
+    getBundling(_this);
+  } else if (!isEmployee && !isChecked) {
+    form.find('input[name=isemployee]').removeAttr('disabled');
   }
+  
+  fields.forEach(fieldName => {
+    const formGroup = form
+      .find(`input[name=${fieldName}], textarea[name=${fieldName}], select[name=${fieldName}]`)
+      .not(".line")
+      .closest(".form-group");
+    
+    formGroup.toggle(shouldShow);
+    
+    if (!shouldShow) {
+      formGroup.find('input, textarea, select').val(null);
+      formGroup.find('select').change();
+    }
+  });
 });
 
 _tableReport.on("click", ".btn_generate_memo", function (e) {

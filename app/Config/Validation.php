@@ -1605,6 +1605,13 @@ class Validation
                 'required_based_field_value'      => 'Mohon mengisi {field} dahulu'
             ]
         ],
+        'trx_bundling_id'        => [
+            'label'             => 'paket',
+            'rules'             => 'required_based_field_value[ispacket, Y]',
+            'errors'            => [
+                'required_based_field_value'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
     ];
 
     public $lembur = [
@@ -1653,6 +1660,13 @@ class Validation
         'md_supplier_id'        => [
             'label'             => 'Asal Outsourcing',
             'rules'             => 'required_based_field_value[isemployee, N]',
+            'errors'            => [
+                'required_based_field_value'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ],
+        'trx_bundling_id'        => [
+            'label'             => 'paket',
+            'rules'             => 'required_based_field_value[ispacket, Y]',
             'errors'            => [
                 'required_based_field_value'      => 'Mohon mengisi {field} dahulu'
             ]
@@ -3559,6 +3573,90 @@ class Validation
             'rules'             => 'required',
             'errors'            => [
                 'required'      => 'Mohon mengisi {field} dahulu'
+            ]
+        ]
+    ];
+
+    public $fcm = [
+        'fcm_token'        => [
+            'label'             => 'Token FCM',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu',
+            ]
+        ],
+        'device_token'        => [
+            'label'             => 'Token Device',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu',
+            ]
+        ],
+        'platform'        => [
+            'label'             => 'Platform',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu',
+            ]
+        ],
+    ];
+
+    public $paket = [
+        'name'        => [
+            'label'             => 'nama paket',
+            'rules'             => 'required|is_unique[sys_menu.name,sys_menu_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu',
+                'is_unique'     => 'This {field} already exists.'
+            ]
+        ],
+        'md_employee_id'        => [
+            'label'             => 'pemohon',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_branch_id'          => [
+            'label'             => 'Cabang',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'md_division_id'        => [
+            'label'             => 'Divisi',
+            'rules'             => 'required',
+            'errors'            => [
+                'is_exist'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'startdate'             => [
+            'label'             => 'Tanggal',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'enddate'               => [
+            'label'             => 'Tanggal',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'line'                  => [
+            'label'             => 'Peserta Paket',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu.'
+            ]
+        ],
+        'detail.table.*.md_employee_id_line'  => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
             ]
         ]
     ];
