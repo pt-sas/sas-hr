@@ -105,9 +105,9 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="nominal_type">Nominal <span class="required">*</span></label>
+                    <label for="nominal_type">Kompensansi <span class="required">*</span></label>
                     <select class="form-control select2" id="nominal_type" name="nominal_type">
-                        <option value="">Pilih Nominal</option>
+                        <option value="">Pilih Kompensansi</option>
                         <option value="orang">Per Orang</option>
                         <option value="fix pernilai">Fix Per Orang</option>
                         <option value="fix perdivisi">Fix Per Divisi</option>
@@ -117,12 +117,12 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="recurring_type">Rekuring</label>
+                    <label for="recurring_type">Rekuren</label>
                     <select class="form-control select2" id="recurring_type" name="recurring_type">
-                        <option value="">Pilih Nominal</option>
-                        <option value="hari">Per Hari</option>
-                        <option value="minggu">Per Minggu</option>
-                        <option value="bulan">Per Bulan</option>
+                        <option value="">Pilih Rekuren</option>
+                        <option value="hari">Harian</option>
+                        <option value="minggu">Mingguan</option>
+                        <option value="bulan">Bulanan</option>
                     </select>
                     <small class="form-text text-danger" id="recurring_type"></small>
                 </div>
