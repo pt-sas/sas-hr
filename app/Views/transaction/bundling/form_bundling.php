@@ -77,6 +77,20 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
+                    <label for="nominal_type">Kompensansi <span class="required">*</span></label>
+                    <select class="form-control select2" id="nominal_type" name="nominal_type" disabled>
+                        <option value="">Pilih Kompensansi</option>
+                        <option value="orang">Per Orang</option>
+                        <option value="fix pernilai">Fix Per Orang</option>
+                        <option value="fix perdivisi">Fix Per Divisi</option>
+                    </select>
+                    <small class="form-text text-danger" id="error_nominal_type"></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
                     <label for="date">Tanggal Mulai <span class="required">*</span></label>
                     <div class="input-icon">
                         <input type="text" class="form-control date-start" name="startdate" autocomplete="off">

@@ -218,4 +218,21 @@ class MasterBundling extends BaseController
             return $this->response->setJSON($response);
         }
     }
+
+    public function getPacketDetail()
+    {
+        if ($this->request->isAjax()) {
+            $post = $this->request->getVar();
+
+            try {
+                $packet = $this->model->where('name', $post['name'])->first();
+
+                $response['nominal_type'] = $packet->nominal_type;
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
 }
