@@ -2704,3 +2704,31 @@ _tableLine.on("click", ".btn_view_image", function (e) {
     },
   });
 });
+
+$("#form_bundling").on("change", '#name', function(e) {
+  const form = $(this).closest('form');
+  let packetName = $(this).val();
+
+  let formData = new FormData();
+
+  formData.append('name', packetName);
+
+  let url = ADMIN_URL + "master-paket/getDetail";
+
+  $.ajax({
+        url: url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "JSON",
+        success: function (result) {
+            let value = result.nominal_type;
+            console.log(value);
+            form.find("#nominal_type").val(value).change();
+        },
+        error: function (jqXHR, exception) {
+          showError(jqXHR, exception);
+        },
+      });
+});
