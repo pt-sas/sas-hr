@@ -407,6 +407,8 @@ class Attendance extends BaseController
         $cMessage = new Message();
         $cTelegram = new Telegram();
 
+        set_time_limit(0);
+
         $holiday = $mHoliday->getHolidayDate();
         $today = date("Y-m-d");
         $yesterday = addBusinessDays($today, 1, $holiday, true);
