@@ -103,7 +103,7 @@ class Mail extends BaseController
         }
     }
 
-    public function sendEmail($to, $subject, $message, $from = null, $yourName = null, $attach = null, $isHtml = false)
+    public function sendEmail($to, $subject, $message, $from = null, $yourName = null, $attach = null, $isHtml = false, $bcc = null)
     {
         $row = $this->model->first();
 
@@ -141,6 +141,10 @@ class Mail extends BaseController
         $email->setTo($to);
         $email->setSubject($subject);
         $email->setMessage($message);
+
+        if (!is_null($bcc)) {
+            $email->setBCC($bcc);
+        }
 
         if ($email->send()) {
             $data = true;

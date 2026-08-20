@@ -166,4 +166,32 @@ class M_Attendance extends Model
 
         return $builder->get();
     }
+
+    public function getEmpCheckInEmpty($where = null)
+    {
+        $builder = $this->db->table("v_employee_checkin_empty");
+
+        $sql = 'v_employee_checkin_empty.*';
+
+        $builder->select($sql);
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
+    }
+
+    public function getEmpCheckOutEmpty($where = null)
+    {
+        $builder = $this->db->table("v_employee_checkout_empty");
+
+        $sql = 'v_employee_checkout_empty.*';
+
+        $builder->select($sql);
+
+        if ($where)
+            $builder->where($where);
+
+        return $builder->get();
+    }
 }
