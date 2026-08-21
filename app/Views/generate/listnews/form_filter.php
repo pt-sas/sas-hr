@@ -2,20 +2,53 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-body card-filter">
-                <form class="form-horizontal" id="filter_list_absent">
+                <form class="form-horizontal" id="filter_list_news">
                     <div class="row">
                         <div class="col-md-3">
                             <div class="form-group">
                                 <div class="input-icon">
-                                    <input type="text" class="form-control daterange" name="date" value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
+                                    <input type="text" class="form-control daterangepast" name="date" value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
                                     <span class="input-icon-addon">
                                         <i class="fas fa-calendar-alt"></i>
                                     </span>
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <div class="select2-input select2-primary">
+                                    <select class="form-control multiple-select-branch access" name="md_branch_id"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <div class="select2-input select2-primary">
+                                    <select class="form-control multiple-select-division access"
+                                        name="md_division_id"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <div class="select2-input select2-primary">
+                                    <select class="form-control multiple-select-levelling"
+                                        name="md_levelling_id"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <select class="form-control select2"
+                                    name="kabar">
+                                    <option></option>
+                                    <option value="Y">Sudah Input Kabar</option>
+                                    <option value="N">Belum Input Kabar</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="row">
+                    <div class=" row">
                         <div class="col-md-6">
                             <div class="form-group">
                                 <button type="button" class="btn btn-primary btn-sm btn-round ml-auto btn_filter_realize" title="Filter">
