@@ -15,6 +15,8 @@ class CreateViewEmployeeCheckoutEmpty extends Migration
         CROSS JOIN date_data d
         LEFT JOIN md_employee_work mew ON me.md_employee_id = mew.md_employee_id and (mew.validfrom <= d.tanggal and mew.validto >= d.tanggal)
         LEFT JOIN md_work_detail mwd ON mew.md_work_id = mwd.md_work_id AND (WEEKDAY(d.tanggal) + 1) = mwd.md_day_id
+        LEFT JOIN md_employee_work mew_now ON me.md_employee_id = mew_now.md_employee_id and (mew_now.validfrom <= DATE(NOW()) and mew_now.validto >= DATE(NOW()))
+        LEFT JOIN md_work_detail mwd_now ON mew_now.md_work_id = mwd_now.md_work_id AND (WEEKDAY(DATE(NOW())) + 1) = mwd_now.md_day_id
         left join (select ad.md_employee_id, a.trx_assignment_id ,a.branch_in, date(adate.date) as date
         from trx_assignment a 
         join trx_assignment_detail ad on a.trx_assignment_id = ad.trx_assignment_id
@@ -26,7 +28,7 @@ class CreateViewEmployeeCheckoutEmpty extends Migration
         and me.md_status_id in (100001, 100002, 100008)
         and me.md_levelling_id != 100001
         and (CASE 
-            WHEN mwd.md_work_detail_id IS NOT NULL AND HOUR(mwd.startwork) <> HOUR(NOW()) THEN FALSE
+            WHEN mwd_now.md_work_detail_id IS NOT NULL AND HOUR(mwd_now.startwork) <> HOUR(NOW()) THEN FALSE
             WHEN me.md_levelling_id <= 100003 AND mwd.md_work_detail_id IS NOT NULL THEN NOT EXISTS(SELECT 1 FROM v_attendance va WHERE va.md_employee_id = me.md_employee_id AND va.date = d.tanggal AND (va.clock_out IS NOT null or va.clock_out != ''))
             WHEN penugasan.trx_assignment_id IS NOT NULL THEN NOT EXISTS (SELECT 1 FROM v_attendance_branch vab 
                             WHERE vab.md_employee_id = me.md_employee_id AND vab.md_branch_id = penugasan.branch_in AND vab.`date` = d.tanggal AND (vab.clock_out IS NOT null or vab.clock_out != ''))
