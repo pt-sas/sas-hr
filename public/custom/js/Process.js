@@ -270,6 +270,27 @@ $(document).ready(function (e) {
     $(this).val("");
   });
 
+  $(".daterangepast").daterangepicker({
+    autoUpdateInput: false,
+    maxDate: moment(),
+    locale: {
+      format: "DD-MMM-YYYY",
+      cancelLabel: "Clear",
+    },
+  });
+
+  $(".daterangepast").on("apply.daterangepicker", function (ev, picker) {
+    $(this).val(
+      picker.startDate.format("DD-MMM-YYYY") +
+        " - " +
+        picker.endDate.format("DD-MMM-YYYY")
+    );
+  });
+
+  $(".daterangepast").on("cancel.daterangepicker", function (ev, picker) {
+    $(this).val("");
+  });
+
   $(".summernote-product").summernote({
     fontNames: [
       "Arial",

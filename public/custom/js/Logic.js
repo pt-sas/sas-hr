@@ -2376,8 +2376,8 @@ _tableReport.on("click", ".btn_input_news", function (e) {
   let reason;
   let id = this.id;
 
-  date = tr.find("td:eq(5)").text();
-  reason = tr.find("td:eq(6)").text();
+  date = tr.find("td:eq(6)").text();
+  reason = tr.find("td:eq(7)").text();
 
   const form = $("#form_input_news");
 
