@@ -63,7 +63,7 @@ class News extends BaseController
             $empListSql = implode(', ', $empList);
 
             //* Get Rule & Operation for Level
-            $rule = $mRule->where('name', 'List Alpa')->first();
+            $rule = $mRule->where('name', 'List Kabar')->first();
             $ruleDetail = $mRuleDetail->where(['name' => 'Included Level', 'md_rule_id' => $rule->md_rule_id])->first();
             $operation = getOperation($ruleDetail->operation);
 
@@ -270,14 +270,20 @@ class News extends BaseController
     {
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
+            $mRule = new M_Rule($this->request);
+            $mRuleDetail = new M_RuleDetail($this->request);
+
             $md_employee_id = $post['md_employee_id'];
             $date = date('Y-m-d', strtotime($post['date']));
             $reason = $post['reason'];
             $today = date('Y-m-d');
-            $maxTime = convertToMinutes("17:00");
             $nowTime = convertToMinutes(date('H:m'));
 
             try {
+                $rule = $mRule->where('name', 'List Kabar')->first();
+                $ruleDetail = $mRuleDetail->where(['name' => 'Batas Waktu Input', 'md_rule_id' => $rule->md_rule_id])->first();
+                $maxTime = convertToMinutes($ruleDetail->condition);
+
                 if (!$this->validation->run($post, 'news')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else if ($nowTime > $maxTime || $today > $date) {
