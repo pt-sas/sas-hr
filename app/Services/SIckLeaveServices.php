@@ -36,8 +36,10 @@ class SickLeaveServices extends BaseServices
         $this->baseSubType = $this->model->Pengajuan_Sakit;
     }
 
-    public function getPaginated(array $params, int $md_employee_id)
+    public function getPaginated(array $params)
     {
+        $empServices = new EmployeeServices($this->userID, $this->employeeID);
+
         $page      = $params['page'];
         $limit     = $params['limit'];
         $docstatus = $params['docstatus'];
@@ -49,7 +51,7 @@ class SickLeaveServices extends BaseServices
 
         $builder->select("trx_absent_id, documentno, startdate, enddate, docstatus, e.md_employee_id, e.value as karyawan");
         $builder->join('md_employee e', 'e.md_employee_id = trx_absent.md_employee_id', 'left');
-        $builder->where('e.md_employee_id', $md_employee_id);
+        $builder->whereIn('e.md_employee_id', $empServices->getEmployeeListAccess(true, false));
         $builder->where('submissiontype', $this->baseSubType);
 
         if (!empty($docstatus))
@@ -238,11 +240,28 @@ class SickLeaveServices extends BaseServices
         $mDivision = new M_Division($this->request);
 
         $fieldsAllowed = [
-            'trx_absent_id', 'documentno', 'md_employee_id', 'nik',
-            'md_branch_id', 'md_division_id', 'submissiondate', 'receiveddate',
-            'submissiontype', 'startdate', 'enddate', 'reason', 'docstatus',
-            'approveddate', 'created_by', 'updated_by', 'totaldays', 'isreopen',
-            'image', 'image2', 'image3', 'img_medical'
+            'trx_absent_id',
+            'documentno',
+            'md_employee_id',
+            'nik',
+            'md_branch_id',
+            'md_division_id',
+            'submissiondate',
+            'receiveddate',
+            'submissiontype',
+            'startdate',
+            'enddate',
+            'reason',
+            'docstatus',
+            'approveddate',
+            'created_by',
+            'updated_by',
+            'totaldays',
+            'isreopen',
+            'image',
+            'image2',
+            'image3',
+            'img_medical'
         ];
 
         $list = $this->model->select($fieldsAllowed)
@@ -283,8 +302,13 @@ class SickLeaveServices extends BaseServices
         $list   = $this->field->setDataSelect($mDivision->table, $list, $mDivision->primaryKey, $rowDiv->getDivisionId(), $rowDiv->getName());
 
         $fieldsAllowed = [
-            'trx_absent_detail_id', 'trx_absent_id', 'lineno',
-            'date', 'isagree', 'ref_absent_detail_id', 'table'
+            'trx_absent_detail_id',
+            'trx_absent_id',
+            'lineno',
+            'date',
+            'isagree',
+            'ref_absent_detail_id',
+            'table'
         ];
         $detail = $this->modelDetail->select($fieldsAllowed)
             ->where($this->model->primaryKey, $id)

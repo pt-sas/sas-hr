@@ -35,7 +35,7 @@ class HalfDayOfficeDuties extends ApiController
                 $params['limit'] = 10;
             }
 
-            $result = $service->getPaginated($params, $this->jwt->md_employee_id);
+            $result = $service->getPaginated($params);
 
             $response = apiResponse(true, "success", $result['data'], [], $result['meta']);
         } catch (\App\Exceptions\BaseException $e) {

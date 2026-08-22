@@ -38,8 +38,10 @@ class ForgotAbsentLeaveServices extends BaseServices
     }
 
     //* Function for paginated for API Mobile
-    public function getPaginated(array $params, int $md_employee_id)
+    public function getPaginated(array $params)
     {
+        $empServices = new EmployeeServices($this->userID, $this->employeeID);
+
         $page       = $params['page'];
         $limit      = $params['limit'];
         $docstatus  = $params['docstatus'];
@@ -53,7 +55,7 @@ class ForgotAbsentLeaveServices extends BaseServices
 
         $builder->join('md_employee e', 'e.md_employee_id = trx_absent.md_employee_id', 'left');
 
-        $builder->where('e.md_employee_id', $md_employee_id);
+        $builder->whereIn('e.md_employee_id', $empServices->getEmployeeListAccess(true, false));
         $builder->where('submissiontype', $this->baseSubType);
 
         if (!empty($docstatus))

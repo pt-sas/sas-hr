@@ -36,8 +36,10 @@ class PermissionLeaveEarlyServices extends BaseServices
     }
 
     //* Function for paginated for API Mobile
-    public function getPaginated(array $params, int $md_employee_id)
+    public function getPaginated(array $params)
     {
+        $empServices = new EmployeeServices($this->userID, $this->employeeID);
+
         $page       = $params['page'];
         $limit      = $params['limit'];
         $docstatus  = $params['docstatus'];
@@ -51,7 +53,7 @@ class PermissionLeaveEarlyServices extends BaseServices
 
         $builder->join('md_employee e', 'e.md_employee_id = trx_absent.md_employee_id', 'left');
 
-        $builder->where('e.md_employee_id', $md_employee_id);
+        $builder->whereIn('e.md_employee_id', $empServices->getEmployeeListAccess(true, false));
         $builder->where('submissiontype', $this->baseSubType);
 
         if (!empty($docstatus))
@@ -185,7 +187,7 @@ class PermissionLeaveEarlyServices extends BaseServices
         $endWorkHour = convertToMinutes($endWork);
 
         if ($endWorkHour <= convertToMinutes($data['startdate']))
-        throw new ValidationException("Jam absen pulang tidak sesuai dengan kriteria jam pulang cepat");
+            throw new ValidationException("Jam absen pulang tidak sesuai dengan kriteria jam pulang cepat");
 
         //* Validate submission one day
         $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
