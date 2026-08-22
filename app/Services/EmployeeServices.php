@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\NotFoundException;
+use App\Models\M_AccessMenu;
 use App\Models\M_Branch;
 use App\Models\M_Country;
 use App\Models\M_Division;
@@ -153,8 +154,109 @@ class EmployeeServices extends BaseServices
         $dataEntity->md_status_id = $status;
         $dataEntity->superior_id = $superior;
         $dataEntity->sys_role_id = $role;
-        $dataEntity->image = '/uploads/' . $this->PATH_Karyawan . '/' . $employee->image;
+        $dataEntity->image = base_url('/uploads/' . $this->PATH_Karyawan . '/' . $employee->image);
 
         return [$dataEntity];
+    }
+
+    public function getEmpListDetail()
+    {
+        $mEmpBranch = new M_EmpBranch($this->request);
+        $mEmpDivision = new M_EmpDivision($this->request);
+
+        $empList = $this->getEmployeeListAccess();
+        if (empty($empList)) return [];
+
+        $empListSql = implode(', ', $empList);
+
+        $dataEmpList = [];
+        foreach ($this->model->whereIn('md_status_id', [$this->Status_PERMANENT, $this->Status_PROBATION])->whereIn('md_employee_id', $empList)->findAll() as $value) {
+            $dataEmpList[$value->md_employee_id] = $value;
+        }
+
+        $dataBranchList = [];
+        foreach ($mEmpBranch->getBranchDetail("md_employee_id IN ({$empListSql})")->getResult() as $value) {
+            $dataBranchList[$value->md_employee_id][] = [
+                'id'   => (int) $value->md_branch_id,
+                'name' => $value->branch_name,
+            ];
+        }
+
+        $dataDivList = [];
+        foreach ($mEmpDivision->getDivisionDetail("md_employee_id IN ({$empListSql})")->getResult() as $value) {
+            $dataDivList[$value->md_employee_id][] = [
+                'id'   => (int) $value->md_division_id,
+                'name' => $value->division_name,
+            ];
+        }
+
+        $data = [];
+        foreach ($dataEmpList as $value) {
+            $data[] = [
+                'md_employee_id' => (int) $value->md_employee_id,
+                'nik' => $value->nik,
+                'fullname' => $value->fullname,
+                'md_branch_id' => $dataBranchList[$value->md_employee_id] ?? [],
+                'md_division_id' => $dataDivList[$value->md_employee_id] ?? []
+            ];
+        }
+
+        return $data;
+    }
+
+    public function getEmployeeListAccess(bool $isAffectDelegation = true, bool $excludeSelf = false)
+    {
+        $mAccess = new M_AccessMenu($this->request);
+        $mUser = new M_User($this->request);
+
+        $roleEmp = $mUser->detail([
+            'sr.isactive'           => 'Y',
+            'sys_user.sys_user_id'  => $this->userID,
+            'sr.name'               => 'W_Emp_All_Data'
+        ])->getRow();
+
+        if ($isAffectDelegation)
+            $empDelegation = $this->model->getEmpDelegation($this->userID);
+
+        $arrAccess = $mAccess->getAccess($this->userID);
+        $arrEmployee = !empty($this->employeeID) ? $this->model->getChartEmployee($this->employeeID) : [];
+
+        if (!empty($empDelegation)) {
+            $arrEmployee = array_unique(array_merge($arrEmployee, $empDelegation));
+        }
+
+        $empList = [];
+
+        if ($arrAccess && isset($arrAccess["branch"]) && isset($arrAccess["division"])) {
+            $arrBranch = $arrAccess["branch"];
+            $arrDiv = $arrAccess["division"];
+
+            $arrEmpBased = $this->model->getEmployeeBased($arrBranch, $arrDiv);
+
+            if (!empty($empDelegation)) {
+                $arrEmpBased = array_unique(array_merge($arrEmpBased, $empDelegation));
+            }
+
+            if ($roleEmp && !empty($this->employeeID)) {
+                $arrMerge = array_unique(array_merge($arrEmpBased, $arrEmployee));
+
+                $empList = $arrMerge;
+            } else if (!$roleEmp && !empty($this->employeeID)) {
+                $empList = $arrEmployee;
+            } else if ($roleEmp && empty($this->employeeID)) {
+                $empList = $arrEmpBased;
+            } else {
+                $empList = [$this->employeeID];
+            }
+        } else if (!empty($this->employeeID)) {
+            $empList = $arrEmployee;
+        } else {
+            $empList = [$this->employeeID];
+        }
+
+        if ($excludeSelf)
+            $empList = array_diff($empList, [$this->employeeID]);
+
+        return $empList;
     }
 }

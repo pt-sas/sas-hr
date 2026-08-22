@@ -832,6 +832,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
     $routes->resource('wactivity', ['controller' => 'WActivity']);
 
     $routes->get('my-profile', 'Employee::getProfile');
+    $routes->get('employee/getList', 'Employee::getEmpListAccess');
 
     $routes->post('cuti/processIt', 'Leave::proccessSubmission');
     $routes->get('cuti/getAvailableLeaves', 'Leave::getAvailableLeaves');

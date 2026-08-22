@@ -35,7 +35,7 @@ class Permission extends ApiController
                 $params['limit'] = 10;
             }
 
-            $result = $service->getPaginated($params, $this->jwt->md_employee_id);
+            $result = $service->getPaginated($params);
 
             $response = apiResponse(true, "success", $result['data'], [], $result['meta']);
         } catch (\Exception $e) {
@@ -120,7 +120,7 @@ class Permission extends ApiController
             //* Check Access
             $authServices = new AuthServices($this->jwt->sys_user_id, $this->jwt->md_employee_id, $this->jwt->sys_role_id);
             $authServices->checkAccess($this->menuURL, $this->Method_UPDATE);
-            
+
             if (empty($data))
                 throw new UnSupportedException("Unsupported Media");
 
