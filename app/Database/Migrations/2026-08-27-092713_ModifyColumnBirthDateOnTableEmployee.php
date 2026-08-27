@@ -13,6 +13,8 @@ class ModifyColumnBirthDateOnTableEmployee extends Migration
         ];
 
         $this->forge->modifyColumn('md_employee', $fields);
+        $this->forge->modifyColumn('md_employee_family', $fields);
+        $this->forge->modifyColumn('md_employee_family_core', $fields);
     }
 
     public function down()
@@ -22,5 +24,7 @@ class ModifyColumnBirthDateOnTableEmployee extends Migration
         ];
 
         $this->forge->modifyColumn('md_employee', $fields);
+        $this->forge->modifyColumn('md_employee_family', $fields);
+        $this->forge->modifyColumn('md_employee_family_core', $fields);
     }
 }
