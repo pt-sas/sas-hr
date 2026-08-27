@@ -455,7 +455,7 @@ class User extends BaseController
 		foreach ($userList as $value) {
 			$user = $this->model->where(['sys_user_id' => $value->sys_user_id, 'isactive' => 'Y'])->first();
 
-			if (!$user && !$user->md_employee_id) continue;
+			if (!$user || !$user->md_employee_id) continue;
 
 			$where = "md_employee.md_employee_id = {$user->md_employee_id}";
 			$where .= " AND v_attendance.date = '{$today}'";
