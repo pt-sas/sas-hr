@@ -295,7 +295,7 @@ class BaseServices
             // TODO : Check is created by or updated by already set?
             if ($newRecord) {
                 if (array_key_exists($this->createdByField, $data)) {
-                    $newV->{$this->updatedByField} = $data[$this->createdByField];
+                    $newV->{$this->createdByField} = $data[$this->createdByField];
                 } else {
                     $newV->{$this->createdByField} = $this->userID;
                 }
