@@ -293,13 +293,21 @@ class BaseServices
             }
 
             // TODO : Check is created by or updated by already set?
-            if ($newRecord && !array_key_exists($this->createdByField, $data))
-                $newV->{$this->createdByField} = $this->userID;
+            if ($newRecord) {
+                if (array_key_exists($this->createdByField, $data)) {
+                    $newV->{$this->updatedByField} = $data[$this->createdByField];
+                } else {
+                    $newV->{$this->createdByField} = $this->userID;
+                }
+            }
 
-            if (
-                $newRecord || (!$newRecord && ($isChange || (!empty($beforeUpdate) || !empty($afterUpdate))) && !array_key_exists($this->updatedByField, $data))
-            )
-                $newV->{$this->updatedByField} = $this->userID;
+            if ($newRecord || (!$newRecord && ($isChange || (!empty($beforeUpdate) || !empty($afterUpdate))))) {
+                if (array_key_exists($this->updatedByField, $data)) {
+                    $newV->{$this->updatedByField} = $data[$this->updatedByField];
+                } else {
+                    $newV->{$this->updatedByField} = $this->userID;
+                }
+            }
 
             if (!empty($this->table) && json_decode($this->table)) {
                 $arrLine = json_decode($this->table);
