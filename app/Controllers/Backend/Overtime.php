@@ -614,7 +614,7 @@ class Overtime extends BaseController
             $pdf->Cell($w[1], 6, $employeeDetail->value, 1, 0, 'L');
             $pdf->Cell($w[2], 6, $row->description, 1, 0, 'L', false, '', 1);
             $pdf->Cell($w[3], 6, format_time($row->startdate), 1, 0, 'C');
-            $pdf->Cell($w[4], 6, format_time($row->enddate), 1, 0, 'C');
+            $pdf->Cell($w[4], 6, format_time($row->enddate_realization == '0000-00-00 00:00:00' ? $row->enddate : $row->enddate_realization), 1, 0, 'C');
             $pdf->Ln();
             $number++;
         }
