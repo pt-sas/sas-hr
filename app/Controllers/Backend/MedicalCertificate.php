@@ -5,10 +5,10 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Absent;
 use Config\Services;
-use App\Models\M_AccessMenu;
 use App\Models\M_Employee;
 use App\Models\M_MedicalCertificate;
 use App\Models\M_Year;
+use App\Services\MedicalCertificateServices;
 
 class MedicalCertificate extends BaseController
 {
@@ -95,6 +95,8 @@ class MedicalCertificate extends BaseController
                 } else {
                     $post["submissiontype"] = $this->model->Pengajuan_Surat_Keterangan_Sakit;
                     $post["necessary"] = 'KS';
+                    $doProcess = $post['processNow'];
+
                     $this->entity->fill($post);
 
                     $trx = $this->model->where('trx_absent_id',  $post['trx_absent_id'])->whereIn('docstatus', ['CO', 'IP'])->first();
@@ -109,6 +111,8 @@ class MedicalCertificate extends BaseController
                     } else if ($trx) {
                         $response = message('error', true, 'Sudah ada pengajuan lain untuk pengajuan Sakit ini');
                     } else {
+                        $this->model->db->transBegin();
+
                         if ($this->isNew()) {
                             $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
 
@@ -116,9 +120,21 @@ class MedicalCertificate extends BaseController
                             $this->entity->setDocumentNo($docNo);
                         }
 
-                        $response = $this->save();
+                        $response = $this->save(false);
+
+                        if ($doProcess === "Y") {
+                            $ID = $post['id'] ?? $this->insertID;
+                            $service = new MedicalCertificateServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                            $service->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                        }
+
+                        $this->model->db->transCommit();
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

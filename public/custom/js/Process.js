@@ -1178,6 +1178,14 @@ $(".save_form").click(function (evt) {
   }
   formData.append("issend", isSend);
 
+  //* For Save & Process
+  let processNow = "N";
+  if (_this.hasClass('save_process')) {
+    processNow = "Y";
+  }
+
+  formData.append("processNow", processNow);
+
     //? Check in form exists Table role
     if (form.find("table.tb_tree").length > 0) {
       const table = form.find("table.tb_tree");
@@ -1437,12 +1445,14 @@ $(".save_form").click(function (evt) {
             '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>'
           )
           .prop("disabled", true);
+        $(".save_form").prop("disabled", true);
         $(".x_form").prop("disabled", true);
         $(".close_form").prop("disabled", true);
         loadingForm(form.prop("id"), "facebook");
       },
       complete: function () {
         $(_this).html(oriElement).prop("disabled", false);
+        $(".save_form").removeAttr("disabled");
         $(".x_form").removeAttr("disabled");
         $(".close_form").removeAttr("disabled");
         hideLoadingForm(form.prop("id"));
@@ -4473,8 +4483,7 @@ function previewImage(input, id, src, status = null) {
             typeof status === "undefined" ||
             status === "" ||
             status === null ||
-            status === "DR" ||
-            status === "IP"
+            status === "DR"
           )
             $(".save_form").removeAttr("disabled");
 

@@ -12,6 +12,7 @@ use App\Models\M_Employee;
 use Config\Services;
 use App\Models\M_User;
 use App\Models\M_Year;
+use App\Services\DelegationTransferServices;
 
 class DelegationTransfer extends BaseController
 {
@@ -106,6 +107,7 @@ class DelegationTransfer extends BaseController
                 } else {
                     $post["submissiontype"] = $this->model->Pengajuan_Transfer_Duta;
                     $post["necessary"] = 'TD';
+                    $doProcess = $post['processNow'];
                     $user_to = $mUser->where('md_employee_id', $post['employee_to'])->first();
 
                     // TODO : Checking Period
@@ -128,6 +130,8 @@ class DelegationTransfer extends BaseController
                     } else if (!$user_to) {
                         $response = message('success', false, 'Duta Tujuan tidak memiliki akses pengguna');
                     } else {
+                        $this->model->db->transBegin();
+
                         $this->entity->fill($post);
 
                         if ($this->isNew()) {
@@ -137,9 +141,21 @@ class DelegationTransfer extends BaseController
                             $this->entity->setDocumentNo($docNo);
                         }
 
-                        $response = $this->save();
+                        $response = $this->save(false);
+
+                        if ($doProcess === "Y") {
+                            $ID = $post['id'] ?? $this->insertID;
+                            $service = new DelegationTransferServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                            $service->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                        }
+
+                        $this->model->db->transCommit();
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

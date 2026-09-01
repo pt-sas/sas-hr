@@ -8,16 +8,12 @@ use App\Models\M_AbsentDetail;
 use App\Models\M_Employee;
 use App\Models\M_Holiday;
 use App\Models\M_Rule;
-use App\Models\M_EmpWorkDay;
-use App\Models\M_WorkDetail;
-use App\Models\M_AccessMenu;
-use App\Models\M_Assignment;
-use App\Models\M_Attendance;
 use App\Models\M_Division;
 use App\Models\M_Configuration;
 use App\Models\M_DocumentType;
 use App\Models\M_RuleDetail;
 use App\Models\M_Year;
+use App\Services\ForgotAbsentArriveServices;
 use TCPDF;
 use Config\Services;
 use DateTime;
@@ -135,178 +131,29 @@ class ForgotAbsentArrive extends BaseController
 
     public function create()
     {
-        $mHoliday = new M_Holiday($this->request);
-        $mRule = new M_Rule($this->request);
-        $mAttendance = new M_Attendance($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-        $mAssignment = new M_Assignment($this->request);
-        $mYear = new M_Year($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
-            $post = $this->request->getVar();
-
-            $ID = isset($post['id']) ? $post['id'] : null;
-            $post["submissiontype"] = $this->baseSubType;
-            $post["necessary"] = 'LM';
-            $post["startdate"] = date('Y-m-d', strtotime($post["datestart"])) . " " . $post['starttime'];
-            $post["enddate"] = $post["startdate"];
-            $employeeId = $post['md_employee_id'];
-            $day = date('w', strtotime($post["startdate"]));
-
             try {
+                $post = $this->request->getVar();
+
                 if (!$this->validation->run($post, 'pengajuan')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $holidays = $mHoliday->getHolidayDate();
-                    $startDate = date('Y-m-d', strtotime($post['startdate']));
-                    $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
+                    //* Set ID Data
+                    $post['trx_absent_id'] = !empty($post['id']) ? $post['id'] : null;
 
-                    $rule = $mRule->where([
-                        'name'      => 'Lupa Absen Masuk',
-                        'isactive'  => 'Y'
-                    ])->first();
+                    $service = new ForgotAbsentArriveServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+                    $result = $service->create($post);
 
-                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
-
-                    //TODO : Get work day employee
-                    $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $startDate,
-                        'validto >='        => $endDate
-                    ])->orderBy('validfrom', 'ASC')->first();
-
-                    if (is_null($workDay)) {
-                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    if ($result && !empty($post['id'])) {
+                        $response = message('success', true, "Your data has been updated successfully !");
+                    } else if ($result) {
+                        $response = message('success', true, "Your data has been inserted successfully !");
                     } else {
-                        $day = strtoupper(formatDay_idn($day));
-
-                        //TODO : Get Work Detail
-                        $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-                        //TODO: Get Work Detail by day
-                        $whereClause .= " AND md_day.name = '{$day}'";
-                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
-
-                        //TODO : Get submission Tugas Kantor, Tugas Kantor Khusus
-                        $whereClause = "trx_assignment_detail.md_employee_id = {$employeeId}";
-                        $whereClause .= " AND DATE_FORMAT(trx_assignment_date.date, '%Y-%m-%d') = '{$startDate}'";
-                        $whereClause .= " AND trx_assignment.docstatus = '{$this->DOCSTATUS_Completed}'";
-                        $whereClause .= " AND trx_assignment_date.isagree = 'Y'";
-                        $whereClause .= " AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
-                        $trx = $mAssignment->getDetailData($whereClause)->getRow();
-
-                        // TODO : Checking Period
-                        $dateRange = getDatesFromRange($post['startdate'], $post['enddate'], [], 'Y-m-d', "all");
-
-                        foreach ($dateRange as $date) {
-                            $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
-
-                            if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
-                                break;
-                            }
-                        }
-
-                        if (empty($period)) {
-                            $response = message('success', false, "Periode belum dibuat");
-                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
-                            $response = message('success', false, "Periode {$period->name} ditutup");
-                        } else if ($startDate > $subDate) {
-                            $response = message('success', false, 'Tidak bisa mengajukan untuk hari besok');
-                        } else if (is_null($work) && is_null($trx)) {
-                            $response = message('success', false, 'Tidak terdaftar pada hari kerja');
-                        } else {
-                            $daysOff = getDaysOff($workDetail);
-                            $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
-
-                            //TODO : Get next day attendance from enddate
-                            $presentNextDate = null;
-
-                            if ($startDate <= $subDate) {
-                                $daysOffStr = implode(', ', $daysOff);
-
-                                $whereClause = "v_attendance.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND v_attendance.date > '{$endDate}'";
-                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
-                                $attPresentNextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
-
-                                if (is_null($attPresentNextDay)) {
-                                    $whereClause = "trx_absent.md_employee_id = {$employeeId}";
-                                    $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '{$endDate}'";
-                                    $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
-                                    $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
-                                    $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
-                                    $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOffStr})";
-                                    $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                                    $presentNextDate = $trxPresentNextDay ? $trxPresentNextDay->date : $endDate;
-                                } else {
-                                    $presentNextDate = $attPresentNextDay->date;
-                                }
-
-                                $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
-
-                                //* last index of array from variable nextDate
-                                $lastDate = end($nextDate);
-                            }
-
-                            //TODO : Get submission Half day
-                            $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
-                            $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
-                            $whereClause .= " AND v_all_submission.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
-                            $whereClause .= " AND v_all_submission.submissiontype IN ({$this->model->Pengajuan_Lupa_Absen_Masuk})";
-                            $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                            $trx = $this->model->getAllSubmission($whereClause)->getRow();
-
-                            //* last index of array from variable addDays
-                            $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-                            $addDays = end($addDays);
-
-                            //TODO : Get attendance present employee
-                            $whereClause = "v_attendance.md_employee_id = {$employeeId}";
-                            $whereClause .= " AND v_attendance.date = '{$endDate}'";
-                            $attPresent = $mAttendance->getAttendance($whereClause)->getRow();
-
-                            // TODO : Get Reopen Status
-                            $reopen = false;
-                            if ($ID) {
-                                $trxReopen = $this->model->where(['trx_absent_id' => $ID])->first();
-
-                                if ($trxReopen->isreopen == "Y")
-                                    $reopen = true;
-                            }
-
-                            if ($trx) {
-                                $date = format_dmy($trx->date, '-');
-                                $response = message('success', false, "Tidak bisa mengajukan pada tanggal : {$date}, karena sudah ada pengajuan lain dengan no : {$trx->documentno}");
-                            } else if ($attPresent && !empty($attPresent->clock_in)) {
-                                $response = message('success', false, 'Sudah ada absen masuk');
-                            } else if ($endDate > $addDays) {
-                                $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                            } else if (!is_null($presentNextDate) && ($lastDate < $subDate) && !$reopen) {
-                                $lastDate = format_dmy($lastDate, '-');
-
-                                $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
-                            } else {
-                                $this->entity->fill($post);
-
-                                if ($this->isNew()) {
-                                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-
-                                    $docNo = $this->model->getInvNumber("submissiontype",  $this->baseSubType, $post, $this->session->get('sys_user_id'));
-                                    $this->entity->setDocumentNo($docNo);
-                                }
-
-                                $response = $this->save();
-                            }
-                        }
+                        $response = message('error', false, "No data to Insert");
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

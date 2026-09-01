@@ -297,7 +297,7 @@ class BaseController extends Controller
 	 * Inserts data into the database
 	 * 
 	 */
-	public function save()
+	public function save($useTransaction = true)
 	{
 		$changeLog = new M_ChangeLog($this->request);
 
@@ -331,7 +331,8 @@ class BaseController extends Controller
 		// Must be called first so we don't
 		$data = $this->doStrip($data);
 
-		$this->model->db->transBegin();
+		if ($useTransaction)
+			$this->model->db->transBegin();
 
 		try {
 			$fields = $this->model->db->getFieldData($modelTable);
@@ -439,9 +440,12 @@ class BaseController extends Controller
 				$ok = message('error', false, $this->message);
 			}
 
-			$this->model->db->transCommit();
+			if ($useTransaction)
+				$this->model->db->transCommit();
 		} catch (\Exception $e) {
-			$this->model->db->transRollback();
+			if ($useTransaction)
+				$this->model->db->transRollback();
+
 			throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
 		}
 

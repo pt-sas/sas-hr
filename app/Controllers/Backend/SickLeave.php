@@ -8,7 +8,6 @@ use App\Models\M_Employee;
 use App\Models\M_AbsentDetail;
 use App\Models\M_AssignmentDate;
 use App\Models\M_Holiday;
-use App\Models\M_Attendance;
 use App\Models\M_Configuration;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_Rule;
@@ -19,6 +18,7 @@ use App\Models\M_MedicalCertificate;
 use App\Models\M_RuleDetail;
 use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_Year;
+use App\Services\SickLeaveServices;
 use TCPDF;
 use Config\Services;
 use DateTime;
@@ -135,251 +135,29 @@ class SickLeave extends BaseController
 
     public function create()
     {
-        $mEmployee = new M_Employee($this->request);
-        $mHoliday = new M_Holiday($this->request);
-        $mAttendance = new M_Attendance($this->request);
-        $mRule = new M_Rule($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-        $mMedical = new M_MedicalCertificate($this->request);
-        $mYear = new M_Year($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
-            $post = $this->request->getVar();
-            $file = $this->request->getFile('image');
-            $file2 = $this->request->getFile('image2');
-            $file3 = $this->request->getFile('image3');
-
-            $ID = isset($post['id']) ? $post['id'] : null;
-            $post["submissiontype"] = $this->baseSubType;
-            $post["necessary"] = 'SA';
-            $employeeId = $post['md_employee_id'];
-            $day = date('w');
-
             try {
-                $img_name = "";
-                $img2_name = "";
-                $img3_name = "";
-                $value = "";
-
-                if (!empty($employeeId)) {
-                    $row = $mEmployee->find($employeeId);
-                    $lenPos = strpos($row->getValue(), '-');
-                    $value = substr_replace($row->getValue(), "", $lenPos);
-                    $ymd = date('YmdHis');
-                }
-
-                if ($file && $file->isValid()) {
-                    $ext = $file->getClientExtension();
-                    $img_name = $this->model->Pengajuan_Sakit . '_' . $value . '_' . $ymd . '.' . $ext;
-                    $post['image'] = $img_name;
-                }
-
-                if ($file2 && $file2->isValid()) {
-                    $ext2 = $file2->getClientExtension();
-                    $img2_name = $this->model->Pengajuan_Sakit . '_' . $value . '2_' . $ymd . '.' . $ext2;
-                    $post['image2'] = $img2_name;
-                }
-
-                if ($file3 && $file3->isValid()) {
-                    $ext3 = $file3->getClientExtension();
-                    $img3_name = $this->model->Pengajuan_Sakit . '_' . $value . '3_' . $ymd . '.' . $ext3;
-                    $post['image3'] = $img3_name;
-                }
+                $post = $this->request->getVar();
 
                 if (!$this->validation->run($post, 'sakit')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $holidays = $mHoliday->getHolidayDate();
-                    $startDate = date('Y-m-d', strtotime($post['startdate']));
-                    $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
+                    //* Set ID Data
+                    $post['trx_absent_id'] = !empty($post['id']) ? $post['id'] : null;
 
-                    $rule = $mRule->where([
-                        'name'      => 'Sakit',
-                        'isactive'  => 'Y'
-                    ])->first();
+                    $service = new SickLeaveServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+                    $result = $service->create($post);
 
-                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
-
-                    //TODO : Get work day employee
-                    $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $employeeId,
-                        'validfrom <='      => $startDate,
-                        'validto >='        => $endDate
-                    ])->orderBy('validfrom', 'ASC')->first();
-
-                    if (is_null($workDay)) {
-                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    if ($result && !empty($post['id'])) {
+                        $response = message('success', true, "Your data has been updated successfully !");
+                    } else if ($result) {
+                        $response = message('success', true, "Your data has been inserted successfully !");
                     } else {
-                        //TODO : Get Work Detail
-                        $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-                        $daysOff = getDaysOff($workDetail);
-                        $dateWorkRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
-
-                        $dayClause = [];
-                        $workClause = [];
-                        foreach ($dateWorkRange as $value) {
-                            $date = date('Y-m-d', strtotime($value));
-                            $day = strtoupper(formatDay_idn(date('w', strtotime($value))));
-
-                            $dayClause[] = "'{$day}'";
-                            $workClause[] = "'{$date}'";
-                        }
-
-                        $dayClause = implode(", ", $dayClause);
-                        $workClause = implode(", ", $workClause);
-
-                        //TODO: Get Work Detail by day
-                        $whereClause .= " AND md_day.name IN ({$dayClause})";
-                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
-
-                        //TODO : Get attendance present employee
-                        $whereClause = "v_attendance.md_employee_id = '{$employeeId}'";
-                        $whereClause .= " AND v_attendance.date IN ({$workClause})";
-                        $attPresent = $mAttendance->getAttendance($whereClause)->getResult();
-
-                        //TODO : Get Max Last Date for Submission Past
-                        if ($startDate <= $subDate) {
-                            $attDate = [];
-                            $lastDate = [];
-                            $daysOffStr = implode(', ', $daysOff);
-
-                            $date_range = getDatesFromRange($startDate, $subDate, [], 'Y-m-d', 'all', []);
-
-                            foreach ($date_range as $date) {
-                                $whereClause = "v_attendance.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND v_attendance.date = '{$date}'";
-                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
-                                $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
-
-                                $whereClause = "trx_absent.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '$date'";
-                                $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
-                                $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
-                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOffStr})";
-                                $trxPresentNextDay =  $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                                if ($attPresentNextDay || $trxPresentNextDay) {
-                                    $attDate[] = $date;
-                                }
-
-                                $lastDate[] = $date;
-
-                                if (count($attDate) == $minDays) {
-                                    break;
-                                }
-                            }
-                            $lastDate = end($lastDate);
-                        }
-
-                        //TODO : Get submission one day
-                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
-                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
-                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
-                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
-
-                        //TODO : Get Max Days for Submission Future
-                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-                        $addDays = end($addDays);
-
-                        //TODO : Get Medical Letter
-                        $trxMedical = null;
-
-                        // TODO : Get Reopen Status
-                        $reopen = false;
-                        if ($ID) {
-                            $trxReopen = $this->model->where(['trx_absent_id' => $ID])->first();
-
-                            if ($trxReopen->isreopen == "Y")
-                                $reopen = true;
-                        }
-
-                        if (!empty($post['id'])) {
-                            $trxMedical = $mMedical->where(['trx_absent_id' => $post['id']])->whereIn('docstatus', [$this->DOCSTATUS_Completed, $this->DOCSTATUS_Drafted, $this->DOCSTATUS_Inprogress])->first();
-                        }
-
-                        // TODO : Checking Period
-                        foreach ($dateWorkRange as $date) {
-                            $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
-
-                            if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
-                                break;
-                            }
-                        }
-
-                        if (empty($period)) {
-                            $response = message('success', false, "Periode belum dibuat");
-                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
-                            $response = message('success', false, "Periode {$period->name} ditutup");
-                        } else if ($trx) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
-                        } else if ($endDate > $addDays) {
-                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if (!empty($lastDate) && ($lastDate < $subDate) && $work && !$reopen) {
-                            $lastDate = format_dmy($lastDate, '-');
-
-                            $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
-                        } else if ($attPresent) {
-                            $date = implode(", ", array_map(function ($value) {
-                                return format_dmy($value->date, '-');
-                            }, $attPresent));
-
-                            $response = message('success', false, "Ada kehadiran, tidak bisa mengajukan pada tanggal : [{$date}]");
-                        } else if ($trxMedical) {
-                            $response = message('success', false, 'Tidak bisa mengedit pengajuan ini, dikarenakan sudah ada pengajuan Surat Keterangan Sakit');
-                        } else {
-                            $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
-
-                            if ($this->isNew()) {
-                                if ($file && $file->isValid())
-                                    uploadFile($file, $path, $img_name);
-
-                                if ($file2 && $file2->isValid())
-                                    uploadFile($file2, $path, $img2_name);
-
-                                if ($file3 && $file3->isValid())
-                                    uploadFile($file3, $path, $img3_name);
-                            } else {
-                                $row = $this->model->find($this->getID());
-
-                                if (empty($post['image']) && !empty($row->getImage()) && file_exists($path . $row->getImage())) {
-                                    unlink($path . $row->getImage());
-                                } else {
-                                    uploadFile($file, $path, $img_name);
-                                }
-
-                                if (empty($post['image2']) && !empty($row->getImage2()) && file_exists($path . $row->getImage2())) {
-                                    unlink($path . $row->getImage2());
-                                } else {
-                                    uploadFile($file2, $path, $img2_name);
-                                }
-
-                                if (empty($post['image3']) && !empty($row->getImage3()) && file_exists($path . $row->getImage3())) {
-                                    unlink($path . $row->getImage3());
-                                } else {
-                                    uploadFile($file3, $path, $img3_name);
-                                }
-                            }
-
-                            $this->entity->fill($post);
-
-                            if ($this->isNew()) {
-                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $post, $this->session->get('sys_user_id'));
-                                $this->entity->setDocumentNo($docNo);
-                            }
-
-                            $response = $this->save();
-                        }
+                        $response = message('error', false, "No data to Insert");
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

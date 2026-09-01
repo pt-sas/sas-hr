@@ -13,6 +13,7 @@ use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_RuleDetail;
 use App\Models\M_Year;
+use App\Services\OvertimeServices;
 use TCPDF;
 use Config\Services;
 
@@ -123,6 +124,7 @@ class Overtime extends BaseController
                     $startDate = date('Y-m-d', strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
                     $subDate = date('Y-m-d', strtotime($post['submissiondate']));
+                    $doProcess = $post['processNow'];
 
                     $rule = $mRule->where([
                         'name'      => 'Lembur',
@@ -226,6 +228,8 @@ class Overtime extends BaseController
 
                             //     $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
                         } else {
+                            $this->model->db->transBegin();
+
                             $this->entity->fill($post);
 
                             if ($this->isNew()) {
@@ -235,10 +239,22 @@ class Overtime extends BaseController
                                 $this->entity->setDocumentNo($docNo);
                             }
 
-                            $response = $this->save();
+                            $response = $this->save(false);
+
+                            if ($doProcess === "Y") {
+                                $ID = $post['id'] ?? $this->insertID;
+                                $service = new OvertimeServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                                $service->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                            }
+
+                            $this->model->db->transCommit();
                         }
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

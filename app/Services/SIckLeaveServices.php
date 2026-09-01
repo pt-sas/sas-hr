@@ -90,147 +90,176 @@ class SickLeaveServices extends BaseServices
 
     public function create(array $data)
     {
-        $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
-        $periodServices   = new PeriodServices($this->userID, $this->employeeID);
+        $this->model->db->transBegin();
 
-        $mHoliday    = new M_Holiday($this->request);
-        $mRule       = new M_Rule($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-        $mAttendance = new M_Attendance($this->request);
+        try {
+            $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
+            $periodServices   = new PeriodServices($this->userID, $this->employeeID);
 
-        $_ID       = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
-        $holidays  = $mHoliday->getHolidayDate();
-        $startDate = date('Y-m-d', strtotime($data['startdate']));
-        $endDate   = date('Y-m-d', strtotime($data['enddate']));
-        $subDate   = date('Y-m-d', strtotime($data['submissiondate']));
-        $employeeId = $data['md_employee_id'];
+            $mHoliday    = new M_Holiday($this->request);
+            $mRule       = new M_Rule($this->request);
+            $mWorkDetail = new M_WorkDetail($this->request);
+            $mAttendance = new M_Attendance($this->request);
 
-        if ($_ID) {
-            $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
+            $_ID       = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
+            $holidays  = $mHoliday->getHolidayDate();
+            $startDate = date('Y-m-d', strtotime($data['startdate']));
+            $endDate   = date('Y-m-d', strtotime($data['enddate']));
+            $subDate   = date('Y-m-d', strtotime($data['submissiondate']));
+            $employeeId = $data['md_employee_id'];
+            $doProcess = $data['processNow'] ?? "N";
 
-            if ($sql->docstatus != $this->DOCSTATUS_Drafted)
-                throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
-        }
+            if ($_ID) {
+                $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
 
-        $data['submissiontype'] = $this->baseSubType;
-        $data['necessary']      = 'SA';
-
-        $rule = $mRule->where(['name' => 'Sakit', 'isactive' => 'Y'])->first();
-
-        $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-        $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
-
-        $workDay = $eWorkDayServices->getEmpWorkDay($employeeId, $startDate, $endDate);
-
-        $whereClause  = "md_work_detail.isactive = 'Y'";
-        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-        $daysOff      = getDaysOff($workDetail);
-        $daysOffStr   = implode(', ', $daysOff);
-        $dateWorkRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
-
-        $workClause = [];
-        foreach ($dateWorkRange as $date) {
-            $workClause[] = "'" . date('Y-m-d', strtotime($date)) . "'";
-        }
-        $workClause = implode(', ', $workClause);
-
-        //* Check attendance on submission range
-        $attWhereClause  = "v_attendance.md_employee_id = '{$employeeId}'";
-        $attWhereClause .= " AND v_attendance.date IN ({$workClause})";
-        $attPresent = $mAttendance->getAttendance($attWhereClause)->getResult();
-
-        if ($attPresent) {
-            $dates = implode(', ', array_map(fn($v) => format_dmy($v->date, '-'), $attPresent));
-            throw new ValidationException("Ada kehadiran, tidak bisa mengajukan pada tanggal : [{$dates}]");
-        }
-
-        //* Past submission: attendance-based deadline check
-        if ($startDate <= $subDate) {
-            $attDate  = [];
-            $lastDate = [];
-
-            $dateRange = getDatesFromRange($startDate, $subDate, [], 'Y-m-d', 'all', []);
-
-            foreach ($dateRange as $date) {
-                $attCheckClause  = "v_attendance.md_employee_id = {$employeeId}";
-                $attCheckClause .= " AND v_attendance.date = '{$date}'";
-                $attCheckClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
-                $attPresentNextDay = $mAttendance->getAttendance($attCheckClause)->getRow();
-
-                $trxCheckClause  = "trx_absent.md_employee_id = {$employeeId}";
-                $trxCheckClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'";
-                $trxCheckClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
-                $trxCheckClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
-                $trxCheckClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN ({$daysOffStr})";
-                $trxPresentNextDay = $this->modelDetail->getAbsentDetail($trxCheckClause)->getRow();
-
-                if ($attPresentNextDay || $trxPresentNextDay)
-                    $attDate[] = $date;
-
-                $lastDate[] = $date;
-
-                if (count($attDate) == $minDays)
-                    break;
+                if ($sql->docstatus != $this->DOCSTATUS_Drafted)
+                    throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
             }
 
-            $lastDate = end($lastDate);
+            $data['submissiontype'] = $this->baseSubType;
+            $data['necessary']      = 'SA';
 
-            if ($lastDate < $subDate)
-                throw new ValidationException("Maksimal tanggal pengajuan pada tanggal : " . format_dmy($lastDate, '-'));
+            $rule = $mRule->where(['name' => 'Sakit', 'isactive' => 'Y'])->first();
+
+            $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
+            $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
+
+            $workDay = $eWorkDayServices->getEmpWorkDay($employeeId, $startDate, $endDate);
+
+            $whereClause  = "md_work_detail.isactive = 'Y'";
+            $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+            $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+            $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+            $daysOff      = getDaysOff($workDetail);
+            $daysOffStr   = implode(', ', $daysOff);
+            $dateWorkRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
+
+            $workClause = [];
+            foreach ($dateWorkRange as $date) {
+                $workClause[] = "'" . date('Y-m-d', strtotime($date)) . "'";
+            }
+            $workClause = implode(', ', $workClause);
+
+            //* Check attendance on submission range
+            $attWhereClause  = "v_attendance.md_employee_id = '{$employeeId}'";
+            $attWhereClause .= " AND v_attendance.date IN ({$workClause})";
+            $attPresent = $mAttendance->getAttendance($attWhereClause)->getResult();
+
+            if ($attPresent) {
+                $dates = implode(', ', array_map(fn($v) => format_dmy($v->date, '-'), $attPresent));
+                throw new ValidationException("Ada kehadiran, tidak bisa mengajukan pada tanggal : [{$dates}]");
+            }
+
+            //* Past submission: attendance-based deadline check
+            if ($startDate <= $subDate) {
+                $attDate  = [];
+                $lastDate = [];
+
+                $dateRange = getDatesFromRange($startDate, $subDate, [], 'Y-m-d', 'all', []);
+
+                foreach ($dateRange as $date) {
+                    $attCheckClause  = "v_attendance.md_employee_id = {$employeeId}";
+                    $attCheckClause .= " AND v_attendance.date = '{$date}'";
+                    $attCheckClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
+                    $attPresentNextDay = $mAttendance->getAttendance($attCheckClause)->getRow();
+
+                    $trxCheckClause  = "trx_absent.md_employee_id = {$employeeId}";
+                    $trxCheckClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'";
+                    $trxCheckClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                    $trxCheckClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
+                    $trxCheckClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN ({$daysOffStr})";
+                    $trxPresentNextDay = $this->modelDetail->getAbsentDetail($trxCheckClause)->getRow();
+
+                    if ($attPresentNextDay || $trxPresentNextDay)
+                        $attDate[] = $date;
+
+                    $lastDate[] = $date;
+
+                    if (count($attDate) == $minDays)
+                        break;
+                }
+
+                $lastDate = end($lastDate);
+
+                if ($lastDate < $subDate)
+                    throw new ValidationException("Maksimal tanggal pengajuan pada tanggal : " . format_dmy($lastDate, '-'));
+            }
+
+            //* Validate duplicate submission
+            $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
+
+            //* Validate max future days
+            $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
+            $addDays = end($addDays);
+
+            if ($endDate > $addDays)
+                throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
+
+            //* Validate Period
+            $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate, $holidays, $daysOff);
+
+            //* Upload Images
+            $uploadServices = new UploadServices($this->userID, $this->employeeID);
+            $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+            $file  = $this->request->getFile('image');
+            $file2 = $this->request->getFile('image2');
+            $file3 = $this->request->getFile('image3');
+
+            if ($_ID) {
+                $sql = $sql ?? $this->model->where($this->model->primaryKey, $_ID)->first();
+
+                if (empty($data['image']) && !empty($sql->getImage()) && file_exists($path . $sql->getImage())) {
+                    unlink($path . $sql->getImage());
+                    $data['image'] = '';
+                }
+
+                if (empty($data['image2']) && !empty($sql->getImage2()) && file_exists($path . $sql->getImage2())) {
+                    unlink($path . $sql->getImage2());
+                    $data['image2'] = '';
+                }
+
+                if (empty($data['image3']) && !empty($sql->getImage3()) && file_exists($path . $sql->getImage3())) {
+                    unlink($path . $sql->getImage3());
+                    $data['image3'] = '';
+                }
+            }
+
+            if ($file && $file->isValid())
+                $data['image']  = $uploadServices->saveImage($file,  $employeeId, $this->baseSubType);
+
+            if ($file2 && $file2->isValid())
+                $data['image2'] = $uploadServices->saveImage($file2, $employeeId, $this->baseSubType, '2');
+
+            if ($file3 && $file3->isValid())
+                $data['image3'] = $uploadServices->saveImage($file3, $employeeId, $this->baseSubType, '3');
+
+            $this->entity->fill($data);
+
+            if (!$_ID) {
+                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
+                $this->entity->setDocumentNo($docNo);
+            } else {
+                $this->entity->setAbsentId($_ID);
+            }
+
+            $result = $this->save(false);
+
+            if ($doProcess === "Y") {
+                if (!$_ID) $_ID = $this->insertID;
+
+                $this->proccessTransaction($_ID, $this->DOCSTATUS_Completed);
+            }
+
+            $this->model->db->transCommit();
+
+            return $result;
+        } catch (\Throwable $e) {
+            $this->model->db->transRollback();
+            throw $e;
         }
-
-        //* Validate duplicate submission
-        $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
-
-        //* Validate max future days
-        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-        $addDays = end($addDays);
-
-        if ($endDate > $addDays)
-            throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
-
-        //* Validate Period
-        $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate, $holidays, $daysOff);
-
-        //* Upload Images
-        $uploadServices = new UploadServices($this->userID, $this->employeeID);
-        $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
-
-        $file  = $this->request->getFile('image');
-        $file2 = $this->request->getFile('image2');
-        $file3 = $this->request->getFile('image3');
-
-        if ($_ID) {
-            $sql = $sql ?? $this->model->where($this->model->primaryKey, $_ID)->first();
-
-            if (empty($data['image']) && !empty($sql->getImage()) && file_exists($path . $sql->getImage()))
-                unlink($path . $sql->getImage());
-
-            if (empty($data['image2']) && !empty($sql->getImage2()) && file_exists($path . $sql->getImage2()))
-                unlink($path . $sql->getImage2());
-
-            if (empty($data['image3']) && !empty($sql->getImage3()) && file_exists($path . $sql->getImage3()))
-                unlink($path . $sql->getImage3());
-        }
-
-        $data['image']  = $uploadServices->saveImage($file,  $employeeId, $this->baseSubType);
-        $data['image2'] = $uploadServices->saveImage($file2, $employeeId, $this->baseSubType, '2');
-        $data['image3'] = $uploadServices->saveImage($file3, $employeeId, $this->baseSubType, '3');
-
-        $this->entity->fill($data);
-
-        if (!$_ID) {
-            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-            $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
-            $this->entity->setDocumentNo($docNo);
-        } else {
-            $this->entity->setAbsentId($_ID);
-        }
-
-        return $this->save();
     }
 
     public function show(int $id)

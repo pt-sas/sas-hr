@@ -6,6 +6,7 @@ use App\Models\M_Menu;
 use App\Models\M_Submenu;
 use App\Models\M_Employee;
 use App\Libraries\Access;
+use App\Models\M_DocumentType;
 use Config\Services;
 
 class Template
@@ -30,6 +31,7 @@ class Template
     public function render($template = '', $view_data = [])
     {
         $mEmployee = new M_Employee($this->request);
+        $mDocType = new M_DocumentType($this->request);
 
         $uri = $this->request->uri->getSegment(2);
         $picture = base_url("/custom/image/no_image.png");
@@ -166,8 +168,12 @@ class Template
 
     private function actionButton()
     {
+        $mDocType = new M_DocumentType($this->request);
+
         $uri = $this->request->uri->getSegment(2);
         $allBtn = '';
+
+        $isSubmission = $mDocType->getDocTypeMenu(null, $uri) ?? null;
 
         //* Button for Table Form 
         $btnTableForm = '<div class="card-action card-button">
@@ -178,6 +184,9 @@ class Template
         if ($uri === 'broadcast-telegram') {
             $btnTableForm .= '<button type="button" class="btn btn-success btn-round save_form save_send_form" style="float: right;">Send Now</button>';
         }
+
+        if ($isSubmission)
+            $btnTableForm .= '<button type="button" class="btn btn-warning btn-round ml-1 save_form save_process">Save & Process</button>';
 
         $btnTableForm .= '</div';
 
