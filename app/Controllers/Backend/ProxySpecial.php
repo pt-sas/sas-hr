@@ -13,6 +13,7 @@ use App\Models\M_ProxySwitching;
 use App\Models\M_User;
 use App\Models\M_UserRole;
 use App\Models\M_Year;
+use App\Services\ProxySpecialServices;
 
 class ProxySpecial extends BaseController
 {
@@ -93,6 +94,7 @@ class ProxySpecial extends BaseController
             //! Mandatory property for detail validation
             $post['line'] = countLine($table);
             $post['detail'] = ['table' => arrTableLine($table)];
+            $doProcess = $post['processNow'];
 
             try {
                 if (!$this->validation->run($post, 'proxy_special')) {
@@ -121,6 +123,8 @@ class ProxySpecial extends BaseController
                     } else if ($today > $startDate) {
                         $response = message('success', false, 'Tanggal Mulai kurang dari tanggal hari ini');
                     } else {
+                        $this->model->db->transBegin();
+
                         $this->entity->fill($post);
 
                         if ($this->isNew()) {
@@ -130,9 +134,21 @@ class ProxySpecial extends BaseController
                             $this->entity->setDocumentNo($docNo);
                         }
 
-                        $response = $this->save();
+                        $response = $this->save(false);
+
+                        if ($doProcess === "Y") {
+                            $ID = $post['id'] ?? $this->insertID;
+                            $service = new ProxySpecialServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                            $service->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                        }
+
+                        $this->model->db->transCommit();
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

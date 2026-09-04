@@ -225,7 +225,7 @@ class BaseServices
         $this->field = new Field();
     }
 
-    public function save()
+    public function save($useTransaction = true)
     {
         //* Object class Old Value
         $oldV = new stdClass();
@@ -253,7 +253,8 @@ class BaseServices
         // TODO : Cleansing data, only allowed fields to inserted or updated
         $data = $this->doStrip($data);
 
-        $this->model->db->transBegin();
+        if ($useTransaction)
+            $this->model->db->transBegin();
 
         try {
             $fields = $this->model->db->getFieldData($modelTable);
@@ -360,9 +361,12 @@ class BaseServices
                 $ok = false;
             }
 
-            $this->model->db->transCommit();
+            if ($useTransaction)
+                $this->model->db->transCommit();
         } catch (\Exception $e) {
-            $this->model->db->transRollBack();
+            if ($useTransaction)
+                $this->model->db->transRollBack();
+
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
 

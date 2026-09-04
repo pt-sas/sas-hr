@@ -51,7 +51,7 @@ class M_DocumentType extends Model
         $this->builder = $this->db->table($this->table);
     }
 
-    public function getDocTypeMenu(int $md_doctype_id)
+    public function getDocTypeMenu(int $md_doctype_id = null, $uri = null)
     {
         $builder = $this->builder;
 
@@ -59,7 +59,12 @@ class M_DocumentType extends Model
         sys_submenu.url");
 
         $builder->join('sys_submenu', "sys_submenu.sys_submenu_id = {$this->table}.sys_submenu_id", 'left');
-        $builder->where('md_doctype_id', $md_doctype_id);
+
+        if ($md_doctype_id)
+            $builder->where('md_doctype_id', $md_doctype_id);
+
+        if ($uri)
+            $builder->where('sys_submenu.url', $uri);
 
         return $builder->get()->getRow();
     }

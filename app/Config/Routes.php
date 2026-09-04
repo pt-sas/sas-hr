@@ -54,6 +54,7 @@ $routes->get('cron-update-broadcast', 'Backend\Broadcast::cronUpdateBroadcast');
 $routes->get('cron-return-proxy', 'Backend\ProxySpecial::proxySwitching');
 $routes->get('cron-delegation-transfer', 'Backend\DelegationTransfer::delegationSwitching');
 $routes->get('cron-delegation-absent', 'Backend\User::sendEmailWhenDelegationAbsent');
+$routes->get('cron-notif-realization', 'Backend\Realization::doSendNotification');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
 $routes->post('/iclock/ldata', 'IclockApi::receiveLocal');

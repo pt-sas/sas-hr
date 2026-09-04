@@ -9,16 +9,14 @@ use App\Models\M_Employee;
 use App\Models\M_AbsentDetail;
 use App\Models\M_AssignmentDate;
 use App\Models\M_Holiday;
-use App\Models\M_Attendance;
 use App\Models\M_Rule;
-use App\Models\M_EmpWorkDay;
-use App\Models\M_WorkDetail;
 use App\Models\M_Division;
 use App\Models\M_Configuration;
 use App\Models\M_DocumentType;
 use App\Models\M_RuleDetail;
 use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_Year;
+use App\Services\PermissionServices;
 use TCPDF;
 use DateTime;
 
@@ -134,175 +132,29 @@ class Permission extends BaseController
 
     public function create()
     {
-        $mHoliday = new M_Holiday($this->request);
-        $mAttendance = new M_Attendance($this->request);
-        $mRule = new M_Rule($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-        $mYear = new M_Year($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
-            $post = $this->request->getVar();
-
-            $ID = isset($post['id']) ? $post['id'] : null;
-            $post["submissiontype"] = $this->baseSubType;
-            $post["necessary"] = 'IJ';
-            $employeeId = $post['md_employee_id'];
-            $day = date('w');
-
             try {
+                $post = $this->request->getVar();
+
                 if (!$this->validation->run($post, 'absent')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $holidays = $mHoliday->getHolidayDate();
-                    $startDate = date('Y-m-d', strtotime($post['startdate']));
-                    $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
+                    //* Set ID Data
+                    $post['trx_absent_id'] = !empty($post['id']) ? $post['id'] : null;
 
-                    $rule = $mRule->where([
-                        'name'      => 'Ijin',
-                        'isactive'  => 'Y'
-                    ])->first();
+                    $service = new PermissionServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+                    $result = $service->create($post);
 
-                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
-
-                    //TODO : Get work day employee
-                    $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $employeeId,
-                        'validfrom <='      => $startDate,
-                        'validto >='        => $endDate
-                    ])->orderBy('validfrom', 'ASC')->first();
-
-                    if (is_null($workDay)) {
-                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    if ($result && !empty($post['id'])) {
+                        $response = message('success', true, "Your data has been updated successfully !");
+                    } else if ($result) {
+                        $response = message('success', true, "Your data has been inserted successfully !");
                     } else {
-                        //TODO : Get Work Detail
-                        $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-                        $daysOff = getDaysOff($workDetail);
-                        $dateWorkRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
-
-                        $dayClause = [];
-                        $workClause = [];
-                        foreach ($dateWorkRange as $value) {
-                            $date = date('Y-m-d', strtotime($value));
-                            $day = strtoupper(formatDay_idn(date('w', strtotime($value))));
-
-                            $dayClause[] = "'{$day}'";
-                            $workClause[] = "'{$date}'";
-                        }
-
-                        $dayClause = implode(", ", $dayClause);
-                        $workClause = implode(", ", $workClause);
-
-                        //TODO: Get Work Detail by day
-                        $whereClause .= " AND md_day.name IN ({$dayClause})";
-                        $work = $mWorkDetail->getWorkDetail($whereClause)->getRow();
-
-                        //TODO : Get attendance present employee
-                        $whereClause = "v_attendance.md_employee_id = '{$employeeId}'";
-                        $whereClause .= " AND v_attendance.date IN ({$workClause})";
-                        $attPresent = $mAttendance->getAttendance($whereClause)->getResult();
-
-                        //TODO : Get Max Last Date for Submission Past
-                        if ($startDate <= $subDate) {
-                            $attDate = [];
-                            $lastDate = [];
-                            $daysOffStr = implode(', ', $daysOff);
-
-                            $date_range = getDatesFromRange($startDate, $subDate, [], 'Y-m-d', 'all', []);
-
-                            foreach ($date_range as $date) {
-                                $whereClause = "v_attendance.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND v_attendance.date = '{$date}'";
-                                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
-                                $attPresentNextDay = $mAttendance->getAttendance($whereClause)->getRow();
-
-                                $whereClause = "trx_absent.md_employee_id = {$employeeId}";
-                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '$date'";
-                                $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
-                                $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
-                                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN  ({$daysOffStr})";
-                                $trxPresentNextDay =  $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                                if ($attPresentNextDay || $trxPresentNextDay) {
-                                    $attDate[] = $date;
-                                }
-
-                                $lastDate[] = $date;
-
-                                if (count($attDate) == $minDays) {
-                                    break;
-                                }
-                            }
-                            $lastDate = end($lastDate);
-                        }
-
-                        //TODO : Get submission one day
-                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
-                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
-                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
-                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
-
-                        //TODO : Get Max Days for Submission Future
-                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-                        $addDays = end($addDays);
-
-                        // TODO : Get Reopen Status
-                        $reopen = false;
-                        if ($ID) {
-                            $trxReopen = $this->model->where(['trx_absent_id' => $ID])->first();
-
-                            if ($trxReopen->isreopen == "Y")
-                                $reopen = true;
-                        }
-
-                        // TODO : Checking Period
-                        foreach ($dateWorkRange as $date) {
-                            $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
-
-                            if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
-                                break;
-                            }
-                        }
-
-                        if (empty($period)) {
-                            $response = message('success', false, "Periode belum dibuat");
-                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
-                            $response = message('success', false, "Periode {$period->name} ditutup");
-                        } else if ($trx) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
-                        } else if ($endDate > $addDays) {
-                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if ($attPresent) {
-                            $date = implode(", ", array_map(function ($value) {
-                                return format_dmy($value->date, '-');
-                            }, $attPresent));
-
-                            $response = message('success', false, 'Ada kehadiran, tidak bisa mengajukan pada tanggal : [' . $date . ']');
-                        } else if (!empty($lastDate) && ($lastDate < $subDate) && $work && !$reopen) {
-                            $lastDate = format_dmy($lastDate, '-');
-
-                            $response = message('success', false, "Maksimal tanggal pengajuan pada tanggal : {$lastDate}");
-                        } else {
-                            $this->entity->fill($post);
-
-                            if ($this->isNew()) {
-                                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-
-                                $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $post, $this->session->get('sys_user_id'));
-                                $this->entity->setDocumentNo($docNo);
-                            }
-
-                            $response = $this->save();
-                        }
+                        $response = message('error', false, "No data to Insert");
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

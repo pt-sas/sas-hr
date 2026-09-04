@@ -17,6 +17,7 @@ use App\Models\M_MassLeave;
 use App\Models\M_Transaction;
 use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_Year;
+use App\Services\LeaveServices;
 use Config\Services;
 
 class Leave extends BaseController
@@ -121,145 +122,29 @@ class Leave extends BaseController
 
     public function create()
     {
-        $mHoliday = new M_Holiday($this->request);
-        $mRule = new M_Rule($this->request);
-        $mEmpWork = new M_EmpWorkDay($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
-        $mLeaveBalance = new M_LeaveBalance($this->request);
-        $mYear = new M_Year($this->request);
-
         if ($this->request->getMethod(true) === 'POST') {
             $post = $this->request->getVar();
 
-            $post["submissiontype"] = $this->model->Pengajuan_Cuti;
-            $post["necessary"] = 'CT';
-            $employeeId = $post['md_employee_id'];
-
             try {
-                $this->entity->fill($post);
-
                 if (!$this->validation->run($post, 'leave')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
-                    $holidays = $mHoliday->getHolidayDate();
-                    $startDate = date("Y-m-d", strtotime($post['startdate']));
-                    $endDate = date('Y-m-d', strtotime($post['enddate']));
-                    $subDate = date('Y-m-d', strtotime($post['submissiondate']));
-                    $nextYear = date('Y', strtotime('+1 year'));
+                    //* Set ID Data
+                    $post['trx_absent_id'] = !empty($post['id']) ? $post['id'] : null;
 
-                    $rule = $mRule->where([
-                        'name'      => 'Cuti',
-                        'isactive'  => 'Y'
-                    ])->first();
+                    $service = new LeaveServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+                    $result = $service->create($post);
 
-                    $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-                    $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
-
-                    //TODO : Get work day employee
-                    $workDay = $mEmpWork->where([
-                        'md_employee_id'    => $post['md_employee_id'],
-                        'validfrom <='      => $startDate,
-                        'validto >='        => $endDate
-                    ])->orderBy('validfrom', 'ASC')->first();
-
-                    if (is_null($workDay)) {
-                        $response = message('success', false, 'Hari kerja belum ditentukan');
+                    if ($result && !empty($post['id'])) {
+                        $response = message('success', true, "Your data has been updated successfully !");
+                    } else if ($result) {
+                        $response = message('success', true, "Your data has been inserted successfully !");
                     } else {
-                        //TODO : Get Work Detail
-                        $whereClause = "md_work_detail.isactive = 'Y'";
-                        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-                        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-                        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-                        $daysOff = getDaysOff($workDetail);
-
-                        // TODO : Get Minimum Dates for Submission Leave
-                        $nextDate = lastWorkingDays($subDate, $holidays, $minDays, false, $daysOff);
-                        $lastDate = end($nextDate);
-
-                        //TODO : Get submission one day
-                        $whereClause = "v_all_submission.md_employee_id = {$employeeId}";
-                        $whereClause .= " AND DATE_FORMAT(v_all_submission.date, '%Y-%m-%d') BETWEEN '{$startDate}' AND '{$endDate}'";
-                        $whereClause .= " AND v_all_submission.submissiontype IN (" . implode(", ", $this->Form_Satu_Hari) . ")";
-                        $whereClause .= " AND v_all_submission.isagree IN ('{$this->LINESTATUS_Disetujui}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Approval}')";
-                        $trx = $this->model->getAllSubmission($whereClause)->getRow();
-
-                        //TODO : Get Max Days for Submission Future
-                        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-                        $addDays = end($addDays);
-
-                        // TODO : Calculate Total Days Leave
-                        $dateRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
-
-                        $amountThisYear = [];
-                        $amountNextYear = [];
-
-                        foreach ($dateRange as $date) {
-                            if (date('Y', strtotime($date)) == $nextYear) {
-                                $amountNextYear[] = $date;
-                            } else {
-                                $amountThisYear[] = $date;
-                            }
-                        }
-
-                        // TODO : Get Leave Balance
-                        $leaveBalance = $mLeaveBalance->getTotalBalance($employeeId, date("Y", strtotime($startDate)));
-                        $leaveBalanceNextYear = !empty($amountNextYear) ? $mLeaveBalance->getNextYearBalance($employeeId) : null;
-
-                        // TODO : Checking Period
-                        foreach ($dateRange as $date) {
-                            $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
-
-                            if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
-                                break;
-                            }
-                        }
-
-                        if (empty($period)) {
-                            $response = message('success', false, "Periode belum dibuat");
-                        } else if ($period->period_status == $this->PERIOD_CLOSED) {
-                            $response = message('success', false, "Periode {$period->name} ditutup");
-                        } else if ($trx) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada rentang tanggal, karena sudah ada pengajuan lain');
-                        } else if (empty($leaveBalance) && empty($leaveBalanceNextYear)) {
-                            $response = message('success', false, 'Saldo cuti tidak tersedia');
-                        } else if ($endDate > $addDays) {
-                            $response = message('success', false, 'Tanggal selesai melewati tanggal ketentuan');
-                        } else if ($startDate <= $lastDate) {
-                            $response = message('success', false, 'Tidak bisa mengajukan pada tanggal ' . format_dmy($startDate, "-") . ', karena tidak sesuai dengan batas pengajuan');
-                        } else {
-                            // Cek apakah saldo carry over ada dan belum expired
-                            $balance = 0;
-
-                            if (!empty($leaveBalance)) {
-                                $carryOverValid = ($leaveBalance->carry_over_expiry_date && $endDate <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
-
-                                $balance = $carryOverValid ? $leaveBalance->carried_over_amount + $leaveBalance->balance_amount : $leaveBalance->balance_amount;
-                                $balance = $balance - $leaveBalance->reserved;
-                            }
-
-                            $balanceNextYear = !empty($leaveBalanceNextYear) ? $leaveBalanceNextYear->balance : 0;
-
-                            $amountThisYear = count($amountThisYear);
-                            $amountNextYear = count($amountNextYear);
-
-                            if (!empty($amountNextYear) && $amountNextYear > $balanceNextYear) {
-                                $response = message('success', false, 'Saldo tahun depan tidak cukup');
-                            } else if (!empty($amountThisYear) && $amountThisYear > $balance) {
-                                $response = message('success', false, 'Saldo cuti tidak cukup atau sudah expired');
-                            } else {
-                                $this->entity->fill($post);
-
-                                if ($this->isNew()) {
-                                    $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-                                    $docNo = $this->model->getInvNumber("submissiontype", $this->model->Pengajuan_Cuti, $post, $this->session->get('sys_user_id'));
-                                    $this->entity->setDocumentNo($docNo);
-                                }
-                                $response = $this->save();
-                            }
-                        }
+                        $response = message('error', false, "No data to Insert");
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

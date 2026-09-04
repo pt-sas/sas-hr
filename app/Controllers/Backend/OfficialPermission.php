@@ -17,6 +17,7 @@ use App\Models\M_Configuration;
 use App\Models\M_DocumentType;
 use App\Models\M_RuleDetail;
 use App\Models\M_Year;
+use App\Services\OfficialPermissionServices;
 use DateTime;
 
 class OfficialPermission extends BaseController
@@ -143,6 +144,7 @@ class OfficialPermission extends BaseController
             $file = $this->request->getFile('image');
 
             $ID = isset($post['id']) ? $post['id'] : null;
+            $doProcess = $post['processNow'];
             $post["submissiontype"] = $this->baseSubType;
             $post["necessary"] = 'IR';
             $employeeId = $post['md_employee_id'];
@@ -305,6 +307,8 @@ class OfficialPermission extends BaseController
 
                             $response = message('success', false, "Ada kehadiran, tidak bisa mengajukan pada tanggal : [{$date}]");
                         } else {
+                            $this->model->db->transBegin();
+
                             $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
 
                             $this->entity->fill($post);
@@ -327,10 +331,22 @@ class OfficialPermission extends BaseController
                                 }
                             }
 
-                            $response = $this->save();
+                            $response = $this->save(false);
+
+                            if ($doProcess === "Y") {
+                                $ID = $post['id'] ?? $this->insertID;
+                                $officialPermissionService = new OfficialPermissionServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                                $officialPermissionService->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                            }
+
+                            $this->model->db->transCommit();
                         }
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

@@ -156,7 +156,7 @@
                         </div>
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label>Foto <span class="required">*</span></label>
+                                <label>Foto</span></label>
                                 <div class="form-upload-result">
                                     <label class="col-md-12 form-result">
                                         <button type="button" class="close-img" aria-label="Close">
@@ -341,7 +341,7 @@
                         </div>
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label>Foto <span class="required">*</span></label>
+                                <label>Foto</label>
                                 <div class="form-upload-result">
                                     <label class="col-md-12 form-result">
                                         <button type="button" class="close-img" aria-label="Close">

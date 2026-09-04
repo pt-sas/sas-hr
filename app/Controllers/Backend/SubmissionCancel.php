@@ -13,6 +13,7 @@ use App\Models\M_Rule;
 use App\Models\M_SubmissionCancel;
 use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_Year;
+use App\Services\SubmissionCancelServices;
 use Config\Services;
 
 class SubmissionCancel extends BaseController
@@ -104,6 +105,7 @@ class SubmissionCancel extends BaseController
 
             $post["submissiontype"] = $this->model->Pengajuan_Pembatalan;
             $post["necessary"] = 'PB';
+            $doProcess = $post['processNow'];
 
             $post['ref_table'] = $post['ref_submissiontype'] == 100008 ? "trx_assignment" : "trx_absent";
 
@@ -206,6 +208,8 @@ class SubmissionCancel extends BaseController
                     }
 
                     if ($insert) {
+                        $this->model->db->transBegin();
+
                         $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
 
                         if ($this->isNew()) {
@@ -231,9 +235,21 @@ class SubmissionCancel extends BaseController
                             $this->entity->setDocumentNo($docNo);
                         }
 
-                        $response = $this->save();
+                        $response = $this->save(false);
+
+                        if ($doProcess === "Y") {
+                            $ID = $post['id'] ?? $this->insertID;
+                            $service = new SubmissionCancelServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                            $service->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                        }
+
+                        $this->model->db->transCommit();
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

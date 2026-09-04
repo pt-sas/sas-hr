@@ -95,109 +95,126 @@ class HalfDayOfficeDutiesServices extends BaseServices
 
     public function create(array $data)
     {
-        //* Call services
-        $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
-        $periodServices = new PeriodServices($this->userID, $this->employeeID);
-        $uploadServices = new UploadServices($this->userID, $this->employeeID);
+        $this->model->db->transBegin();
 
-        //* Call model
-        $mHoliday = new M_Holiday($this->request);
-        $mRule = new M_Rule($this->request);
-        $mRuleDetail = new M_RuleDetail($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
+        try {
+            //* Call services
+            $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
+            $periodServices = new PeriodServices($this->userID, $this->employeeID);
+            $uploadServices = new UploadServices($this->userID, $this->employeeID);
 
-        //* Preparing Data
-        $data["submissiontype"] = $this->baseSubType;
-        $data["necessary"] = 'TH';
-        $data["startdate"] = date('Y-m-d', strtotime($data["datestart"])) . " " . $data['starttime'];
-        $data["enddate"] = date('Y-m-d', strtotime($data["dateend"])) . " " . $data['endtime'];
+            //* Call model
+            $mHoliday = new M_Holiday($this->request);
+            $mRule = new M_Rule($this->request);
+            $mWorkDetail = new M_WorkDetail($this->request);
 
-        $_ID = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
-        $holidays = $mHoliday->getHolidayDate();
-        $startDate = date("Y-m-d", strtotime($data['startdate']));
-        $endDate = date('Y-m-d', strtotime($data['enddate']));
-        $subDate = date('Y-m-d', strtotime($data['submissiondate']));
-        $employeeId = $data['md_employee_id'];
-        $reopen = false;
+            //* Preparing Data
+            $data["submissiontype"] = $this->baseSubType;
+            $data["necessary"] = 'TH';
+            $data["startdate"] = date('Y-m-d', strtotime($data["datestart"])) . " " . $data['starttime'];
+            $data["enddate"] = date('Y-m-d', strtotime($data["dateend"])) . " " . $data['endtime'];
+
+            $_ID = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
+            $holidays = $mHoliday->getHolidayDate();
+            $startDate = date("Y-m-d", strtotime($data['startdate']));
+            $endDate = date('Y-m-d', strtotime($data['enddate']));
+            $subDate = date('Y-m-d', strtotime($data['submissiondate']));
+            $employeeId = $data['md_employee_id'];
+            $doProcess = $data['processNow'] ?? "N";
+            $reopen = false;
 
 
-        //* Add submission & necessary to variable data when update data
-        $sql = null;
+            //* Add submission & necessary to variable data when update data
+            $sql = null;
 
-        if ($_ID) {
-            //* Validation for check docstatus when update
-            $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
+            if ($_ID) {
+                //* Validation for check docstatus when update
+                $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
 
-            if ($sql->docstatus != $this->DOCSTATUS_Drafted)
-                throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
+                if ($sql->docstatus != $this->DOCSTATUS_Drafted)
+                    throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
 
-            //* Check reopen status
-            if ($sql->isreopen == "Y")
-                $reopen = true;
+                //* Check reopen status
+                if ($sql->isreopen == "Y")
+                    $reopen = true;
+            }
+
+            //* Get Rule
+            $rule = $mRule->where([
+                'name'      => 'Tugas Kantor Setengah Hari',
+                'isactive'  => 'Y'
+            ])->first();
+
+            $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
+            $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
+
+            //* Get work day employee
+            $workDay = $eWorkDayServices->getEmpWorkDay($employeeId, $startDate, $endDate);
+
+            //* Get Work Detail
+            $whereClause = "md_work_detail.isactive = 'Y'";
+            $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+            $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+            $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+            $daysOff = getDaysOff($workDetail);
+
+            //* Validate Minimum Dates for Submission Office Duties
+            $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
+            $lastDate = end($nextDate);
+
+            if ($lastDate < $subDate && !$reopen)
+                throw new ValidationException("Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan");
+
+            //* Validate submission half day
+            $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
+
+            //* Validate Max Days for Submission Future
+            $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
+            $addDays = end($addDays);
+
+            if ($endDate > $addDays)
+                throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
+
+            //* Validate Period
+            $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate);
+
+            //* Upload Images
+            $file = $this->request->getFile('image');
+            $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
+
+            if ($sql && empty($data['image']) && !empty($sql->getImage()) && file_exists($path . $sql->getImage())) {
+                unlink($path . $sql->getImage());
+            }
+
+            $data['image'] = $uploadServices->saveImage($file, $employeeId, $this->baseSubType);
+
+            //* Do Insert or update Data
+            $this->entity->fill($data);
+
+            if (!$_ID) {
+                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
+                $this->entity->setDocumentNo($docNo);
+            } else {
+                $this->entity->setAbsentId($_ID);
+            }
+
+            $result = $this->save(false);
+
+            if ($doProcess === "Y") {
+                if (!$_ID) $_ID = $this->insertID;
+
+                $this->proccessTransaction($_ID, $this->DOCSTATUS_Completed);
+            }
+
+            $this->model->db->transCommit();
+
+            return $result;
+        } catch (\Throwable $e) {
+            $this->model->db->transRollback();
+            throw $e;
         }
-
-        //* Get Rule
-        $rule = $mRule->where([
-            'name'      => 'Tugas Kantor Setengah Hari',
-            'isactive'  => 'Y'
-        ])->first();
-
-        $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-        $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
-
-        //* Get work day employee
-        $workDay = $eWorkDayServices->getEmpWorkDay($employeeId, $startDate, $endDate);
-
-        //* Get Work Detail
-        $whereClause = "md_work_detail.isactive = 'Y'";
-        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-        $daysOff = getDaysOff($workDetail);
-
-        //* Validate Minimum Dates for Submission Office Duties
-        $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
-        $lastDate = end($nextDate);
-
-        if ($lastDate < $subDate && !$reopen)
-            throw new ValidationException("Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan");
-
-        //* Validate submission half day
-        $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
-
-        //* Validate Max Days for Submission Future
-        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-        $addDays = end($addDays);
-
-        if ($endDate > $addDays)
-            throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
-
-        //* Validate Period
-        $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate);
-
-        //* Upload Images
-        $file = $this->request->getFile('image');
-        $path = $this->PATH_UPLOAD . $this->PATH_Pengajuan . '/';
-
-        if ($sql && empty($data['image']) && !empty($sql->getImage()) && file_exists($path . $sql->getImage())) {
-            unlink($path . $sql->getImage());
-        }
-
-        $data['image'] = $uploadServices->saveImage($file, $employeeId, $this->baseSubType);
-
-        //* Do Insert or update Data
-        $this->entity->fill($data);
-
-        if (!$_ID) {
-            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-            $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
-            $this->entity->setDocumentNo($docNo);
-        } else {
-            $this->entity->setAbsentId($_ID);
-        }
-
-        return $this->save();
     }
 
     public function show(int $id)
@@ -300,7 +317,7 @@ class HalfDayOfficeDutiesServices extends BaseServices
 
         //* Get Data Transaction
         $row = $this->model->where([$this->model->primaryKey => $id, 'submissiontype' => $this->baseSubType])->first();
-        logMessage($row);
+
         if (empty($row))
             throw new NotFoundException("Pengajuan tidak ditemukan");
 

@@ -94,89 +94,107 @@ class LeaveServices extends BaseServices
 
     public function create(array $data)
     {
-        //* Call services
-        $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
-        $periodServices = new PeriodServices($this->userID, $this->employeeID);
+        $this->model->db->transBegin();
 
-        //* Call model
-        $mHoliday = new M_Holiday($this->request);
-        $mRule = new M_Rule($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
+        try {
+            //* Call services
+            $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
+            $periodServices = new PeriodServices($this->userID, $this->employeeID);
 
-        $_ID = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
-        $holidays = $mHoliday->getHolidayDate();
-        $startDate = date("Y-m-d", strtotime($data['startdate']));
-        $endDate = date('Y-m-d', strtotime($data['enddate']));
-        $subDate = date('Y-m-d', strtotime($data['submissiondate']));
-        $employeeId = $data['md_employee_id'];
+            //* Call model
+            $mHoliday = new M_Holiday($this->request);
+            $mRule = new M_Rule($this->request);
+            $mWorkDetail = new M_WorkDetail($this->request);
 
-        //* Add submission & necessary to variable data when update data
-        if ($_ID) {
-            //* Validation for check docstatus when update
-            $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
+            $_ID = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
+            $holidays = $mHoliday->getHolidayDate();
+            $startDate = date("Y-m-d", strtotime($data['startdate']));
+            $endDate = date('Y-m-d', strtotime($data['enddate']));
+            $subDate = date('Y-m-d', strtotime($data['submissiondate']));
+            $employeeId = $data['md_employee_id'];
+            $doProcess = $data['processNow'] ?? "N";
 
-            if ($sql->docstatus != $this->DOCSTATUS_Drafted)
-                throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
+            //* Add submission & necessary to variable data when update data
+            if ($_ID) {
+                //* Validation for check docstatus when update
+                $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
+
+                if ($sql->docstatus != $this->DOCSTATUS_Drafted)
+                    throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
+            }
+
+            $data["submissiontype"] = $this->baseSubType;
+            $data["necessary"] = 'CT';
+
+            //* Get Rule
+            $rule = $mRule->where([
+                'name'      => 'Cuti',
+                'isactive'  => 'Y'
+            ])->first();
+
+            $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
+            $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
+
+            //* Get work day employee
+            $workDay = $eWorkDayServices->getEmpWorkDay($employeeId, $startDate, $endDate);
+
+            //* Get Work Detail
+            $whereClause = "md_work_detail.isactive = 'Y'";
+            $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+            $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+            $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+            $daysOff = getDaysOff($workDetail);
+
+            //* Validate Minimum Dates for Submission Leave
+            $nextDate = lastWorkingDays($subDate, $holidays, $minDays, false, $daysOff);
+            $lastDate = end($nextDate);
+
+            if ($startDate <= $lastDate)
+                throw new ValidationException("Tidak bisa mengajukan pada tanggal " . format_dmy($startDate, " - ") . ", karena tidak sesuai dengan batas pengajuan");
+
+            //* Validate submission one day
+            $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
+
+            //* Validate Max Days for Submission Future
+            $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
+            $addDays = end($addDays);
+
+            if ($endDate > $addDays)
+                throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
+
+            //* Validate Leave Balance
+            $this->validateLeaveBalance($employeeId, $startDate, $endDate, $holidays, $daysOff);
+
+            //* Validate Period
+            $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate, $holidays, $daysOff);
+
+            //* Do Insert or update Data
+            $this->entity->fill($data);
+
+            if (!$_ID) {
+                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
+                $this->entity->setDocumentNo($docNo);
+            } else {
+                $this->entity->setAbsentId($_ID);
+            }
+
+            $result = $this->save(false);
+
+            if ($doProcess === "Y") {
+                if (!$_ID) $_ID = $this->insertID;
+
+                $this->proccessTransaction($_ID, $this->DOCSTATUS_Completed);
+            }
+
+            $this->model->db->transCommit();
+
+            return $result;
+        } catch (\Throwable $e) {
+            $this->model->db->transRollback();
+            throw $e;
         }
-
-        $data["submissiontype"] = $this->baseSubType;
-        $data["necessary"] = 'CT';
-
-        //* Get Rule
-        $rule = $mRule->where([
-            'name'      => 'Cuti',
-            'isactive'  => 'Y'
-        ])->first();
-
-        $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-        $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
-
-        //* Get work day employee
-        $workDay = $eWorkDayServices->getEmpWorkDay($employeeId, $startDate, $endDate);
-
-        //* Get Work Detail
-        $whereClause = "md_work_detail.isactive = 'Y'";
-        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-        $daysOff = getDaysOff($workDetail);
-
-        //* Validate Minimum Dates for Submission Leave
-        $nextDate = lastWorkingDays($subDate, $holidays, $minDays, false, $daysOff);
-        $lastDate = end($nextDate);
-
-        if ($startDate <= $lastDate)
-            throw new ValidationException("Tidak bisa mengajukan pada tanggal " . format_dmy($startDate, " - ") . ", karena tidak sesuai dengan batas pengajuan");
-
-        //* Validate submission one day
-        $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
-
-        //* Validate Max Days for Submission Future
-        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-        $addDays = end($addDays);
-
-        if ($endDate > $addDays)
-            throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
-
-        //* Validate Leave Balance
-        $this->validateLeaveBalance($employeeId, $startDate, $endDate, $holidays, $daysOff);
-
-        //* Validate Period
-        $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate, $holidays, $daysOff);
-
-        //* Do Insert or update Data
-        $this->entity->fill($data);
-
-        if (!$_ID) {
-            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-            $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
-            $this->entity->setDocumentNo($docNo);
-        } else {
-            $this->entity->setAbsentId($_ID);
-        }
-
-        return $this->save();
     }
 
     public function show(int $id)

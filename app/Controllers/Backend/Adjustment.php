@@ -16,6 +16,7 @@ use App\Models\M_Employee;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_LeaveBalance;
 use App\Models\M_Year;
+use App\Services\AdjusmentServices;
 use Config\Services;
 
 class Adjustment extends BaseController
@@ -101,6 +102,7 @@ class Adjustment extends BaseController
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
                     $date = date('Y-m-d', strtotime($post['date']));
+                    $doProcess = $post['processNow'];
 
                     // TODO : Checking Period
                     $period = $mYear->getPeriodStatus($date, $post['submissiontype'])->getRow();
@@ -121,6 +123,8 @@ class Adjustment extends BaseController
                     } else if ($post['submissiontype'] == $this->model->Pengajuan_Adj_Cuti && $post['ending_balance'] < 0) {
                         $response = message('success', false, 'Saldo akhir cuti tidak bisa dibawah 0');
                     } else {
+                        $this->model->db->transBegin();
+
                         $this->entity->fill($post);
 
                         if ($this->isNew()) {
@@ -130,9 +134,21 @@ class Adjustment extends BaseController
                             $this->entity->setDocumentNo($docNo);
                         }
 
-                        $response = $this->save();
+                        $response = $this->save(false);
+
+                        if ($doProcess === "Y") {
+                            $ID = $post['id'] ?? $this->insertID;
+                            $service = new AdjusmentServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                            $service->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                        }
+
+                        $this->model->db->transCommit();
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

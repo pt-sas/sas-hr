@@ -155,4 +155,19 @@ class M_User extends Model
 		$query = $this->builder->get();
 		return $query;
 	}
+
+	public function getUser($where)
+	{
+		$this->builder->select($this->table . '.*');
+
+		$this->builder->join('sys_user_role sur', 'sur.sys_user_id = ' . $this->table . '.sys_user_id', 'left');
+		$this->builder->join('sys_role sr', 'sur.sys_role_id = sr.sys_role_id', 'left');
+		$this->builder->join('sys_user_branchaccess ub', 'ub.sys_user_id = ' . $this->table . '.sys_user_id', 'left');
+		$this->builder->join('sys_user_divaccess ud', 'ud.sys_user_id = ' . $this->table . '.sys_user_id', 'left');
+
+		$this->builder->where($where);
+
+		$query = $this->builder->get();
+		return $query;
+	}
 }

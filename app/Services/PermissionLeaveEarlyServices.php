@@ -93,127 +93,145 @@ class PermissionLeaveEarlyServices extends BaseServices
 
     public function create(array $data)
     {
-        //* Call services
-        $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
-        $periodServices = new PeriodServices($this->userID, $this->employeeID);
+        $this->model->db->transBegin();
 
-        //* Call model
-        $mHoliday = new M_Holiday($this->request);
-        $mRule = new M_Rule($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
+        try {
+            //* Call services
+            $eWorkDayServices = new EmpWorkDayServices($this->userID, $this->employeeID);
+            $periodServices = new PeriodServices($this->userID, $this->employeeID);
 
-        $_ID = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
-        $holidays = $mHoliday->getHolidayDate();
-        $data['startdate'] = date('Y-m-d', strtotime($data['datestart'])) . " " . $data['starttime'];
-        $data['enddate'] = $data['startdate'];
-        $startDate = date("Y-m-d", strtotime($data['startdate']));
-        $endDate = date('Y-m-d', strtotime($data['enddate']));
-        $subDate = date('Y-m-d', strtotime($data['submissiondate']));
-        $employeeId = $data['md_employee_id'];
+            //* Call model
+            $mHoliday = new M_Holiday($this->request);
+            $mRule = new M_Rule($this->request);
+            $mWorkDetail = new M_WorkDetail($this->request);
 
-        //* Add submission & necessary to variable data when update data
-        if ($_ID) {
-            //* Validation for check docstatus when update
-            $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
+            $_ID = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
+            $holidays = $mHoliday->getHolidayDate();
+            $data['startdate'] = date('Y-m-d', strtotime($data['datestart'])) . " " . $data['starttime'];
+            $data['enddate'] = $data['startdate'];
+            $startDate = date("Y-m-d", strtotime($data['startdate']));
+            $endDate = date('Y-m-d', strtotime($data['enddate']));
+            $subDate = date('Y-m-d', strtotime($data['submissiondate']));
+            $employeeId = $data['md_employee_id'];
+            $doProcess = $data['processNow'] ?? "N";
 
-            if ($sql->docstatus != $this->DOCSTATUS_Drafted)
-                throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
-        }
+            //* Add submission & necessary to variable data when update data
+            if ($_ID) {
+                //* Validation for check docstatus when update
+                $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
 
-        $data["submissiontype"] = $this->baseSubType;
-        $data["necessary"] = 'PC';
-
-        //* Get Rule
-        $rule = $mRule->where([
-            'name'      => 'Pulang Cepat',
-            'isactive'  => 'Y'
-        ])->first();
-
-        $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
-        $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
-
-        //* Get work day employee
-        $workDay = $eWorkDayServices->getEmpWorkDay($employeeId, $startDate, $endDate);
-
-        //* Get Work Detail
-        $whereClause = "md_work_detail.isactive = 'Y'";
-        $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
-        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-        $daysOff = getDaysOff($workDetail);
-
-        //* Validate Minimum Dates for Permission Leave Early
-        $presentNextDate = null;
-
-        if ($startDate <= $subDate) {
-            $mAttendance = new \App\Models\M_Attendance($this->request);
-            $daysOffStr = implode(', ', $daysOff);
-
-            $whereClause = "v_attendance.md_employee_id = {$employeeId}";
-            $whereClause .= " AND v_attendance.date > '{$endDate}'";
-            $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
-            $attPresentNextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
-
-            if (is_null($attPresentNextDay)) {
-                $whereClause = "trx_absent.md_employee_id = {$employeeId}";
-                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '{$endDate}'";
-                $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
-                $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
-                $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
-                $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN ({$daysOffStr})";
-                $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
-
-                $presentNextDate = $trxPresentNextDay ? $trxPresentNextDay->date : $endDate;
-            } else {
-                $presentNextDate = $attPresentNextDay->date;
+                if ($sql->docstatus != $this->DOCSTATUS_Drafted)
+                    throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
             }
 
-            $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
-            $lastDate = end($nextDate);
+            $data["submissiontype"] = $this->baseSubType;
+            $data["necessary"] = 'PC';
 
-            if ($presentNextDate && !($lastDate >= $subDate))
-                throw new ValidationException("Maksimal tanggal pengajuan pada tanggal : " . format_dmy($lastDate, '-'));
+            //* Get Rule
+            $rule = $mRule->where([
+                'name'      => 'Pulang Cepat',
+                'isactive'  => 'Y'
+            ])->first();
+
+            $minDays = $rule && !empty($rule->min) ? $rule->min : 1;
+            $maxDays = $rule && !empty($rule->max) ? $rule->max : 1;
+
+            //* Get work day employee
+            $workDay = $eWorkDayServices->getEmpWorkDay($employeeId, $startDate, $endDate);
+
+            //* Get Work Detail
+            $whereClause = "md_work_detail.isactive = 'Y'";
+            $whereClause .= " AND md_employee_work.md_employee_id = $employeeId";
+            $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
+            $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
+
+            $daysOff = getDaysOff($workDetail);
+
+            //* Validate Minimum Dates for Permission Leave Early
+            $presentNextDate = null;
+
+            if ($startDate <= $subDate) {
+                $mAttendance = new \App\Models\M_Attendance($this->request);
+                $daysOffStr = implode(', ', $daysOff);
+
+                $whereClause = "v_attendance.md_employee_id = {$employeeId}";
+                $whereClause .= " AND v_attendance.date > '{$endDate}'";
+                $whereClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
+                $attPresentNextDay = $mAttendance->getAttendance($whereClause, 'ASC')->getRow();
+
+                if (is_null($attPresentNextDay)) {
+                    $whereClause = "trx_absent.md_employee_id = {$employeeId}";
+                    $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') > '{$endDate}'";
+                    $whereClause .= " AND trx_absent.docstatus IN ('{$this->DOCSTATUS_Inprogress}','{$this->DOCSTATUS_Completed}')";
+                    $whereClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                    $whereClause .= " AND trx_absent_detail.isagree IN ('Y','M','S')";
+                    $whereClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN ({$daysOffStr})";
+                    $trxPresentNextDay = $this->modelDetail->getAbsentDetail($whereClause)->getRow();
+
+                    $presentNextDate = $trxPresentNextDay ? $trxPresentNextDay->date : $endDate;
+                } else {
+                    $presentNextDate = $attPresentNextDay->date;
+                }
+
+                $nextDate = lastWorkingDays($presentNextDate, $holidays, $minDays, false, $daysOff);
+                $lastDate = end($nextDate);
+
+                if ($presentNextDate && !($lastDate >= $subDate))
+                    throw new ValidationException("Maksimal tanggal pengajuan pada tanggal : " . format_dmy($lastDate, '-'));
+            }
+
+            // $nextDate = lastWorkingDays($subDate, $holidays, $minDays, false, $daysOff);
+            // $lastDate = end($nextDate);
+
+            // if ($startDate <= $lastDate)
+            //     throw new ValidationException("Tidak bisa mengajukan pada tanggal " . format_dmy($startDate, " - ") . ", karena tidak sesuai dengan batas pengajuan");
+
+            //* Validate end work hour
+            $endWork = isset($workDetail[0]) ? $workDetail[0]->endwork : "17:00";
+            $endWorkHour = convertToMinutes($endWork);
+
+            if ($endWorkHour <= convertToMinutes($data['startdate']))
+                throw new ValidationException("Jam absen pulang tidak sesuai dengan kriteria jam pulang cepat");
+
+            //* Validate submission one day
+            $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
+
+            //* Validate Max Days for Submission Future
+            $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
+            $addDays = end($addDays);
+
+            if ($endDate > $addDays)
+                throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
+
+            //* Validate Period
+            $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate, $holidays, $daysOff);
+
+            //* Do Insert or update Data
+            $this->entity->fill($data);
+
+            if (!$_ID) {
+                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
+                $this->entity->setDocumentNo($docNo);
+            } else {
+                $this->entity->setAbsentId($_ID);
+            }
+
+            $result = $this->save(false);
+
+            if ($doProcess === "Y") {
+                if (!$_ID) $_ID = $this->insertID;
+
+                $this->proccessTransaction($_ID, $this->DOCSTATUS_Completed);
+            }
+
+            $this->model->db->transCommit();
+
+            return $result;
+        } catch (\Throwable $e) {
+            $this->model->db->transRollback();
+            throw $e;
         }
-
-        // $nextDate = lastWorkingDays($subDate, $holidays, $minDays, false, $daysOff);
-        // $lastDate = end($nextDate);
-
-        // if ($startDate <= $lastDate)
-        //     throw new ValidationException("Tidak bisa mengajukan pada tanggal " . format_dmy($startDate, " - ") . ", karena tidak sesuai dengan batas pengajuan");
-
-        //* Validate end work hour
-        $endWork = isset($workDetail[0]) ? $workDetail[0]->endwork : "17:00";
-        $endWorkHour = convertToMinutes($endWork);
-
-        if ($endWorkHour <= convertToMinutes($data['startdate']))
-            throw new ValidationException("Jam absen pulang tidak sesuai dengan kriteria jam pulang cepat");
-
-        //* Validate submission one day
-        $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
-
-        //* Validate Max Days for Submission Future
-        $addDays = lastWorkingDays($subDate, [], $maxDays, false, [], true);
-        $addDays = end($addDays);
-
-        if ($endDate > $addDays)
-            throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
-
-        //* Validate Period
-        $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate, $holidays, $daysOff);
-
-        //* Do Insert or update Data
-        $this->entity->fill($data);
-
-        if (!$_ID) {
-            $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
-            $docNo = $this->model->getInvNumber("submissiontype", $this->baseSubType, $data, $this->userID);
-            $this->entity->setDocumentNo($docNo);
-        } else {
-            $this->entity->setAbsentId($_ID);
-        }
-
-        return $this->save();
     }
 
     public function show(int $id)

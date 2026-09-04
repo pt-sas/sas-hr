@@ -13,6 +13,7 @@ use App\Models\M_WorkDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_RuleDetail;
 use App\Models\M_Year;
+use App\Services\OvertimeServices;
 use TCPDF;
 use Config\Services;
 
@@ -123,6 +124,7 @@ class Overtime extends BaseController
                     $startDate = date('Y-m-d', strtotime($post['startdate']));
                     $endDate = date('Y-m-d', strtotime($post['enddate']));
                     $subDate = date('Y-m-d', strtotime($post['submissiondate']));
+                    $doProcess = $post['processNow'];
 
                     $rule = $mRule->where([
                         'name'      => 'Lembur',
@@ -226,6 +228,8 @@ class Overtime extends BaseController
 
                             //     $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
                         } else {
+                            $this->model->db->transBegin();
+
                             $this->entity->fill($post);
 
                             if ($this->isNew()) {
@@ -235,10 +239,22 @@ class Overtime extends BaseController
                                 $this->entity->setDocumentNo($docNo);
                             }
 
-                            $response = $this->save();
+                            $response = $this->save(false);
+
+                            if ($doProcess === "Y") {
+                                $ID = $post['id'] ?? $this->insertID;
+                                $service = new OvertimeServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                                $service->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                            }
+
+                            $this->model->db->transCommit();
                         }
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -614,7 +630,7 @@ class Overtime extends BaseController
             $pdf->Cell($w[1], 6, $employeeDetail->value, 1, 0, 'L');
             $pdf->Cell($w[2], 6, $row->description, 1, 0, 'L', false, '', 1);
             $pdf->Cell($w[3], 6, format_time($row->startdate), 1, 0, 'C');
-            $pdf->Cell($w[4], 6, format_time($row->enddate), 1, 0, 'C');
+            $pdf->Cell($w[4], 6, format_time($row->enddate_realization == '0000-00-00 00:00:00' ? $row->enddate : $row->enddate_realization), 1, 0, 'C');
             $pdf->Ln();
             $number++;
         }

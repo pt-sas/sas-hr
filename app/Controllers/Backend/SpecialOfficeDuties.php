@@ -19,6 +19,7 @@ use App\Models\M_Division;
 use App\Models\M_RuleDetail;
 use App\Models\M_SubmissionCancelDetail;
 use App\Models\M_Year;
+use App\Services\SpecialOfficeDutiesServices;
 use TCPDF;
 
 class SpecialOfficeDuties extends BaseController
@@ -143,6 +144,7 @@ class SpecialOfficeDuties extends BaseController
                 if (!$this->validation->run($post, 'penugasan')) {
                     $response = $this->field->errorValidation($this->model->table, $post);
                 } else {
+                    $doProcess = $post['processNow'];
                     $post["submissiontype"] = $this->model->Pengajuan_Penugasan;
                     $post["necessary"] = 'PG';
                     $employeeId = $post['md_employee_id'];
@@ -233,6 +235,8 @@ class SpecialOfficeDuties extends BaseController
 
                             $response = message('success', false, "Karyawan tidak terdaftar dalam hari kerja : [{$value}]");
                         } else {
+                            $this->model->db->transBegin();
+
                             $this->entity->fill($post);
 
                             if ($this->isNew()) {
@@ -242,10 +246,22 @@ class SpecialOfficeDuties extends BaseController
                                 $this->entity->setDocumentNo($docNo);
                             }
 
-                            $response = $this->save();
+                            $response = $this->save(false);
+
+                            if ($doProcess === "Y") {
+                                $ID = $post['id'] ?? $this->insertID;
+                                $service = new SpecialOfficeDutiesServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+
+                                $service->proccessTransaction($ID, $this->DOCSTATUS_Completed);
+                            }
+
+                            $this->model->db->transCommit();
                         }
                     }
                 }
+            } catch (\App\Exceptions\BaseException $e) {
+                $this->model->db->transRollback();
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

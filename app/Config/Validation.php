@@ -1919,9 +1919,8 @@ class Validation
     public $realisasi_tugaskantor = [
         'image'                 => [
             'label'             => 'foto',
-            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
-                'uploaded'      => 'Mohon upload {field} dahulu',
                 'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
@@ -1932,9 +1931,8 @@ class Validation
     public $realisasi_tugaskantor_setengah = [
         'image'                 => [
             'label'             => 'foto',
-            'rules'             => 'uploaded[image]|max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
+            'rules'             => 'max_size[image, 3024]|is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]',
             'errors'            => [
-                'uploaded'      => 'Mohon upload {field} dahulu',
                 'max_size'      => 'Data {field} melebihi batas maksimum 3 Mb',
                 'is_image'      => 'Format file {field} salah',
                 'mime_in'       => 'Format file {field} wajib {param}',
