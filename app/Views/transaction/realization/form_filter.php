@@ -8,11 +8,14 @@
                             <div class="form-group">
                                 <div class="input-icon">
                                     <input type="text" class="form-control daterange" name="realization_hrd"
-                                        value="<?= $date_range ?>" placeholder="Tanggal mulai dan selesai">
+                                        value="" placeholder="Tanggal mulai dan selesai">
                                     <span class="input-icon-addon">
                                         <i class="fas fa-calendar-alt"></i>
                                     </span>
                                 </div>
+                                <small class="form-text text-muted">
+                                    Kosongkan untuk melihat realisasi hari ini dan sebelumnya.
+                                </small>
                             </div>
                         </div>
                         <div class="col-md-3">

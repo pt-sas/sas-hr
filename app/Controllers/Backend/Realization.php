@@ -12,7 +12,6 @@ use App\Models\M_Rule;
 use App\Models\M_RuleDetail;
 use App\Models\M_EmpWorkDay;
 use App\Models\M_WorkDetail;
-use App\Models\M_AccessMenu;
 use App\Models\M_Assignment;
 use App\Models\M_AssignmentDate;
 use App\Models\M_ChangeLog;
@@ -39,11 +38,7 @@ class Realization extends BaseController
 
     public function index()
     {
-        $start_date = format_dmy(date('Y-m-d', strtotime('- 1 days')), "-");
-        $end_date = format_dmy(date('Y-m-d'), "-");
-
         $data = [
-            'date_range'            => $start_date . ' - ' . $end_date,
             'toolbarRealization'    => $this->template->buttonExport()
         ];
 
@@ -52,11 +47,7 @@ class Realization extends BaseController
 
     public function indexOvertime()
     {
-        $start_date = format_dmy(date('Y-m-d', strtotime('- 1 days')), "-");
-        $end_date = format_dmy(date('Y-m-d'), "-");
-
         $data = [
-            'date_range'            => $start_date . ' - ' . $end_date,
             'toolbarRealization'    => $this->template->toolbarButtonProcess()
         ];
 
@@ -65,11 +56,7 @@ class Realization extends BaseController
 
     public function indexAttendance()
     {
-        $start_date = format_dmy(date('Y-m-d', strtotime('- 1 days')), "-");
-        $end_date = format_dmy(date('Y-m-d'), "-");
-
         $data = [
-            'date_range'            => $start_date . ' - ' . $end_date,
             'toolbarRealization'    => $this->template->toolbarButtonProcess()
         ];
 
@@ -79,6 +66,19 @@ class Realization extends BaseController
     public function showAll()
     {
         if ($this->request->getMethod(true) === 'POST') {
+            $post = $this->request->getVar();
+            $today = date('Y-m-d');
+
+            $dateRange = null;
+            foreach ($post['form'] as $value) :
+                if ($value['name'] === "realization_hrd") {
+                    if (!empty($value['value'])) {
+                        $dateRange = explode(" - ",  urldecode($value['value']));
+                    }
+                }
+
+            endforeach;
+
             $mSubCancelDetail = new M_SubmissionCancelDetail($this->request);
             $table = 'v_realization_new';
             $select = '*';
@@ -97,18 +97,22 @@ class Realization extends BaseController
             $search = $this->request->getPost('search');
             $sort = ['v_realization_new.date' => 'ASC', 'v_realization_new.employee_fullname' => 'ASC'];
 
-            $formType = [
+            $excludedFormType = [
                 $this->model->Pengajuan_Lupa_Absen_Masuk,
                 $this->model->Pengajuan_Lupa_Absen_Pulang,
                 $this->model->Pengajuan_Datang_Terlambat,
                 $this->model->Pengajuan_Pulang_Cepat,
             ];
 
-            $where = [
-                "docstatus = '{$this->DOCSTATUS_Inprogress}'
-                AND isagree = '{$this->LINESTATUS_Realisasi_HRD}' 
-                AND submissiontype NOT IN (" . implode(",", $formType) . ")"
-            ];
+            $whereClause = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
+            $whereClause .= " AND isagree = '{$this->LINESTATUS_Realisasi_HRD}'";
+            $whereClause .= " AND submissiontype NOT IN (" . implode(",", $excludedFormType) . ")";
+
+            if (!$dateRange) {
+                $whereClause .= " AND realization_hrd <= '{$today}'";
+            }
+
+            $where = [$whereClause];
 
             $data = [];
 
@@ -170,6 +174,19 @@ class Realization extends BaseController
         $mAttendance = new M_Attendance($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
+            $post = $this->request->getVar();
+            $today = date('Y-m-d');
+
+            $dateRange = null;
+            foreach ($post['form'] as $value) :
+                if ($value['name'] === "realization_date") {
+                    if (!empty($value['value'])) {
+                        $dateRange = explode(" - ",  urldecode($value['value']));
+                    }
+                }
+
+            endforeach;
+
             $table = 'v_realization_overtime';
             $select = '*';
             $join = [];
@@ -186,8 +203,14 @@ class Realization extends BaseController
             $search = $this->request->getPost('search');
             $sort = ['documentno' => 'ASC'];
 
-            $where['docstatus'] = $this->DOCSTATUS_Inprogress;
-            $where['md_employee_id'] = ['value' => $this->access->getEmployeeData(false)];
+            $whereClause = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
+            $whereClause .= " AND md_employee_id IN (" . implode(",", $this->access->getEmployeeData(false)) . ")";
+
+            if (!$dateRange) {
+                $whereClause .= " AND realization_date <= '{$today}'";
+            }
+
+            $where = [$whereClause];
 
             $data = [];
 
@@ -241,6 +264,19 @@ class Realization extends BaseController
         $mAbsent = new M_Absent($this->request);
 
         if ($this->request->getMethod(true) === 'POST') {
+            $post = $this->request->getVar();
+            $today = date('Y-m-d');
+
+            $dateRange = null;
+            foreach ($post['form'] as $value) :
+                if ($value['name'] === "realization_mgr") {
+                    if (!empty($value['value'])) {
+                        $dateRange = explode(" - ",  urldecode($value['value']));
+                    }
+                }
+
+            endforeach;
+
             $table = 'v_realization_new';
             $select = '*';
             $join = [];
@@ -261,10 +297,15 @@ class Realization extends BaseController
             $search = $this->request->getPost('search');
             $sort = ['v_realization_new.date' => 'ASC', 'v_realization_new.employee_fullname' => 'ASC'];
 
-            $where['docstatus'] = $this->DOCSTATUS_Inprogress;
-            $where['isagree'] = 'M';
+            $whereClause = "docstatus = '{$this->DOCSTATUS_Inprogress}'";
+            $whereClause .= " AND isagree = '{$this->LINESTATUS_Realisasi_Atasan}'";
+            $whereClause .= " AND md_employee_id IN (" . implode(",", $this->access->getEmployeeData(false, true)) . ")";
 
-            $where['md_employee_id'] = ['value' => $this->access->getEmployeeData(false, true)];
+            if (!$dateRange) {
+                $whereClause .= " AND realization_mgr <= '{$today}'";
+            }
+
+            $where = [$whereClause];
 
             $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
 
@@ -1454,5 +1495,316 @@ class Realization extends BaseController
                 log_message('info', 'Tidak ada transaksi realisasi lembur');
             }
         }
+    }
+
+    public function doSendNotification()
+    {
+        $mAbsentDetail = new M_AbsentDetail($this->request);
+        $mOvertimeDetail = new M_OvertimeDetail($this->request);
+        $mEmployee     = new M_Employee($this->request);
+        $mUser         = new M_User($this->request);
+        $mUserRole     = new M_UserRole($this->request);
+        $cMessage      = new Message();
+
+        $today = date('Y-m-d');
+
+        /*
+     * ==========================================================
+     * CACHE MASTER DATA
+     * ==========================================================
+     */
+
+        $employeesById = [];
+
+        foreach ($mEmployee->findAll() as $employee) {
+            $employeesById[$employee->md_employee_id] = $employee;
+        }
+
+        $usersById = [];
+        $usersByEmployeeId = [];
+
+        foreach ($mUser->findAll() as $user) {
+            $usersById[$user->sys_user_id] = $user;
+
+            if (
+                !empty($user->md_employee_id)
+                && !isset($usersByEmployeeId[$user->md_employee_id])
+            ) {
+                $usersByEmployeeId[$user->md_employee_id] = $user;
+            }
+        }
+
+        /*
+     * ==========================================================
+     * REALIZATION ATASAN
+     * ==========================================================
+     */
+
+        $whereClause = "
+        docstatus = '{$this->DOCSTATUS_Inprogress}'
+        AND isagree = '{$this->LINESTATUS_Realisasi_Atasan}'
+        AND realization_mgr <= '{$today}'
+    ";
+
+        $listApproval = $mAbsentDetail->getRealization($whereClause)->getResult();
+
+        // Key = Employee ID Atasan
+        $dataListNotif = [];
+
+        // Key = User ID Backup
+        $dataListBackup = [];
+
+        // Cache manager per employee agar tidak query berkali-kali
+        $managerCache = [];
+
+        // Cache backup user per branch + division
+        $backupUserCache = [];
+
+        foreach ($listApproval as $approval) {
+
+            /*
+            * ----------------------------------------------------------
+            * PIC / ATASAN
+            * ----------------------------------------------------------
+            */
+
+            $employee = $employeesById[$approval->md_employee_id] ?? null;
+
+            if ($employee) {
+
+                $superiorID = null;
+
+                if ($employee->md_levelling_id < 100003) {
+
+                    if (!array_key_exists(
+                        $approval->md_employee_id,
+                        $managerCache
+                    )) {
+                        $managerCache[$approval->md_employee_id] =
+                            $mEmployee->getEmployeeManagerID(
+                                $approval->md_employee_id
+                            );
+                    }
+
+                    $superiorID =
+                        $managerCache[$approval->md_employee_id];
+                } else {
+                    $superiorID = $employee->superior_id;
+                }
+
+                if (!empty($superiorID)) {
+                    $dataListNotif[$superiorID][] = $approval;
+                }
+            }
+
+            /*
+         * ----------------------------------------------------------
+         * BACKUP USER
+         * ----------------------------------------------------------
+         */
+
+            $cacheKey =
+                $approval->md_branch_id . '_' .
+                $approval->md_division_id;
+
+            if (!array_key_exists($cacheKey, $backupUserCache)) {
+
+                $branchID   = (int) $approval->md_branch_id;
+                $divisionID = (int) $approval->md_division_id;
+
+                $whereBackup = "
+                sr.name = 'W_Notification_Realization'
+                AND ub.md_branch_id = {$branchID}
+                AND ud.md_division_id = {$divisionID}
+            ";
+
+                $backupUserCache[$cacheKey] = $mUser->getUser($whereBackup)->getResult();
+            }
+
+            foreach ($backupUserCache[$cacheKey] as $user) {
+                $dataListBackup[$user->sys_user_id][] = $approval;
+            }
+        }
+
+        /*
+     * ==========================================================
+     * SEND TO ATASAN
+     * ==========================================================
+     */
+
+        foreach ($dataListNotif as $employeeID => $approvals) {
+            $user = $usersByEmployeeId[$employeeID] ?? null;
+
+            if (!$user) continue;
+
+            $msg = $this->buildRealizationMessage($approvals, 'Realisasi Atasan', 'realization_mgr');
+
+            $cMessage->sendInformation($user, 'Notifikasi Realisasi Atasan', $msg, 'HARMONY SAS', null, null, true, true, true);
+        }
+
+        /*
+     * ==========================================================
+     * SEND TO BACKUP USER
+     * ==========================================================
+     */
+
+        foreach ($dataListBackup as $userID => $approvals) {
+
+            $user = $usersById[$userID] ?? null;
+
+            if (!$user) continue;
+
+            $msg = $this->buildRealizationMessage($approvals, 'Realisasi Atasan', 'realization_mgr');
+
+            $cMessage->sendInformation($user, 'Notifikasi Realisasi Atasan', $msg, 'HARMONY SAS', null, null, true, true, true);
+        }
+
+        /*
+        * ==========================================================
+        * REALIZATION HRD
+        * ==========================================================
+        */
+
+        $whereClause = "
+        docstatus = '{$this->DOCSTATUS_Inprogress}'
+        AND isagree = '{$this->LINESTATUS_Realisasi_HRD}'
+        AND realization_hrd <= '{$today}'";
+
+        $listApproval = $mAbsentDetail->getRealization($whereClause)->getResult();
+
+        /*
+        * Get semua user dengan Role HR
+        */
+        $hrRoles = $mUserRole->where('sys_role_id', 5)->findAll();
+
+        $hrUserIds = [];
+
+        foreach ($hrRoles as $role) {
+            $hrUserIds[$role->sys_user_id] = true;
+        }
+
+        /*
+        * Message dibuat satu kali karena semua HR
+        * mendapatkan isi notification yang sama
+        */
+        $msg = $this->buildRealizationMessage($listApproval, 'Realisasi HRD', 'realization_hrd');
+
+        foreach (array_keys($hrUserIds) as $userID) {
+            $user = $usersById[$userID] ?? null;
+
+            if (!$user) continue;
+
+            $cMessage->sendInformation($user, 'Notifikasi Realisasi HRD', $msg, 'HARMONY SAS', null, null, true, true, true);
+        }
+
+        /*
+        * ==========================================================
+        * REALIZATION LEMBUR
+        * ==========================================================
+        */
+
+        // TODO : This segment is for auto approve Overtime
+        $where = "isagree = '{$this->LINESTATUS_Realisasi_Atasan}'
+                  AND realization_date <= '{$today}'";
+
+        $listApproval = $mOvertimeDetail->getRealizationOvertime($where)->getResult();
+
+        // Key = Employee ID Atasan
+        $dataListNotif = [];
+
+        foreach ($listApproval as $approval) {
+            $employee = $employeesById[$approval->md_employee_id] ?? null;
+
+            if ($employee) {
+                $superiorID = null;
+
+                if ($employee->md_levelling_id < 100003) {
+
+                    if (!array_key_exists(
+                        $approval->md_employee_id,
+                        $managerCache
+                    )) {
+                        $managerCache[$approval->md_employee_id] =
+                            $mEmployee->getEmployeeManagerID(
+                                $approval->md_employee_id
+                            );
+                    }
+
+                    $superiorID = $managerCache[$approval->md_employee_id];
+                } else {
+                    $superiorID = $employee->superior_id;
+                }
+
+                if (!empty($superiorID)) {
+                    $dataListNotif[$superiorID][] = $approval;
+                }
+            }
+        }
+
+        foreach ($dataListNotif as $employeeID => $approvals) {
+            $user = $usersByEmployeeId[$employeeID] ?? null;
+
+            if (!$user) {
+                continue;
+            }
+
+            $msg = $this->buildRealizationMessage(
+                $approvals,
+                'Realisasi Lembur',
+                'startdate_line'
+            );
+
+            $cMessage->sendInformation(
+                $user,
+                'Notifikasi Realisasi Lembur',
+                $msg,
+                'HARMONY SAS',
+                null,
+                null,
+                true,
+                true,
+                true
+            );
+        }
+    }
+
+    private function buildRealizationMessage(
+        array $approvals,
+        string $menu,
+        string $dateField
+    ): string {
+        $msg = "<p>Salam Bapak / Ibu,</p>";
+
+        $msg .= "<p>";
+        $msg .= "Mohon realisasikan pengajuan di bawah ini pada menu {$menu}:";
+        $msg .= "</p>";
+
+        foreach ($approvals as $index => $approval) {
+
+            $number = $index + 1;
+
+            $dateRealization = format_dmy(
+                $approval->{$dateField},
+                '-'
+            );
+
+            $msg .= "<p>";
+
+            if ($menu === 'Realisasi Lembur') {
+                $msg .= "{$number}. {$approval->documentno}<br>";
+                $msg .= "{$approval->employee_name}<br>";
+                $msg .= "Tanggal Lembur : {$dateRealization}";
+            } else {
+                $msg .= "{$number}. {$approval->documentno} - {$approval->doctype}<br>";
+                $msg .= "{$approval->employee_fullname}<br>";
+                $msg .= "Tanggal Realisasi : {$dateRealization}";
+            }
+
+            $msg .= "</p>";
+        }
+
+        $msg .= "<p>Terima Kasih</p>";
+
+        return $msg;
     }
 }
