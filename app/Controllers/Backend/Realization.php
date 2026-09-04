@@ -1504,9 +1504,18 @@ class Realization extends BaseController
         $mEmployee     = new M_Employee($this->request);
         $mUser         = new M_User($this->request);
         $mUserRole     = new M_UserRole($this->request);
+        $mHoliday      = new M_Holiday($this->request);
         $cMessage      = new Message();
 
+        set_time_limit(0);
+
         $today = date('Y-m-d');
+        $holiday = $mHoliday->getHolidayDate();
+
+        if (in_array($today, $holiday)) return;
+
+        //* SKip when now is weekend
+        if (date('N') >= 6) return;
 
         /*
      * ==========================================================
