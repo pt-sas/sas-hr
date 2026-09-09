@@ -7,6 +7,7 @@ use App\Exceptions\NotFoundException;
 use App\Exceptions\ValidationException;
 use App\Models\M_Absent;
 use App\Models\M_AbsentDetail;
+use App\Models\M_Attendance;
 use App\Models\M_Branch;
 use App\Models\M_Configuration;
 use App\Models\M_Division;
@@ -104,7 +105,7 @@ class PermissionServices extends BaseServices
             //* Call model
             $mHoliday = new M_Holiday($this->request);
             $mRule = new M_Rule($this->request);
-            $mRuleDetail = new M_RuleDetail($this->request);
+            $mAttendance = new M_Attendance($this->request);
             $mWorkDetail = new M_WorkDetail($this->request);
 
             $_ID = !empty($data[$this->model->primaryKey]) ? $data[$this->model->primaryKey] : null;
@@ -154,12 +155,62 @@ class PermissionServices extends BaseServices
 
             $daysOff = getDaysOff($workDetail);
 
-            //* Validate Minimum Dates for Permission
-            $nextDate = lastWorkingDays($startDate, $holidays, $minDays, false, $daysOff);
-            $lastDate = end($nextDate);
+            $daysOff      = getDaysOff($workDetail);
+            $daysOffStr   = implode(', ', $daysOff);
 
-            if ($lastDate < $subDate && !$reopen)
-                throw new ValidationException("Tidak bisa mengajukan pada rentang tanggal, karena sudah selesai melewati tanggal ketentuan");
+            $dateWorkRange = getDatesFromRange($startDate, $endDate, $holidays, 'Y-m-d', 'all', $daysOff);
+
+            $workClause = [];
+            foreach ($dateWorkRange as $date) {
+                $workClause[] = "'" . date('Y-m-d', strtotime($date)) . "'";
+            }
+
+            $workClause = implode(', ', $workClause);
+
+            //* Check attendance on submission range
+            $attWhereClause  = "v_attendance.md_employee_id = '{$employeeId}'";
+            $attWhereClause .= " AND v_attendance.date IN ({$workClause})";
+            $attPresent = $mAttendance->getAttendance($attWhereClause)->getResult();
+
+            if ($attPresent) {
+                $dates = implode(', ', array_map(fn($v) => format_dmy($v->date, '-'), $attPresent));
+                throw new ValidationException("Ada kehadiran, tidak bisa mengajukan pada tanggal : [{$dates}]");
+            }
+
+            //* Past submission: attendance-based deadline check
+            if ($startDate <= $subDate) {
+                $attDate  = [];
+                $lastDate = [];
+
+                $dateRange = getDatesFromRange($startDate, $subDate, $holidays, 'Y-m-d', 'all', []);
+
+                foreach ($dateRange as $date) {
+                    $attCheckClause  = "v_attendance.md_employee_id = {$employeeId}";
+                    $attCheckClause .= " AND v_attendance.date = '{$date}'";
+                    $attCheckClause .= " AND DATE_FORMAT(v_attendance.date, '%w') NOT IN ({$daysOffStr})";
+                    $attPresentNextDay = $mAttendance->getAttendance($attCheckClause)->getRow();
+
+                    $trxCheckClause  = "trx_absent.md_employee_id = {$employeeId}";
+                    $trxCheckClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%Y-%m-%d') = '{$date}'";
+                    $trxCheckClause .= " AND trx_absent.submissiontype IN ({$this->model->Pengajuan_Tugas_Kantor}, {$this->model->Pengajuan_Tugas_Kantor_setengah_Hari})";
+                    $trxCheckClause .= " AND trx_absent_detail.isagree IN ('{$this->LINESTATUS_Disetujui}','{$this->LINESTATUS_Realisasi_Atasan}','{$this->LINESTATUS_Realisasi_HRD}')";
+                    $trxCheckClause .= " AND DATE_FORMAT(trx_absent_detail.date, '%w') NOT IN ({$daysOffStr})";
+                    $trxPresentNextDay = $this->modelDetail->getAbsentDetail($trxCheckClause)->getRow();
+
+                    if ($attPresentNextDay || $trxPresentNextDay)
+                        $attDate[] = $date;
+
+                    $lastDate[] = $date;
+
+                    if (count($attDate) == $minDays)
+                        break;
+                }
+
+                $lastDate = end($lastDate);
+
+                if ($lastDate < $subDate && !$reopen)
+                    throw new ValidationException("Maksimal tanggal pengajuan pada tanggal : " . format_dmy($lastDate, '-'));
+            }
 
             //* Validate submission one day
             $this->validateDuplicateSubmission($employeeId, $startDate, $endDate);
@@ -170,14 +221,6 @@ class PermissionServices extends BaseServices
 
             if ($endDate > $addDays)
                 throw new ValidationException("Tanggal selesai melewati tanggal ketentuan");
-
-            //* Validate Max Time when submission Same Day
-            $ruleDetail = $rule ? $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'isactive' => 'Y'])->first() : null;
-            $todayMinutes = convertToMinutes(date('H:i'));
-            $maxMinutes = $ruleDetail ? convertToMinutes(date("H:i", strtotime($ruleDetail->condition))) : null;
-
-            if ($startDate == $subDate && ($maxMinutes && ($todayMinutes > $maxMinutes)))
-                throw new ValidationException('Maksimal jam pengajuan ' . $ruleDetail->condition);
 
             //* Validate Period
             $periodServices->validatePeriod($this->baseSubType, $startDate, $endDate);

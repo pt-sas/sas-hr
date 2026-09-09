@@ -15,6 +15,8 @@ use App\Models\M_Holiday;
 use App\Models\M_MedicalCertificate;
 use App\Models\M_Rule;
 use App\Models\M_Attendance;
+use App\Models\M_Configuration;
+use App\Models\M_RuleDetail;
 use App\Models\M_WorkDetail;
 use App\Services\EmpWorkDayServices;
 use App\Services\PeriodServices;
@@ -108,12 +110,17 @@ class SickLeaveServices extends BaseServices
             $subDate   = date('Y-m-d', strtotime($data['submissiondate']));
             $employeeId = $data['md_employee_id'];
             $doProcess = $data['processNow'] ?? "N";
+            $reopen = false;
 
             if ($_ID) {
                 $sql = $this->model->where([$this->model->primaryKey => $_ID, 'submissiontype' => $this->baseSubType])->first();
 
                 if ($sql->docstatus != $this->DOCSTATUS_Drafted)
                     throw new ValidationException("Tidak bisa edit, dokumen sudah diproses");
+
+                //* Check reopen status
+                if ($sql->isreopen == "Y")
+                    $reopen = true;
             }
 
             $data['submissiontype'] = $this->baseSubType;
@@ -182,7 +189,7 @@ class SickLeaveServices extends BaseServices
 
                 $lastDate = end($lastDate);
 
-                if ($lastDate < $subDate)
+                if ($lastDate < $subDate && !$reopen)
                     throw new ValidationException("Maksimal tanggal pengajuan pada tanggal : " . format_dmy($lastDate, '-'));
             }
 
@@ -359,6 +366,9 @@ class SickLeaveServices extends BaseServices
         $mHoliday    = new M_Holiday($this->request);
         $mWorkDetail = new M_WorkDetail($this->request);
         $mMedical    = new M_MedicalCertificate($this->request);
+        $mRule       = new M_Rule($this->request);
+        $mRuleDetail = new M_RuleDetail($this->request);
+        $mConfig     = new M_Configuration($this->request);
 
         $row = $this->model->where([$this->model->primaryKey => $id, 'submissiontype' => $this->baseSubType])->first();
 
@@ -373,20 +383,11 @@ class SickLeaveServices extends BaseServices
         if (empty($docType->sys_submenu_id))
             throw new NotFoundException("Tipe Pengajuan {$docType->name} belum diset acuan menu-nya");
 
+        $today = date('Y-m-d');
         $startDate = date('Y-m-d', strtotime($row->startdate));
         $endDate   = date('Y-m-d', strtotime($row->enddate));
-        $holidays  = $mHoliday->getHolidayDate();
 
-        $workDay = $eWorkDayServices->getEmpWorkDay($row->md_employee_id, $startDate, $endDate);
-
-        $whereClause  = "md_work_detail.isactive = 'Y'";
-        $whereClause .= " AND md_employee_work.md_employee_id = $row->md_employee_id";
-        $whereClause .= " AND md_work.md_work_id = $workDay->md_work_id";
-        $workDetail = $mWorkDetail->getWorkDetail($whereClause)->getResult();
-
-        $daysOff = getDaysOff($workDetail);
-
-        $periodServices->validatePeriod($row->submissiontype, $startDate, $endDate, $holidays, $daysOff);
+        $periodServices->validatePeriod($row->submissiontype, $startDate, $endDate);
 
         if ($docaction === $this->DOCSTATUS_Completed) {
             //* Must have at least one sick letter image or medical doc
@@ -404,18 +405,13 @@ class SickLeaveServices extends BaseServices
             //* Validate duplicate submission
             $this->validateDuplicateSubmission($row->md_employee_id, $startDate, $endDate);
 
-            //* Create detail lines if not yet present
-            $line = $this->modelDetail->where($this->model->primaryKey, $id)->first();
+            $data = [
+                'id'         => $id,
+                'created_by' => $this->userID,
+                'updated_by' => $this->userID
+            ];
 
-            if (empty($line)) {
-                $data = [
-                    'id'         => $id,
-                    'created_by' => $this->userID,
-                    'updated_by' => $this->userID
-                ];
-
-                $this->model->createAbsentDetail($data, $row);
-            }
+            $this->model->createAbsentDetail($data, $row);
 
             $WScenarioServices->setScenario($this->entity, $this->model, $this->modelDetail, $id, $docaction, $docType->url, null, true);
 
@@ -425,6 +421,86 @@ class SickLeaveServices extends BaseServices
             $this->entity->setAbsentId($id);
             $this->save();
             return 'Pengajuan berhasil Divoid';
+        } else if ($docaction === $this->DOCSTATUS_Reopen) {
+            //TODO : Perlu diperbaiki, liat acuan ke Controller Backend\Sickleave
+            $holidays  = $mHoliday->getHolidayDate();
+            $config = $mConfig->where('name', "MAX_DATE_REOPEN")->first();
+
+            $rule = $mRule->where([
+                'name'      => 'Sakit',
+                'isactive'  => 'Y'
+            ])->first();
+
+            $ruleDetail = $mRuleDetail->where(['md_rule_id' => $rule->md_rule_id, 'name' => 'Batas Reopen'])->first();
+
+            $maxDateReopen = DateTime::createFromFormat('d-m', $config->value);
+            $dateRange = getDatesFromRange($row->submissiondate, $today, $holidays, 'Y-m-d');
+
+            //* Validate Reopen
+            if (empty($subTypeTarget))
+                throw new ValidationException("Silahkan pilih tipe form dahulu.");
+
+            if ($row->md_employee_id == $this->employeeID)
+                throw new ValidationException("Tidak bisa reopen untuk pengajuan diri sendiri");
+
+            if ($startDate > date('Y-m-d', strtotime($row->submissiondate)))
+                throw new ValidationException("Tidak bisa reopen untuk pengajuan future");
+
+            if ($today > $maxDateReopen->format('Y-m-d'))
+                throw new ValidationException("Batas reopen tanggal 24 Desember");
+
+            if (count($dateRange) > ($ruleDetail ? $ruleDetail->condition : 1))
+                throw new ValidationException("Sudah melewati batas waktu reopen");
+
+            if ($row->isreopen == "Y")
+                throw new ValidationException("Dokumen ini sudah tidak bisa direopen");
+
+            if ($_SubType == $this->baseSubType) {
+                //* Do Save
+                $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
+                $this->entity->setIsReopen('Y');
+                $this->entity->setIsApproved('');
+
+                $this->save();
+            } else {
+                //* Generate new Document
+                $entity = new \App\Entities\Absent();
+
+                $necessary = "IJ";
+                $entity->setNecessary($necessary);
+                $entity->setSubmissionType($_SubType);
+                $entity->setEmployeeId($row->md_employee_id);
+                $entity->setNik($row->nik);
+                $entity->setBranchId($row->md_branch_id);
+                $entity->setDivisionId($row->md_division_id);
+                $entity->setReason($row->reason . " | Document sebelumnya {$row->documentno}");
+                $entity->setSubmissionDate($today);
+                $entity->setStartDate($row->startdate);
+                $entity->setEndDate($row->enddate);
+                $entity->setDocStatus($this->DOCSTATUS_Drafted);
+                $entity->setIsReopen("Y");
+                $entity->setReferenceId($row->{$this->model->primaryKey});
+                $entity->setCreatedBy($this->userID);
+                $entity->setUpdatedBy($this->userID);
+
+                $post['submissiondate'] = $entity->getSubmissionDate();
+                $post['necessary'] = $necessary;
+
+                $docNo = $this->model->getInvNumber("submissiontype", $_SubType, $post, $this->session->get('sys_user_id'), false);
+                $entity->setDocumentNo($docNo);
+
+                $this->model->save($entity);
+
+                // TODO : Update current Document
+                $this->entity->setDocStatus($this->DOCSTATUS_Reopen);
+                $this->entity->setIsReopen('Y');
+                $this->entity->setReferenceId($this->model->insertID);
+                $this->entity->setReason($row->reason . " | Document Reopen menjadi {$docNo}");
+
+                $this->save();
+            }
+
+            return "Dokumen berhasil direopen";
         } else {
             throw new BusinessException("Dokumen aksi ini tidak tersedia pada tipe pengajuan ini");
         }
