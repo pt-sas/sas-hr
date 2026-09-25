@@ -101,7 +101,10 @@ class Field
      * $field_post mendapatkan field dari method post
      * @return $result
      */
-    function errorValidation($table, $field_post, $str = null)
+
+    // ERR: Optional parameter $field declared before required parameter $text is implicitly treated as a required parameter search → 
+    // FIX: give $field_post a default value or rearrange the signature so that default/optional parameters come last.
+    function errorValidation($table, $field_post = [], $str = null)
     {
         $allError = $this->validation->getErrors();
 
@@ -324,10 +327,12 @@ class Field
 
         foreach ($data as $row) {
             // if ($this->db->fieldExists($field, $table))
+            logMessage($row);
             $row->{$field} = ([
                 'id'    => $value,
                 'name'  => $text
             ]);
+            logMessage($row);
         }
 
         return $data;

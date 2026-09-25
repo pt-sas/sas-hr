@@ -1042,13 +1042,14 @@ $(".save_form").click(function (evt) {
     for (let i = 0; i < field.length; i++) {
       if (field[i].name !== "") {
         let className = field[i].className.split(/\s+/);
+        let safeName = $.escapeSelector(field[i].name);
 
         form
           .find(
             "input:checkbox[name=" +
-              field[i].name +
+              safeName +
               "], select[name=" +
-              field[i].name +
+              safeName +
               "]"
           )
           .not(".line")
@@ -1074,38 +1075,48 @@ $(".save_form").click(function (evt) {
 
         //* Field type input file and containing class control-upload-image
         if (field[i].type === "file" && className.includes("control-upload-image")) {
-        const input = field[i];
-        const files = input.files;
+          const input = field[i];
+          const files = input.files;
 
-        if (files.length > 0) {
-          const originalFile = files[0];
-          const safeName = originalFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-          const safeFile = new File([originalFile],safeName,{type: originalFile.type});
+          if (files.length > 0) {
+            const originalFile = files[0];
+            const safeName = originalFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+            const safeFile = new File([originalFile],safeName,{type: originalFile.type});
 
-          formData.append(input.name, safeFile);
-        } else {
-          const group = $(input).closest(".form-group");
-          const isPreviewVisible = group.find(".form-result").is(":visible") || group.find(".form-file-result").is(":visible");
+            formData.append(input.name, safeFile);
+          } else {
+            const group = $(input).closest(".form-group");
+            const isPreviewVisible = group.find(".form-result").is(":visible") || group.find(".form-file-result").is(":visible");
 
-          if (isPreviewVisible) {
-            const source = group.find(".img-result").attr("src");
+            if (isPreviewVisible) {
+              const source = group.find(".img-result").attr("src");
 
-            if (source) {
-              const cleanSource = source.split("?")[0].split("#")[0];
-              const fileName = decodeURIComponent(cleanSource.substring(cleanSource.lastIndexOf("/") + 1));
-              formData.append(input.name, fileName);
-            } else {
-              const documentName = group.find(".file-name").text().trim();
-              if (documentName !== "") {formData.append(input.name, documentName);}
+              if (source) {
+                const cleanSource = source.split("?")[0].split("#")[0];
+                const fileName = decodeURIComponent(cleanSource.substring(cleanSource.lastIndexOf("/") + 1));
+                formData.append(input.name, fileName);
+              } else {
+                const documentName = group.find(".file-name").text().trim();
+                if (documentName !== "") {formData.append(input.name, documentName);}
+              }
             }
           }
+        } else if (field[i].type === "file") {
+            const input = field[i];
+            const files = input.files;
+            
+            if (files.length > 0) {
+                // Loop through all files so 'multiple' works
+                for (let f = 0; f < files.length; f++) {
+                    formData.append(input.name, files[f]);
+                }
+            }
         }
-      }
 
         //* Field type textarea class summernote isEmpty to set value null
         if (
-          form.find("textarea.summernote[name=" + field[i].name + "]").length &&
-          $("[name =" + field[i].name + "]").summernote("isEmpty")
+          form.find("textarea.summernote[name=" + safeName + "]").length &&
+          $("[name =" + safeName + "]").summernote("isEmpty")
         ) {
           formData.append(field[i].name, "");
         }
@@ -1739,6 +1750,12 @@ function Edit(id, status, last_url) {
 
               ul.append(list);
 
+              // BUG: This part hide the `form_filter` without properly showing it agaim
+              /*
+                So, first of all this is a known problem across the app for example.
+                If you have a filter on the page and you click on the edit button, the filter will still be visible.
+                So, this part will hide the filter part when you click on the edit button.
+              */
               if (parent.find("div.filter_page").length > 0)
                 parent.find("div.filter_page").css("display", "none");
             }
@@ -4000,20 +4017,21 @@ function clearErrorForm(form) {
   //* Remove class has-error
   for (let i = 0; i < field.length; i++) {
     if (field[i].name !== "") {
-      if (!form.find("div.form-group").prop("classList").contains("row"))
+      if (!form.find("div.form-group").prop("classList").contains("row")){
+        let safeName = $.escapeSelector(field[i].name);
         form
           .find(
             "input[name=" +
-              field[i].name +
+              safeName +
               "], textarea[name=" +
-              field[i].name +
+              safeName +
               "], select[name=" +
-              field[i].name +
+              safeName +
               "]"
           )
           .closest(".form-group")
           .removeClass("has-error");
-      else
+      } else {
         form
           .find(
             "input[name=" +
@@ -4026,6 +4044,7 @@ function clearErrorForm(form) {
           )
           .closest("div")
           .removeClass("has-error");
+      }
     }
   }
 
@@ -4105,12 +4124,13 @@ function clearForm(evt) {
         fieldReadOnly.length == 0 &&
         !form.attr("id").includes("realization")
       ) {
+        let safeName = $.escapeSelector(field[i].name);
         form
           .find(
             "input[name=" +
-              field[i].name +
+              safeName +
               "], textarea[name=" +
-              field[i].name +
+              safeName +
               "]"
           )
           .removeAttr("readonly")
@@ -4196,8 +4216,9 @@ function clearForm(evt) {
           fieldReadOnly.length == 0 &&
           !form.attr("id").includes("realization")
         ) {
+          let safeName = $.escapeSelector(field[i].name);
           form
-            .find("select[name=" + field[i].name + "]")
+            .find("select[name=" + safeName + "]")
             .val(null)
             .change()
             .removeAttr("disabled")
@@ -4243,9 +4264,10 @@ function clearForm(evt) {
       if (field[i].type == "file") $(".close-img").click();
 
       //? Textarea class summernote
-      if (form.find("textarea.summernote[name=" + field[i].name + "]").length) {
-        $("[name =" + field[i].name + "]").summernote("reset");
-        $("[name =" + field[i].name + "]").summernote("destroy");
+      let safeName = $.escapeSelector(field[i].name);
+      if (form.find('textarea.summernote[name="' + safeName + '"]').length) {
+        $('[name="' + safeName + '"]').summernote("reset");
+        $('[name="' + safeName + '"]').summernote("destroy");
       }
 
       //? Exist table display line
@@ -4284,9 +4306,9 @@ function clearForm(evt) {
       form
         .find(
           "input:radio[name=" +
-            field[i].name +
+            safeName +
             "], button[name=" +
-            field[i].name +
+            safeName +
             "]"
         )
         .removeAttr("disabled");
@@ -4826,6 +4848,23 @@ function initSelectData(select, field = null, id = null) {
           .val(defaultID)
           .text(defaultText);
         $(this).append(optionSelected).change();
+      }
+      let pendingVal = $(item).attr("data-pending-val");
+      let pendingText = $(item).attr("data-pending-text");
+
+      if (pendingVal) {
+        let optionText = pendingText ? pendingText : pendingVal;
+        
+        if ($(item).find("option[value='" + pendingVal + "']").length === 0) {
+          let optionSelected = $("<option selected='selected'></option>")
+            .val(pendingVal)
+            .text(optionText);
+          $(item).append(optionSelected);
+        }
+
+        $(item).val(pendingVal).trigger("change");
+        $(item).removeAttr("data-pending-val");
+        $(item).removeAttr("data-pending-text");
       }
     }
   });
@@ -5456,39 +5495,49 @@ function putFieldData(form, data, status = null) {
               .summernote("code", label);
           }
 
+          // Safety checks on 2 cases, object or raw id
           if (field[i].type === "select-one") {
+            let selectEl = form.find("select[name=" + fieldName + "]").not(".line");
+
+            // Case A: Backend returned an object { id: 1, name: "General" }
             if (typeof label === "object" && label !== null) {
-              let option_ID = label.id;
-              let option_Txt = label.name;
+              let option_ID = label.id || label.value;
+              let option_Txt = label.name || label.text || option_ID;
 
-              option.push({
-                fieldName,
-                option_ID,
-                option_Txt,
-              });
+              if (selectEl.find("option[value='" + option_ID + "']").length === 0) {
+                let newOption = new Option(option_Txt, option_ID, true, true);
+                selectEl.append(newOption);
+              }
+              selectEl.val(option_ID).trigger("change");
 
-              let newOption = $("<option selected='selected'></option>")
-                .val(option_ID)
-                .text(option_Txt);
-              form
-                .find("select[name=" + fieldName + "]")
-                .not(".line")
-                .append(newOption)
-                .change();
-            } else if (
-              typeof label === "string" &&
-              (label !== null || label != 0)
-            ) {
-              option.push({
-                fieldName,
-                label,
-              });
+            // Case B: Backend returned a raw ID integer/string (e.g. 1)
+            } else if (label !== null && label !== "" && label != 0) {
+              let url = selectEl.attr("data-url");
 
-              form
-                .find("select[name=" + fieldName + "]")
-                .not(".line")
-                .val(label)
-                .change();
+              if (url) {
+                // Fetch the option label from the server using the ID
+                $.ajax({
+                  url: ADMIN_URL + url + "?id=" + label,
+                  type: "GET",
+                  dataType: "JSON",
+                  success: function (res) {
+                    let item = Array.isArray(res) ? res.find(x => x.id == label) || res[0] : res;
+                    let optionText = item ? (item.text || item.name || label) : label;
+
+                    if (selectEl.find("option[value='" + label + "']").length === 0) {
+                      let newOption = new Option(optionText, label, true, true);
+                      selectEl.append(newOption);
+                    }
+                    selectEl.val(label).trigger("change");
+                  },
+                  error: function () {
+                    // Fallback if request fails
+                    selectEl.val(label).trigger("change");
+                  }
+                });
+              } else {
+                selectEl.val(label).trigger("change");
+              }
             }
           }
 

@@ -3560,4 +3560,22 @@ class Validation
             ]
         ]
     ];
+
+    public $article = [
+        'title' => [
+            'rules'  => 'required|max_length[255]',
+            'errors' => ['required' => 'Title is required.']
+        ],
+        'sys_ref_detail_id' => [
+            'rules'  => 'required|is_natural_no_zero',
+            'errors' => [
+                'required'            => 'Category is required.',
+                'is_natural_no_zero'  => 'Category is required.',
+            ]
+        ],
+        'content' => [
+            'rules'  => 'required',
+            'errors' => ['required' => 'Content cannot be empty.']
+        ],
+    ];
 }
