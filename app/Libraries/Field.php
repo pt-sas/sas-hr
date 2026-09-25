@@ -327,12 +327,10 @@ class Field
 
         foreach ($data as $row) {
             // if ($this->db->fieldExists($field, $table))
-            logMessage($row);
             $row->{$field} = ([
                 'id'    => $value,
                 'name'  => $text
             ]);
-            logMessage($row);
         }
 
         return $data;
