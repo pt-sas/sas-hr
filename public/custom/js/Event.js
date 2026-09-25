@@ -1,5 +1,438 @@
+// --- Constants ---
+const ATTACH = {
+  MAX_FILES: 20,
+  MAX_SIZE: 10 * 1024 * 1024, // 10 MB
+  ALLOWED: [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+    'txt', 'csv', 'rtf', 'odt', 'ods', 'odp', 'zip',
+    'rar', 'png', 'jpg', 'jpeg', 'webp', 'gif'
+  ]
+};
+
+// --- CSRF helper ---
+function getCsrf() {
+  const $i = $('input[type="hidden"][name^="csrf"]').first();
+  return $i.length ? { name: $i.attr('name'), value: $i.val() } : null;
+}
+
+// --- HTML escaping ---
+function escapeHtml(text) {
+  return $('<div>').text(text == null ? '' : text).html();
+}
+
+// --- Attachment staging module (closure hides DataTransfer) ---
+const AttachmentManager = (function () {
+  let stager = new DataTransfer();
+  let onChange = null; // callback set from inside ready
+
+  function setOnChange(fn) { onChange = fn; }
+
+  function files() { return stager.files; }
+
+  function reset() {
+    stager = new DataTransfer();
+    const input = document.getElementById('attachments');
+    if (input) {
+      input.files = stager.files;
+      $(input).val('');
+    }
+    $('#selected_files_list').empty();
+    $('#selected_files_wrapper').addClass('d-none');
+    $('#existing_files_wrapper').empty();
+    if (typeof onChange === 'function') onChange();
+  }
+
+  function add(newFiles) {
+    const current = stager.files.length;
+
+    if (current + newFiles.length > ATTACH.MAX_FILES) {
+      alert(`Batas maksimal adalah ${ATTACH.MAX_FILES} file. Anda sudah memilih ${current} file.`);
+      return false;
+    }
+
+    let changed = false;
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i];
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+
+      if (!ATTACH.ALLOWED.includes(ext)) {
+        alert(`File "${file.name}" ditolak. Format tidak diizinkan.`);
+        continue;
+      }
+      if (file.size > ATTACH.MAX_SIZE) {
+        alert(`File "${file.name}" melebihi batas ukuran 10 MB.`);
+        continue;
+      }
+
+      // Dedupe: skip identical name + size + lastModified
+      const duplicate = Array.from(stager.files).some(f =>
+        f.name === file.name &&
+        f.size === file.size &&
+        f.lastModified === file.lastModified
+      );
+      if (duplicate) {
+        alert(`File "${file.name}" sudah dipilih.`);
+        continue;
+      }
+
+      stager.items.add(file);
+      changed = true;
+    }
+
+    if (changed && typeof onChange === 'function') onChange();
+    return changed;
+  }
+
+  function removeAt(index) {
+    const next = new DataTransfer();
+    for (let i = 0; i < stager.files.length; i++) {
+      if (i !== index) next.items.add(stager.files[i]);
+    }
+    stager = next;
+    const input = document.getElementById('attachments');
+    if (input) input.files = stager.files;
+    if (typeof onChange === 'function') onChange();
+  }
+
+  return { setOnChange, files, reset, add, removeAt };
+})();
+
+// --- Summernote image upload ---
+function uploadSummernoteImage(file, editor) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const csrf = getCsrf();
+  if (csrf) formData.append(csrf.name, csrf.value);
+
+  $.ajax({
+    url: ADMIN_URL + 'help-article/uploadImage',
+    type: 'POST',
+    data: formData,
+    processData: false,
+    contentType: false,
+    dataType: 'JSON',
+    success: function (response) {
+      if (response && response.success) {
+        $(editor).summernote('insertImage', response.url);
+      } else {
+        alert((response && response.message) || 'Upload failed');
+      }
+    },
+    error: function () { alert('Upload error'); }
+  });
+}
+
+// --- Summernote init/rebuild ---
+function initSummernote(content) {
+  const $el = $('#content');
+  if (!$el.length) return;
+  if (!document.body.contains($el[0])) return;
+
+  if ($el.data('summernote')) {
+    try { $el.summernote('destroy'); } catch (e) { /* ignore */ }
+  }
+
+  try {
+    $el.summernote({
+      height: 600,
+      dialogsInBody: true,
+      toolbar: [
+        ['history', ['undo', 'redo']],
+        ['style',   ['style', 'bold', 'italic', 'underline', 'strikethrough', 'clear']],
+        ['font',    ['fontname', 'fontsize', 'color']],
+        ['para',    ['ol', 'ul', 'paragraph', 'height']],
+        ['insert',  ['link', 'picture', 'table', 'hr']],
+        ['view',    ['fullscreen', 'codeview']]
+      ],
+      callbacks: {
+        onImageUpload: function (files) {
+          for (let i = 0; i < files.length; i++) {
+            uploadSummernoteImage(files[i], this);
+          }
+        }
+      }
+    });
+
+    if (content !== undefined && content !== null) {
+      $el.summernote('code', content);
+    }
+  } catch (e) {
+    console.warn('initSummernote failed:', e);
+  }
+}
+
 $(document).ready(function () {
-  $(".multiple-select-branch").select2({
+
+  // ----- Attachment: render staged file list -----
+  function renderStagedFiles() {
+    const $list = $('#selected_files_list');
+    const files = AttachmentManager.files();
+
+    $list.empty();
+
+    if (files.length > 0) {
+      $('#selected_files_wrapper').removeClass('d-none');
+
+      $.each(files, function (index, file) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        const row = `
+          <li class="list-group-item d-flex justify-content-between align-items-center py-1 px-3 bg-light mb-1 border rounded">
+            <span class="text-truncate mr-2" style="max-width: 80%;">
+              <i class="fas fa-file-alt text-info mr-2"></i>
+              <strong>${escapeHtml(file.name)}</strong>
+              <small class="text-muted">(${sizeMB} MB)</small>
+            </span>
+            <button type="button" class="btn btn-xs btn-outline-danger btn-cancel-staged-file" data-index="${index}" title="Batal Upload">
+              <i class="fas fa-times"></i>
+            </button>
+          </li>`;
+        $list.append(row);
+      });
+    } else {
+      $('#selected_files_wrapper').addClass('d-none');
+    }
+  }
+
+  // Wire render callback into the module
+  AttachmentManager.setOnChange(renderStagedFiles);
+
+  // ----- Attachment: input change -----
+  $(document).on('change', '#attachments', function () {
+    const input = this;
+    const added = AttachmentManager.add(input.files);
+    // Sync DOM input to current staged files (even if some were rejected)
+    input.files = AttachmentManager.files();
+    if (!added) renderStagedFiles();
+  });
+
+  // ----- Attachment: cancel staged file -----
+  $(document).on('click', '.btn-cancel-staged-file', function () {
+    const removeIndex = $(this).data('index');
+    AttachmentManager.removeAt(removeIndex);
+  });
+
+  // ----- Reset on New / Edit buttons -----
+  $(document).on('click', '.new_form', function () {
+    AttachmentManager.reset();
+    setTimeout(function () { initSummernote(''); }, 100);
+  });
+
+  $(document).on('click', '.btn_edit', function () {
+    AttachmentManager.reset();
+    setTimeout(function () { initSummernote(''); }, 50);
+  });
+
+  // ----- Explicit close buttons -----
+  $(document).on('click', '#form_article .close_form, #form_article .btn_close', function () {
+    AttachmentManager.reset();
+  });
+
+  // ----- Reset when main modal is hidden (ignore Summernote dialogs) -----
+  $(document).on('hidden.bs.modal', function (e) {
+    if ($(e.target).hasClass('note-modal') || $(e.target).closest('.note-modal').length) {
+      return;
+    }
+    if ($(e.target).is('#modal_form, #modal_article')) {
+      AttachmentManager.reset();
+    }
+  });
+
+  // ----- Existing files (edit mode) -----
+  function populateExistingFiles(attachments) {
+    const $wrapper = $('#existing_files_wrapper');
+    $wrapper.empty();
+
+    if (!attachments || attachments.length === 0) return;
+
+    let html = '<small class="text-muted font-weight-bold d-block mb-1">Lampiran Tersimpan Saat Ini:</small>';
+    html += '<ul class="list-group" id="existing_files_list">';
+
+    $.each(attachments, function (index, file) {
+      const fileId   = file.md_article_file_id || file.id;
+      const fileName = file.file_name || file.filename || 'Lampiran File';
+      const fileSize = file.file_size ? (file.file_size / 1024).toFixed(1) + ' KB' : '';
+
+      html += `
+        <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 existing-file-item" id="existing_file_${fileId}">
+          <div class="d-flex align-items-center">
+            <i class="far fa-file-alt text-primary fa-lg mr-2"></i>
+            <div>
+              <span class="file-title text-dark small font-weight-bold d-block">${escapeHtml(fileName)}</span>
+              ${fileSize ? `<small class="text-muted">${fileSize}</small>` : ''}
+            </div>
+          </div>
+          <div>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-mark-delete" data-id="${fileId}">
+              <i class="fas fa-trash-alt"></i> Hapus
+            </button>
+          </div>
+        </li>
+      `;
+    });
+
+    html += '</ul>';
+    html += '<div id="deleted_files_container"></div>';
+    $wrapper.html(html);
+  }
+
+  // ----- Toggle mark-for-delete -----
+  $(document).on('click', '.btn-mark-delete', function () {
+    const $btn = $(this);
+    const fileId = $btn.data('id');
+    const $item = $('#existing_file_' + fileId);
+    const $title = $item.find('.file-title');
+
+    if ($item.hasClass('marked-for-delete')) {
+      // Unmark
+      $item.removeClass('marked-for-delete');
+      $title.css({ 'text-decoration': 'none', 'opacity': '1' });
+      $item.css('background-color', '#ffffff');
+      $btn.removeClass('btn-outline-secondary').addClass('btn-outline-danger')
+          .html('<i class="fas fa-trash-alt"></i> Hapus');
+      $('#del_file_' + fileId).remove();
+    } else {
+      // Mark for delete
+      $item.addClass('marked-for-delete');
+      $title.css({ 'text-decoration': 'line-through', 'opacity': '0.5' });
+      $item.css('background-color', '#f8d7da');
+      $btn.removeClass('btn-outline-danger').addClass('btn-outline-secondary')
+          .html('<i class="fas fa-undo"></i> Batal');
+
+      $('#deleted_files_container').append(
+        `<input type="hidden" name="deleted_file_ids[]" id="del_file_${fileId}" value="${fileId}">`
+      );
+    }
+  });
+
+  // ----- AJAX interceptor (show & save) -----
+  $(document).ajaxComplete(function (event, xhr, settings) {
+    if (!settings || !settings.url) return;
+
+    // A. Edit mode — load article
+    if (/help-article\/show\/\d+/.test(settings.url)) {
+      try {
+        const res = xhr.responseJSON;
+        const data = (Array.isArray(res) && res[0]) ? res[0].message : (res ? res.message : null);
+        if (!data) return;
+
+        AttachmentManager.reset();
+
+        if (data.header) {
+          let content = '';
+          $.each(data.header, function (i, item) {
+            if (item.field === 'content') content = item.label != null ? item.label : '';
+          });``
+          setTimeout(function () { initSummernote(content); }, 100);
+        }
+
+        if (data.attachments) {
+          populateExistingFiles(data.attachments);
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+      return;
+    }
+
+    // B. Save (create/update) — reset on success
+    if (settings.url.indexOf('help-article/create') !== -1 ||
+        settings.url.indexOf('help-article/update') !== -1) {
+      try {
+        const res = xhr.responseJSON;
+        const ok = xhr.status >= 200 && xhr.status < 300 &&
+                   res && res.success !== false && res.status !== 0;
+        if (ok) AttachmentManager.reset();
+      } catch (e) { /* ignore */ }
+    }
+  });
+
+  // =========================================================
+  // Live search (Help Center)
+  // =========================================================
+  const $searchInput = $('#search_help');
+  const $searchResults = $('#search_results_wrapper');
+  let searchTimer;
+
+  function executeHelpSearch(query) {
+    const postData = { query: query };
+    const csrf = getCsrf();
+    if (csrf) postData[csrf.name] = csrf.value;
+
+    $.ajax({
+      url: ADMIN_URL + 'help/search',
+      type: 'POST',
+      data: postData,
+      dataType: 'JSON',
+      beforeSend: function () {
+        $searchResults
+          .html('<div class="p-3 text-center text-muted"><i class="fas fa-spinner fa-spin fa-fw"></i> Mencari...</div>')
+          .show();
+      },
+      success: function (response) {
+        if (response && response.status && response.data && response.data.length > 0) {
+          let html = '<div class="list-group list-group-flush text-left">';
+          $.each(response.data, function (i, item) {
+            html += `
+              <a href="${item.url}" class="list-group-item list-group-item-action py-2 px-3">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                  <span class="font-weight-bold text-dark mb-0">${escapeHtml(item.title)}</span>
+                  <span class="badge badge-primary">${escapeHtml(item.category)}</span>
+                </div>
+              </a>
+            `;
+          });
+          html += '</div>';
+          $searchResults.html(html).show();
+        } else {
+          $searchResults
+            .html('<div class="p-3 text-center text-muted"><i class="fas fa-exclamation-circle fa-fw"></i> Tidak ada artikel ditemukan.</div>')
+            .show();
+        }
+      },
+      error: function () {
+        $searchResults
+          .html('<div class="p-3 text-center text-danger"><i class="fas fa-times-circle fa-fw"></i> Terjadi kesalahan pada server.</div>')
+          .show();
+      }
+    });
+  }
+
+  $searchInput.on('keyup input', function () {
+    clearTimeout(searchTimer);
+    const query = $.trim($(this).val());
+    if (query.length < 2) {
+      $searchResults.hide().empty();
+      return;
+    }
+    searchTimer = setTimeout(function () { executeHelpSearch(query); }, 300);
+  });
+
+  $(document).on('click', '#btn_search_help', function (e) {
+    e.preventDefault();
+    const query = $.trim($searchInput.val());
+    if (query.length >= 2) executeHelpSearch(query);
+  });
+
+  $('#form_search_help').on('submit', function (e) {
+    e.preventDefault();
+    const query = $.trim($searchInput.val());
+    if (query.length >= 2) executeHelpSearch(query);
+  });
+
+  $(document).on('click', function (e) {
+    if (!$(e.target).closest('.search-container').length) {
+      $searchResults.hide();
+    }
+  });
+
+  $searchInput.on('focus', function () {
+    if ($.trim($(this).val()).length >= 2 && $searchResults.children().length > 0) {
+      $searchResults.show();
+    }
+  });
+
+    $(".multiple-select-branch").select2({
     placeholder: "Pilih opsi cabang",
     width: "100%",
     theme: "bootstrap",
@@ -197,8 +630,12 @@ $(document).ready(function () {
   if ($(this).find("#form_absent_manual").is($("#form_absent_manual"))) {
     initSelectData($(this).find("select.select-data"));
   }
-});
 
+  // =========================================================
+  // Summernote init on load
+  // =========================================================
+  initSummernote('');
+});
 $(".form-absent").on("change", "#md_employee_id", function (e) {
   let _this = $(this);
   const form = _this.closest("form");
