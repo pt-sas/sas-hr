@@ -131,3 +131,7 @@ public/custom/image/*/*.jpeg
 public/custom/image/*/*.png
 
 public/uploads
+
+# Prettier (Formatter)
+.prettierrc
+.prettierignore
