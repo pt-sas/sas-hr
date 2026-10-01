@@ -26,6 +26,8 @@ class Overtime extends Entity
     protected $isoutsourcing;
     protected $md_supplier_id;
     protected $receiveddate;
+    protected $trx_bundling_id;
+    protected $ispacket;
 
     protected $dates   = [
         'created_at',
@@ -250,5 +252,25 @@ class Overtime extends Entity
             return null;
 
         $this->attributes['receiveddate'] = $receiveddate;
+    }
+
+    public function getBundlingId()
+    {
+        return $this->attributes['trx_bundling_Id'];
+    }
+
+    public function setBundlingId($trx_bundling_Id)
+    {
+        $this->attributes['trx_bundling_Id'] = $trx_bundling_Id;
+    }
+
+    public function getIsPacket()
+    {
+        return $this->attributes['ispacket'];
+    }
+
+    public function setIsPacket($ispacket)
+    {
+        $this->attributes['ispacket'] = $ispacket;
     }
 }

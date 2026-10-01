@@ -817,6 +817,30 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('promo-demo/processIt', 'Backend\PromoDemo::processIt');
     $routes->get('promo-demo/print/(:any)', 'Backend\PromoDemo::exportPDF/$1');
 
+    $routes->add('master-paket', 'Backend\MasterBundling::index');
+    $routes->post('master-paket/showAll', 'Backend\MasterBundling::showAll');
+    $routes->get('master-paket/show/(:any)', 'Backend\MasterBundling::show/$1');
+    $routes->post('master-paket/create', 'Backend\MasterBundling::create');
+    $routes->match(['get', 'post'], 'master-paket/getList', 'Backend\MasterBundling::getList');
+    $routes->post('master-paket/getDetail', 'Backend\MasterBundling::getPacketDetail');
+
+    $routes->add('paket', 'Backend\Bundling::index');
+    $routes->post('paket/showAll', 'Backend\Bundling::showAll');
+    $routes->get('paket/show/(:any)', 'Backend\Bundling::show/$1');
+    $routes->post('paket/create', 'Backend\Bundling::create');
+    $routes->get('paket/destroy/(:any)', 'Backend\Bundling::destroy/$1');
+    $routes->get('paket/processIt', 'Backend\Bundling::processIt');
+    $routes->post('paket/tableLine', 'Backend\Bundling::tableLine');
+    $routes->post('paket/getList', 'Backend\Bundling::getList');
+    $routes->post('paket/getSubData', 'Backend\Bundling::getSubData');
+
+    $routes->add('lembur-paket', 'Backend\ExecuteBundling::index');
+    $routes->match(['get', 'post'], 'lembur-paket/showAll', 'Backend\ExecuteBundling::showAll');
+    $routes->post('lembur-paket/create', 'Backend\ExecuteBundling::create');
+    $routes->get('lembur-paket/show/(:any)', 'Backend\ExecuteBundling::show/$1');
+    $routes->get('lembur-paket/destroy/(:any)', 'Backend\ExecuteBundling::destroy/$1');
+    $routes->get('lembur-paket/processIt', 'Backend\ExecuteBundling::processIt');
+    $routes->post('lembur-paket/tableLine', 'Backend\ExecuteBundling::tableLine');
     // Bantuan (Help / FAQ)
     // 1. For HR master data
     // Category Article Module
@@ -826,7 +850,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'help-article/show/(:any)', 'Backend\Help::show/$1');
     $routes->match(['get', 'post'], 'help-article/destroy/(:any)', 'Backend\Help::destroy/$1');
     $routes->post('help-article/uploadImage', 'Backend\Help::uploadImage');
-    
+
     $routes->match(['get', 'post'], 'help-article/getListArticle', 'Backend\Help::getListArticle');
     $routes->match(['get', 'post'], 'help-article/getListDocCategory', 'Backend\Help::getListDocCategory');
     $routes->match(['get', 'post'], 'help-article/getListStatus', 'Backend\Help::getListStatus');
@@ -892,6 +916,10 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
 
     $routes->put('notifikasi/updateRead/(:num)', 'Notification::updateRead/$1');
     $routes->resource('notifikasi', ['controller' => 'Notification']);
+
+    $routes->post('fcm/register', 'FCM::registerToken');
+    $routes->delete('fcm/remove', 'FCM::removeToken');
+    $routes->post('fcm/sendMessage', 'FCM::sendTestMessage');
 });
 
 /*

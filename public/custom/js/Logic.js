@@ -135,18 +135,29 @@ $("#form_official_permission").on(
   }
 );
 
-$("#form_overtime").on("dp.change", "input[name=startdate]", function (e) {
-  $("[name=enddate]").data("DateTimePicker").date(moment(e.date));
+$("#form_overtime").on("change dp.change", "#md_employee_id, input[name=startdate]", function (e) {
+  const _this = $(this);
+  const form = $(e.target).closest('form');
+  const isDate = _this.attr('name') === 'startdate';
+  const packetChecked = form.find('input[name=ispacket]').is(':checked');
 
-  const rows = _tableLine.rows().nodes().to$();
+  if (isDate) {
+    $("[name=enddate]").data("DateTimePicker").date(moment(e.date));
+  
+    const rows = _tableLine.rows().nodes().to$();
+  
+    rows.find("input[name=datestart]").val(this.value);
+    rows.find("input[name=dateend]").val(this.value);
+  }
 
-  rows.find("input[name=datestart]").val(this.value);
-  rows.find("input[name=dateend]").val(this.value);
+  if (packetChecked) {
+    getBundling(_this);
+  }
 });
 
 $("#form_overtime").on(
   "change",
-  "#md_branch_id, #md_division_id, #md_supplier_id",
+  "#md_branch_id, #md_division_id, #md_supplier_id, #trx_bundling_id",
   function (evt) {
     const form = $(this).closest("form");
     const field = form.find("select");
@@ -1133,18 +1144,34 @@ $(".tb_childrow").on("click", "td.details-control", function () {
   var id = $(this).attr("data-line-id");
 
   const form = $(
-    "#form_office_duties, #form_special_office_duties, #form_closing_period"
+    "#form_office_duties, #form_special_office_duties, #form_closing_period, #form_bundling"
   );
 
   if (row.child.isShown()) {
     row.child.hide();
     tr.removeClass("shown");
   } else {
-    // if (form.is($("#form_office_duties")) || form.is($("#form_special_office_duties"))) {
+    let url = LAST_URL + '/getSubData';
+
+    if (form.is($("#form_office_duties")) || form.is($("#form_special_office_duties"))) {
     getAssignmentDate(id, function (tableHtml) {
       row.child(tableHtml).show();
       tr.addClass("shown");
     });
+  } else if (form.is($("#form_bundling"))) {
+
+    $.ajax({
+    url:url,
+    type: "POST",
+    data: { id: id },
+    success:function (result) {
+      if(result[0].success) {
+      row.child(result[0].message).show();
+      tr.addClass("shown");
+      }
+    }
+    });
+  }
     // } else if (form.is($("#form_closing_period"))){
     //   getPeriodControl(id, function (tableHtml) {
     //     row.child(tableHtml).show();
@@ -2998,6 +3025,74 @@ $("#form_adjustment").on(
       else form.find("select[name=resigndate]").closest(".form-group").hide();
   }
 );
+
+function getBundling(elem) {
+  if(isLoadingForm) return;
+
+    const form = elem.closest("form");
+    const field = form.find('select[name=trx_bundling_id]');
+    let url = ADMIN_URL + '/paket/getList';
+
+    let employeeID = form.find('select[name=md_employee_id]').val();
+    let date = form.find('input[name=startdate]').val();
+
+    field.empty();
+    
+    if (date != "" && employeeID != "") {
+      let formData = new FormData();
+      formData.append('startdate', date);
+      formData.append('md_employee_id', employeeID);
+
+      $.ajax({
+      url: url,
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      cache: false,
+      dataType: "JSON",
+          beforeSend: function () {
+            loadingForm(form.prop("id"), "facebook");
+            $(".save_form").prop("disabled", true);
+            $(".close_form").prop("disabled", true);
+          },
+          complete: function () {
+            hideLoadingForm(form.prop("id"));
+            $(".save_form").removeAttr("disabled");
+            $(".close_form").removeAttr("disabled");
+          },
+      success: function (result) {
+        if (result.length) {
+          field.append('<option value=""></option>');
+  
+          $.each(result, function (idx, item) {
+            if (setSave === "detail")
+              field
+                .append(
+                  '<option value="' +
+                    item.id +
+                    '">' +
+                    item.text +
+                    "</option>"
+                )
+                .prop("disabled", true);
+            else
+              field.append(
+                '<option value="' +
+                  item.id +
+                  '">' +
+                  item.text +
+                  "</option>"
+              );
+          });
+          }
+      },
+      error: function (jqXHR, exception) {
+        showError(jqXHR, exception);
+      },
+      });
+    }
+}
 
 // $("#saldo_cuti_detail").ready(function () {
 //   const _this = $(this);
