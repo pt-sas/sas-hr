@@ -20,6 +20,7 @@ use App\Models\M_RuleDetail;
 use App\Models\M_WorkDetail;
 use App\Services\EmpWorkDayServices;
 use App\Services\PeriodServices;
+use DateTime;
 
 class SickLeaveServices extends BaseServices
 {
@@ -360,11 +361,9 @@ class SickLeaveServices extends BaseServices
     {
         $WScenarioServices = new WScenarioServices($this->userID, $this->employeeID);
         $periodServices    = new PeriodServices($this->userID, $this->employeeID);
-        $eWorkDayServices  = new EmpWorkDayServices($this->userID, $this->employeeID);
 
         $mDocType    = new M_DocumentType($this->request);
         $mHoliday    = new M_Holiday($this->request);
-        $mWorkDetail = new M_WorkDetail($this->request);
         $mMedical    = new M_MedicalCertificate($this->request);
         $mRule       = new M_Rule($this->request);
         $mRuleDetail = new M_RuleDetail($this->request);
@@ -422,7 +421,6 @@ class SickLeaveServices extends BaseServices
             $this->save();
             return 'Pengajuan berhasil Divoid';
         } else if ($docaction === $this->DOCSTATUS_Reopen) {
-            //TODO : Perlu diperbaiki, liat acuan ke Controller Backend\Sickleave
             $holidays  = $mHoliday->getHolidayDate();
             $config = $mConfig->where('name', "MAX_DATE_REOPEN")->first();
 
@@ -455,20 +453,20 @@ class SickLeaveServices extends BaseServices
             if ($row->isreopen == "Y")
                 throw new ValidationException("Dokumen ini sudah tidak bisa direopen");
 
-            if ($_SubType == $this->baseSubType) {
+            if ($subTypeTarget == $this->baseSubType) {
                 //* Do Save
                 $this->entity->setDocStatus($this->DOCSTATUS_Drafted);
                 $this->entity->setIsReopen('Y');
                 $this->entity->setIsApproved('');
 
                 $this->save();
-            } else {
+            } else if ($subTypeTarget == $this->model->Pengajuan_Ijin) {
                 //* Generate new Document
                 $entity = new \App\Entities\Absent();
 
                 $necessary = "IJ";
                 $entity->setNecessary($necessary);
-                $entity->setSubmissionType($_SubType);
+                $entity->setSubmissionType($subTypeTarget);
                 $entity->setEmployeeId($row->md_employee_id);
                 $entity->setNik($row->nik);
                 $entity->setBranchId($row->md_branch_id);
@@ -483,21 +481,24 @@ class SickLeaveServices extends BaseServices
                 $entity->setCreatedBy($this->userID);
                 $entity->setUpdatedBy($this->userID);
 
-                $post['submissiondate'] = $entity->getSubmissionDate();
-                $post['necessary'] = $necessary;
+                $dataDocNo['submissiondate'] = $entity->getSubmissionDate();
+                $dataDocNo['necessary'] = $necessary;
 
-                $docNo = $this->model->getInvNumber("submissiontype", $_SubType, $post, $this->session->get('sys_user_id'), false);
+                $docNo = $this->model->getInvNumber("submissiontype", $subTypeTarget, $dataDocNo, $this->userID, false);
                 $entity->setDocumentNo($docNo);
 
                 $this->model->save($entity);
 
                 // TODO : Update current Document
+                $this->entity->setAbsentId($id);
                 $this->entity->setDocStatus($this->DOCSTATUS_Reopen);
                 $this->entity->setIsReopen('Y');
                 $this->entity->setReferenceId($this->model->insertID);
                 $this->entity->setReason($row->reason . " | Document Reopen menjadi {$docNo}");
 
                 $this->save();
+            } else {
+                throw new ValidationException("Tidak bisa reopen ke tipe form ini");
             }
 
             return "Dokumen berhasil direopen";
