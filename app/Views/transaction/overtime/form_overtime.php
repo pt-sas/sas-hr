@@ -12,15 +12,7 @@
                     <small class="form-text text-danger" id="error_md_employee_id"></small>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="trx_bundling_id">No Paket <span class="required">*</span></label>
-                    <select class="form-control select2" id="trx_bundling_id" name="trx_bundling_id">
-                        <option value="">Pilih Paket</option>
-                    </select>
-                    <small class="form-text text-danger" id="error_trx_bundling_id"></small>
-                </div>
-            </div>
+            <div class="col-md-3"></div>
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="documentno">No Form</label>
@@ -95,11 +87,6 @@
                         <input type="checkbox" class="form-check-input" name="isemployee" checked
                             hide-field="md_supplier_id">
                         <span class=" form-check-sign">Karyawan</span>
-                    </label>
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" name="ispacket"
-                            show-field="trx_bundling_id">
-                        <span class=" form-check-sign">Paket</span>
                     </label>
                 </div>
             </div>

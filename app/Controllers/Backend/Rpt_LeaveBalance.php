@@ -445,7 +445,7 @@ class Rpt_LeaveBalance extends BaseController
 
                     $row[] = $useDes;
 
-                    $totalSaldo = $value->amount + $useJan + $useFeb + $useMar + $useApr + $useMei + $useJun + $useJul + $useAgs + $useSep + $useOkt + $useNov + $useDes;
+                    $totalSaldo = $value->amount + $useJan + $useFeb + $useMar + $useApr + $useMei + $useJun + $useJul + $useSep + $useOkt + $useNov + $useDes;
                     $row[] = $totalSaldo;
                     $data[] = $row;
 

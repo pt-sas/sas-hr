@@ -9,9 +9,12 @@ use App\Models\M_Assignment;
 use App\Models\M_AssignmentDate;
 use App\Models\M_AssignmentDetail;
 use App\Models\M_Attendance;
+use App\Models\M_Configuration;
 use App\Models\M_EmpBranch;
 use App\Models\M_EmpDivision;
 use App\Models\M_Employee;
+use App\Models\M_EmployeeDeparture;
+use App\Models\M_EmpWorkDay;
 use App\Models\M_Holiday;
 use App\Models\M_Message;
 use App\Models\M_WorkDetail;
@@ -19,6 +22,7 @@ use App\Models\M_NotificationText;
 use App\Models\M_User;
 use Config\Services;
 use Html2Text\Html2Text;
+use DateTime;
 use PHPExcel_Style_Alignment;
 use PHPExcel_Style_Fill;
 use PHPExcel_IOFactory;
@@ -70,14 +74,6 @@ class Attendance extends BaseController
                         if ($value['name'] === "md_employee_id") {
                             $empList = $value['value'];
                         }
-
-                        if ($value['name'] === 'md_branch_id') {
-                            $branchIds = $value['value'];
-                        }
-
-                        if ($value['name'] === 'md_division_id') {
-                            $divisionIds = $value['value'];
-                        }
                     }
                 }
 
@@ -104,16 +100,8 @@ class Attendance extends BaseController
                 $dateEnd = isset($date) ? date('Y-m-d', strtotime($date[1])) : date('Y-m-d');
                 $dateRange = getDatesFromRange($dateStart, $dateEnd, [], 'Y-m-d', 'all');
 
-                $whereClause = "md_employee.md_status_id IN ('{$this->Status_PERMANENT}', '{$this->Status_PROBATION}', '{$this->Status_KONTRAK}', '{$this->Status_MAGANG}', '{$this->Status_FREELANCE}')";
-                $whereClause .= " AND md_employee.md_employee_id IN (" . implode(", ", $empList) .  ")";
-
-                if (!empty($branchIds))
-                    $whereClause .= " AND md_employee_branch.md_branch_id IN (" . implode(", ", $branchIds) . ")";
-
-                if (!empty($divisionIds))
-                    $whereClause .= " AND md_employee_division.md_division_id IN (" . implode(", ", $divisionIds) . ")";
-
-                $empList = $mEmployee->getEmployee($whereClause);
+                $empList = $mEmployee->whereIn('md_status_id', [$this->Status_PERMANENT, $this->Status_PROBATION, $this->Status_KONTRAK, $this->Status_MAGANG, $this->Status_FREELANCE])
+                    ->whereIn('md_employee_id', $empList)->findAll();
 
                 foreach ($empList as $employee) :
                     foreach ($dateRange as $date) {
@@ -404,6 +392,271 @@ class Attendance extends BaseController
             return $this->response->setJSON($response);
         }
     }
+
+    // public function toDoCheckAbsent()
+    // {
+    //     $mEmployee = new M_Employee($this->request);
+    //     $mNotifText = new M_NotificationText($this->request);
+    //     $mUser = new M_User($this->request);
+    //     $mWorkDetail = new M_WorkDetail($this->request);
+    //     $mAbsent = new M_Absent($this->request);
+    //     $mAbsentDetail = new M_AbsentDetail($this->request);
+    //     $mHoliday = new M_Holiday($this->request);
+    //     $mConfig = new M_Configuration($this->request);
+    //     $mAssignment = new M_Assignment($this->request);
+    //     $mEmpBranch = new M_EmpBranch($this->request);
+    //     $mMessage = new M_Message($this->request);
+    //     $cMail = new Mail();
+    //     $cTelegram = new Telegram();
+
+    //     set_time_limit(0);
+
+    //     $holiday = $mHoliday->getHolidayDate();
+    //     $today = date("Y-m-d");
+    //     $formatIDNToday = strtoupper(formatDay_idn(date('w')));
+
+    //     $yesterday = addBusinessDays($today, 1, $holiday, true);
+    //     $formatIDNYesterday = strtoupper(formatDay_idn(date('w', strtotime($yesterday))));
+
+    //     // TODO : Set Master Data Notification
+    //     $dataNotifIn = $mNotifText->where('name', 'Belum Absen Masuk')->first();
+    //     $subjectIn = $dataNotifIn->getSubject();
+    //     $messageIn = str_replace(['(Var1)'], [$today], $dataNotifIn->getText());
+    //     $dataNotifOut = $mNotifText->where('name', 'Belum Absen Pulang')->first();
+    //     $subjectOut = $dataNotifOut->getSubject();
+    //     $messageOut = str_replace(['(Var1)'], [$yesterday], $dataNotifOut->getText());
+    //     $employee = $mEmployee->where('isactive', 'Y')->whereIn('md_status_id', [100001, 100002])->whereNotIn('md_levelling_id', [100001])->findAll();
+
+    //     $configMNSOD = $mConfig->where('name', 'MANAGER_NO_NEED_SPECIAL_OFFICE_DUTIES')->first();
+
+    //     $configMNSOD = $configMNSOD->value == 'Y' ? true : false;
+    //     $lvlManager = 100003;
+
+    //     //* Get All User
+    //     $allUser = [];
+    //     foreach ($mUser->where("isactive", 'Y')->findAll() as $value) {
+    //         $allUser[$value->md_employee_id] = $value;
+    //     }
+
+    //     //* Get All Workday Today
+    //     $allWorkdayToday = [];
+    //     $whereClause = "md_work_detail.isactive = 'Y'";
+    //     $whereClause .= " AND md_employee_work.validfrom <= '{$today}'";
+    //     $whereClause .= " AND md_employee_work.validto >= '{$today}'";
+    //     $whereClause .= " AND md_day.name = '{$formatIDNToday}'";
+
+    //     foreach ($mWorkDetail->getWorkDetail($whereClause)->getResult() as $value) {
+    //         $allWorkdayToday[$value->md_employee_id] = $value;
+    //     }
+
+    //     //* Get All Kunjungan Today
+    //     $allTugasKunjunganToday = [];
+    //     $whereClause = "DATE(trx_assignment_date.date) = '{$today}'
+    //                 AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+    //                 AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
+    //                 AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
+
+    //     foreach ($mAssignment->getDetailData($whereClause)->getResult() as $value) {
+    //         $allTugasKunjunganToday[$value->md_employee_id] = $value;
+    //     }
+
+    //     //* Get All Submission Today
+    //     $allSubmissionToday = [];
+    //     $whereClause = "v_realization.date = '{$today}'";
+    //     $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+    //     $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
+    //     $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+
+    //     foreach ($mAbsentDetail->getAllSubmission($whereClause)->getResult() as $value) {
+    //         $allSubmissionToday[$value->md_employee_id] = $value;
+    //     }
+
+    //     //* Get All Workday Yesterday
+    //     $allWorkdayYesterday = [];
+    //     $whereClause = "md_work_detail.isactive = 'Y'";
+    //     $whereClause .= " AND md_employee_work.validfrom <= '{$yesterday}'";
+    //     $whereClause .= " AND md_employee_work.validto >= '{$yesterday}'";
+    //     $whereClause .= " AND md_day.name = '{$formatIDNYesterday}'";
+
+    //     foreach ($mWorkDetail->getWorkDetail($whereClause)->getResult() as $value) {
+    //         $allWorkdayYesterday[$value->md_employee_id] = $value;
+    //     }
+
+    //     //* Get All Kunjungan Yesterday
+    //     $allTugasKunjunganYesterday = [];
+    //     $whereClause = "DATE(trx_assignment_date.date) = '{$yesterday}'
+    //                 AND trx_assignment.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')
+    //                 AND trx_assignment_date.isagree IN ('{$this->LINESTATUS_Approval}', '{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')
+    //                 AND trx_assignment.submissiontype = {$mAssignment->Pengajuan_Penugasan}";
+
+    //     foreach ($mAssignment->getDetailData($whereClause)->getResult() as $value) {
+    //         $allTugasKunjunganYesterday[$value->md_employee_id] = $value;
+    //     }
+
+    //     //* Get All Submission Yesterday
+    //     $allSubmissionYesterday = [];
+    //     $whereClause = "v_realization.date = '{$yesterday}'";
+    //     $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+    //     $whereClause .= " AND v_realization.submissiontype IN ('{$mAbsent->Pengajuan_sakit}', '{$mAbsent->Pengajuan_Cuti}', '{$mAbsent->Pengajuan_Ijin}', '{$mAbsent->Pengajuan_Ijin_Resmi}', '{$mAbsent->Pengajuan_Tugas_Kantor}', '{$mAbsent->Pengajuan_Tugas_Kantor_setengah_Hari}')";
+    //     $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+
+    //     foreach ($mAbsentDetail->getAllSubmission($whereClause)->getResult() as $value) {
+    //         $allSubmissionYesterday[$value->md_employee_id] = $value;
+    //     }
+
+    //     //* Get All Submission Forget Absent Out & Leave Early Yesterday
+    //     $allForgotAbsentLeave = [];
+    //     $whereClause = "v_realization.date = '{$yesterday}'";
+    //     $whereClause .= " AND v_realization.isagree IN ('{$this->LINESTATUS_Realisasi_HRD}', '{$this->LINESTATUS_Realisasi_Atasan}', '{$this->LINESTATUS_Disetujui}')";
+    //     $whereClause .= " AND v_realization.submissiontype IN ({$mAbsent->Pengajuan_Lupa_Absen_Pulang}, {$mAbsent->Pengajuan_Pulang_Cepat})";
+    //     $whereClause .= " AND v_realization.docstatus IN ('{$this->DOCSTATUS_Completed}', '{$this->DOCSTATUS_Inprogress}')";
+
+    //     foreach ($mAbsentDetail->getAllSubmission($whereClause)->getResult() as $value) {
+    //         $allForgotAbsentLeave[$value->md_employee_id] = $value;
+    //     }
+
+    //     $dataNotif = [];
+    //     $dataEmailNotifIn = [];
+    //     $dataEmailNotifOut = [];
+    //     foreach ($employee as $value) {
+    //         $employeeID = $value->md_employee_id;
+
+    //         $empBranch = $mEmpBranch->where('md_employee_id', $employeeID)->findAll();
+    //         $user = isset($allUser[$employeeID]) ? $allUser[$employeeID] : null;
+
+    //         if (empty($empBranch)) {
+    //             continue;
+    //         }
+
+    //         $empBranch = implode(", ", array_column($empBranch, 'md_branch_id'));
+
+    //         //** This Section for checking Today Absent In */
+
+    //         // TODO : Get Workday Employee
+    //         $workDetail = isset($allWorkdayToday[$employeeID]) ? $allWorkdayToday[$employeeID] : null;
+
+    //         // TODO : Skip when runtime cronjob not same as starwork hour
+    //         if (!empty($workDetail) && date('H') != date('H', strtotime($workDetail->startwork))) {
+    //             continue;
+    //         }
+
+    //         // TODO : Get Submission Assignment
+    //         $tugasKunjungan = isset($allTugasKunjunganToday[$employeeID]) ? $allTugasKunjunganToday[$employeeID] : null;
+
+    //         // TODO : Get Attendance In Today
+    //         if ($configMNSOD && $value->md_levelling_id <= $lvlManager) {
+    //             $whereClause = "v_attendance.md_employee_id = {$employeeID}";
+    //             $whereClause .= " AND v_attendance.date = '{$today}'";
+    //             $whereClause .= " AND v_attendance.clock_in != ''";
+    //             $absentIn = $this->model->getAttendance($whereClause)->getRow();
+    //         } else {
+    //             $whereClause = "v_attendance_branch.md_employee_id = {$employeeID}";
+    //             $whereClause .= " AND v_attendance_branch.date = '{$today}'";
+    //             $whereClause .= " AND v_attendance_branch.clock_in != ''";
+
+    //             if ($tugasKunjungan) {
+    //                 $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_in_line}";
+    //             } else {
+    //                 $whereClause .= " AND v_attendance_branch.md_branch_id IN ({$empBranch})";
+    //             }
+
+    //             $absentIn = $this->model->getAttBranch($whereClause)->getRow();
+    //         }
+
+    //         // TODO : Get Submission Today
+    //         $submission = isset($allSubmissionToday[$employeeID]) ? $allSubmissionToday[$employeeID] : null;
+
+    //         if (!$absentIn && ($workDetail || $tugasKunjungan) && !$submission && !in_array($today, $holiday) && $dataNotifIn) {
+    //             if (!empty($value->telegram_id)) {
+    //                 $cTelegram->sendMessage($value->telegram_id, (new Html2Text($messageIn))->getText());
+    //             }
+
+    //             if ($user) {
+    //                 $dataNotif[] = [
+    //                     'created_by'    => 100001,
+    //                     'updated_by'    => 100001,
+    //                     'author_id'     => 100001,
+    //                     'recipient_id'  => $user->sys_user_id,
+    //                     'subject'       => $subjectIn,
+    //                     'messagedate'   => date('Y-m-d H:i:s'),
+    //                     'body'          => $messageIn
+    //                 ];
+
+    //                 if (!empty($user->email))
+    //                     $dataEmailNotifIn[] = $user->email;
+    //             }
+    //         }
+
+    //         //** This Section for checking Yesterday Absent Out*/
+
+    //         // TODO : Get Workday Employee
+    //         $workDetail = isset($allWorkdayYesterday[$employeeID]) ? $allWorkdayYesterday[$employeeID] : null;
+
+    //         // TODO : Get Submission Assignment Yesterday
+    //         $tugasKunjungan = isset($allTugasKunjunganYesterday[$employeeID]) ? $allTugasKunjunganYesterday[$employeeID] : null;
+
+    //         // TODO : Get Submission Yesterday
+    //         $submission = isset($allSubmissionYesterday[$employeeID]) ? $allSubmissionYesterday[$employeeID] : null;
+
+    //         // TODO : Get Attendance Out Yesterday
+    //         if ($configMNSOD && $value->md_levelling_id <= $lvlManager) {
+    //             $whereClause = "v_attendance.md_employee_id = {$value->md_employee_id}";
+    //             $whereClause .= " AND v_attendance.date = '{$yesterday}'";
+    //             $whereClause .= " AND v_attendance.clock_out != ''";
+    //             $absentOut = $this->model->getAttendance($whereClause)->getRow();
+    //         } else {
+    //             $whereClause = "v_attendance_branch.md_employee_id = {$value->md_employee_id}";
+    //             $whereClause .= " AND v_attendance_branch.date = '{$yesterday}'";
+    //             $whereClause .= " AND v_attendance_branch.clock_out != ''";
+
+    //             if ($tugasKunjungan) {
+    //                 $whereClause .= " AND v_attendance_branch.md_branch_id = {$tugasKunjungan->branch_out_line}";
+    //             } else {
+    //                 $whereClause .= " AND v_attendance_branch.md_branch_id IN ({$empBranch})";
+    //             }
+
+    //             $absentOut = $this->model->getAttBranch($whereClause)->getRow();
+    //         }
+
+    //         // TODO : Get Submission Forget Absent Leave Yesterday
+    //         $forgotAbsentLeave = isset($allForgotAbsentLeave[$employeeID]) ? $allForgotAbsentLeave[$employeeID] : null;
+
+    //         if ($workDetail && !$absentOut && !$forgotAbsentLeave && !$submission && $dataNotifOut) {
+    //             if (!empty($value->telegram_id)) {
+    //                 $cTelegram->sendMessage($value->telegram_id, (new Html2Text($messageOut))->getText());
+    //             }
+
+    //             if ($user) {
+    //                 $dataNotif[] = [
+    //                     'created_by'    => 100001,
+    //                     'updated_by'    => 100001,
+    //                     'author_id'     => 100001,
+    //                     'recipient_id'  => $user->sys_user_id,
+    //                     'subject'       => $subjectOut,
+    //                     'messagedate'   => date('Y-m-d H:i:s'),
+    //                     'body'          => $messageOut
+    //                 ];
+
+    //                 if (!empty($user->email))
+    //                     $dataEmailNotifOut[] = $user->email;
+    //             }
+    //         }
+    //     }
+
+    //     //* Send Notif Apps
+    //     if ($dataNotif) {
+    //         $mMessage->insertBatch($dataNotif);
+    //     }
+
+    //     //* Send Email
+    //     if ($dataEmailNotifIn) {
+    //         $cMail->sendEmail('alert.harmony@sahabatabadi.com', $subjectIn, (new Html2Text($messageIn))->getText(), null, 'HARMONY SAS', null, null, $dataEmailNotifIn);
+    //     }
+
+    //     if ($dataEmailNotifOut) {
+    //         $cMail->sendEmail('alert.harmony@sahabatabadi.com', $subjectOut, (new Html2Text($messageOut))->getText(), null, 'HARMONY SAS', null, null, $dataEmailNotifOut);
+    //     }
+    // }
 
     public function toDoCheckAbsent()
     {
