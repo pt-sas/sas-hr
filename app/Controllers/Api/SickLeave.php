@@ -131,7 +131,7 @@ class SickLeave extends ApiController
             if (empty($data['docaction']))
                 throw new ValidationException("Silahkan pilih tindakan terlebih dahulu");
 
-            $message = $service->proccessTransaction($data['id'], $data['docaction']);
+            $message = $service->proccessTransaction($data['id'], $data['docaction'], $data['subtype']);
 
             $response = apiResponse(true, $message);
         } catch (\App\Exceptions\BaseException $e) {
