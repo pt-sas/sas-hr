@@ -5495,47 +5495,37 @@ function putFieldData(form, data, status = null) {
               .summernote("code", label);
           }
 
-          // Safety checks on 2 cases, object or raw id
           if (field[i].type === "select-one") {
             let selectEl = form.find("select[name=" + fieldName + "]").not(".line");
 
-            // Case A: Backend returned an object { id: 1, name: "General" }
+            // CASE A: Object returned from backend { id/key/value, name/text }
             if (typeof label === "object" && label !== null) {
-              let option_ID = label.id || label.value;
-              let option_Txt = label.name || label.text || option_ID;
+              let option_ID = label.id ?? label.key ?? label.value;
+              let option_Txt = label.name ?? label.text ?? label.label ?? option_ID;
 
-              if (selectEl.find("option[value='" + option_ID + "']").length === 0) {
-                let newOption = new Option(option_Txt, option_ID, true, true);
-                selectEl.append(newOption);
+              if (option_ID !== undefined && option_ID !== null) {
+                option.push({ fieldName, option_ID, option_Txt });
+
+                // Append option if it doesn't exist yet
+                if (selectEl.find("option[value='" + option_ID + "']").length === 0) {
+                  let newOption = new Option(option_Txt, option_ID, true, true);
+                  selectEl.append(newOption);
+                }
+                selectEl.val(option_ID).trigger("change");
               }
-              selectEl.val(option_ID).trigger("change");
 
-            // Case B: Backend returned a raw ID integer/string (e.g. 1)
-            } else if (label !== null && label !== "" && label != 0) {
-              let url = selectEl.attr("data-url");
+            // CASE B: Raw Primitive (String key/value OR Numeric ID e.g., "CO", 1, "105")
+            } else if (label !== null && label !== undefined && label !== "") {
+              option.push({ fieldName, label });
 
-              if (url) {
-                // Fetch the option label from the server using the ID
-                $.ajax({
-                  url: ADMIN_URL + url + "?id=" + label,
-                  type: "GET",
-                  dataType: "JSON",
-                  success: function (res) {
-                    let item = Array.isArray(res) ? res.find(x => x.id == label) || res[0] : res;
-                    let optionText = item ? (item.text || item.name || label) : label;
+              // 1. If option already exists in DOM (e.g. static <option value="CO">), select it
+              if (selectEl.find("option[value='" + label + "']").length > 0) {
+                selectEl.val(label).trigger("change");
 
-                    if (selectEl.find("option[value='" + label + "']").length === 0) {
-                      let newOption = new Option(optionText, label, true, true);
-                      selectEl.append(newOption);
-                    }
-                    selectEl.val(label).trigger("change");
-                  },
-                  error: function () {
-                    // Fallback if request fails
-                    selectEl.val(label).trigger("change");
-                  }
-                });
+              // 2. If option doesn't exist (raw ID passed), create a temporary fallback option synchronously
               } else {
+                let newOption = new Option(label, label, true, true);
+                selectEl.append(newOption);
                 selectEl.val(label).trigger("change");
               }
             }
