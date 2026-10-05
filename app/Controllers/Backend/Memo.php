@@ -356,14 +356,13 @@ class Memo extends BaseController
 
                 // TODO : Get All Memo List
                 $date = DateTime::createFromFormat('m-Y', $period);
-
                 $where = "(v_attendance_submission.period = '{$period}' OR v_attendance_submission.period = '{$date->format('Y')}')
-                    AND md_employee.md_employee_id = {$employeeId}
-                    AND md_employee.md_levelling_id " . getOperation($ruleDetail[0]->operation) . " {$ruleDetail[0]->condition}
-                    AND ((v_attendance_submission.type = 'alpa' AND v_attendance_submission.total " . getOperation($ruleDetail[5]->operation) . " {$ruleDetail[5]->condition}) 
-                    OR (v_attendance_submission.type = 'kehadiran_masuk' AND v_attendance_submission.total " . getOperation($ruleDetail[1]->operation) . " {$ruleDetail[1]->condition})
-                    OR (v_attendance_submission.type = 'kehadiran_pulang' AND v_attendance_submission.total " . getOperation($ruleDetail[3]->operation) . " {$ruleDetail[3]->condition})
-                    OR (v_attendance_submission.type = 'ijin' AND v_attendance_submission.total " . getOperation($ruleDetail[6]->operation) . " {$ruleDetail[6]->condition}))";
+                AND md_employee.md_employee_id = {$employeeId}
+                AND md_employee.md_levelling_id " . getOperation($ruleDetail[0]->operation) . " {$ruleDetail[0]->condition}
+                AND ((v_attendance_submission.type = 'alpa' AND v_attendance_submission.total " . getOperation($ruleDetail[5]->operation) . " {$ruleDetail[5]->condition}) 
+                OR (v_attendance_submission.type = 'kehadiran_masuk' AND v_attendance_submission.total " . getOperation($ruleDetail[1]->operation) . " {$ruleDetail[1]->condition})
+                OR (v_attendance_submission.type = 'kehadiran_pulang' AND v_attendance_submission.total " . getOperation($ruleDetail[3]->operation) . " {$ruleDetail[3]->condition})
+                OR (v_attendance_submission.type = 'ijin' AND v_attendance_submission.total " . getOperation($ruleDetail[6]->operation) . " {$ruleDetail[6]->condition}))";
 
                 $memoList = $this->model->getMemoList($where)->getResult();
 
@@ -390,20 +389,19 @@ class Memo extends BaseController
 
                     if ($memo->type == "kehadiran_masuk" && $memo->total > $ruleDetail[2]->condition) {
                         $memoLevel += 1;
-                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[2]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[2]->condition} Kali Total {$str} dalam bulan {$period->name} = {$memo->total} Kali.";
                     } else if ($memo->type == "kehadiran_masuk") {
-                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[1]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[1]->condition} Kali Total {$str} dalam bulan {$period->name} = {$memo->total} Kali.";
                     }
-
                     if ($memo->type == "kehadiran_pulang" && $memo->total > $ruleDetail[4]->condition) {
                         $memoLevel += 1;
-                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[4]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[4]->condition} Kali Total {$str} dalam bulan {$period->name} = {$memo->total} Kali.";
                     } else if ($memo->type == "kehadiran_pulang") {
-                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[3]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[3]->condition} Kali Total {$str} dalam bulan {$period->name} = {$memo->total} Kali.";
                     }
 
                     if ($memo->type == "ijin") {
-                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[6]->condition} Kali Total {$str} dalam bulan {$period} = {$memo->total} Kali.";
+                        $memoContent .= " {$number}. {$str} lebih dari {$ruleDetail[6]->condition} Kali Total {$str} dalam bulan {$period->name} = {$memo->total} Kali.";
                     }
 
                     if ($memo->type == "alpa") {
