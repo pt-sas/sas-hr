@@ -891,6 +891,40 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('help/category/(:num)', 'Backend\HelpFront::category/$1');
     $routes->get('help/article/(:num)', 'Backend\HelpFront::detail/$1');
     $routes->post('help/search', 'Backend\HelpFront::search');
+
+    // Dashboard
+    $routes->get('get-today-card', 'Backend\DashboardAttendance::getTodayCard');
+    $routes->get('get-calendar-events', 'Backend\Dashboard::getCalendarEvents');
+    $routes->match(['get', 'post'], 'process-batch', 'Backend\DashboardAttendance::processBatch');
+    
+
+    // Bantuan (Help / FAQ)
+    // 1. For HR master data
+    // Category Article Module
+    $routes->add('help-article', 'Backend\Help::index');
+    $routes->match(['get', 'post'], 'help-article/showAll', 'Backend\Help::showAll');
+    $routes->post('help-article/create', 'Backend\Help::create');
+    $routes->match(['get', 'post'], 'help-article/show/(:any)', 'Backend\Help::show/$1');
+    $routes->match(['get', 'post'], 'help-article/destroy/(:any)', 'Backend\Help::destroy/$1');
+    $routes->post('help-article/uploadImage', 'Backend\Help::uploadImage');
+    
+    $routes->match(['get', 'post'], 'help-article/getListArticle', 'Backend\Help::getListArticle');
+    $routes->match(['get', 'post'], 'help-article/getListDocCategory', 'Backend\Help::getListDocCategory');
+    $routes->match(['get', 'post'], 'help-article/getListStatus', 'Backend\Help::getListStatus');
+    $routes->match(['get', 'post'], 'help-article/getListActiveState', 'Backend\Help::getListActiveState');
+
+    // 2. For USER guide
+    // Help Center Frontend Routes
+    $routes->get('help', 'Backend\HelpFront::index');
+    $routes->get('help/category/(:num)', 'Backend\HelpFront::category/$1');
+    $routes->get('help/article/(:num)', 'Backend\HelpFront::detail/$1');
+    $routes->post('help/search', 'Backend\HelpFront::search');
+
+    // Dashboard
+    $routes->get('get-today-card', 'Backend\DashboardAttendance::getTodayCard');
+    $routes->get('get-calendar-events', 'Backend\Dashboard::getCalendarEvents');
+    $routes->match(['get', 'post'], 'process-batch', 'Backend\DashboardAttendance::processBatch');
+    
 });
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
