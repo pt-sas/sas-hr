@@ -63,6 +63,7 @@ $routes->post('/iclock/updatelastlog', 'IclockApi::updateLastLog');
 $routes->post('/telegramHook', 'Backend\Telegram::telegramHook');
 
 $routes->group('sas', ['filter' => 'auth'], function ($routes) {
+    // Dashboard
     $routes->add('/', 'Backend\Dashboard::index');
 
     $routes->post('(:any)/accessmenu/getAccess', 'Backend\AccessMenu::getAccess');
@@ -838,6 +839,12 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('help/category/(:num)', 'Backend\HelpFront::category/$1');
     $routes->get('help/article/(:num)', 'Backend\HelpFront::detail/$1');
     $routes->post('help/search', 'Backend\HelpFront::search');
+
+    // Dashboard
+    $routes->get('get-today-card', 'Backend\DashboardAttendance::getTodayCard');
+    $routes->get('get-calendar-events', 'Backend\Dashboard::getCalendarEvents');
+    $routes->match(['get', 'post'], 'process-batch', 'Backend\DashboardAttendance::processBatch');
+    
 });
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
