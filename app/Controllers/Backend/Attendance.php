@@ -301,9 +301,9 @@ class Attendance extends BaseController
 
                 if (isset($info['submissiontype'])) {
                     $whereClause = "v_all_submission.md_employee_id = {$row->md_employee_id}
-                                    AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'
-                                    AND MONTH(v_all_submission.date) = '{$periode}'
-                                    AND v_all_submission.submissiontype = {$info['submissiontype']}";
+                    AND v_all_submission.isagree = '{$this->LINESTATUS_Disetujui}'
+                    AND TO_CHAR(v_all_submission.date, 'MM-YYYY') = '{$periode}'
+                    AND v_all_submission.submissiontype = {$info['submissiontype']}";
                     $trx = count($mAbsent->getAllSubmission($whereClause)->getResult());
                 } else {
                     if ($info['text'] == "Telat < 30 MNT") {
@@ -313,7 +313,7 @@ class Attendance extends BaseController
                     }
 
                     $whereClause .= " AND v_attendance.md_employee_id = {$row->md_employee_id}
-                                      AND MONTH(v_attendance.date) = '{$periode}'
+                                      AND TO_CHAR(v_attendance.date, 'MM-YYYY') = '{$periode}'
                                       AND DATE(v_attendance.date) NOT IN ({$holidays})
                                       AND mwd.md_work_detail_id IS NOT NULL
                                       AND NOT EXISTS (SELECT 1
