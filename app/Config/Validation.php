@@ -3675,4 +3675,5 @@ class Validation
             'errors' => ['required' => 'Content cannot be empty.']
         ],
     ];
+
 }

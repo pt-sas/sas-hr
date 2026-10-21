@@ -83,80 +83,80 @@ class HelpFront extends BaseController
     /**
      * Single Article Reader View
      */
-public function detail($articleId = null)
-{
-    // 1. Fetch current active article with category and author name
-    $activeArticle = $this->mArticle
-        ->select('md_article.*, rd.name as category_name, rd.sys_ref_detail_id as category_id, u.name as created_by_name')
-        ->join('sys_ref_detail rd', 'rd.sys_ref_detail_id = md_article.sys_ref_detail_id', 'left')
-        ->join('sys_user u', 'u.sys_user_id = md_article.created_by', 'left')
-        ->where('md_article.md_article_id', $articleId)
-        ->where('md_article.isactive', 'Y')
-        ->get()
-        ->getRow();
+    public function detail($articleId = null)
+    {
+        // 1. Fetch current active article with category and author name
+        $activeArticle = $this->mArticle
+            ->select('md_article.*, rd.name as category_name, rd.sys_ref_detail_id as category_id, u.name as created_by_name')
+            ->join('sys_ref_detail rd', 'rd.sys_ref_detail_id = md_article.sys_ref_detail_id', 'left')
+            ->join('sys_user u', 'u.sys_user_id = md_article.created_by', 'left')
+            ->where('md_article.md_article_id', $articleId)
+            ->where('md_article.isactive', 'Y')
+            ->get()
+            ->getRow();
 
-    if (!$activeArticle) {
-        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Artikel tidak ditemukan.');
+        if (!$activeArticle) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Artikel tidak ditemukan.');
+        }
+
+        // Decode HTML entities for reader view
+        if (!empty($activeArticle->content)) {
+            $activeArticle->content = html_entity_decode($activeArticle->content, ENT_QUOTES, 'UTF-8');
+        }
+
+        // 2. Fetch raw attachments from md_article_file
+        $rawAttachments = $this->mArticleFile
+            ->where('md_article_id', $articleId)
+            ->where('isactive', 'Y')
+            ->findAll();
+
+        $attachments = [];
+        foreach ($rawAttachments as $file) {
+            // Safe extraction without property name mangling
+            if ($file instanceof \CodeIgniter\Entity\Entity) {
+                $fileData = $file->toArray();
+            } elseif (is_object($file)) {
+                $fileData = get_object_vars($file);
+            } else {
+                $fileData = (array) $file;
+            }
+
+            // Standardize column name aliases (handles filename/filesize/filepath)
+            if (!isset($fileData['file_name']) && isset($fileData['filename'])) {
+                $fileData['file_name'] = $fileData['filename'];
+            }
+            if (!isset($fileData['file_size']) && isset($fileData['filesize'])) {
+                $fileData['file_size'] = $fileData['filesize'];
+            }
+            if (!isset($fileData['file_path']) && isset($fileData['filepath'])) {
+                $fileData['file_path'] = $fileData['filepath'];
+            }
+
+            // Force 'pdf' for file_type if extension or type is pdf
+            $checkType = $fileData['file_type'] ?? $fileData['file_name'] ?? '';
+            if (str_contains(strtolower($checkType), 'pdf')) {
+                $fileData['file_type'] = 'pdf';
+            }
+
+            $attachments[] = new \App\Entities\ArticleFile($fileData);
+        }
+
+        // 3. Fetch all articles under this category for the sidebar navigation
+        $sidebarArticles = $this->mArticle
+            ->where('sys_ref_detail_id', $activeArticle->category_id)
+            ->where('isactive', 'Y')
+            ->orderBy('title', 'ASC')
+            ->findAll();
+
+        $data = [
+            'title'           => $activeArticle->title,
+            'activeArticle'   => $activeArticle,
+            'sidebarArticles' => $sidebarArticles,
+            'attachments'     => $attachments,
+        ];
+
+        return $this->template->render('help/v_detail', $data);
     }
-
-    // Decode HTML entities for reader view
-    if (!empty($activeArticle->content)) {
-        $activeArticle->content = html_entity_decode($activeArticle->content, ENT_QUOTES, 'UTF-8');
-    }
-
-    // 2. Fetch raw attachments from md_article_file
-    $rawAttachments = $this->mArticleFile
-        ->where('md_article_id', $articleId)
-        ->where('isactive', 'Y')
-        ->findAll();
-
-    $attachments = [];
-    foreach ($rawAttachments as $file) {
-        // Safe extraction without property name mangling
-        if ($file instanceof \CodeIgniter\Entity\Entity) {
-            $fileData = $file->toArray();
-        } elseif (is_object($file)) {
-            $fileData = get_object_vars($file);
-        } else {
-            $fileData = (array) $file;
-        }
-
-        // Standardize column name aliases (handles filename/filesize/filepath)
-        if (!isset($fileData['file_name']) && isset($fileData['filename'])) {
-            $fileData['file_name'] = $fileData['filename'];
-        }
-        if (!isset($fileData['file_size']) && isset($fileData['filesize'])) {
-            $fileData['file_size'] = $fileData['filesize'];
-        }
-        if (!isset($fileData['file_path']) && isset($fileData['filepath'])) {
-            $fileData['file_path'] = $fileData['filepath'];
-        }
-
-        // Force 'pdf' for file_type if extension or type is pdf
-        $checkType = $fileData['file_type'] ?? $fileData['file_name'] ?? '';
-        if (str_contains(strtolower($checkType), 'pdf')) {
-            $fileData['file_type'] = 'pdf';
-        }
-
-        $attachments[] = new \App\Entities\ArticleFile($fileData);
-    }
-
-    // 3. Fetch all articles under this category for the sidebar navigation
-    $sidebarArticles = $this->mArticle
-        ->where('sys_ref_detail_id', $activeArticle->category_id)
-        ->where('isactive', 'Y')
-        ->orderBy('title', 'ASC')
-        ->findAll();
-
-    $data = [
-        'title'           => $activeArticle->title,
-        'activeArticle'   => $activeArticle,
-        'sidebarArticles' => $sidebarArticles,
-        'attachments'     => $attachments,
-    ];
-
-    return $this->template->render('help/v_detail', $data);
-}
 
     /**
      * Live Search AJAX Handler

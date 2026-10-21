@@ -1,6 +1,6 @@
 // --- Constants ---
 const ATTACH = {
-  MAX_FILES: 20,
+  MAX_FILES: 5,
   MAX_SIZE: 10 * 1024 * 1024, // 10 MB
   ALLOWED: [
     'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
@@ -636,6 +636,7 @@ $(document).ready(function () {
   // =========================================================
   initSummernote('');
 });
+
 $(".form-absent").on("change", "#md_employee_id", function (e) {
   let _this = $(this);
   const form = _this.closest("form");
@@ -3172,6 +3173,980 @@ _tableLine.on("click", ".btn_view_image", function (e) {
   });
 });
 
+// DASHBOARD
+// v_dashboard
+// --- Carousel Scroll Controller ---
+(function () {
+    var track = document.getElementById('kpiCarousel');
+    if (!track) return;
+    var wrap   = track.parentNode;
+    var prev   = wrap.querySelector('.kc-prev');
+    var next   = wrap.querySelector('.kc-next');
+    var slides = track.querySelectorAll('.kc-slide');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function step() { return slides[1] ? slides[1].offsetLeft - slides[0].offsetLeft : track.clientWidth; }
+    function move(dir) { track.scrollBy({ left: dir * step(), behavior: reduce ? 'auto' : 'smooth' }); }
+    function update() {
+        var max = track.scrollWidth - track.clientWidth;
+        wrap.classList.toggle('is-static', max <= 2);
+        if (prev) prev.disabled = track.scrollLeft <= 2;
+        if (next) next.disabled = track.scrollLeft >= max - 2;
+    }
+
+    prev.addEventListener('click', function () { move(-1); });
+    next.addEventListener('click', function () { move(1); });
+    track.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+})();
+
+// --- Sticky Header Scroll Docking ---
+document.addEventListener('DOMContentLoaded', function () {
+    const wrapper = document.getElementById('datePickerWrapper');
+    const picker  = document.getElementById('stickyDatePicker');
+    if (!wrapper || !picker) return;
+
+    const navbarHeight = 60;
+    const dockAt    = navbarHeight + 4;   // dock slightly earlier
+    const undockAt  = navbarHeight + 40;  // undock with hysteresis to avoid flapping
+    let   isDocked  = false;
+
+    function dock(rect) {
+        picker.style.position = 'fixed';
+        picker.style.top      = navbarHeight + 'px';
+        picker.style.left     = rect.left + 'px';
+        picker.style.width    = rect.width + 'px';
+        picker.style.zIndex   = '999';
+        picker.classList.add('is-docked');
+        isDocked = true;
+    }
+
+    function undock() {
+        picker.style.position = 'static';
+        picker.style.top      = '';
+        picker.style.left     = '';
+        picker.style.width    = '';
+        picker.classList.remove('is-docked');
+        isDocked = false;
+    }
+
+    function updateStickyPosition() {
+        // Measure the wrapper, not the picker — because the picker becomes
+        // fixed and its own rect stops being useful for this check.
+        const rect = wrapper.getBoundingClientRect();
+
+        if (!isDocked && rect.top <= dockAt) {
+            dock(rect);
+        } else if (isDocked && rect.top >= undockAt) {
+            undock();
+        } else if (isDocked) {
+            // Keep left/width in sync while docked — no snap when scrolling
+            picker.style.left  = rect.left + 'px';
+            picker.style.width = rect.width + 'px';
+        }
+    }
+
+    window.addEventListener('scroll', updateStickyPosition, { passive: true });
+    window.addEventListener('resize', updateStickyPosition, { passive: true });
+    updateStickyPosition();
+});
+
+
+// --- Dynamic Async AJAX Handler ---
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('dp:change', function(e) {
+        const detail = e.detail;
+        if (!detail) return;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('date', detail.date);
+        url.searchParams.set('mode', detail.mode);
+        url.searchParams.set('level', detail.level);
+        url.searchParams.set('ajax', '1');
+
+        const kpiElements = document.querySelectorAll('[data-kpi]');
+        kpiElements.forEach(el => el.classList.add('kpi-loading'));
+
+        fetch(url.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            updateDashboardDOM(data);
+
+            if (window.calendar) {
+                window.calendar.refetchEvents();
+            } else if (typeof $!== 'undefined' &&$('#calendar').length && $.isFunction($('#calendar').fullCalendar)) {
+                $('#calendar').fullCalendar('refetchEvents');
+            }
+        })
+        .catch(err => console.error('Dashboard AJAX refresh failed:', err))
+        .finally(() => {
+            kpiElements.forEach(el => el.classList.remove('kpi-loading'));
+        });
+    });
+
+    function updateDashboardDOM(data) {
+        const setText = (selector, val) => {
+            document.querySelectorAll(selector).forEach(el => el.textContent = val ?? '—');
+        };
+
+        const setWidth = (selector, pct) => {
+            document.querySelectorAll(selector).forEach(el => el.style.width = (pct ?? 0) + '%');
+        };
+
+        const currentMode = data.mode || 'month';
+
+        // ---------------------------------------------------------
+        // 1. Personal Attendance (Kehadiran Saya)
+        // ---------------------------------------------------------
+        const attCard = document.querySelector('[data-kpi-card="attendance"]');
+        if (attCard) {
+            const attDayView    = attCard.querySelector('[data-kpi-view="day"]');
+            const attPeriodView = attCard.querySelector('[data-kpi-view="period"]');
+
+            if (attDayView && attPeriodView) {
+                if (currentMode === 'day') {
+                    attDayView.classList.remove('d-none');
+                    attPeriodView.classList.add('d-none');
+
+                    if (window.KPI && typeof window.KPI.attendanceDay === 'function') {
+                        attDayView.innerHTML = window.KPI.attendanceDay({
+                            statusText: data.my_status_text || 'Belum Absen',
+                            tone:       data.my_tone || 'secondary',
+                            clockIn:    data.my_clock_in_text || data.clock_in_time || '-',
+                            clockOut:   data.my_clock_out_text || data.clock_out_time || '-',
+                            schedule:   data.schedule_range || '',
+                            punctual:   data.my_punctuality_text || '',
+                        });
+                    }
+                } else {
+                    attDayView.classList.add('d-none');
+                    attPeriodView.classList.remove('d-none');
+                }
+            }
+        }
+
+        // Shared Label
+        setText('[data-kpi="label"]', data.label);
+
+        // Period Mode Numerical Values
+        const target   = parseInt(data.work_days || 0, 10);
+        const myDays   = parseInt(data.attendance_days || 0, 10);
+        const myLeave  = parseInt(data.my_leave_count || 0, 10);
+        const myAbsent = parseInt(data.my_absent_count || 0, 10);
+        const myLate   = parseInt(data.late_count || 0, 10);
+        const myStreak = parseInt(data.my_streak || 0, 10);
+        const rate     = Math.min(100, Math.max(0, parseInt(data.my_rate || 0, 10)));
+
+        setText('[data-kpi="my_rate"]', rate + '%');
+        setText('[data-kpi="attendance_days"]', myDays);
+        setText('[data-kpi="work_days"]', target);
+
+        const rateTone = rate >= 90 ? 'success' : (rate >= 75 ? 'warning' : 'danger');
+
+        // FIX 1: Set main rate bar width using data.my_rate & querySelectorAll
+        document.querySelectorAll('[data-kpi="my_rate_bar"]').forEach(bar => {
+            bar.style.width = rate + '%';
+            bar.className = `progress-bar bg-${rateTone}`;
+        });
+
+        // FIX 2: Pass full context (target, ontime, overtime) to attendanceMeta
+        const myMetaEl = document.querySelector('[data-kpi="my_period_meta"]');
+        if (myMetaEl && window.KPI && typeof window.KPI.attendanceMeta === 'function') {
+            myMetaEl.innerHTML = window.KPI.attendanceMeta({
+                mode:            currentMode,
+                work_days:       target,
+                target:          target,
+                attendance_days: myDays,
+                days:            myDays,
+                my_leave_count:  myLeave,
+                leave:           myLeave,
+                my_absent_count: myAbsent,
+                absent:          myAbsent,
+                late_count:      myLate,
+                late:            myLate,
+                my_ontime_count: parseInt(data.my_ontime_count || 0, 10),
+                overtime_count:  parseInt(data.overtime_count || 0, 10),
+                rateTone:        rateTone,
+                my_streak:       myStreak,
+                streak:          myStreak
+            });
+        }
+        
+        // ---------------------------------------------------------
+        // 2. Team Attendance (Kehadiran Tim)
+        // ---------------------------------------------------------
+        const teamCard = document.querySelector('[data-kpi-card="team"]');
+        if (teamCard) {
+            const teamDayView    = teamCard.querySelector('[data-kpi-view="day"]');
+            const teamPeriodView = teamCard.querySelector('[data-kpi-view="period"]');
+
+            if (teamDayView && teamPeriodView) {
+                if (currentMode === 'day') {
+                    teamDayView.classList.remove('d-none');
+                    teamPeriodView.classList.add('d-none');
+                } else {
+                    teamDayView.classList.add('d-none');
+                    teamPeriodView.classList.remove('d-none');
+                }
+            }
+        }
+
+        const teamRateText = (data.team_rate ?? 0) + '%';
+        setText('[data-kpi="team_subtitle"]', data.label || (currentMode === 'day' ? 'Hari ini' : (currentMode === 'week' ? 'Minggu ini' : 'Bulan ini')));
+        setText('[data-kpi="team_rate"]', teamRateText);
+        setText('[data-kpi="team_rate_day"]', teamRateText);
+        setText('[data-kpi="team_rate_label"]', currentMode === 'week' ? 'kehadiran minggu ini' : 'rata-rata kehadiran');
+
+        const total      = parseInt(data.team_total || 0, 10);
+        const present    = parseInt(data.team_present || 0, 10);
+        const leaveCount = parseInt(data.team_on_leave || 0, 10);
+        const pending    = Math.max(0, total - present - leaveCount);
+
+        setText('[data-kpi="team_present"]', present);
+        setText('[data-kpi="team_present_count"]', present);
+        setText('[data-kpi="team_total"]', total);
+        setText('[data-kpi="team_on_leave"]', leaveCount);
+        setText('[data-kpi="team_leave_count"]', leaveCount);
+        setText('[data-kpi="team_pending_count"]', pending);
+
+        if (total > 0) {
+            setWidth('[data-kpi="team_present_bar"]', (present / total) * 100);
+            setWidth('[data-kpi="team_leave_bar"]', (leaveCount / total) * 100);
+        }
+
+        // Team Absent Names Update
+        const absentEl = document.querySelector('[data-kpi="team_absent_names"]');
+        if (absentEl) {
+            const absentArr = Array.isArray(data.team_absent_names) ? data.team_absent_names.filter(Boolean) : [];
+            if (absentArr.length > 0) {
+                absentEl.classList.remove('d-none');
+                const namesStr = absentArr.join(', ');
+                const sliceStr = absentArr.slice(0, 2).join(', ') + (absentArr.length > 2 ? ' +' + (absentArr.length - 2) : '');
+                absentEl.title = namesStr;
+                absentEl.innerHTML = `<i class="far fa-clock" aria-hidden="true"></i> Belum hadir: ${sliceStr}`;
+            } else {
+                absentEl.classList.add('d-none');
+            }
+        }
+
+        // Delta indicator
+        const deltaEl = document.querySelector('[data-kpi="team_delta"]');
+        if (deltaEl) {
+            if (data.team_prev_rate !== undefined && data.team_prev_rate !== null) {
+                const deltaVal = (data.team_rate || 0) - parseInt(data.team_prev_rate, 10);
+                deltaEl.classList.remove('d-none', 'is-up', 'is-down');
+                deltaEl.classList.add(deltaVal >= 0 ? 'is-up' : 'is-down');
+                deltaEl.innerHTML = `<i class="fas fa-arrow-${deltaVal >= 0 ? 'up' : 'down'}" aria-hidden="true"></i> ${Math.abs(deltaVal)} pt`;
+            } else {
+                deltaEl.classList.add('d-none');
+            }
+        }
+
+        // Sparkline Grid
+        if (window.KPI && typeof window.KPI.teamChart === 'function' && Array.isArray(data.team_trend)) {
+            const targetVal = data.team_target || 90;
+            const unitVal   = data.team_trend_unit || (currentMode === 'week' ? 'hari' : 'minggu');
+            const chartData = window.KPI.teamChart(data.team_trend, targetVal, unitVal);
+
+            const sparkContainer = document.querySelector('[data-kpi="team_sparklines"]');
+            if (sparkContainer) {
+                sparkContainer.innerHTML = chartData.html;
+                sparkContainer.setAttribute('aria-label', chartData.aria);
+            }
+            setText('[data-kpi="team_target_note"]', chartData.note);
+        }
+
+        // ---------------------------------------------------------
+        // 3. Pending Approvals (Pengajuan Berjalan)
+        // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // 3. Pending Approvals (Pengajuan Berjalan)
+        // ---------------------------------------------------------
+        const pendingCount = parseInt(data.pending_approvals || 0, 10);
+        
+        // 1. Detect if selected period/date is in the past
+        const todayStr  = new Date().toISOString().split('T')[0];
+        const checkDate = data.rangeEnd || data.date || todayStr;
+        const isPast    = checkDate < todayStr;
+        const dateText  = data.dateLabel || data.label || '';
+
+        // 2. Set Subtitle (Riwayat vs Menunggu persetujuan)
+        let subTitle = dateText;
+        if (isPast) {
+            subTitle = dateText ? `Riwayat (${dateText})` : 'Riwayat pengajuan';
+        } else if (!dateText) {
+            subTitle = 'Menunggu persetujuan';
+        }
+        setText('[data-kpi="approval_date"]', subTitle);
+
+        // 3. Set Total Counter
+        setText('[data-kpi="pending_approvals"]', pendingCount);
+        
+        // 4. Set Full Breakdown List (Full summary without truncation)
+        const summarySpan = document.querySelector('[data-kpi="pending_summary"]');
+        if (summarySpan) {
+            if (pendingCount === 0) {
+                summarySpan.innerHTML = '<span class="text-success fw-medium"><i class="fas fa-check-circle me-1"></i>Tidak ada yang tertunda</span>';
+                summarySpan.title = 'Tidak ada yang tertunda';
+            } else {
+                const summaryText = data.pending_summary || 'Perlu ditinjau';
+                summarySpan.innerHTML = `<i class="fas fa-circle text-warning me-1" style="font-size:.45rem;vertical-align:middle"></i><span>${summaryText}</span>`;
+                summarySpan.title = summaryText;
+            }
+        }
+
+    }
+});
+
+(function () {
+    const root = document.querySelector('[data-dp]');
+    if (!root) return;
+
+    // Helper to format real system clock as YYYY-MM-DD
+    function getRealTodayIso() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    // FIX: Override data-today on the DOM element BEFORE init runs
+    // This stops Process.js from thinking the reloaded page date is "Today"
+    root.dataset.today = getRealTodayIso();
+
+    DP.picker.init({
+        root,
+        pop:      root.querySelector('[data-pop]'),
+        toggle:   root.querySelector('[data-dp-toggle]'),
+        label:    root.querySelector('[data-dp-label]'),
+        nowEl:    root.querySelector('[data-dp-now]'),
+        todayBtn: root.querySelector('[data-dp-today]')
+    });
+
+    const todayBtn = root.querySelector('[data-dp-today]');
+
+    // Core Handler for "Hari Ini"
+    function handleHariIni(e) {
+        if (e) e.preventDefault();
+        const st = DP.picker.getState();
+        const liveToday = new Date();
+
+        if (typeof DP.picker.setYear === 'function') DP.picker.setYear(liveToday.getFullYear());
+        if (typeof DP.picker.setMonth === 'function') DP.picker.setMonth(liveToday.getMonth());
+
+        DP.picker.emitChange(liveToday, st ? st.mode : 'month', st ? st.level : 'me');
+        DP.picker.close();
+    }
+
+    // Header "Hari Ini" button
+    todayBtn?.addEventListener('click', handleHariIni);
+
+    // Navigation buttons
+    root.querySelectorAll('[data-dp-nav]').forEach(btn => btn.addEventListener('click', () => {
+        const st = DP.picker.getState();
+        const dir = Number(btn.dataset.dpNav);
+        const d = st.mode === 'day'  ? DP.addDays(st.sel, dir)
+                : st.mode === 'week' ? DP.addDays(st.sel, 7 * dir)
+                : new Date(st.sel.getFullYear(), st.sel.getMonth() + dir, 1);
+        DP.picker.emitChange(d, st.mode, st.level);
+    }));
+
+    // Mode buttons
+    root.querySelectorAll('[data-dp-mode]').forEach(btn => btn.addEventListener('click', () => {
+        const st = DP.picker.getState();
+        const m = btn.dataset.dpMode;
+        if (m === st.mode) return;
+        DP.picker.emitChange(st.sel, m, st.level);
+    }));
+
+    // Level buttons
+    root.querySelectorAll('[data-dp-level]').forEach(btn => btn.addEventListener('click', () => {
+        const st = DP.picker.getState();
+        if (btn.dataset.dpLevel === st.level) return;
+        DP.picker.emitChange(st.sel, st.mode, btn.dataset.dpLevel);
+    }));
+
+    // Toggle popover
+    const toggle = root.querySelector('[data-dp-toggle]');
+    toggle?.addEventListener('click', e => {
+        e.preventDefault();
+        const st = DP.picker.getState();
+        st.pop.hidden ? DP.picker.open() : DP.picker.close();
+    });
+
+    // Popover click delegation
+    const pop = root.querySelector('[data-pop]');
+    pop.addEventListener('click', e => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        e.preventDefault();
+
+        if (btn.hasAttribute('data-pop-today') || btn.hasAttribute('data-dp-today')) { 
+            handleHariIni(e); 
+            return; 
+        }
+
+        const st = DP.picker.getState();
+        if (btn.dataset.monthVal) { DP.picker.emitChange(DP.parse(btn.dataset.monthVal), st.mode, st.level); DP.picker.close(); return; }
+        if (btn.dataset.day)      { DP.picker.emitChange(DP.parse(btn.dataset.day), st.mode, st.level); DP.picker.close(); return; }
+        if (btn.dataset.year)     { DP.picker.setYear(st.viewYear + Number(btn.dataset.year)); DP.picker.render(); return; }
+        if (btn.dataset.nav)      { const d = new Date(st.viewYear, st.viewMonth + Number(btn.dataset.nav), 1); DP.picker.setYear(d.getFullYear()); DP.picker.setMonth(d.getMonth()); DP.picker.render(); return; }
+        if (btn.dataset.panel)    { DP.picker.setPanel(btn.dataset.panel); DP.picker.render(); }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', e => {
+        const st = DP.picker.getState();
+        if (!st.pop.hidden && e.target.isConnected && !st.root.contains(e.target)) DP.picker.close();
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', e => {
+        const st = DP.picker.getState();
+        if (e.key === 'Escape' && !st.pop.hidden) { DP.picker.close(); st.toggle?.focus(); }
+    });
+})();
+// --- Announcement Modal & Pagination Controller ---
+(function () {
+    // Teleport modal to document.body so parent card overflow/z-index won't clip it
+    const modalEl = document.getElementById('modalAnnouncementDetail');
+    if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+
+    const card = document.getElementById('boxAnnouncementCard');
+    if (!card) return;
+
+    const perPage = parseInt(card.dataset.perPage || 5, 10);
+    let currentPage = 1;
+
+    function refreshPagination() {
+        const rows = Array.from(document.querySelectorAll('#annList .ann-row'));
+        const totalItems = rows.length;
+        const totalPages = Math.ceil(totalItems / perPage);
+
+        const listEl       = document.getElementById('annList');
+        const emptyStateEl = document.getElementById('annEmptyState');
+        const footerEl     = document.getElementById('annFooter');
+
+        if (totalItems === 0) {
+            if (listEl) listEl.style.display = 'none';
+            if (emptyStateEl) emptyStateEl.style.display = 'block';
+            if (footerEl) footerEl.style.setProperty('display', 'none', 'important');
+            return;
+        }
+
+        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+
+        rows.forEach((row, index) => {
+            const pNum = Math.floor(index / perPage) + 1;
+            row.dataset.page = pNum;
+            row.style.display = pNum === currentPage ? 'flex' : 'none';
+        });
+
+        const pageIndicator = document.getElementById('annPageIndicator');
+        const prevBtn       = document.getElementById('annPrevBtn');
+        const nextBtn       = document.getElementById('annNextBtn');
+
+        if (pageIndicator) pageIndicator.textContent = `Halaman ${currentPage} dari ${totalPages}`;
+        if (prevBtn)       prevBtn.disabled = currentPage === 1;
+        if (nextBtn)       nextBtn.disabled = currentPage === totalPages;
+
+        if (footerEl) footerEl.style.setProperty('display', totalPages > 1 ? 'flex' : 'none', 'important');
+    }
+
+    const prevBtn = document.getElementById('annPrevBtn');
+    const nextBtn = document.getElementById('annNextBtn');
+
+    if (prevBtn) prevBtn.addEventListener('click', () => { currentPage--; refreshPagination(); });
+    if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; refreshPagination(); });
+
+    // Explicit Close Handler (Guarantees modal & backdrop removal)
+    function closeModal() {
+        if (window.jQuery && typeof $('#modalAnnouncementDetail').modal === 'function') {
+            $('#modalAnnouncementDetail').modal('hide');
+        } else if (window.bootstrap && bootstrap.Modal) {
+            const instance = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+            instance.hide();
+        } else {
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            document.body.classList.remove('modal-open');
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        }
+    }
+
+    // Attach explicit click listener to close buttons
+    modalEl?.querySelectorAll('[data-bs-dismiss="modal"], [data-dismiss="modal"]').forEach(btn => {
+        btn.addEventListener('click', closeModal);
+    });
+
+    // Row Click: Populate modal, update AJAX status, and remove row from list
+    document.getElementById('annList')?.addEventListener('click', function (e) {
+        const row = e.target.closest('.ann-row');
+        if (!row) return;
+
+        // 1. Fill Modal Data
+        const annTitle   = document.getElementById('annTitle');
+        const annSender  = document.getElementById('annSender');
+        const annDate    = document.getElementById('annDate');
+        const annContent = document.getElementById('annContent');
+
+        if (annTitle)   annTitle.textContent  = row.dataset.title || 'Pesan Baru';
+        if (annSender)  annSender.textContent = row.dataset.sender || 'System';
+        if (annDate)    annDate.textContent   = row.dataset.date || '';
+        if (annContent) annContent.innerHTML  = row.dataset.body || '<div class="text-muted">Pesan kosong.</div>';
+
+        // 2. Open Modal
+        if (window.jQuery && typeof $('#modalAnnouncementDetail').modal === 'function') {
+            $('#modalAnnouncementDetail').modal('show');
+        } else if (window.bootstrap && bootstrap.Modal) {
+            const instance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            instance.show();
+        }
+
+        // 3. Mark Read via AJAX & remove item row from DOM
+        const messageId = row.dataset.id;
+        if (messageId && !row.dataset.readProcessed) {
+            row.dataset.readProcessed = 'true';
+
+            if (window.APP_URLS && window.APP_URLS.pesanUpdateRead) {
+                const fd = new FormData();
+                fd.append('trx_message_id', messageId);
+                fetch(window.APP_URLS.pesanUpdateRead, {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).catch(() => {});
+            }
+
+            // Animate and remove from DOM
+            row.style.transition = 'all 0.2s ease';
+            row.style.opacity = '0';
+            row.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                row.remove();
+                refreshPagination();
+            }, 200);
+        }
+    });
+
+    refreshPagination();
+})();
+
+// DASHBOARD
+// Calendar
+// ── Calendar Activity ───────────────────────────────────────
+(function () {
+  var CFG = window.CAL_CFG;
+  if (!CFG) return;
+
+  var TYPES  = { company:'Agenda perusahaan', leave:'Cuti / izin', team:'Aktivitas tim', bday:'Ulang Tahun', holiday:'Hari libur' };
+  var MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  var DAYS   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+  var root = document.getElementById('kalender');
+  if (!root) return;
+  var sel  = CFG.focus;
+
+  function esc(t){ var e = document.createElement('div'); e.textContent = t == null ? '' : t; return e.innerHTML; }
+  function fail(msg){ document.getElementById('fc-calendar').innerHTML = '<div class="alert alert-warning mb-0 small">' + msg + '</div>'; }
+
+  function loadScript(src, done){
+    var s = document.createElement('script'); s.src = src; s.onload = done;
+    s.onerror = function(){ if (src === CFG.swal) return done(); fail('Gagal memuat ' + src + ' — periksa path'); };
+    document.head.appendChild(s);
+  }
+
+  function whenJQuery(cb, n){
+    if (window.jQuery) return cb(window.jQuery);
+    if ((n || 0) > 100) return fail('jQuery tidak ditemukan.');
+    setTimeout(function(){ whenJQuery(cb, (n || 0) + 1); }, 50);
+  }
+
+  function boot(){
+    whenJQuery(function ($) {
+      var chain = [];
+      if (!window.moment) chain.push(CFG.moment);
+      if (!$.fn.fullCalendar) chain.push(CFG.fcJs);
+      if (CFG.editable && !window.swal) chain.push(CFG.swal);
+      (function next(){ var s = chain.shift(); if (!s) return init($); loadScript(s, next); })();
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+  function init($){
+    var $cal = $('#fc-calendar');
+
+    var activeFilters = { division: '', branch: '', categories: 'leave,holiday,bday,team' };
+
+    document.addEventListener('kf:change', function (e) {
+      activeFilters.division   = e.detail.division || '';
+      activeFilters.branch     = e.detail.branch || '';
+      activeFilters.categories = e.detail.categories || '';
+      if ($.isFunction($cal.fullCalendar)) $cal.fullCalendar('refetchEvents');
+    });
+
+    function first(ev){ return ev.start.format('YYYY-MM-DD'); }
+    function last(ev){
+      if (!ev.end) return first(ev);
+      var e = ev.allDay ? ev.end.clone().subtract(1, 'day') : ev.end;
+      var s = e.format('YYYY-MM-DD');
+      return s < first(ev) ? first(ev) : s;
+    }
+    function longDate(s){ var d = moment(s, 'YYYY-MM-DD'); return DAYS[d.day()] + ', ' + d.date() + ' ' + MONTHS[d.month()] + ' ' + d.year(); }
+
+    function getStatusBadge(status) {
+      status = (status || '').toUpperCase();
+      switch (status) {
+        case 'CO': case 'AP': case 'APPROVED': case 'Y':
+          return '<span class="badge bg-success text-white" style="font-size:0.65rem; padding: 3px 6px;">Approved</span>';
+        case 'IP': case 'PENDING':
+          return '<span class="badge bg-warning text-dark" style="font-size:0.65rem; padding: 3px 6px;">Pending</span>';
+        case 'DR': case 'DRAFT':
+          return '<span class="badge bg-secondary text-white" style="font-size:0.65rem; padding: 3px 6px;">Draft</span>';
+        case 'VO': case 'RJ': case 'REJECTED': case 'N':
+          return '<span class="badge bg-danger text-white" style="font-size:0.65rem; padding: 3px 6px;">Rejected</span>';
+        default:
+          return '<span class="badge bg-info text-white" style="font-size:0.65rem; padding: 3px 6px;">' + esc(status) + '</span>';
+      }
+    }
+
+    function card(ev) {
+      var ext = ev.extendedProps || {};
+
+      if (ev.type === 'bday') {
+        var empName  = ext.employee || ev.title || 'Karyawan';
+        var empNik   = ext.nik ? ' (' + ext.nik + ')' : '';
+        var branch   = ext.branch || '-';
+        var division = ext.division || '-';
+        return '<div class="k-card-box t-bday" style="border-left-color: #8b5cf6;">' +
+          '<div class="k-card-head">' +
+            '<div class="k-card-head-title"><span class="k-time-tag" style="color: #8b5cf6;"><i class="fas fa-birthday-cake me-1"></i> [Ulang Tahun]</span> <b>' + esc(empName) + '</b></div>' +
+            '<span class="badge text-white" style="font-size:0.65rem; padding: 3px 6px; background-color: #8b5cf6;">Birthday</span>' +
+          '</div>' +
+          '<div class="k-card-body-content">' +
+            '<div class="k-card-row"><strong>Employee:</strong> ' + esc(empName) + esc(empNik) + '</div>' +
+            '<div class="k-card-row"><strong>Branch:</strong> ' + esc(branch) + ' <span class="k-sep">|</span> <strong>Division:</strong> ' + esc(division) + '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      if (ev.type === 'holiday') {
+        return '<div class="k-card-box t-holiday" style="border-left-color: #dc2626;">' +
+          '<div class="k-card-head">' +
+            '<div class="k-card-head-title"><span class="k-time-tag" style="color:#dc2626;"><i class="fas fa-calendar-alt me-1"></i> [Hari Libur]</span> <b>' + esc(ev.title) + '</b></div>' +
+            '<span class="badge bg-danger text-white" style="font-size:0.65rem; padding: 3px 6px;">Libur Nasional</span>' +
+          '</div>' +
+        '</div>';
+      }
+
+      var docType   = ext.doctype_name || 'Pengajuan';
+      var docNo     = ext.documentno || ev.id || '-';
+      var empName   = ext.employee || '-';
+      var empNik    = ext.nik ? ' (' + ext.nik + ')' : '';
+      var branch    = ext.branch || '-';
+      var division  = ext.division || '-';
+      var reason    = ext.reason || ev.place || '-';
+      var status    = ext.status || 'CO';
+
+      return '<div class="k-card-box t-' + ev.type + '">' +
+        '<div class="k-card-head">' +
+          '<div class="k-card-head-title"><b>' + esc(docType) + '</b> - #' + esc(docNo) + '</div>' +
+          '<div>' + getStatusBadge(status) + '</div>' +
+        '</div>' +
+        '<div class="k-card-body-content">' +
+          '<div class="k-card-row"><strong>Employee:</strong> ' + esc(empName) + esc(empNik) + '</div>' +
+          '<div class="k-card-row"><strong>Branch:</strong> ' + esc(branch) + ' <span class="k-sep">|</span> <strong>Division:</strong> ' + esc(division) + '</div>' +
+          '<div class="k-card-row"><strong>Submission Type:</strong> ' + esc(docType) + '</div>' +
+          '<div class="k-card-row text-truncate-2"><strong>Reason:</strong> ' + esc(reason) + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderDetail(){
+      var list = $cal.fullCalendar('clientEvents', function (ev) { return sel >= first(ev) && sel <= last(ev); });
+      document.getElementById('k-detail-title').textContent = longDate(sel);
+      document.getElementById('k-detail').innerHTML = list.length ? list.map(card).join('') : '<p class="k-empty">Belum ada aktivitas di tanggal ini.</p>';
+    }
+
+    function markSelected(){
+      $cal.find('.is-selected').removeClass('is-selected');
+      $cal.find('.fc-bg td.fc-day[data-date="' + sel + '"]').addClass('is-selected');
+    }
+
+    function pick(d){ sel = d; markSelected(); renderDetail(); }
+
+    function paintDots(){
+      var view = $cal.fullCalendar('getView');
+      $cal.find('.k-dots').remove();
+      $cal.find('.k-hol').removeClass('k-hol').removeAttr('title');
+      if (!view || view.name !== 'month') return;
+
+      var has = {}, companyEvents = {};
+      $cal.fullCalendar('clientEvents').forEach(function (ev) {
+        if (!TYPES[ev.type]) return;
+        for (var d = moment(first(ev)), end = moment(last(ev)); !d.isAfter(end, 'day'); d.add(1, 'day')) {
+          var k = d.format('YYYY-MM-DD');
+          if (ev.type === 'company' || ev.type === 'holiday') { companyEvents[k] = ev.title; continue; }
+          has[k] = has[k] || {};
+          has[k][ev.type] = (has[k][ev.type] || 0) + 1;
+        }
+      });
+
+      Object.keys(companyEvents).forEach(function (k) {
+        $cal.find('[data-date="' + k + '"]').addClass('k-hol').attr('title', companyEvents[k]);
+      });
+
+      var SHORT = { leave: 'Cuti', team: 'Tim', bday: 'Ultah' };
+
+      $cal.find('td.fc-day-top[data-date], td.fc-day-number[data-date]').each(function () {
+        var k = this.getAttribute('data-date'), c = has[k] || {};
+        var html = Object.keys(SHORT).filter(function (t) { return c[t]; }).map(function (t) {
+          return '<div class="k-row t-' + t + '" title="' + TYPES[t] + ': ' + c[t] + '"><i></i><b>' + c[t] + '</b><span>' + SHORT[t] + '</span></div>';
+        }).join('');
+
+        if (companyEvents[k]) {
+          html = '<div class="k-row k-holrow" title="' + esc(companyEvents[k]).replace(/"/g, '&quot;') + '"><span>' + esc(companyEvents[k]) + '</span></div>' + html;
+        }
+        if (html) $(this).append('<div class="k-dots">' + html + '</div>');
+      });
+    }
+
+    var VIEW = CFG.lockMonth ? 'month' : ({ day: 'agendaDay', week: 'agendaWeek', month: 'month' }[CFG.mode] || 'month');
+
+    $cal.fullCalendar({
+      header: { left: '', center: 'title', right: 'month,listMonth' },
+      buttonText: { month: 'Kalender', list: 'Agenda' },
+      views: { listMonth: { buttonText: 'Agenda' } },
+      allDayText: 'Seharian',
+      noEventsMessage: 'Tidak ada aktivitas',
+      monthNames: MONTHS,
+      dayNames: DAYS,
+      dayNamesShort: ['Min','Sen','Sel','Rab','Kam','Jum','Sab'],
+      defaultView: VIEW,
+      defaultDate: CFG.focus,
+      firstDay: 1,
+      height: 'auto',
+      fixedWeekCount: false,
+      eventLimit: true,
+      nowIndicator: true,
+      editable: false,
+
+      events: function (start, end, timezone, callback) {
+        $.ajax({
+          url: CFG.eventsUrl,
+          dataType: 'json',
+          data: {
+            start: start.format('YYYY-MM-DD'),
+            end: end.format('YYYY-MM-DD'),
+            level: $('[data-dp]').attr('data-level') || 'team',
+            division: activeFilters.division,
+            branch: activeFilters.branch,
+            categories: activeFilters.categories
+          },
+          success: function (doc) {
+            var formatted = (doc || []).map(function(item) {
+              var ext = item.extendedProps || {};
+              return {
+                id: item.id || '',
+                documentno: item.id || item.documentno || '',
+                doctype: item.doctype || item.doctype_name || '',
+                title: item.title || '',
+                start: item.start,
+                end: item.end || null,
+                allDay: item.allDay || false,
+                type: item.type || 'team',
+                status: item.docstatus || ext.status || 'CO',
+                employee: item.employee || ext.employee || item.employee_name || '',
+                branch: item.branch || ext.branch || '',
+                submissionType: item.submissiontype_name || item.doctype_name || '',
+                reason: item.place || ext.reason || item.reason || '',
+                className: item.className || ['t-' + (item.type || 'team')],
+                extendedProps: ext
+              };
+            });
+            callback(formatted);
+          },
+          error: function () { callback([]); }
+        });
+      },
+
+      dayClick:   function (date) { pick(date.format('YYYY-MM-DD')); },
+      eventClick: function (ev)   { pick(first(ev)); return false; },
+
+      eventAfterAllRender: function () { markSelected(); paintDots(); renderDetail(); },
+      viewRender: function () { markSelected(); paintDots(); }
+    });
+
+    $cal.find('.fc-toolbar').after($('.k-legend-bar'));
+    $cal.find('.fc-toolbar .fc-left').html($('#fc-filter-template').html());
+
+    document.addEventListener('dp:change', function (e) {
+      var viewMap = { day: 'agendaDay', week: 'agendaWeek', month: 'month' };
+      if (!CFG.lockMonth && viewMap[e.detail.mode]) {
+        $cal.fullCalendar('changeView', viewMap[e.detail.mode]);
+      }
+      $cal.fullCalendar('gotoDate', e.detail.date);
+      pick(e.detail.date);
+    });
+  }
+})();
+
+// DASHBOARD
+// calendar_filter
+(function () {
+  if (window.__kfBound) return;
+  window.__kfBound = true;
+
+  var filterState = {
+    categories: new Set(['leave', 'holiday', 'bday', 'team']),
+    division: '',
+    branch: ''
+  };
+
+  var filterDebounceTimer = null;
+
+  function syncUI() {
+    document.querySelectorAll('.kf').forEach(function (box) {
+      var activeCount = 0;
+
+      // 1. Sync Chips
+      box.querySelectorAll('.kf-chip').forEach(function (chip) {
+        var type = chip.dataset.type;
+        var isActive = filterState.categories.has(type);
+
+        chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        chip.classList.toggle('is-active', isActive);
+
+        if (!isActive) activeCount++;
+      });
+
+      // 2. Sync Select Values & Active Count
+      var selDiv = box.querySelector('.kf-select-division');
+      var selBr  = box.querySelector('.kf-select-branch');
+
+      if (selDiv) {
+        selDiv.value = filterState.division;
+        if (filterState.division) activeCount++;
+      }
+      if (selBr) {
+        selBr.value = filterState.branch;
+        if (filterState.branch) activeCount++;
+      }
+
+      // 3. Sync Badge
+      var b = box.querySelector('.kf-badge');
+      if (b) { 
+        b.textContent = activeCount; 
+        b.hidden = (activeCount === 0); 
+      }
+    });
+  }
+
+  function emitFilterChange() {
+    var catsArray = Array.from(filterState.categories);
+    var payload = {
+      division:   filterState.division,
+      branch:     filterState.branch,
+      categories: catsArray.length > 0 ? catsArray.join(',') : 'none'
+    };
+
+    document.dispatchEvent(new CustomEvent('kf:change', {
+      bubbles: true,
+      detail: payload
+    }));
+  }
+
+  function debouncedEmit() {
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(function () {
+      emitFilterChange();
+    }, 200);
+  }
+
+  // Global Click Listener
+  document.addEventListener('click', function (e) {
+    // 1. Chip Click
+    var chip = e.target.closest('.kf-chip');
+    if (chip) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      var type = chip.dataset.type;
+      if (filterState.categories.has(type)) {
+        filterState.categories.delete(type);
+      } else {
+        filterState.categories.add(type);
+      }
+
+      syncUI();
+      debouncedEmit();
+      return;
+    }
+
+    // 2. Toggle Panel
+    var toggle = e.target.closest('[data-kf-toggle]');
+    document.querySelectorAll('.kf.is-open').forEach(function (box) {
+      if (!box.contains(e.target)) {
+        box.classList.remove('is-open');
+        var t = box.querySelector('[data-kf-toggle]');
+        if (t) t.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    if (toggle) {
+      var box = toggle.closest('.kf');
+      var open = box.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+      var panel = box.querySelector('.kf-panel');
+      if (panel && open) {
+        var rect = panel.getBoundingClientRect();
+        if (rect.right > window.innerWidth - 16) {
+          panel.classList.add('align-right');
+        } else {
+          panel.classList.remove('align-right');
+        }
+      }
+      return;
+    }
+
+    // 3. Reset Button
+    if (e.target.closest('.kf-btn-reset')) {
+      e.preventDefault();
+
+      filterState.categories = new Set(['leave', 'holiday', 'bday', 'team']);
+      filterState.division = '';
+      filterState.branch = '';
+
+      syncUI();
+      debouncedEmit();
+    }
+  });
+
+  // Global Change Listener for Select Dropdowns
+  document.addEventListener('change', function (e) {
+    var selDiv = e.target.closest('.kf-select-division');
+    var selBr  = e.target.closest('.kf-select-branch');
+
+    if (selDiv) filterState.division = selDiv.value;
+    if (selBr)  filterState.branch   = selBr.value;
+
+    if (selDiv || selBr) {
+      syncUI();
+      debouncedEmit();
+    }
+  });
+
+  // Initial Sync
+  setTimeout(syncUI, 50);
+})();
 $("#form_bundling").on("change", '#name', function(e) {
   const form = $(this).closest('form');
   let packetName = $(this).val();
@@ -3199,3 +4174,977 @@ $("#form_bundling").on("change", '#name', function(e) {
         },
       });
 });
+// DASHBOARD
+// v_dashboard
+// --- Carousel Scroll Controller ---
+(function () {
+    var track = document.getElementById('kpiCarousel');
+    if (!track) return;
+    var wrap   = track.parentNode;
+    var prev   = wrap.querySelector('.kc-prev');
+    var next   = wrap.querySelector('.kc-next');
+    var slides = track.querySelectorAll('.kc-slide');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function step() { return slides[1] ? slides[1].offsetLeft - slides[0].offsetLeft : track.clientWidth; }
+    function move(dir) { track.scrollBy({ left: dir * step(), behavior: reduce ? 'auto' : 'smooth' }); }
+    function update() {
+        var max = track.scrollWidth - track.clientWidth;
+        wrap.classList.toggle('is-static', max <= 2);
+        if (prev) prev.disabled = track.scrollLeft <= 2;
+        if (next) next.disabled = track.scrollLeft >= max - 2;
+    }
+
+    prev.addEventListener('click', function () { move(-1); });
+    next.addEventListener('click', function () { move(1); });
+    track.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+})();
+
+// --- Sticky Header Scroll Docking ---
+document.addEventListener('DOMContentLoaded', function () {
+    const wrapper = document.getElementById('datePickerWrapper');
+    const picker  = document.getElementById('stickyDatePicker');
+    if (!wrapper || !picker) return;
+
+    const navbarHeight = 60;
+    const dockAt    = navbarHeight + 4;   // dock slightly earlier
+    const undockAt  = navbarHeight + 40;  // undock with hysteresis to avoid flapping
+    let   isDocked  = false;
+
+    function dock(rect) {
+        picker.style.position = 'fixed';
+        picker.style.top      = navbarHeight + 'px';
+        picker.style.left     = rect.left + 'px';
+        picker.style.width    = rect.width + 'px';
+        picker.style.zIndex   = '999';
+        picker.classList.add('is-docked');
+        isDocked = true;
+    }
+
+    function undock() {
+        picker.style.position = 'static';
+        picker.style.top      = '';
+        picker.style.left     = '';
+        picker.style.width    = '';
+        picker.classList.remove('is-docked');
+        isDocked = false;
+    }
+
+    function updateStickyPosition() {
+        // Measure the wrapper, not the picker — because the picker becomes
+        // fixed and its own rect stops being useful for this check.
+        const rect = wrapper.getBoundingClientRect();
+
+        if (!isDocked && rect.top <= dockAt) {
+            dock(rect);
+        } else if (isDocked && rect.top >= undockAt) {
+            undock();
+        } else if (isDocked) {
+            // Keep left/width in sync while docked — no snap when scrolling
+            picker.style.left  = rect.left + 'px';
+            picker.style.width = rect.width + 'px';
+        }
+    }
+
+    window.addEventListener('scroll', updateStickyPosition, { passive: true });
+    window.addEventListener('resize', updateStickyPosition, { passive: true });
+    updateStickyPosition();
+});
+
+
+// --- Dynamic Async AJAX Handler ---
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('dp:change', function(e) {
+        const detail = e.detail;
+        if (!detail) return;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('date', detail.date);
+        url.searchParams.set('mode', detail.mode);
+        url.searchParams.set('level', detail.level);
+        url.searchParams.set('ajax', '1');
+
+        const kpiElements = document.querySelectorAll('[data-kpi]');
+        kpiElements.forEach(el => el.classList.add('kpi-loading'));
+
+        fetch(url.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            updateDashboardDOM(data);
+
+            if (window.calendar) {
+                window.calendar.refetchEvents();
+            } else if (typeof $!== 'undefined' &&$('#calendar').length && $.isFunction($('#calendar').fullCalendar)) {
+                $('#calendar').fullCalendar('refetchEvents');
+            }
+        })
+        .catch(err => console.error('Dashboard AJAX refresh failed:', err))
+        .finally(() => {
+            kpiElements.forEach(el => el.classList.remove('kpi-loading'));
+        });
+    });
+
+    function updateDashboardDOM(data) {
+        const setText = (selector, val) => {
+            document.querySelectorAll(selector).forEach(el => el.textContent = val ?? '—');
+        };
+
+        const setWidth = (selector, pct) => {
+            document.querySelectorAll(selector).forEach(el => el.style.width = (pct ?? 0) + '%');
+        };
+
+        const currentMode = data.mode || 'month';
+
+        // ---------------------------------------------------------
+        // 1. Personal Attendance (Kehadiran Saya)
+        // ---------------------------------------------------------
+        const attCard = document.querySelector('[data-kpi-card="attendance"]');
+        if (attCard) {
+            const attDayView    = attCard.querySelector('[data-kpi-view="day"]');
+            const attPeriodView = attCard.querySelector('[data-kpi-view="period"]');
+
+            if (attDayView && attPeriodView) {
+                if (currentMode === 'day') {
+                    attDayView.classList.remove('d-none');
+                    attPeriodView.classList.add('d-none');
+
+                    if (window.KPI && typeof window.KPI.attendanceDay === 'function') {
+                        attDayView.innerHTML = window.KPI.attendanceDay({
+                            statusText: data.my_status_text || 'Belum Absen',
+                            tone:       data.my_tone || 'secondary',
+                            clockIn:    data.my_clock_in_text || data.clock_in_time || '-',
+                            clockOut:   data.my_clock_out_text || data.clock_out_time || '-',
+                            schedule:   data.schedule_range || '',
+                            punctual:   data.my_punctuality_text || '',
+                        });
+                    }
+                } else {
+                    attDayView.classList.add('d-none');
+                    attPeriodView.classList.remove('d-none');
+                }
+            }
+        }
+
+        // Shared Label
+        setText('[data-kpi="label"]', data.label);
+
+        // Period Mode Numerical Values
+        const target   = parseInt(data.work_days || 0, 10);
+        const myDays   = parseInt(data.attendance_days || 0, 10);
+        const myLeave  = parseInt(data.my_leave_count || 0, 10);
+        const myAbsent = parseInt(data.my_absent_count || 0, 10);
+        const myLate   = parseInt(data.late_count || 0, 10);
+        const myStreak = parseInt(data.my_streak || 0, 10);
+        const rate     = Math.min(100, Math.max(0, parseInt(data.my_rate || 0, 10)));
+
+        setText('[data-kpi="my_rate"]', rate + '%');
+        setText('[data-kpi="attendance_days"]', myDays);
+        setText('[data-kpi="work_days"]', target);
+
+        const rateTone = rate >= 90 ? 'success' : (rate >= 75 ? 'warning' : 'danger');
+
+        // FIX 1: Set main rate bar width using data.my_rate & querySelectorAll
+        document.querySelectorAll('[data-kpi="my_rate_bar"]').forEach(bar => {
+            bar.style.width = rate + '%';
+            bar.className = `progress-bar bg-${rateTone}`;
+        });
+
+        // FIX 2: Pass full context (target, ontime, overtime) to attendanceMeta
+        const myMetaEl = document.querySelector('[data-kpi="my_period_meta"]');
+        if (myMetaEl && window.KPI && typeof window.KPI.attendanceMeta === 'function') {
+            myMetaEl.innerHTML = window.KPI.attendanceMeta({
+                mode:            currentMode,
+                work_days:       target,
+                target:          target,
+                attendance_days: myDays,
+                days:            myDays,
+                my_leave_count:  myLeave,
+                leave:           myLeave,
+                my_absent_count: myAbsent,
+                absent:          myAbsent,
+                late_count:      myLate,
+                late:            myLate,
+                my_ontime_count: parseInt(data.my_ontime_count || 0, 10),
+                overtime_count:  parseInt(data.overtime_count || 0, 10),
+                rateTone:        rateTone,
+                my_streak:       myStreak,
+                streak:          myStreak
+            });
+        }
+        
+        // ---------------------------------------------------------
+        // 2. Team Attendance (Kehadiran Tim)
+        // ---------------------------------------------------------
+        const teamCard = document.querySelector('[data-kpi-card="team"]');
+        if (teamCard) {
+            const teamDayView    = teamCard.querySelector('[data-kpi-view="day"]');
+            const teamPeriodView = teamCard.querySelector('[data-kpi-view="period"]');
+
+            if (teamDayView && teamPeriodView) {
+                if (currentMode === 'day') {
+                    teamDayView.classList.remove('d-none');
+                    teamPeriodView.classList.add('d-none');
+                } else {
+                    teamDayView.classList.add('d-none');
+                    teamPeriodView.classList.remove('d-none');
+                }
+            }
+        }
+
+        const teamRateText = (data.team_rate ?? 0) + '%';
+        setText('[data-kpi="team_subtitle"]', data.label || (currentMode === 'day' ? 'Hari ini' : (currentMode === 'week' ? 'Minggu ini' : 'Bulan ini')));
+        setText('[data-kpi="team_rate"]', teamRateText);
+        setText('[data-kpi="team_rate_day"]', teamRateText);
+        setText('[data-kpi="team_rate_label"]', currentMode === 'week' ? 'kehadiran minggu ini' : 'rata-rata kehadiran');
+
+        const total      = parseInt(data.team_total || 0, 10);
+        const present    = parseInt(data.team_present || 0, 10);
+        const leaveCount = parseInt(data.team_on_leave || 0, 10);
+        const pending    = Math.max(0, total - present - leaveCount);
+
+        setText('[data-kpi="team_present"]', present);
+        setText('[data-kpi="team_present_count"]', present);
+        setText('[data-kpi="team_total"]', total);
+        setText('[data-kpi="team_on_leave"]', leaveCount);
+        setText('[data-kpi="team_leave_count"]', leaveCount);
+        setText('[data-kpi="team_pending_count"]', pending);
+
+        if (total > 0) {
+            setWidth('[data-kpi="team_present_bar"]', (present / total) * 100);
+            setWidth('[data-kpi="team_leave_bar"]', (leaveCount / total) * 100);
+        }
+
+        // Team Absent Names Update
+        const absentEl = document.querySelector('[data-kpi="team_absent_names"]');
+        if (absentEl) {
+            const absentArr = Array.isArray(data.team_absent_names) ? data.team_absent_names.filter(Boolean) : [];
+            if (absentArr.length > 0) {
+                absentEl.classList.remove('d-none');
+                const namesStr = absentArr.join(', ');
+                const sliceStr = absentArr.slice(0, 2).join(', ') + (absentArr.length > 2 ? ' +' + (absentArr.length - 2) : '');
+                absentEl.title = namesStr;
+                absentEl.innerHTML = `<i class="far fa-clock" aria-hidden="true"></i> Belum hadir: ${sliceStr}`;
+            } else {
+                absentEl.classList.add('d-none');
+            }
+        }
+
+        // Delta indicator
+        const deltaEl = document.querySelector('[data-kpi="team_delta"]');
+        if (deltaEl) {
+            if (data.team_prev_rate !== undefined && data.team_prev_rate !== null) {
+                const deltaVal = (data.team_rate || 0) - parseInt(data.team_prev_rate, 10);
+                deltaEl.classList.remove('d-none', 'is-up', 'is-down');
+                deltaEl.classList.add(deltaVal >= 0 ? 'is-up' : 'is-down');
+                deltaEl.innerHTML = `<i class="fas fa-arrow-${deltaVal >= 0 ? 'up' : 'down'}" aria-hidden="true"></i> ${Math.abs(deltaVal)} pt`;
+            } else {
+                deltaEl.classList.add('d-none');
+            }
+        }
+
+        // Sparkline Grid
+        if (window.KPI && typeof window.KPI.teamChart === 'function' && Array.isArray(data.team_trend)) {
+            const targetVal = data.team_target || 90;
+            const unitVal   = data.team_trend_unit || (currentMode === 'week' ? 'hari' : 'minggu');
+            const chartData = window.KPI.teamChart(data.team_trend, targetVal, unitVal);
+
+            const sparkContainer = document.querySelector('[data-kpi="team_sparklines"]');
+            if (sparkContainer) {
+                sparkContainer.innerHTML = chartData.html;
+                sparkContainer.setAttribute('aria-label', chartData.aria);
+            }
+            setText('[data-kpi="team_target_note"]', chartData.note);
+        }
+
+        // ---------------------------------------------------------
+        // 3. Pending Approvals (Pengajuan Berjalan)
+        // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // 3. Pending Approvals (Pengajuan Berjalan)
+        // ---------------------------------------------------------
+        const pendingCount = parseInt(data.pending_approvals || 0, 10);
+        
+        // 1. Detect if selected period/date is in the past
+        const todayStr  = new Date().toISOString().split('T')[0];
+        const checkDate = data.rangeEnd || data.date || todayStr;
+        const isPast    = checkDate < todayStr;
+        const dateText  = data.dateLabel || data.label || '';
+
+        // 2. Set Subtitle (Riwayat vs Menunggu persetujuan)
+        let subTitle = dateText;
+        if (isPast) {
+            subTitle = dateText ? `Riwayat (${dateText})` : 'Riwayat pengajuan';
+        } else if (!dateText) {
+            subTitle = 'Menunggu persetujuan';
+        }
+        setText('[data-kpi="approval_date"]', subTitle);
+
+        // 3. Set Total Counter
+        setText('[data-kpi="pending_approvals"]', pendingCount);
+        
+        // 4. Set Full Breakdown List (Full summary without truncation)
+        const summarySpan = document.querySelector('[data-kpi="pending_summary"]');
+        if (summarySpan) {
+            if (pendingCount === 0) {
+                summarySpan.innerHTML = '<span class="text-success fw-medium"><i class="fas fa-check-circle me-1"></i>Tidak ada yang tertunda</span>';
+                summarySpan.title = 'Tidak ada yang tertunda';
+            } else {
+                const summaryText = data.pending_summary || 'Perlu ditinjau';
+                summarySpan.innerHTML = `<i class="fas fa-circle text-warning me-1" style="font-size:.45rem;vertical-align:middle"></i><span>${summaryText}</span>`;
+                summarySpan.title = summaryText;
+            }
+        }
+
+    }
+});
+
+(function () {
+    const root = document.querySelector('[data-dp]');
+    if (!root) return;
+
+    // Helper to format real system clock as YYYY-MM-DD
+    function getRealTodayIso() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    // FIX: Override data-today on the DOM element BEFORE init runs
+    // This stops Process.js from thinking the reloaded page date is "Today"
+    root.dataset.today = getRealTodayIso();
+
+    DP.picker.init({
+        root,
+        pop:      root.querySelector('[data-pop]'),
+        toggle:   root.querySelector('[data-dp-toggle]'),
+        label:    root.querySelector('[data-dp-label]'),
+        nowEl:    root.querySelector('[data-dp-now]'),
+        todayBtn: root.querySelector('[data-dp-today]')
+    });
+
+    const todayBtn = root.querySelector('[data-dp-today]');
+
+    // Core Handler for "Hari Ini"
+    function handleHariIni(e) {
+        if (e) e.preventDefault();
+        const st = DP.picker.getState();
+        const liveToday = new Date();
+
+        if (typeof DP.picker.setYear === 'function') DP.picker.setYear(liveToday.getFullYear());
+        if (typeof DP.picker.setMonth === 'function') DP.picker.setMonth(liveToday.getMonth());
+
+        DP.picker.emitChange(liveToday, st ? st.mode : 'month', st ? st.level : 'me');
+        DP.picker.close();
+    }
+
+    // Header "Hari Ini" button
+    todayBtn?.addEventListener('click', handleHariIni);
+
+    // Navigation buttons
+    root.querySelectorAll('[data-dp-nav]').forEach(btn => btn.addEventListener('click', () => {
+        const st = DP.picker.getState();
+        const dir = Number(btn.dataset.dpNav);
+        const d = st.mode === 'day'  ? DP.addDays(st.sel, dir)
+                : st.mode === 'week' ? DP.addDays(st.sel, 7 * dir)
+                : new Date(st.sel.getFullYear(), st.sel.getMonth() + dir, 1);
+        DP.picker.emitChange(d, st.mode, st.level);
+    }));
+
+    // Mode buttons
+    root.querySelectorAll('[data-dp-mode]').forEach(btn => btn.addEventListener('click', () => {
+        const st = DP.picker.getState();
+        const m = btn.dataset.dpMode;
+        if (m === st.mode) return;
+        DP.picker.emitChange(st.sel, m, st.level);
+    }));
+
+    // Level buttons
+    root.querySelectorAll('[data-dp-level]').forEach(btn => btn.addEventListener('click', () => {
+        const st = DP.picker.getState();
+        if (btn.dataset.dpLevel === st.level) return;
+        DP.picker.emitChange(st.sel, st.mode, btn.dataset.dpLevel);
+    }));
+
+    // Toggle popover
+    const toggle = root.querySelector('[data-dp-toggle]');
+    toggle?.addEventListener('click', e => {
+        e.preventDefault();
+        const st = DP.picker.getState();
+        st.pop.hidden ? DP.picker.open() : DP.picker.close();
+    });
+
+    // Popover click delegation
+    const pop = root.querySelector('[data-pop]');
+    pop.addEventListener('click', e => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        e.preventDefault();
+
+        if (btn.hasAttribute('data-pop-today') || btn.hasAttribute('data-dp-today')) { 
+            handleHariIni(e); 
+            return; 
+        }
+
+        const st = DP.picker.getState();
+        if (btn.dataset.monthVal) { DP.picker.emitChange(DP.parse(btn.dataset.monthVal), st.mode, st.level); DP.picker.close(); return; }
+        if (btn.dataset.day)      { DP.picker.emitChange(DP.parse(btn.dataset.day), st.mode, st.level); DP.picker.close(); return; }
+        if (btn.dataset.year)     { DP.picker.setYear(st.viewYear + Number(btn.dataset.year)); DP.picker.render(); return; }
+        if (btn.dataset.nav)      { const d = new Date(st.viewYear, st.viewMonth + Number(btn.dataset.nav), 1); DP.picker.setYear(d.getFullYear()); DP.picker.setMonth(d.getMonth()); DP.picker.render(); return; }
+        if (btn.dataset.panel)    { DP.picker.setPanel(btn.dataset.panel); DP.picker.render(); }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', e => {
+        const st = DP.picker.getState();
+        if (!st.pop.hidden && e.target.isConnected && !st.root.contains(e.target)) DP.picker.close();
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', e => {
+        const st = DP.picker.getState();
+        if (e.key === 'Escape' && !st.pop.hidden) { DP.picker.close(); st.toggle?.focus(); }
+    });
+})();
+// --- Announcement Modal & Pagination Controller ---
+(function () {
+    // Teleport modal to document.body so parent card overflow/z-index won't clip it
+    const modalEl = document.getElementById('modalAnnouncementDetail');
+    if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+
+    const card = document.getElementById('boxAnnouncementCard');
+    if (!card) return;
+
+    const perPage = parseInt(card.dataset.perPage || 5, 10);
+    let currentPage = 1;
+
+    function refreshPagination() {
+        const rows = Array.from(document.querySelectorAll('#annList .ann-row'));
+        const totalItems = rows.length;
+        const totalPages = Math.ceil(totalItems / perPage);
+
+        const listEl       = document.getElementById('annList');
+        const emptyStateEl = document.getElementById('annEmptyState');
+        const footerEl     = document.getElementById('annFooter');
+
+        if (totalItems === 0) {
+            if (listEl) listEl.style.display = 'none';
+            if (emptyStateEl) emptyStateEl.style.display = 'block';
+            if (footerEl) footerEl.style.setProperty('display', 'none', 'important');
+            return;
+        }
+
+        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+
+        rows.forEach((row, index) => {
+            const pNum = Math.floor(index / perPage) + 1;
+            row.dataset.page = pNum;
+            row.style.display = pNum === currentPage ? 'flex' : 'none';
+        });
+
+        const pageIndicator = document.getElementById('annPageIndicator');
+        const prevBtn       = document.getElementById('annPrevBtn');
+        const nextBtn       = document.getElementById('annNextBtn');
+
+        if (pageIndicator) pageIndicator.textContent = `Halaman ${currentPage} dari ${totalPages}`;
+        if (prevBtn)       prevBtn.disabled = currentPage === 1;
+        if (nextBtn)       nextBtn.disabled = currentPage === totalPages;
+
+        if (footerEl) footerEl.style.setProperty('display', totalPages > 1 ? 'flex' : 'none', 'important');
+    }
+
+    const prevBtn = document.getElementById('annPrevBtn');
+    const nextBtn = document.getElementById('annNextBtn');
+
+    if (prevBtn) prevBtn.addEventListener('click', () => { currentPage--; refreshPagination(); });
+    if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; refreshPagination(); });
+
+    // Explicit Close Handler (Guarantees modal & backdrop removal)
+    function closeModal() {
+        if (window.jQuery && typeof $('#modalAnnouncementDetail').modal === 'function') {
+            $('#modalAnnouncementDetail').modal('hide');
+        } else if (window.bootstrap && bootstrap.Modal) {
+            const instance = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+            instance.hide();
+        } else {
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            document.body.classList.remove('modal-open');
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        }
+    }
+
+    // Attach explicit click listener to close buttons
+    modalEl?.querySelectorAll('[data-bs-dismiss="modal"], [data-dismiss="modal"]').forEach(btn => {
+        btn.addEventListener('click', closeModal);
+    });
+
+    // Row Click: Populate modal, update AJAX status, and remove row from list
+    document.getElementById('annList')?.addEventListener('click', function (e) {
+        const row = e.target.closest('.ann-row');
+        if (!row) return;
+
+        // 1. Fill Modal Data
+        const annTitle   = document.getElementById('annTitle');
+        const annSender  = document.getElementById('annSender');
+        const annDate    = document.getElementById('annDate');
+        const annContent = document.getElementById('annContent');
+
+        if (annTitle)   annTitle.textContent  = row.dataset.title || 'Pesan Baru';
+        if (annSender)  annSender.textContent = row.dataset.sender || 'System';
+        if (annDate)    annDate.textContent   = row.dataset.date || '';
+        if (annContent) annContent.innerHTML  = row.dataset.body || '<div class="text-muted">Pesan kosong.</div>';
+
+        // 2. Open Modal
+        if (window.jQuery && typeof $('#modalAnnouncementDetail').modal === 'function') {
+            $('#modalAnnouncementDetail').modal('show');
+        } else if (window.bootstrap && bootstrap.Modal) {
+            const instance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            instance.show();
+        }
+
+        // 3. Mark Read via AJAX & remove item row from DOM
+        const messageId = row.dataset.id;
+        if (messageId && !row.dataset.readProcessed) {
+            row.dataset.readProcessed = 'true';
+
+            if (window.APP_URLS && window.APP_URLS.pesanUpdateRead) {
+                const fd = new FormData();
+                fd.append('trx_message_id', messageId);
+                fetch(window.APP_URLS.pesanUpdateRead, {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).catch(() => {});
+            }
+
+            // Animate and remove from DOM
+            row.style.transition = 'all 0.2s ease';
+            row.style.opacity = '0';
+            row.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                row.remove();
+                refreshPagination();
+            }, 200);
+        }
+    });
+
+    refreshPagination();
+})();
+
+// DASHBOARD
+// Calendar
+// ── Calendar Activity ───────────────────────────────────────
+(function () {
+  var CFG = window.CAL_CFG;
+  if (!CFG) return;
+
+  var TYPES  = { company:'Agenda perusahaan', leave:'Cuti / izin', team:'Aktivitas tim', bday:'Ulang Tahun', holiday:'Hari libur' };
+  var MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  var DAYS   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+  var root = document.getElementById('kalender');
+  if (!root) return;
+  var sel  = CFG.focus;
+
+  function esc(t){ var e = document.createElement('div'); e.textContent = t == null ? '' : t; return e.innerHTML; }
+  function fail(msg){ document.getElementById('fc-calendar').innerHTML = '<div class="alert alert-warning mb-0 small">' + msg + '</div>'; }
+
+  function loadScript(src, done){
+    var s = document.createElement('script'); s.src = src; s.onload = done;
+    s.onerror = function(){ if (src === CFG.swal) return done(); fail('Gagal memuat ' + src + ' — periksa path'); };
+    document.head.appendChild(s);
+  }
+
+  function whenJQuery(cb, n){
+    if (window.jQuery) return cb(window.jQuery);
+    if ((n || 0) > 100) return fail('jQuery tidak ditemukan.');
+    setTimeout(function(){ whenJQuery(cb, (n || 0) + 1); }, 50);
+  }
+
+  function boot(){
+    whenJQuery(function ($) {
+      var chain = [];
+      if (!window.moment) chain.push(CFG.moment);
+      if (!$.fn.fullCalendar) chain.push(CFG.fcJs);
+      if (CFG.editable && !window.swal) chain.push(CFG.swal);
+      (function next(){ var s = chain.shift(); if (!s) return init($); loadScript(s, next); })();
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+  function init($){
+    var $cal = $('#fc-calendar');
+
+    var activeFilters = { division: '', branch: '', categories: 'leave,holiday,bday,team' };
+
+    document.addEventListener('kf:change', function (e) {
+      activeFilters.division   = e.detail.division || '';
+      activeFilters.branch     = e.detail.branch || '';
+      activeFilters.categories = e.detail.categories || '';
+      if ($.isFunction($cal.fullCalendar)) $cal.fullCalendar('refetchEvents');
+    });
+
+    function first(ev){ return ev.start.format('YYYY-MM-DD'); }
+    function last(ev){
+      if (!ev.end) return first(ev);
+      var e = ev.allDay ? ev.end.clone().subtract(1, 'day') : ev.end;
+      var s = e.format('YYYY-MM-DD');
+      return s < first(ev) ? first(ev) : s;
+    }
+    function longDate(s){ var d = moment(s, 'YYYY-MM-DD'); return DAYS[d.day()] + ', ' + d.date() + ' ' + MONTHS[d.month()] + ' ' + d.year(); }
+
+    function getStatusBadge(status) {
+      status = (status || '').toUpperCase();
+      switch (status) {
+        case 'CO': case 'AP': case 'APPROVED': case 'Y':
+          return '<span class="badge bg-success text-white" style="font-size:0.65rem; padding: 3px 6px;">Approved</span>';
+        case 'IP': case 'PENDING':
+          return '<span class="badge bg-warning text-dark" style="font-size:0.65rem; padding: 3px 6px;">Pending</span>';
+        case 'DR': case 'DRAFT':
+          return '<span class="badge bg-secondary text-white" style="font-size:0.65rem; padding: 3px 6px;">Draft</span>';
+        case 'VO': case 'RJ': case 'REJECTED': case 'N':
+          return '<span class="badge bg-danger text-white" style="font-size:0.65rem; padding: 3px 6px;">Rejected</span>';
+        default:
+          return '<span class="badge bg-info text-white" style="font-size:0.65rem; padding: 3px 6px;">' + esc(status) + '</span>';
+      }
+    }
+
+    function card(ev) {
+      var ext = ev.extendedProps || {};
+
+      if (ev.type === 'bday') {
+        var empName  = ext.employee || ev.title || 'Karyawan';
+        var empNik   = ext.nik ? ' (' + ext.nik + ')' : '';
+        var branch   = ext.branch || '-';
+        var division = ext.division || '-';
+        return '<div class="k-card-box t-bday" style="border-left-color: #8b5cf6;">' +
+          '<div class="k-card-head">' +
+            '<div class="k-card-head-title"><span class="k-time-tag" style="color: #8b5cf6;"><i class="fas fa-birthday-cake me-1"></i> [Ulang Tahun]</span> <b>' + esc(empName) + '</b></div>' +
+            '<span class="badge text-white" style="font-size:0.65rem; padding: 3px 6px; background-color: #8b5cf6;">Birthday</span>' +
+          '</div>' +
+          '<div class="k-card-body-content">' +
+            '<div class="k-card-row"><strong>Employee:</strong> ' + esc(empName) + esc(empNik) + '</div>' +
+            '<div class="k-card-row"><strong>Branch:</strong> ' + esc(branch) + ' <span class="k-sep">|</span> <strong>Division:</strong> ' + esc(division) + '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      if (ev.type === 'holiday') {
+        return '<div class="k-card-box t-holiday" style="border-left-color: #dc2626;">' +
+          '<div class="k-card-head">' +
+            '<div class="k-card-head-title"><span class="k-time-tag" style="color:#dc2626;"><i class="fas fa-calendar-alt me-1"></i> [Hari Libur]</span> <b>' + esc(ev.title) + '</b></div>' +
+            '<span class="badge bg-danger text-white" style="font-size:0.65rem; padding: 3px 6px;">Libur Nasional</span>' +
+          '</div>' +
+        '</div>';
+      }
+
+      var docType   = ext.doctype_name || 'Pengajuan';
+      var docNo     = ext.documentno || ev.id || '-';
+      var empName   = ext.employee || '-';
+      var empNik    = ext.nik ? ' (' + ext.nik + ')' : '';
+      var branch    = ext.branch || '-';
+      var division  = ext.division || '-';
+      var reason    = ext.reason || ev.place || '-';
+      var status    = ext.status || 'CO';
+
+      return '<div class="k-card-box t-' + ev.type + '">' +
+        '<div class="k-card-head">' +
+          '<div class="k-card-head-title"><b>' + esc(docType) + '</b> - #' + esc(docNo) + '</div>' +
+          '<div>' + getStatusBadge(status) + '</div>' +
+        '</div>' +
+        '<div class="k-card-body-content">' +
+          '<div class="k-card-row"><strong>Employee:</strong> ' + esc(empName) + esc(empNik) + '</div>' +
+          '<div class="k-card-row"><strong>Branch:</strong> ' + esc(branch) + ' <span class="k-sep">|</span> <strong>Division:</strong> ' + esc(division) + '</div>' +
+          '<div class="k-card-row"><strong>Submission Type:</strong> ' + esc(docType) + '</div>' +
+          '<div class="k-card-row text-truncate-2"><strong>Reason:</strong> ' + esc(reason) + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderDetail(){
+      var list = $cal.fullCalendar('clientEvents', function (ev) { return sel >= first(ev) && sel <= last(ev); });
+      document.getElementById('k-detail-title').textContent = longDate(sel);
+      document.getElementById('k-detail').innerHTML = list.length ? list.map(card).join('') : '<p class="k-empty">Belum ada aktivitas di tanggal ini.</p>';
+    }
+
+    function markSelected(){
+      $cal.find('.is-selected').removeClass('is-selected');
+      $cal.find('.fc-bg td.fc-day[data-date="' + sel + '"]').addClass('is-selected');
+    }
+
+    function pick(d){ sel = d; markSelected(); renderDetail(); }
+
+    function paintDots(){
+      var view = $cal.fullCalendar('getView');
+      $cal.find('.k-dots').remove();
+      $cal.find('.k-hol').removeClass('k-hol').removeAttr('title');
+      if (!view || view.name !== 'month') return;
+
+      var has = {}, companyEvents = {};
+      $cal.fullCalendar('clientEvents').forEach(function (ev) {
+        if (!TYPES[ev.type]) return;
+        for (var d = moment(first(ev)), end = moment(last(ev)); !d.isAfter(end, 'day'); d.add(1, 'day')) {
+          var k = d.format('YYYY-MM-DD');
+          if (ev.type === 'company' || ev.type === 'holiday') { companyEvents[k] = ev.title; continue; }
+          has[k] = has[k] || {};
+          has[k][ev.type] = (has[k][ev.type] || 0) + 1;
+        }
+      });
+
+      Object.keys(companyEvents).forEach(function (k) {
+        $cal.find('[data-date="' + k + '"]').addClass('k-hol').attr('title', companyEvents[k]);
+      });
+
+      var SHORT = { leave: 'Cuti', team: 'Tim', bday: 'Ultah' };
+
+      $cal.find('td.fc-day-top[data-date], td.fc-day-number[data-date]').each(function () {
+        var k = this.getAttribute('data-date'), c = has[k] || {};
+        var html = Object.keys(SHORT).filter(function (t) { return c[t]; }).map(function (t) {
+          return '<div class="k-row t-' + t + '" title="' + TYPES[t] + ': ' + c[t] + '"><i></i><b>' + c[t] + '</b><span>' + SHORT[t] + '</span></div>';
+        }).join('');
+
+        if (companyEvents[k]) {
+          html = '<div class="k-row k-holrow" title="' + esc(companyEvents[k]).replace(/"/g, '&quot;') + '"><span>' + esc(companyEvents[k]) + '</span></div>' + html;
+        }
+        if (html) $(this).append('<div class="k-dots">' + html + '</div>');
+      });
+    }
+
+    var VIEW = CFG.lockMonth ? 'month' : ({ day: 'agendaDay', week: 'agendaWeek', month: 'month' }[CFG.mode] || 'month');
+
+    $cal.fullCalendar({
+      header: { left: '', center: 'title', right: 'month,listMonth' },
+      buttonText: { month: 'Kalender', list: 'Agenda' },
+      views: { listMonth: { buttonText: 'Agenda' } },
+      allDayText: 'Seharian',
+      noEventsMessage: 'Tidak ada aktivitas',
+      monthNames: MONTHS,
+      dayNames: DAYS,
+      dayNamesShort: ['Min','Sen','Sel','Rab','Kam','Jum','Sab'],
+      defaultView: VIEW,
+      defaultDate: CFG.focus,
+      firstDay: 1,
+      height: 'auto',
+      fixedWeekCount: false,
+      eventLimit: true,
+      nowIndicator: true,
+      editable: false,
+
+      events: function (start, end, timezone, callback) {
+        $.ajax({
+          url: CFG.eventsUrl,
+          dataType: 'json',
+          data: {
+            start: start.format('YYYY-MM-DD'),
+            end: end.format('YYYY-MM-DD'),
+            level: $('[data-dp]').attr('data-level') || 'team',
+            division: activeFilters.division,
+            branch: activeFilters.branch,
+            categories: activeFilters.categories
+          },
+          success: function (doc) {
+            var formatted = (doc || []).map(function(item) {
+              var ext = item.extendedProps || {};
+              return {
+                id: item.id || '',
+                documentno: item.id || item.documentno || '',
+                doctype: item.doctype || item.doctype_name || '',
+                title: item.title || '',
+                start: item.start,
+                end: item.end || null,
+                allDay: item.allDay || false,
+                type: item.type || 'team',
+                status: item.docstatus || ext.status || 'CO',
+                employee: item.employee || ext.employee || item.employee_name || '',
+                branch: item.branch || ext.branch || '',
+                submissionType: item.submissiontype_name || item.doctype_name || '',
+                reason: item.place || ext.reason || item.reason || '',
+                className: item.className || ['t-' + (item.type || 'team')],
+                extendedProps: ext
+              };
+            });
+            callback(formatted);
+          },
+          error: function () { callback([]); }
+        });
+      },
+
+      dayClick:   function (date) { pick(date.format('YYYY-MM-DD')); },
+      eventClick: function (ev)   { pick(first(ev)); return false; },
+
+      eventAfterAllRender: function () { markSelected(); paintDots(); renderDetail(); },
+      viewRender: function () { markSelected(); paintDots(); }
+    });
+
+    $cal.find('.fc-toolbar').after($('.k-legend-bar'));
+    $cal.find('.fc-toolbar .fc-left').html($('#fc-filter-template').html());
+
+    document.addEventListener('dp:change', function (e) {
+      var viewMap = { day: 'agendaDay', week: 'agendaWeek', month: 'month' };
+      if (!CFG.lockMonth && viewMap[e.detail.mode]) {
+        $cal.fullCalendar('changeView', viewMap[e.detail.mode]);
+      }
+      $cal.fullCalendar('gotoDate', e.detail.date);
+      pick(e.detail.date);
+    });
+  }
+})();
+
+// DASHBOARD
+// calendar_filter
+(function () {
+  if (window.__kfBound) return;
+  window.__kfBound = true;
+
+  var filterState = {
+    categories: new Set(['leave', 'holiday', 'bday', 'team']),
+    division: '',
+    branch: ''
+  };
+
+  var filterDebounceTimer = null;
+
+  function syncUI() {
+    document.querySelectorAll('.kf').forEach(function (box) {
+      var activeCount = 0;
+
+      // 1. Sync Chips
+      box.querySelectorAll('.kf-chip').forEach(function (chip) {
+        var type = chip.dataset.type;
+        var isActive = filterState.categories.has(type);
+
+        chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        chip.classList.toggle('is-active', isActive);
+
+        if (!isActive) activeCount++;
+      });
+
+      // 2. Sync Select Values & Active Count
+      var selDiv = box.querySelector('.kf-select-division');
+      var selBr  = box.querySelector('.kf-select-branch');
+
+      if (selDiv) {
+        selDiv.value = filterState.division;
+        if (filterState.division) activeCount++;
+      }
+      if (selBr) {
+        selBr.value = filterState.branch;
+        if (filterState.branch) activeCount++;
+      }
+
+      // 3. Sync Badge
+      var b = box.querySelector('.kf-badge');
+      if (b) { 
+        b.textContent = activeCount; 
+        b.hidden = (activeCount === 0); 
+      }
+    });
+  }
+
+  function emitFilterChange() {
+    var catsArray = Array.from(filterState.categories);
+    var payload = {
+      division:   filterState.division,
+      branch:     filterState.branch,
+      categories: catsArray.length > 0 ? catsArray.join(',') : 'none'
+    };
+
+    document.dispatchEvent(new CustomEvent('kf:change', {
+      bubbles: true,
+      detail: payload
+    }));
+  }
+
+  function debouncedEmit() {
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(function () {
+      emitFilterChange();
+    }, 200);
+  }
+
+  // Global Click Listener
+  document.addEventListener('click', function (e) {
+    // 1. Chip Click
+    var chip = e.target.closest('.kf-chip');
+    if (chip) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      var type = chip.dataset.type;
+      if (filterState.categories.has(type)) {
+        filterState.categories.delete(type);
+      } else {
+        filterState.categories.add(type);
+      }
+
+      syncUI();
+      debouncedEmit();
+      return;
+    }
+
+    // 2. Toggle Panel
+    var toggle = e.target.closest('[data-kf-toggle]');
+    document.querySelectorAll('.kf.is-open').forEach(function (box) {
+      if (!box.contains(e.target)) {
+        box.classList.remove('is-open');
+        var t = box.querySelector('[data-kf-toggle]');
+        if (t) t.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    if (toggle) {
+      var box = toggle.closest('.kf');
+      var open = box.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+      var panel = box.querySelector('.kf-panel');
+      if (panel && open) {
+        var rect = panel.getBoundingClientRect();
+        if (rect.right > window.innerWidth - 16) {
+          panel.classList.add('align-right');
+        } else {
+          panel.classList.remove('align-right');
+        }
+      }
+      return;
+    }
+
+    // 3. Reset Button
+    if (e.target.closest('.kf-btn-reset')) {
+      e.preventDefault();
+
+      filterState.categories = new Set(['leave', 'holiday', 'bday', 'team']);
+      filterState.division = '';
+      filterState.branch = '';
+
+      syncUI();
+      debouncedEmit();
+    }
+  });
+
+  // Global Change Listener for Select Dropdowns
+  document.addEventListener('change', function (e) {
+    var selDiv = e.target.closest('.kf-select-division');
+    var selBr  = e.target.closest('.kf-select-branch');
+
+    if (selDiv) filterState.division = selDiv.value;
+    if (selBr)  filterState.branch   = selBr.value;
+
+    if (selDiv || selBr) {
+      syncUI();
+      debouncedEmit();
+    }
+  });
+
+  // Initial Sync
+  setTimeout(syncUI, 50);
+})();
