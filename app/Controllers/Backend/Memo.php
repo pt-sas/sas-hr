@@ -27,7 +27,6 @@ class Memo extends BaseController
         $this->request = Services::request();
         $this->model = new M_Memo($this->request);
         $this->entity = new \App\Entities\Memo();
-        $this->db = db_connect();
     }
 
     public function index()
@@ -481,133 +480,53 @@ class Memo extends BaseController
     {
         $mEmployee = new M_Employee($this->request);
         $list = $this->model->find($id);
-        $employee = $mEmployee->where($mEmployee->primaryKey, $list->md_employee_id)->first();
+        $employee = $mEmployee->where($mEmployee->primaryKey, $list->created_by)->first();
 
-        // 1. Memo level
-        $memoLevel = $list->memolevel ?? 1;
-        // HR Creator
-        $createdByName  = '-';$hrCreatorEmpId = null;
+        $memosplit = preg_split('/(?=Pemotongan|Sebanyak|Total)/', $list->memocontent);
 
-        if (!empty($list->created_by)) {
-            $userRow =$this->db->table('sys_user u')
-                ->select('u.name as user_name, u.username, e.md_employee_id, e.fullname')
-                ->join('md_employee e', 'e.md_employee_id = u.md_employee_id', 'left')
-                ->where('u.sys_user_id', $list->created_by)
-                ->get()
-                ->getRow();
 
-            if ($userRow) {
-                $hrCreatorEmpId =$userRow->md_employee_id;
-                $createdByName  =$userRow->fullname ?? $userRow->user_name ?? $userRow->username ?? '-';
-            }
-        }
-        // Disetujui oleh (HR Manager Name)
-        $hrManagerName = '-';
-        if ($hrCreatorEmpId) {$hrMgrId = $mEmployee->getEmployeeManagerID($hrCreatorEmpId);
-            if ($hrMgrId > 0) {$hrMgrEmp = (new M_Employee($this->request))->find($hrMgrId);
-                if ($hrMgrEmp) {
-                    $hrManagerName =$hrMgrEmp->fullname;
-                }
-            }
-        }
-        // Manager Ybs (Issued Employee's Manager Name)
-        $targetManagerName = '-';
-        if (!empty($list->md_employee_id)) {$targetMgrId = $mEmployee->getEmployeeManagerID($list->md_employee_id);
-            if ($targetMgrId > 0) {$targetMgrEmp = (new M_Employee($this->request))->find($targetMgrId);
-                if ($targetMgrEmp) {
-                    $targetManagerName =$targetMgrEmp->fullname;
-                }
-            }
-        }
-        // Karyawan Ybs (Issued Target Employee Name)
-        $targetEmployeeName = '-';
-        if (!empty($list->md_employee_id)) {$targetEmp = (new M_Employee($this->request))->find($list->md_employee_id);
-            if ($targetEmp) {
-                $targetEmployeeName =$targetEmp->fullname;
-            }
-        }
+        //bagian PF
+        $pdf = new TCPDF('P', PDF_UNIT, 'A4', true, 'UTF-8', false);
 
-        // Split memo content & trim whitespace
-        $memosplit = preg_split('/(?=Pemotongan|Sebanyak|Total)/', $list->memocontent ?? '');
-        $part1     = isset($memosplit[1]) ? trim($memosplit[1]) : '';
-        $part2     = isset($memosplit[2]) ? trim($memosplit[2]) : '';
-        $part3     = isset($memosplit[3]) ? trim($memosplit[3]) : '';
-
-        // TCPDF Configuration - A5 Landscape (210mm x 148mm)
-        $pdf = new TCPDF('L', PDF_UNIT, 'A5', true, 'UTF-8', false);
         $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
-        $pdf->SetMargins(10, 10, 10); // 10mm margins = 190mm printable width
-        $pdf->SetAutoPageBreak(true, 8);
         $pdf->AddPage();
-
-        // 1. Header: Company Name & Document No
-        $pdf->setFont('helvetica', 'B', 11);
-        $pdf->Cell(120, 0, 'PT. SAHABAT ABADI SEJAHTERA', 0, 0, 'L');
-        $pdf->setFont('helvetica', '', 9.5);
-        $pdf->Cell(70, 0, 'No Urut : ' . $list->documentno, 0, 1, 'R');
-        $pdf->Ln(10);
-
-        // 2. Title
-        $pdf->setFont('times', 'B', 16);
-        $pdf->Cell(0, 0, 'MEMO SDM ' . $memoLevel, 0, 1, 'C');
-        $pdf->Ln(10);
-
-        // 3. Tanggal Pembuatan
-        $pdf->setFont('helvetica', '', 9.5);
-        $pdf->Cell(34, 0, 'Tanggal Pembuatan', 0, 0, 'L');
-        $pdf->Cell(4, 0, ':', 0, 0, 'L');
-        $pdf->Cell(0, 0, format_dmy($list->memodate, '-'), 0, 1, 'L');
-        $pdf->Ln(2);
-
-        // 4. Isi Memo
-        $pdf->setFont('helvetica', '', 9.5);
-        $pdf->Cell(0, 0, 'Isi Memo :', 0, 1, 'L');
+        $pdf->Cell(140, 0, 'pt. sahabat abadi sejahtera', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(50, 0, 'No Form : ' . $list->documentno, 0, 1, 'L', false, '', 0, false);
+        $pdf->setFont('helvetica', 'B', 20);
+        $pdf->Cell(0, 20, 'MEMO SDM', 0, 1, 'C');
+        $pdf->setFont('helvetica', '', 12);
+        //Ini untuk bagian field nama dan tanggal pengajuan
+        $pdf->Cell(40, 0, 'Tanggal Pembuatan', 0, 0, 'L', false, '', 0, false);
+        $pdf->Cell(90, 0, ': ' . format_dmy($list->memodate, '-'), 0, 1, 'L', false, '', 0, false);
+        $pdf->Ln(5);
+        //Ini untuk bagian field divisi dan Tanggal diterima
+        $pdf->Cell(40, 0, 'Isi Memo :', 0, 1, 'L', false, '', 0, false);
+        // $pdf->Cell(3, 0, ':', 0, 1, 'L');
         $pdf->Ln(1);
-
-        if ($part1) {
-            $pdf->setFont('helvetica', '', 9.5);
-            $pdf->MultiCell(0, 0, $part1, 0, 'L', false, 1);
-        }
-        if ($part2) {
-            $pdf->setFont('helvetica', 'B', 9.5);
-            $pdf->MultiCell(0, 0, $part2, 0, 'L', false, 1);
-        }
-        if ($part3) {
-            $pdf->setFont('helvetica', '', 9.5);
-            $pdf->MultiCell(0, 0, $part3, 0, 'L', false, 1);
-        }
-
+        $pdf->MultiCell(0, 0, $memosplit[1], 0, '', false, 1, null, null, false, 0, false, false, 20);
+        // $pdf->Ln(1);
+        $pdf->Cell(0, 0, $memosplit[2], 0, 1, 'L', false, '', 0, false);
+        // $pdf->Ln(1);
+        $pdf->Cell(0, 0, $memosplit[3], 0, 1, 'L', false, '', 0, false);
+        // $pdf->MultiCell(0, 20, $memosplit[1], 0, '', false, 1, null, null, false, 0, false, false, 20);
+        $pdf->Ln(5);
+        //Ini bagian tanggal ijin dan jam
+        $pdf->Cell(10, 0, 'Ket :', 0, 0, 'L', false, '', 0, false);
+        $pdf->MultiCell(0, 10, $list->description, 0, '', false, 1, null, null, false, 0, false, false, 20);
         $pdf->Ln(10);
-
-        // 5. Keterangan
-        $pdf->setFont('helvetica', '', 9.5);
-        $pdf->Cell(10, 0, 'Ket', 0, 0, 'L');
-        $pdf->Cell(4, 0, ':', 0, 0, 'L');
-        $pdf->MultiCell(0, 0, trim($list->description ?? ''), 0, 'L', false, 1);
-        
-        $pdf->Ln(28);
-
-        // 6. Signatures (4 Columns @ 47.5mm = 190mm total width)
-        $colWidth = 47.5;
-        $pdf->setFont('helvetica', '', 9);
-
-        // Header Titles
-        $pdf->Cell($colWidth, 0, 'Dibuat oleh,', 0, 0, 'C');
-        $pdf->Cell($colWidth, 0, 'Diketahui oleh,', 0, 0, 'C');
-        $pdf->Cell($colWidth, 0, 'Manajer Ybs,', 0, 0, 'C');
-        $pdf->Cell($colWidth, 0, 'Kary. Ybs,', 0, 1, 'C');
-
-        $pdf->Ln(14); // Spacing for physical signature
-
-        // Signature Names
-        $pdf->setFont('helvetica', '', 8.5);
-        $pdf->Cell($colWidth, 0, $createdByName, 0, 0, 'C');
-        $pdf->Cell($colWidth, 0, $hrManagerName, 0, 0, 'C');
-        $pdf->Cell($colWidth, 0, $targetManagerName, 0, 0, 'C');
-        $pdf->Cell($colWidth, 0, $targetEmployeeName, 0, 1, 'C');
+        //Bagian ttd
+        $pdf->setFont('helvetica', '', 10);
+        $pdf->Cell(48, 0, 'Dibuat oleh,', 0, 0, 'C');
+        $pdf->Cell(48, 0, 'Disetujui oleh,', 0, 0, 'C');
+        $pdf->Cell(48, 0, 'Mgr. Ybs,', 0, 0, 'C');
+        $pdf->Cell(48, 0, 'Kary. Ybs,', 0, 0, 'C');
+        $pdf->Ln(25);
+        $pdf->Cell(48, 0, $employee->fullname, 0, 0, 'C');
+        $pdf->Cell(48, 0, '(                          )', 0, 0, 'C');
+        $pdf->Cell(48, 0, '(                          )', 0, 0, 'C');
+        $pdf->Cell(48, 0, '(                          )', 0, 1, 'C');
 
         $this->response->setContentType('application/pdf');
-        $pdf->Output('detail-laporan.pdf', 'I');
+        $pdf->Output('detail-laporan,pdf', 'I');
     }
 }
