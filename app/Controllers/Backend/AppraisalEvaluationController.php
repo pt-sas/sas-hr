@@ -1,0 +1,1424 @@
+<?php
+
+namespace App\Controllers\Backend;
+
+use App\Controllers\BaseController;
+use App\Entities\Appraisal;
+use App\Models\M_Appraisal;
+use App\Models\M_AppraisalCycle;
+use App\Models\M_AppraisalResponse;
+use App\Models\M_Employee;
+use App\Services\AppraisalScoringService;
+use App\Services\AppraisalWorkflowService;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
+use Exception;
+
+class AppraisalEvaluationController extends BaseController
+{
+    protected AppraisalScoringService $scoringService;
+    protected AppraisalWorkflowService $workflowService;
+    protected M_AppraisalCycle $cycleModel;
+    protected M_Employee $mEmployee;
+
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
+    {
+        parent::initController($request, $response, $logger);
+
+        $this->model           = new M_Appraisal();
+        $this->modelDetail     = new M_AppraisalResponse();
+        $this->entity          = new Appraisal();
+        $this->scoringService  = new AppraisalScoringService();
+        $this->workflowService = new AppraisalWorkflowService();
+        $this->cycleModel      = new M_AppraisalCycle();
+        $this->mEmployee       = new M_Employee();
+        $this->primaryKey      = $this->model->primaryKey ?? 'md_appraisal_id';
+        $this->db              = \Config\Database::connect();
+    }
+
+    /**
+     * Helper to resolve current logged-in employee ID.
+     */
+    protected function getCurrentEmployeeId(): int
+    {
+        $empId = (int) ($this->session->get('md_employee_id') ?? 0);
+        if ($empId <= 0) {
+            $userId = (int) ($this->access->getSessionUser() ?? 0);
+            if ($userId > 0) {
+                $user = $this->db->table('sys_user')
+                    ->select('md_employee_id')
+                    ->where('sys_user_id', $userId)
+                    ->get()
+                    ->getRowArray();
+                $empId = (int) ($user['md_employee_id'] ?? 0);
+            }
+        }
+        return $empId;
+    }
+
+    /**
+     * GET /penilaian
+     * Entry point: Renders Task List Hub or Empty State
+     */
+    public function index()
+    {
+        $empId = $this->getCurrentEmployeeId();
+
+        // 1. Fetch active OPEN cycle
+        $activeCycle = $this->cycleModel->where('status', M_AppraisalCycle::STATUS_OPEN)
+                                        ->where('isactive', 'Y')
+                                        ->first();
+
+        // 2. Count tasks per role
+        $countEvaluator = $this->model->where('snapshot_evaluator_id', $empId)
+                                      ->where('isactive', 'Y')
+                                      ->where('status', M_Appraisal::STATUS_DRAFT_EVALUATOR)
+                                      ->countAllResults();
+
+        $countGm = $this->model->where('snapshot_gm_id', $empId)
+                               ->where('isactive', 'Y')
+                               ->where('status', M_Appraisal::STATUS_REVIEW_GM)
+                               ->countAllResults();
+
+        $countEmp = $this->model->where('md_employee_id', $empId)
+                                ->where('isactive', 'Y')
+                                ->countAllResults();
+
+        $totalActiveTasks = $countEvaluator + $countGm;
+
+        // If no cycle and no active tasks and no employee appraisals, render empty state
+        if (! $activeCycle && $totalActiveTasks === 0 && $countEmp === 0) {
+            return $this->template->render('masterdata/appraisal-filling/v_appraisal_empty');
+        }
+
+        // 3. Resolve user levelling and tab permissions
+        $userId = (int) ($this->session->get('sys_user_id') ?? 0);
+        $roleId = (int) ($this->session->get('sys_role_id') ?? 0);
+
+        $empLevel = null;
+        if ($empId > 0) {
+            $empRow = $this->db->table('md_employee e')
+                ->select('l.name as level_name')
+                ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+                ->where('e.md_employee_id', $empId)
+                ->get()->getRow();
+            $empLevel = strtoupper($empRow->level_name ?? '');
+        }
+
+        $isAdmin = ($empId <= 0) || ($roleId === 1) || (bool) $this->access->getUserRoleName($userId, 'awn Admin');
+
+        // Tab permissions
+        $canEvaluator = $isAdmin || in_array($empLevel, ['MANAGER', 'GM', 'DIREKSI']) || $countEvaluator > 0;
+        $canGm        = $isAdmin || in_array($empLevel, ['GM', 'DIREKSI']) || $countGm > 0;
+        $canEmployee  = $isAdmin || $empId > 0;
+
+        // Determine default tab (Smart landing based on pending task priorities)
+        $defaultTab = 'EVALUATOR';
+        if ($countEvaluator === 0 && $countGm > 0) {
+            $defaultTab = 'GM';
+        } elseif ($countEvaluator === 0 && $countGm === 0 && $countEmp > 0) {
+            $defaultTab = 'EMPLOYEE';
+        } elseif (! $canEvaluator && $canGm) {
+            $defaultTab = 'GM';
+        } elseif (! $canEvaluator && $canEmployee) {
+            $defaultTab = 'EMPLOYEE';
+        }
+
+        // 4. Resolve simulated debug date & active workflow stage
+        $debugDate    = $this->session->get('appraisal_debug_date');
+        $currentDate  = $debugDate ?: date('Y-m-d');
+        $currentStage = ($activeCycle && method_exists($activeCycle, 'getCurrentStage')) 
+            ? $activeCycle->getCurrentStage($currentDate) 
+            : 2;
+
+        $data = [
+            'active_cycle'    => $activeCycle,
+            'count_evaluator' => $countEvaluator,
+            'count_gm'        => $countGm,
+            'count_employee'  => $countEmp,
+            'current_emp_id'  => $empId,
+            'can_evaluator'   => $canEvaluator,
+            'can_gm'          => $canGm,
+            'can_employee'    => $canEmployee,
+            'default_tab'     => $defaultTab,
+            'current_date'    => $currentDate,
+            'is_debug_date'   => ! empty($debugDate),
+            'current_stage'   => $currentStage,
+        ];
+
+        return $this->template->render('masterdata/appraisal-filling/v_appraisal_task_list', $data);
+    }
+
+    /**
+     * GET/POST /penilaian/showAll
+     * Supports both Action F GET header queries and Datatable POST fetches
+     */
+    public function showAll()
+    {
+        if ($this->request->getMethod(true) === 'GET') {
+            return $this->response->setJSON(message('success', true, ['header' => []]));
+        }
+
+        if ($this->request->getMethod(true) === 'POST') {
+            try {
+                $empId = $this->getCurrentEmployeeId();
+
+                // 1. Early parse of DataTable form filters (Process.js sends form: [ {name, value}, ... ])
+                $formFilter = $this->request->getPost('form') ?? [];
+                $formValues = [];
+                if (is_array($formFilter)) {
+                    foreach ($formFilter as $row) {
+                        $name  = $row['name']  ?? null;
+                        $value = $row['value'] ?? null;
+                        if ($name && $value !== '' && $value !== null) {
+                            $formValues[$name] = $value;
+                        }
+                    }
+                }
+
+                $roleTab = $formValues['role_tab'] ?? $this->request->getPost('role_tab') ?? 'EVALUATOR';
+
+                $builder = $this->db->table('md_appraisal a')
+                    ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_cycle_id, a.status, a.performance_score, a.final_score, a.rating, a.evaluator_submitted_at, a.gm_reviewed_at, a.finalized_at,
+                              a.snapshot_evaluator_id, a.snapshot_gm_id,
+                              e.value as nik, e.fullname as employee_name,
+                              ev.value as evaluator_nik, ev.fullname as evaluator_name,
+                              gm.value as gm_nik, gm.fullname as gm_name,
+                              d.name as division_name, p.name as position_name, l.name as level_name,
+                              c.title as cycle_title, c.deadline_filling, c.deadline_review, c.deadline_reading, c.evaluator_due_date, c.gm_due_date')
+                    ->join('md_employee e', 'e.md_employee_id = a.md_employee_id', 'left')
+                    ->join('md_employee ev', 'ev.md_employee_id = a.snapshot_evaluator_id', 'left')
+                    ->join('md_employee gm', 'gm.md_employee_id = a.snapshot_gm_id', 'left')
+                    ->join('md_division d', 'd.md_division_id = a.snapshot_division_id', 'left')
+                    ->join('md_position p', 'p.md_position_id = a.snapshot_position_id', 'left')
+                    ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+                    ->join('md_appraisal_cycle c', 'c.md_appraisal_cycle_id = a.md_appraisal_cycle_id', 'left')
+                    ->where('a.isactive', 'Y');
+
+                // Role Tab Scope (If Admin/System $empId <= 0, don't filter to empty)
+                if ($empId > 0) {
+                    $userId  = (int) ($this->session->get('sys_user_id') ?? 0);
+                    $roleId  = (int) ($this->session->get('sys_role_id') ?? 0);
+                    $isAdmin = ($roleId === 1) || (bool) $this->access->getUserRoleName($userId, 'awn Admin');
+
+                    if (! $isAdmin) {
+                        $empRow = $this->db->table('md_employee e')
+                            ->select('l.name as level_name')
+                            ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+                            ->where('e.md_employee_id', $empId)
+                            ->get()->getRow();
+                            
+                        $empLevel = strtoupper($empRow->level_name ?? '');
+
+                        $canEvaluator = in_array($empLevel, ['MANAGER', 'GM', 'DIREKSI']);
+                        $canGm        = in_array($empLevel, ['GM', 'DIREKSI']);
+
+                        if ($roleTab === 'EVALUATOR' && ! $canEvaluator) {
+                            $hasEvalTasks = $this->model->where('snapshot_evaluator_id', $empId)->countAllResults() > 0;
+                            if (! $hasEvalTasks) {
+                                $roleTab = 'EMPLOYEE';
+                            }
+                        } elseif ($roleTab === 'GM' && ! $canGm) {
+                            $hasGmTasks = $this->model->where('snapshot_gm_id', $empId)->countAllResults() > 0;
+                            if (! $hasGmTasks) {
+                                $roleTab = 'EMPLOYEE';
+                            }
+                        }
+                    }
+
+                    if ($roleTab === 'GM') {
+                        $builder->where('a.snapshot_gm_id', $empId);
+                    } elseif ($roleTab === 'EMPLOYEE') {
+                        $builder->where('a.md_employee_id', $empId);
+                    } else {
+                        // Default EVALUATOR
+                        $builder->where('a.snapshot_evaluator_id', $empId);
+                    }
+                }
+
+                // Filter search
+                $search = $this->request->getPost('search')['value'] ?? null;
+                if (!empty(trim($search))) {
+                    $builder->groupStart()
+                        ->like('e.fullname', trim($search))
+                        ->orLike('e.value', trim($search))
+                        ->orLike('ev.fullname', trim($search))
+                        ->orLike('c.title', trim($search))
+                        ->groupEnd();
+                }
+
+                // Form Filters (Status, Cycle ID, etc.)
+                if (isset($formValues['status'])) {
+                    $builder->where('a.status', $formValues['status']);
+                }
+                if (isset($formValues['cycle_id'])) {
+                    $builder->where('a.md_appraisal_cycle_id', (int) $formValues['cycle_id']);
+                }
+
+                $totalFiltered = (clone $builder)->countAllResults(false);
+
+                // Sorting
+                $builder->orderBy('a.md_appraisal_id', 'DESC');
+
+                // Pagination
+                $start  = (int) ($this->request->getPost('start') ?? 0);
+                $length = (int) ($this->request->getPost('length') ?? 10);
+                if ($length > 0) {
+                    $builder->limit($length, $start);
+                }
+
+                $list = $builder->get()->getResultArray();
+                $data = [];
+                $number = $start;
+
+                foreach ($list as $value) {
+                    $number++;
+                    $id     = $value['md_appraisal_id'];
+                    $status = $value['status'] ?? 'DRAFT_EVALUATOR';
+                    $score  = $value['final_score'] !== null ? number_format((float) $value['final_score'], 2) : '-';
+
+                    // Status Badge
+                    $statusBadge = $this->renderStatusBadge($status);
+
+                    // Workflow Stage progress dots
+                    $stageProgress = $this->renderStageProgress($status);
+
+                    // Contextual Action Buttons based on Role & Status
+                    $actionBtn = $this->renderActionButton($value, $roleTab, $empId);
+
+                    // Avatar Initials
+                    $empName  = esc($value['employee_name'] ?? '-');
+                    $nik      = esc($value['nik'] ?? '-');
+                    $level    = esc($value['level_name'] ?? '');
+                    $divName  = esc($value['division_name'] ?? '-');
+                    $posName  = esc($value['position_name'] ?? '-');
+                    $cycTitle = esc($value['cycle_title'] ?? '-');
+                    $evalName = esc($value['evaluator_name'] ?? '-');
+                    $evalNik  = esc($value['evaluator_nik'] ?? '');
+
+                    $karyawanCol = '<div>' .
+                        '<p class="mb-0 font-weight-bold">' . $empName . '</p>' .
+                        '<small class="text-muted">' . $nik . ($level ? ' &middot; ' . $level : '') . '</small>' .
+                    '</div>';
+
+                    $divisiCol = '<div><p class="mb-0 font-weight-bold">' . $divName . '</p><small class="text-muted">' . $posName . '</small></div>';
+
+                    $evaluatorCol = '<div><p class="mb-0 font-weight-bold">' . $evalName . '</p>' . ($evalNik ? '<small class="text-muted">' . $evalNik . '</small>' : '') . '</div>';
+
+                    $row = [];
+                    $row[] = $id;                                    // [0] ID (hidden)
+                    $row[] = $number;                                // [1] No
+                    $row[] = $karyawanCol;                           // [2] Karyawan
+                    $row[] = $divisiCol;                             // [3] Divisi & Posisi
+                    $row[] = $evaluatorCol;                          // [4] Penilai (Evaluator)
+                    $row[] = '<strong>' . $cycTitle . '</strong>';   // [5] Siklus Penilaian
+                    $row[] = $stageProgress;                         // [6] Tahapan Progress
+                    $row[] = $statusBadge;                           // [7] Status
+                    $row[] = $actionBtn;                             // [8] Aksi Buttons
+
+                    $data[] = $row;
+                }
+
+                return $this->response->setJSON([
+                    'draw'            => (int) ($this->request->getPost('draw') ?? 1),
+                    'recordsTotal'    => $totalFiltered,
+                    'recordsFiltered' => $totalFiltered,
+                    'data'            => $data,
+                ]);
+
+            } catch (\Throwable $e) {
+                return $this->response->setJSON([
+                    'draw'            => (int) ($this->request->getPost('draw') ?? 1),
+                    'recordsTotal'    => 0,
+                    'recordsFiltered' => 0,
+                    'data'            => [],
+                    'error'           => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * GET /penilaian/fill/(:num)
+     * Screen: Dynamic Form Filling Page
+     */
+    public function fill($id = null)
+    {
+        $appraisal = $this->model->find((int) $id);
+
+        if (! $appraisal) {
+            return redirect()->to(base_url('penilaian'))->with('error', 'Form penilaian tidak ditemukan.');
+        }
+
+        if ($appraisal->status === M_Appraisal::STATUS_FINALIZED) {
+            return redirect()->to(base_url('penilaian/complete/' . $id));
+        }
+
+        $empId = $this->getCurrentEmployeeId();
+
+        // 1. Fetch Employee, Hierarchy & Cycle info
+        $employee = $this->db->table('md_employee e')
+            ->select('e.md_employee_id, e.value as nik, e.fullname as name, eb.md_branch_id, b.name as branch_name, ed.md_division_id, d.name as division_name, e.md_levelling_id, l.name as level_name, e.md_position_id, p.name as position_name')
+            ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
+            ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
+            ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+            ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
+            ->where('e.md_employee_id', $appraisal->md_employee_id)
+            ->get()
+            ->getRowArray();
+
+        $evaluator = $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_evaluator_id)->get()->getRowArray();
+        $gm        = $appraisal->snapshot_gm_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_gm_id)->get()->getRowArray() : null;
+        $cycle     = $this->cycleModel->find($appraisal->md_appraisal_cycle_id);
+
+        // 2. Decode template snapshot JSON
+        $snapshot = is_string($appraisal->template_snapshot)
+            ? json_decode($appraisal->template_snapshot, true)
+            : ($appraisal->template_snapshot ?: []);
+
+        // 3. Load pre-seeded or existing responses
+        $responses = $this->modelDetail->where('md_appraisal_id', (int) $id)
+                                       ->where('isactive', 'Y')
+                                       ->findAll();
+
+        $responsesByItemId = [];
+        foreach ($responses as $resp) {
+            $responsesByItemId[(int) $resp->md_appraisal_template_item_id] = $resp;
+        }
+
+        // 4. Determine user viewing mode
+        $mode = 'VIEW';
+        if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+            $mode = 'EVALUATOR';
+        } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+            $mode = 'GM';
+        } elseif ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+            $mode = 'EMPLOYEE';
+        }
+
+        $data = [
+            'appraisal_id'         => (int) $id,
+            'appraisal'            => $appraisal,
+            'employee'             => $employee ?: [],
+            'evaluator'            => $evaluator ?: ['name' => '-'],
+            'gm'                   => $gm ?: ['name' => '-'],
+            'has_reviewer'         => ! empty($appraisal->snapshot_gm_id),
+            'cycle'                => $cycle,
+            'template_snapshot'    => $snapshot,
+            'responses_by_item_id' => $responsesByItemId,
+            'user_mode'            => $mode,
+        ];
+
+        return $this->template->render('masterdata/appraisal-filling/form_appraisal_filling', $data);
+    }
+
+    /**
+     * Helper to prepare appraisal form data
+     */
+    protected function getAppraisalFormData($id, $mode = null): ?array
+    {
+        $appraisal = $this->model->find((int) $id);
+        if (! $appraisal) {
+            return null;
+        }
+
+        $empId = $this->getCurrentEmployeeId();
+
+        $employee = $this->db->table('md_employee e')
+            ->select('e.md_employee_id, e.value as nik, e.fullname as name, eb.md_branch_id, b.name as branch_name, ed.md_division_id, d.name as division_name, e.md_levelling_id, l.name as level_name, e.md_position_id, p.name as position_name')
+            ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
+            ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
+            ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+            ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
+            ->where('e.md_employee_id', $appraisal->md_employee_id)
+            ->get()
+            ->getRowArray();
+
+        $evaluator = $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_evaluator_id)->get()->getRowArray();
+        $gm        = $appraisal->snapshot_gm_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_gm_id)->get()->getRowArray() : null;
+        $cycle     = $this->cycleModel->find($appraisal->md_appraisal_cycle_id);
+
+        $snapshot = is_string($appraisal->template_snapshot)
+            ? json_decode($appraisal->template_snapshot, true)
+            : ($appraisal->template_snapshot ?: []);
+
+        $responses = $this->modelDetail->where('md_appraisal_id', (int) $id)
+                                       ->where('isactive', 'Y')
+                                       ->findAll();
+
+        $responsesByItemId = [];
+        foreach ($responses as $resp) {
+            $responsesByItemId[(int) $resp->md_appraisal_template_item_id] = $resp;
+        }
+
+        if (! $mode) {
+            $mode = 'VIEW';
+            $roleId  = (int) ($this->session->get('sys_role_id') ?? 0);
+            $userId  = (int) ($this->session->get('sys_user_id') ?? 0);
+            $isAdmin = ($empId <= 0) || ($roleId === 1) || (bool) $this->access->getUserRoleName($userId, 'awn Admin');
+
+            if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+                $mode = 'EVALUATOR';
+            } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+                $mode = 'GM';
+            } elseif ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                $mode = 'EMPLOYEE';
+            } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+                $mode = 'GM';
+            } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+                $mode = 'EVALUATOR';
+            }
+        } else {
+            $mode = strtoupper($mode);
+        }
+
+        return [
+            'appraisal_id'         => (int) $id,
+            'appraisal'            => $appraisal,
+            'employee'             => $employee ?: [],
+            'evaluator'            => $evaluator ?: ['name' => '-'],
+            'gm'                   => $gm ?: ['name' => '-'],
+            'has_reviewer'         => ! empty($appraisal->snapshot_gm_id),
+            'cycle'                => $cycle,
+            'template_snapshot'    => $snapshot,
+            'responses_by_item_id' => $responsesByItemId,
+            'user_mode'            => $mode,
+        ];
+    }
+
+    /**
+     * GET /penilaian/form/(:num)
+     * AJAX: Form Filling Inner HTML for Action T Single Page Mode
+     */
+    public function form($id = null)
+    {
+        $data = $this->getAppraisalFormData($id, $this->request->getGet('mode'));
+        if (! $data) {
+            return $this->response->setStatusCode(404)->setBody('<div class="alert alert-danger m-3">Data penilaian tidak ditemukan.</div>');
+        }
+
+        return view('masterdata/appraisal-filling/form_appraisal_filling_inner', $data);
+    }
+
+
+    /**
+     * GET /penilaian/complete/(:num)
+     * Screen: Completed Read-Only Rapor View
+     */
+    public function complete($id = null)
+    {
+        $appraisal = $this->model->find((int) $id);
+
+        if (! $appraisal) {
+            return redirect()->to(base_url('penilaian'))->with('error', 'Form penilaian tidak ditemukan.');
+        }
+
+        $employee = $this->db->table('md_employee e')
+            ->select('e.md_employee_id, e.value as nik, e.fullname as name, b.name as branch_name, d.name as division_name, l.name as level_name, p.name as position_name')
+            ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
+            ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
+            ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+            ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
+            ->where('e.md_employee_id', $appraisal->md_employee_id)
+            ->get()
+            ->getRowArray();
+
+        $evaluator = $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_evaluator_id)->get()->getRowArray();
+        $gm        = $appraisal->snapshot_gm_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_gm_id)->get()->getRowArray() : null;
+        $cycle     = $this->cycleModel->find($appraisal->md_appraisal_cycle_id);
+
+        $snapshot = is_string($appraisal->template_snapshot)
+            ? json_decode($appraisal->template_snapshot, true)
+            : ($appraisal->template_snapshot ?: []);
+
+        $responses = $this->modelDetail->where('md_appraisal_id', (int) $id)
+                                       ->where('isactive', 'Y')
+                                       ->findAll();
+        $responsesByItemId = [];
+        foreach ($responses as $resp) {
+            $responsesByItemId[(int) $resp->md_appraisal_template_item_id] = $resp;
+        }
+
+        $data = [
+            'appraisal_id'         => (int) $id,
+            'appraisal'            => $appraisal,
+            'employee'             => $employee ?: [],
+            'evaluator'            => $evaluator ?: ['name' => '-'],
+            'gm'                   => $gm ?: ['name' => '-'],
+            'cycle'                => $cycle,
+            'template_snapshot'    => $snapshot,
+            'responses_by_item_id' => $responsesByItemId,
+        ];
+
+        return $this->template->render('masterdata/appraisal-filling/v_appraisal_complete', $data);
+    }
+
+    /**
+     * GET /penilaian/scoreComparison/(:num)
+     * AJAX modal view: Riwayat & Komparasi Skor Penilaian (Evaluator vs Reviewer)
+     */
+    public function scoreComparison($id = null)
+    {
+        $id = (int) $id;
+        $formData = $this->getAppraisalFormData($id);
+        if (! $formData) {
+            return $this->response->setStatusCode(404)->setBody(
+                '<div class="p-4 text-center text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i><p class="mb-0">Data penilaian tidak ditemukan.</p></div>'
+            );
+        }
+
+        $appraisal         = $formData['appraisal'];
+        $employee          = $formData['employee'];
+        $evaluator         = $formData['evaluator'];
+        $gm                = $formData['gm'];
+        $cycle             = $formData['cycle'];
+        $snapshot          = $formData['template_snapshot'];
+        $responsesByItemId = $formData['responses_by_item_id'];
+
+        $parseActions = function ($raw): array {
+            if (empty($raw)) return [];
+            if (is_array($raw)) return array_values(array_filter(array_map('trim', $raw)));
+            if (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    return array_values(array_filter(array_map('trim', $decoded)));
+                }
+                $lines = explode("\n", $raw);
+                return array_values(array_filter(array_map('trim', $lines)));
+            }
+            return [];
+        };
+
+        $parseChecked = function (int $idx, array $checkedList): bool {
+            if (empty($checkedList)) return false;
+            $hasYorN = false;
+            foreach ($checkedList as $v) {
+                if (in_array(strtoupper((string) $v), ['Y', 'N'], true)) {
+                    $hasYorN = true;
+                    break;
+                }
+            }
+            if ($hasYorN) {
+                $val = $checkedList[$idx] ?? $checkedList[(string) $idx] ?? null;
+                return in_array(strtoupper((string) $val), ['Y', '1', 'TRUE'], true);
+            }
+            return in_array((string) $idx, array_map('strval', $checkedList), true);
+        };
+
+        $sections = $snapshot['sections'] ?? [];
+        $items    = $snapshot['items'] ?? [];
+
+        $itemsBySection = [];
+        foreach ($items as $item) {
+            $secId = (int) ($item['md_appraisal_section_id'] ?? 0);
+            $itemsBySection[$secId][] = $item;
+        }
+
+        $isGmReviewed = ! empty($appraisal->gm_reviewed_at) || ! empty($appraisal->gm_comment);
+        foreach ($responsesByItemId as $r) {
+            if (! empty($r->gm_response)) {
+                $isGmReviewed = true;
+                break;
+            }
+        }
+
+        $comparisonSections     = [];
+        $evalTotalWeightedScore = 0.0;
+        $evalTotalWeight        = 0.0;
+        $gmTotalWeightedScore   = 0.0;
+        $gmTotalWeight          = 0.0;
+        $hasOverride            = false;
+
+        foreach ($sections as $sec) {
+            $secId    = (int) $sec['md_appraisal_section_id'];
+            $secType  = strtoupper($sec['section_type'] ?? 'SCORE');
+            $secItems = $itemsBySection[$secId] ?? [];
+            if (empty($secItems)) continue;
+
+            $processedItems = [];
+
+            foreach ($secItems as $itIdx => $item) {
+                $itemId    = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id'] ?? 0);
+                $weight    = (float) ($item['weight'] ?? 1.0);
+                $cfg       = is_string($item['config'] ?? null) ? json_decode($item['config'], true) : ($item['config'] ?? []);
+                $inputType = strtoupper($item['input_type'] ?? 'SCORE');
+
+                $compTitle  = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($itIdx + 1)));
+                $definition = !empty($item['description']) ? $item['description'] : (!empty($cfg['definition']) ? $cfg['definition'] : '-');
+                $actions    = $parseActions($cfg['key_actions'] ?? null);
+
+                $resp = $responsesByItemId[$itemId] ?? null;
+
+                $evalPayload = ($resp && !empty($resp->evaluator_response))
+                    ? (is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response)
+                    : [];
+                $evalActionScores   = $evalPayload['action_scores'] ?? [];
+                $evalCheckedActions = $evalPayload['checked_actions'] ?? [];
+
+                $gmPayload = ($resp && !empty($resp->gm_response))
+                    ? (is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response)
+                    : [];
+                $gmActionScores   = $gmPayload['action_scores'] ?? [];
+                $gmCheckedActions = $gmPayload['checked_actions'] ?? [];
+
+                if ($inputType === 'SCORE') {
+                    $hasKeyActions = !empty($actions);
+                    $totalActions  = $hasKeyActions ? count($actions) : 1;
+
+                    $evalActionSum = 0.0;
+                    $gmActionSum   = 0.0;
+                    $actionRows    = [];
+
+                    if ($hasKeyActions) {
+                        foreach ($actions as $aIdx => $actionText) {
+                            $evalActScore = 3.00;
+                            if (isset($evalActionScores[$aIdx]) && $evalActionScores[$aIdx] !== '') {
+                                $evalActScore = (float) $evalActionScores[$aIdx];
+                            } elseif (isset($evalActionScores[(string) $aIdx]) && $evalActionScores[(string) $aIdx] !== '') {
+                                $evalActScore = (float) $evalActionScores[(string) $aIdx];
+                            } elseif ($resp && $resp->score !== null) {
+                                $evalActScore = (float) $resp->score;
+                            }
+                            $evalActionSum += $evalActScore;
+
+                            $gmActScore   = $evalActScore;
+                            $isOverridden = false;
+                            if ($isGmReviewed) {
+                                if (isset($gmActionScores[$aIdx]) && $gmActionScores[$aIdx] !== '') {
+                                    $gmActScore = (float) $gmActionScores[$aIdx];
+                                    if (round($gmActScore, 2) !== round($evalActScore, 2)) {
+                                        $isOverridden = true;
+                                        $hasOverride  = true;
+                                    }
+                                } elseif (isset($gmActionScores[(string) $aIdx]) && $gmActionScores[(string) $aIdx] !== '') {
+                                    $gmActScore = (float) $gmActionScores[(string) $aIdx];
+                                    if (round($gmActScore, 2) !== round($evalActScore, 2)) {
+                                        $isOverridden = true;
+                                        $hasOverride  = true;
+                                    }
+                                }
+                            }
+                            $gmActionSum += $gmActScore;
+
+                            $actionRows[] = [
+                                'index'         => $aIdx,
+                                'letter'        => chr(97 + $aIdx),
+                                'text'          => $actionText,
+                                'eval_score'    => $evalActScore,
+                                'gm_score'      => $isGmReviewed ? $gmActScore : null,
+                                'is_overridden' => $isOverridden,
+                                'delta'         => $isGmReviewed ? round($gmActScore - $evalActScore, 2) : 0,
+                            ];
+                        }
+
+                        $evalAvg = $totalActions > 0 ? ($evalActionSum / $totalActions) : 3.00;
+                        $gmAvg   = $totalActions > 0 ? ($gmActionSum / $totalActions) : 3.00;
+                    } else {
+                        $evalAvg = ($resp && $resp->score !== null) ? (float) $resp->score : 3.00;
+                        $gmAvg   = $evalAvg;
+                        $isOverridden = false;
+                        if ($isGmReviewed && isset($gmPayload['score']) && $gmPayload['score'] !== '') {
+                            $gmAvg = (float) $gmPayload['score'];
+                            if (round($gmAvg, 2) !== round($evalAvg, 2)) {
+                                $isOverridden = true;
+                                $hasOverride  = true;
+                            }
+                        }
+
+                        $actionRows[] = [
+                            'index'         => 0,
+                            'letter'        => 'a',
+                            'text'          => 'Indikator umum',
+                            'eval_score'    => $evalAvg,
+                            'gm_score'      => $isGmReviewed ? $gmAvg : null,
+                            'is_overridden' => $isOverridden,
+                            'delta'         => $isGmReviewed ? round($gmAvg - $evalAvg, 2) : 0,
+                        ];
+                    }
+
+                    $evalAvg = round($evalAvg, 2);
+                    $gmAvg   = round($gmAvg, 2);
+
+                    if ($weight > 0) {
+                        $evalTotalWeightedScore += ($evalAvg * $weight);
+                        $evalTotalWeight        += $weight;
+                        $gmTotalWeightedScore   += ($gmAvg * $weight);
+                        $gmTotalWeight          += $weight;
+                    }
+
+                    $processedItems[] = [
+                        'item_id'       => $itemId,
+                        'title'         => $compTitle,
+                        'definition'    => $definition,
+                        'weight'        => $weight,
+                        'input_type'    => 'SCORE',
+                        'actions'       => $actionRows,
+                        'eval_avg'      => $evalAvg,
+                        'gm_avg'        => $isGmReviewed ? $gmAvg : null,
+                        'is_overridden' => $isGmReviewed && (round($gmAvg, 2) !== round($evalAvg, 2)),
+                    ];
+                } else {
+                    // BOOLEAN / CHECKLIST
+                    $actionRows = [];
+                    if (!empty($actions)) {
+                        foreach ($actions as $aIdx => $actionText) {
+                            $evalChecked = $parseChecked($aIdx, $evalCheckedActions);
+
+                            $gmChecked    = null;
+                            $isOverridden = false;
+
+                            if ($isGmReviewed) {
+                                if (isset($gmPayload['checked_actions'])) {
+                                    $gmChecked = $parseChecked($aIdx, $gmCheckedActions);
+                                    if ($gmChecked !== $evalChecked) {
+                                        $isOverridden = true;
+                                        $hasOverride  = true;
+                                    }
+                                } else {
+                                    $gmChecked = $evalChecked;
+                                }
+                            }
+
+                            $actionRows[] = [
+                                'index'         => $aIdx,
+                                'letter'        => chr(97 + $aIdx),
+                                'text'          => $actionText,
+                                'eval_checked'  => $evalChecked,
+                                'gm_checked'    => $isGmReviewed ? $gmChecked : null,
+                                'is_overridden' => $isOverridden,
+                            ];
+                        }
+                    } else {
+                        $evalChecked  = in_array(strtoupper((string) ($evalPayload['boolean_value'] ?? '')), ['Y', '1', 'TRUE'], true);
+                        $gmChecked    = null;
+                        $isOverridden = false;
+
+                        if ($isGmReviewed) {
+                            if (isset($gmPayload['boolean_value'])) {
+                                $gmChecked = in_array(strtoupper((string) $gmPayload['boolean_value']), ['Y', '1', 'TRUE'], true);
+                                if ($gmChecked !== $evalChecked) {
+                                    $isOverridden = true;
+                                    $hasOverride  = true;
+                                }
+                            } else {
+                                $gmChecked = $evalChecked;
+                            }
+                        }
+
+                        $actionRows[] = [
+                            'index'         => 0,
+                            'letter'        => 'a',
+                            'text'          => $compTitle,
+                            'eval_checked'  => $evalChecked,
+                            'gm_checked'    => $isGmReviewed ? $gmChecked : null,
+                            'is_overridden' => $isOverridden,
+                        ];
+                    }
+
+                    $processedItems[] = [
+                        'item_id'    => $itemId,
+                        'title'      => $compTitle,
+                        'definition' => $definition,
+                        'weight'     => $weight,
+                        'input_type' => 'BOOLEAN',
+                        'actions'    => $actionRows,
+                    ];
+                }
+            }
+
+            $comparisonSections[] = [
+                'section_id'   => $secId,
+                'title'        => $sec['title'] ?? 'Section',
+                'section_type' => $secType,
+                'items'        => $processedItems,
+            ];
+        }
+
+        $evalFinalOverall = $evalTotalWeight > 0 ? ($evalTotalWeightedScore / $evalTotalWeight) : 3.00;
+        $evalFinalOverall = max(1.00, min(4.00, round($evalFinalOverall, 2)));
+
+        if ($isGmReviewed) {
+            $gmFinalOverall = $gmTotalWeight > 0 ? ($gmTotalWeightedScore / $gmTotalWeight) : 3.00;
+            if ($appraisal->final_score !== null && !empty($appraisal->gm_reviewed_at)) {
+                $gmFinalOverall = (float) $appraisal->final_score;
+            }
+            $gmFinalOverall = max(1.00, min(4.00, round($gmFinalOverall, 2)));
+            $delta          = round($gmFinalOverall - $evalFinalOverall, 2);
+        } else {
+            $gmFinalOverall = null;
+            $delta          = null;
+        }
+
+        $getRating = function ($score): array {
+            if ($score === null) return ['label' => 'Belum Dinilai', 'class' => 'r-muted'];
+            if ($score >= 3.50) return ['label' => 'Sangat Baik (Exceeds Expectations)', 'class' => 'r-great badge-success'];
+            if ($score >= 2.75) return ['label' => 'Baik (Meets Expectations)', 'class' => 'r-good badge-primary'];
+            if ($score >= 2.00) return ['label' => 'Cukup (Needs Improvement)', 'class' => 'r-fair badge-warning'];
+            return ['label' => 'Kurang (Unsatisfactory)', 'class' => 'r-low badge-danger'];
+        };
+
+        $evalRating = $getRating($evalFinalOverall);
+        $gmRating   = $getRating($gmFinalOverall);
+
+        $viewData = [
+            'appraisal_id'         => $id,
+            'appraisal'            => $appraisal,
+            'employee'             => $employee,
+            'evaluator'            => $evaluator,
+            'gm'                   => $gm,
+            'cycle'                => $cycle,
+            'sections'             => $comparisonSections,
+            'eval_overall_score'   => $evalFinalOverall,
+            'eval_rating'          => $evalRating,
+            'gm_overall_score'     => $gmFinalOverall,
+            'gm_rating'            => $gmRating,
+            'delta'                => $delta,
+            'is_gm_reviewed'       => $isGmReviewed,
+            'has_override'         => $hasOverride,
+            'evaluator_comment'    => $appraisal->evaluator_comment ?? '',
+            'gm_comment'           => $appraisal->gm_comment ?? '',
+        ];
+
+        return view('masterdata/appraisal-filling/modal_score_comparison', $viewData);
+    }
+
+    /**
+     * GET /penilaian/show/(:num)
+     * JSON API returning appraisal metadata, snapshot items, and responses
+     */
+    public function show($id = null)
+    {
+        if ($this->request->isAJAX()) {
+            try {
+                $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+
+                if (!empty($list)) {
+                    $row = $list[0];
+                    $title = 'Detail Penilaian';
+                    if (is_object($row)) {
+                        $title = method_exists($row, 'getTitle') ? $row->getTitle() : ($row->title ?? ('Penilaian #' . ($row->md_appraisal_id ?? $id)));
+                    } elseif (is_array($row)) {
+                        $title = $row['title'] ?? ('Penilaian #' . ($row['md_appraisal_id'] ?? $id));
+                    }
+
+                    $fieldHeader = new \App\Entities\Table();
+                    $fieldHeader->setTitle($title);
+                    $fieldHeader->setTable($this->model->table);
+                    $fieldHeader->setList($list);
+
+                    $formData = $this->getAppraisalFormData($id, $this->request->getGet('mode'));
+
+                    $result = [
+                        'header' => $this->field->store($fieldHeader),
+                        'html'   => $formData ? view('masterdata/appraisal-filling/form_appraisal_filling_inner', $formData) : '',
+                    ];
+
+                    $response = message('success', true, $result);
+                } else {
+                    $response = message('error', false, 'Data penilaian tidak ditemukan.');
+                }
+            } catch (\Throwable $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    /**
+     * POST /penilaian/create
+     * Action F Standard save endpoint triggered by template .save_form
+     */
+    public function create()
+    {
+        if ($this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(message('error', false, 'Method not allowed.'));
+        }
+
+        $post        = $this->request->getVar();
+        $appraisalId = (int) ($post['md_appraisal_id'] ?? $this->request->getPost('id') ?? 0);
+
+        if ($appraisalId <= 0) {
+            return $this->response->setJSON(message('error', false, 'ID Penilaian tidak valid.'));
+        }
+
+        $appraisal = $this->model->find($appraisalId);
+        if (! $appraisal) {
+            return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
+        }
+
+        if ($appraisal->status === M_Appraisal::STATUS_FINALIZED) {
+            return $this->response->setJSON(message('error', false, 'Form penilaian sudah berstatus FINAL dan tidak dapat diubah.'));
+        }
+
+        $userId  = (int) ($this->access->getSessionUser() ?? 1);
+        $empId   = (int) ($this->getCurrentEmployeeId() ?? 0);
+        $roleId  = (int) ($this->session->get('sys_role_id') ?? 0);
+        $isAdmin = ($empId <= 0) || ($roleId === 1) || (bool) $this->access->getUserRoleName($userId, 'awn Admin');
+
+        // Determine userMode strictly
+        $userMode = 'VIEW';
+        if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+            $userMode = 'EVALUATOR';
+        } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+            $userMode = 'GM';
+        } elseif ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+            $userMode = 'EMPLOYEE';
+        } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+            $userMode = 'GM';
+        } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+            $userMode = 'EVALUATOR';
+        }
+
+        // Guard against unauthorized saves
+        if ($userMode === 'VIEW') {
+            return $this->response->setJSON(message('error', false, 'Anda tidak memiliki hak akses untuk mengubah penilaian ini pada status saat ini.'));
+        }
+
+        // Normalize action type (supports submit, Y, 1, or is_finalize flag from Process.js checkboxes)
+        $rawAction  = strtolower(trim((string) ($post['action_type'] ?? 'save_draft')));
+        $isFinalize = in_array(strtolower(trim((string) ($post['is_finalize'] ?? ''))), ['y', '1', 'true', 'submit'], true);
+
+        if ($isFinalize || in_array($rawAction, ['submit', 'y', '1', 'true'], true)) {
+            $actionType = 'submit';
+        } elseif ($rawAction === 'kickback') {
+            $actionType = 'kickback';
+        } else {
+            $actionType = 'save_draft';
+        }
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        try {
+            // Extract and normalize responses
+            $rawResponses            = $post['responses_json'] ?? $post['responses'] ?? null;
+            $actionScoresFallback    = $post['action_scores'] ?? [];
+            $checkedActionsFallback  = $post['checked_actions'] ?? [];
+            $booleanValuesFallback   = $post['boolean_value'] ?? [];
+            $responseList            = $this->normalizeResponseList($rawResponses, $actionScoresFallback, $checkedActionsFallback, $booleanValuesFallback);
+
+            if ($userMode === 'EVALUATOR') {
+                $evaluatorComment = isset($post['evaluator_comment']) ? trim($post['evaluator_comment']) : $appraisal->evaluator_comment;
+                $developmentPlan  = isset($post['development_plan']) ? trim($post['development_plan']) : $appraisal->development_plan;
+
+                $appraisal->evaluator_comment = $evaluatorComment;
+                $appraisal->development_plan  = $developmentPlan;
+                $appraisal->updated_by        = $userId;
+                $this->model->save($appraisal);
+
+                if (! empty($responseList)) {
+                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'EVALUATOR');
+                } else {
+                    $this->scoringService->calculateAndUpdateScores($appraisalId, $userId);
+                }
+
+                if ($actionType === 'submit') {
+                    if (empty($evaluatorComment)) {
+                        throw new \RuntimeException('Catatan & Feedback Evaluator wajib diisi sebelum melakukan submit.');
+                    }
+                    $this->workflowService->submitByEvaluator($appraisalId, $userId, $evaluatorComment, $developmentPlan);
+                }
+
+            } elseif ($userMode === 'GM') {
+                $gmComment = isset($post['gm_comment']) ? trim($post['gm_comment']) : $appraisal->gm_comment;
+                $appraisal->gm_comment = $gmComment;
+                $appraisal->updated_by = $userId;
+                $this->model->save($appraisal);
+
+                if (! empty($responseList)) {
+                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'GM');
+                }
+
+                if ($actionType === 'kickback') {
+                    $reason = trim($post['kickback_reason'] ?? $gmComment ?? '');
+                    if (empty($reason)) {
+                        throw new \RuntimeException('Alasan revisi wajib diisi jika mengembalikan form.');
+                    }
+                    $this->workflowService->kickbackByGm($appraisalId, $userId, $reason);
+                } elseif ($actionType === 'submit') {
+                    $this->workflowService->reviewByGm($appraisalId, $userId, $gmComment);
+                }
+
+            } elseif ($userMode === 'EMPLOYEE') {
+                $this->workflowService->acknowledgeByEmployee($appraisalId, $userId);
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                throw new \RuntimeException('Gagal memproses transaksi database penyimpanan penilaian.');
+            }
+
+            $msg = ($actionType === 'submit') ? 'Penilaian berhasil disubmit.' : (($actionType === 'kickback') ? 'Form berhasil dikembalikan untuk revisi.' : 'Data penilaian berhasil disimpan.');
+            return $this->response->setJSON(message('success', true, $msg));
+
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            return $this->response->setJSON(message('error', false, $e->getMessage()));
+        }
+    }
+
+    /**
+     * POST /penilaian/saveDraft/(:num)
+     * Auto-save or draft save of item responses without changing workflow status
+     */
+    public function saveDraft($id = null)
+    {
+        if (strpos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false) {
+            $json = $this->request->getJSON(true);
+            if (is_array($json)) {
+                if (isset($json['responses']) && is_array($json['responses'])) {
+                    $json['responses'] = json_encode($json['responses']);
+                }
+                $_POST = $json;
+            }
+        }
+
+        $post        = $this->request->getPost();
+        $appraisalId = (int) $id;
+
+        $appraisal = $this->model->find($appraisalId);
+
+        if (! $appraisal) {
+            return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
+        }
+
+        if ($appraisal->status === M_Appraisal::STATUS_FINALIZED) {
+            return $this->response->setJSON(message('error', false, 'Form penilaian terkunci karena sudah berstatus FINALIZED.'));
+        }
+
+        try {
+            $userId = (int) ($this->access->getSessionUser() ?? 1);
+            $empId  = $this->getCurrentEmployeeId();
+
+            if (isset($post['evaluator_comment'])) {
+                $appraisal->evaluator_comment = $post['evaluator_comment'];
+            }
+            if (isset($post['development_plan'])) {
+                $appraisal->development_plan = $post['development_plan'];
+            }
+            if (isset($post['gm_comment'])) {
+                $appraisal->gm_comment = $post['gm_comment'];
+            }
+
+            $appraisal->updated_by = $userId;
+            $this->model->save($appraisal);
+
+            // Save individual item responses
+            $rawList                 = $post['responses_json'] ?? $post['responses'] ?? (! empty($post['table']) ? $post['table'] : null);
+            $actionScoresFallback    = $post['action_scores'] ?? [];
+            $checkedActionsFallback  = $post['checked_actions'] ?? [];
+            $booleanValuesFallback   = $post['boolean_value'] ?? [];
+            $responseList            = $this->normalizeResponseList($rawList, $actionScoresFallback, $checkedActionsFallback, $booleanValuesFallback);
+
+            $actorRole = ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) ? 'GM' : 'EVALUATOR';
+
+            if (is_array($responseList) && ! empty($responseList)) {
+                $this->scoringService->saveResponses($appraisalId, $responseList, $userId, $actorRole);
+            } else {
+                $this->scoringService->calculateAndUpdateScores($appraisalId, $userId);
+            }
+
+            $updatedAppraisal = $this->model->find($appraisalId);
+
+            return $this->response->setJSON(message('success', true, 'Draft penilaian berhasil disimpan.', $updatedAppraisal));
+        } catch (Exception $e) {
+            return $this->response->setJSON(message('error', false, $e->getMessage()));
+        }
+    }
+
+    /**
+     * POST /penilaian/submit/(:num)
+     * Evaluator submits form to GM or Employee sign-off
+     */
+    public function submit($id = null)
+    {
+        if (strpos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false) {
+            $json = $this->request->getJSON(true);
+            if (is_array($json)) {
+                if (isset($json['responses']) && is_array($json['responses'])) {
+                    $json['responses'] = json_encode($json['responses']);
+                }
+                $_POST = $json;
+            }
+        }
+
+        $post        = $this->request->getPost();
+        $appraisalId = (int) $id;
+
+        $appraisal = $this->model->find($appraisalId);
+
+        if (! $appraisal) {
+            return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
+        }
+
+        try {
+            $userId = (int) ($this->access->getSessionUser() ?? 1);
+            $empId  = $this->getCurrentEmployeeId();
+
+            // Validate authorization
+            if ($empId > 0 && (int) $appraisal->snapshot_evaluator_id !== $empId) {
+                return $this->response->setJSON(message('error', false, 'Anda bukan atasan penilai yang ditugaskan untuk form ini.'));
+            }
+
+            // Save item responses first
+            $rawList = ! empty($post['responses']) ? $post['responses'] : (! empty($post['table']) ? $post['table'] : null);
+            $responseList = $this->normalizeResponseList($rawList);
+
+            if (is_array($responseList) && ! empty($responseList)) {
+                $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'EVALUATOR');
+            } else {
+                $this->scoringService->calculateAndUpdateScores($appraisalId, $userId);
+            }
+
+            $evaluatorComment = $post['evaluator_comment'] ?? $appraisal->evaluator_comment;
+            $developmentPlan  = $post['development_plan'] ?? $appraisal->development_plan;
+
+            if (empty(trim($evaluatorComment ?? ''))) {
+                return $this->response->setJSON(message('error', false, 'Catatan & feedback evaluasi wajib diisi sebelum melakukan submit!'));
+            }
+
+            // Transition status via workflow service
+            $this->workflowService->submitByEvaluator($appraisalId, $userId, $evaluatorComment, $developmentPlan);
+
+            return $this->response->setJSON(message('success', true, 'Evaluasi kinerja berhasil disubmit!'));
+        } catch (Exception $e) {
+            return $this->response->setJSON(message('error', false, $e->getMessage()));
+        }
+    }
+
+    protected function renderStageProgress(string $status): string
+    {
+        $step = 2;
+        $label = 'Filling';
+        $final = false;
+
+        switch ($status) {
+            case M_Appraisal::STATUS_DRAFT_EVALUATOR:
+                $step = 2;
+                $label = 'Form Filling';
+                break;
+            case M_Appraisal::STATUS_SUBMITTED_EVALUATOR:
+            case M_Appraisal::STATUS_REVIEW_GM:
+                $step = 3;
+                $label = 'Review Superior';
+                break;
+            case M_Appraisal::STATUS_PENDING_ACK:
+                $step = 4;
+                $label = 'Pembacaan Karyawan';
+                break;
+            case M_Appraisal::STATUS_FINALIZED:
+                $step = 4;
+                $label = 'Completed';
+                $final = true;
+                break;
+        }
+
+        $dots = '';
+        for ($i = 1; $i <= 4; $i++) {
+            $dots .= '<i class="' . ($i <= $step ? 'on' : '') . '"></i>';
+        }
+
+        return '<span class="atl-stage-label">' . esc($label) . '</span>';
+    }
+
+    protected function renderStatusBadge(string $status): string
+    {
+        switch ($status) {
+            case M_Appraisal::STATUS_DRAFT_EVALUATOR:
+                return 'Draft Penilai';
+            case M_Appraisal::STATUS_SUBMITTED_EVALUATOR:
+            case M_Appraisal::STATUS_REVIEW_GM:
+                return 'Review GM';
+            case M_Appraisal::STATUS_PENDING_ACK:
+                return 'Menunggu TTD';
+            case M_Appraisal::STATUS_FINALIZED:
+                return 'Final';
+            default:
+                return esc($status);
+        }
+    }
+
+    protected function renderActionButton(array $row, string $roleTab, int $empId): string
+    {
+        $id     = $row['md_appraisal_id'];
+        $status = $row['status'];
+        $actions = '';
+
+        if ($status === M_Appraisal::STATUS_DRAFT_EVALUATOR && ($roleTab === 'EVALUATOR' || (int) ($row['snapshot_evaluator_id'] ?? 0) === $empId)) {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Isi Penilaian"><i class="fas fa-edit text-primary"></i></a>';
+        } elseif ($status === M_Appraisal::STATUS_REVIEW_GM && ($roleTab === 'GM' || (int) ($row['snapshot_gm_id'] ?? 0) === $empId)) {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Review GM"><i class="fas fa-user-check text-info"></i></a>';
+        } elseif ($status === M_Appraisal::STATUS_PENDING_ACK && (int) $row['md_employee_id'] === $empId) {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Konfirmasi TTD"><i class="fas fa-signature text-warning"></i></a>';
+        } elseif ($status === M_Appraisal::STATUS_FINALIZED) {
+            $actions .= '<a class="btn btn-sm" href="' . base_url('sas/penilaian/complete/' . $id) . '" title="Rapor Kinerja"><i class="fas fa-file-alt text-success"></i></a>';
+        } else {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'VIEW\')" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
+        }
+
+        // Score Comparison & History Action Button
+        $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat & Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
+
+        return $actions;
+    }
+
+    /**
+     * Normalize responses payload whether submitted as JSON string or nested array
+     */
+    protected function normalizeResponseList($raw, array $actionScoresFallback = [], array $checkedActionsFallback = [], array $booleanValuesFallback = []): array
+    {
+        $list = [];
+        if (! empty($raw)) {
+            $list = is_string($raw) ? json_decode($raw, true) : $raw;
+        }
+        if (! is_array($list)) {
+            $list = [];
+        }
+
+        $itemsById = [];
+        foreach ($list as $k => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $itemId = (int) ($row['md_appraisal_template_item_id'] ?? (is_numeric($k) ? $k : 0));
+            if ($itemId <= 0) {
+                continue;
+            }
+            $row['md_appraisal_template_item_id'] = $itemId;
+            $itemsById[$itemId] = $row;
+        }
+
+        // Merge fallback action_scores if provided
+        if (! empty($actionScoresFallback) && is_array($actionScoresFallback)) {
+            foreach ($actionScoresFallback as $fbItemId => $scores) {
+                $fbItemId = (int) $fbItemId;
+                if ($fbItemId <= 0 || ! is_array($scores)) {
+                    continue;
+                }
+                if (! isset($itemsById[$fbItemId])) {
+                    $itemsById[$fbItemId] = [
+                        'md_appraisal_template_item_id' => $fbItemId,
+                    ];
+                }
+                if (empty($itemsById[$fbItemId]['action_scores'])) {
+                    $itemsById[$fbItemId]['action_scores'] = array_values($scores);
+                }
+            }
+        }
+
+        // Merge fallback checked_actions if provided
+        if (! empty($checkedActionsFallback) && is_array($checkedActionsFallback)) {
+            foreach ($checkedActionsFallback as $fbItemId => $actions) {
+                $fbItemId = (int) $fbItemId;
+                if ($fbItemId <= 0) {
+                    continue;
+                }
+                if (! isset($itemsById[$fbItemId])) {
+                    $itemsById[$fbItemId] = [
+                        'md_appraisal_template_item_id' => $fbItemId,
+                    ];
+                }
+                if (! array_key_exists('checked_actions', $itemsById[$fbItemId])) {
+                    $itemsById[$fbItemId]['checked_actions'] = is_array($actions) ? array_values($actions) : [$actions];
+                    $itemsById[$fbItemId]['boolean_value']   = 'Y';
+                }
+            }
+        }
+
+        // Merge fallback boolean_value if provided
+        if (! empty($booleanValuesFallback) && is_array($booleanValuesFallback)) {
+            foreach ($booleanValuesFallback as $fbItemId => $bVal) {
+                $fbItemId = (int) $fbItemId;
+                if ($fbItemId <= 0) {
+                    continue;
+                }
+                if (! isset($itemsById[$fbItemId])) {
+                    $itemsById[$fbItemId] = [
+                        'md_appraisal_template_item_id' => $fbItemId,
+                    ];
+                }
+                if (! isset($itemsById[$fbItemId]['boolean_value'])) {
+                    $itemsById[$fbItemId]['boolean_value'] = in_array(strtoupper((string) $bVal), ['Y', '1', 'TRUE'], true) ? 'Y' : 'N';
+                }
+            }
+        }
+
+        $normalized = [];
+        foreach ($itemsById as $itemId => $row) {
+            $isBooleanItem = isset($row['checked_actions']) || isset($row['boolean_value']);
+            if ($isBooleanItem) {
+                unset($row['score']);
+            } elseif (! empty($row['action_scores']) && is_array($row['action_scores'])) {
+                $numericScores = array_values(array_map(function ($s) {
+                    return round((float) $s, 2);
+                }, $row['action_scores']));
+                $row['action_scores'] = $numericScores;
+                $row['score']         = count($numericScores) > 0 ? round(array_sum($numericScores) / count($numericScores), 2) : 3.00;
+            } elseif (isset($row['score']) && $row['score'] !== '') {
+                $row['score'] = round((float) $row['score'], 2);
+            }
+
+            $normalized[] = $row;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * POST/GET /penilaian/setDebugDate
+     * Set, jump stage, or reset simulated debug date in session
+     */
+    public function setDebugDate()
+    {
+        $post   = $this->request->getVar();
+        $action = $post['action'] ?? $this->request->getGet('action') ?? null;
+        $date   = trim((string) ($post['debug_date'] ?? $this->request->getGet('debug_date') ?? ''));
+        $stage  = (int) ($post['stage'] ?? $this->request->getGet('stage') ?? 0);
+
+        if ($action === 'reset' || $date === 'reset' || $date === 'today') {
+            $this->session->remove('appraisal_debug_date');
+            return $this->response->setJSON(message('success', true, [
+                'message'       => 'Debug date direset ke tanggal sistem hari ini (' . date('d M Y') . ').',
+                'debug_date'    => date('Y-m-d'),
+                'is_debug'      => false,
+                'current_stage' => 2,
+            ]));
+        }
+
+        $activeCycle = $this->cycleModel->where('status', M_AppraisalCycle::STATUS_OPEN)
+                                        ->where('isactive', 'Y')
+                                        ->first();
+
+        // If jump to specific stage requested
+        if ($stage >= 1 && $stage <= 5 && $activeCycle && method_exists($activeCycle, 'getStageTargetDate')) {
+            $date = $activeCycle->getStageTargetDate($stage);
+        }
+
+        if (empty($date) || ! strtotime($date)) {
+            return $this->response->setJSON(message('error', false, 'Format tanggal tidak valid.'));
+        }
+
+        $formattedDate = date('Y-m-d', strtotime($date));
+        $this->session->set('appraisal_debug_date', $formattedDate);
+
+        $stageNum = ($activeCycle && method_exists($activeCycle, 'getCurrentStage')) 
+            ? $activeCycle->getCurrentStage($formattedDate) 
+            : 2;
+
+        return $this->response->setJSON(message('success', true, [
+            'message'       => 'Debug date aktif: ' . date('d M Y', strtotime($formattedDate)) . ' (Tahap ' . $stageNum . ').',
+            'debug_date'    => $formattedDate,
+            'is_debug'      => true,
+            'current_stage' => $stageNum,
+        ]));
+    }
+}

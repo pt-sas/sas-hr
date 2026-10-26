@@ -1,0 +1,56 @@
+{
+  "permissions": {
+    "deny": [
+      "command(sed -i*)",
+      "command(*sed *-i*)",
+      "command(*sed *-*i*)"
+    ],
+    "ask": [
+      "command(sed*)",
+      "command(*|*sed*)"
+    ],
+    "allow": [
+      "command(awk *)",
+      "command(cat)",
+      "command(cat *)",
+      "command(git blame)",
+      "command(git blame *)",
+      "command(git branch)",
+      "command(git branch *)",
+      "command(git describe)",
+      "command(git describe *)",
+      "command(git diff)",
+      "command(git diff *)",
+      "command(git grep)",
+      "command(git grep *)",
+      "command(git log)",
+      "command(git log *)",
+      "command(git ls-files)",
+      "command(git ls-files *)",
+      "command(git ls-tree)",
+      "command(git ls-tree *)",
+      "command(git merge-base)",
+      "command(git merge-base *)",
+      "command(git remote)",
+      "command(git remote -v)",
+      "command(git remote show *)",
+      "command(git rev-parse)",
+      "command(git rev-parse *)",
+      "command(git show)",
+      "command(git show *)",
+      "command(git status)",
+      "command(git status *)",
+      "command(git tag)",
+      "command(git tag *)",
+      "command(grep)",
+      "command(grep *)",
+      "command(head)",
+      "command(head *)",
+      "command(sed -n *)",
+      "command(tail)",
+      "command(tail *)",
+      "mcp(mysql/*)",
+      "read_file(*)"
+    ]
+  }
+}

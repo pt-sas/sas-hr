@@ -45,6 +45,42 @@ class Validation
     //--------------------------------------------------------------------
     // Rules
     //--------------------------------------------------------------------
+    public $appraisal_cycle = [
+        'title' => [
+            'label'  => 'Nama Siklus Penilaian',
+            'rules'  => 'required',
+            'errors' => [
+                'required' => 'Mohon mengisi {field} dahulu',
+            ],
+        ],
+        'start_date' => [
+            'label'  => 'Tanggal Mulai Periode',
+            'rules'  => 'required',
+            'errors' => [
+                'required' => 'Mohon mengisi {field} dahulu',
+            ],
+        ],
+        'end_date' => [
+            'label'  => 'Tanggal Selesai Periode',
+            'rules'  => 'required',
+            'errors' => [
+                'required' => 'Mohon mengisi {field} dahulu',
+            ],
+        ],
+        'deadline_filling' => [
+            'label'  => 'Deadline Pengisian',
+            'rules'  => 'permit_empty',
+        ],
+        'deadline_review' => [
+            'label'  => 'Deadline Review',
+            'rules'  => 'permit_empty',
+        ],
+        'deadline_reading' => [
+            'label'  => 'Deadline Pembacaan',
+            'rules'  => 'permit_empty',
+        ],
+    ];
+
     public $menu = [
         'name'              => [
             'rules'         =>    'required|is_unique[sys_menu.name,sys_menu_id,{id}]',

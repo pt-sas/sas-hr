@@ -1615,15 +1615,16 @@ $(".save_form").click(function (evt) {
       let fieldActive = form.find("input.active");
       // Check element name is not null and any field checkbox active
       if (field[i].name !== "" && fieldActive.length) {
+        let safeName = $.escapeSelector(field[i].name);
         let className = field[i].className.split(/\s+/);
         if (form.find("input.active").is(":checked")) {
           if (!fieldReadOnly.includes(field[i].name)) {
             form
               .find(
                 "input:checkbox[name=" +
-                  field[i].name +
+                  safeName +
                   "], select[name=" +
-                  field[i].name +
+                  safeName +
                   "]"
               )
               .removeAttr("disabled");
@@ -1631,9 +1632,9 @@ $(".save_form").click(function (evt) {
             form
               .find(
                 "input:checkbox[name=" +
-                  field[i].name +
+                  safeName +
                   "], select[name=" +
-                  field[i].name +
+                  safeName +
                   "]"
               )
               .not(".line")
@@ -1644,16 +1645,17 @@ $(".save_form").click(function (evt) {
             form
               .find(
                 "input:checkbox[name=" +
-                  field[i].name +
+                  safeName +
                   "], select[name=" +
-                  field[i].name +
+                  safeName +
                   "]"
               )
               .not(".line")
               .prop("disabled", true);
           }
         }
-      } else {
+      } else if (field[i].name !== "") {
+        let safeName = $.escapeSelector(field[i].name);
         //? Set attribute disabled based on default field or exist attribute edit-disabled
         if (
           fieldReadOnly.includes(field[i].name) ||
@@ -1663,9 +1665,9 @@ $(".save_form").click(function (evt) {
           form
             .find(
               "input:checkbox[name=" +
-                field[i].name +
+                safeName +
                 "], select[name=" +
-                field[i].name +
+                safeName +
                 "]"
             )
             .not(".line")
@@ -2606,10 +2608,12 @@ $(document).on("click", ".new_form", function (evt) {
             if (
               field[i].type == "checkbox" &&
               fieldChecked.includes(field[i].name)
-            )
+            ) {
+              let safeName = $.escapeSelector(field[i].name);
               form
-                .find("input:checkbox[name=" + field[i].name + "]")
+                .find("input:checkbox[name=" + safeName + "]")
                 .prop("checked", true);
+            }
 
             //? Condition field and contain attribute hide-field
             if ($(field[i]).attr("hide-field")) {
@@ -2895,14 +2899,15 @@ $(".add_row").click(function (evt) {
 
     for (let i = 0; i < field.length; i++) {
       if (field[i].name !== "") {
+        let safeName = $.escapeSelector(field[i].name);
         let className = field[i].className.split(/\s+/);
 
         form
           .find(
             "input:checkbox[name=" +
-              field[i].name +
+              safeName +
               "], select[name=" +
-              field[i].name +
+              safeName +
               "]"
           )
           .not(".line")
@@ -3049,12 +3054,13 @@ $(".add_row").click(function (evt) {
 
           for (let i = 0; i < field.length; i++) {
             if (field[i].name !== "") {
+              let safeName = $.escapeSelector(field[i].name);
               form
                 .find(
                   "input[name=" +
-                    field[i].name +
+                    safeName +
                     "], select[name=" +
-                    field[i].name +
+                    safeName +
                     "]"
                 )
                 .closest(".form-group")
@@ -3613,6 +3619,7 @@ $("input.active:checkbox").change(function (evt) {
   if ($(this).is(":checked")) {
     for (let i = 0; i < field.length; i++) {
       if (field[i].name !== "") {
+        let safeName = $.escapeSelector(field[i].name);
         className = field[i].className.split(/\s+/);
 
         // field is not readonly by default
@@ -3623,11 +3630,11 @@ $("input.active:checkbox").change(function (evt) {
           parent
             .find(
               "input:text[name=" +
-                field[i].name +
+                safeName +
                 "], textarea[name=" +
-                field[i].name +
+                safeName +
                 "], input:password[name=" +
-                field[i].name +
+                safeName +
                 "]"
             )
             .not(".line")
@@ -3642,13 +3649,13 @@ $("input.active:checkbox").change(function (evt) {
           parent
             .find(
               "input:checkbox[name=" +
-                field[i].name +
+                safeName +
                 "], input:radio[name=" +
-                field[i].name +
+                safeName +
                 "], select[name=" +
-                field[i].name +
+                safeName +
                 "], button[name=" +
-                field[i].name +
+                safeName +
                 "]"
             )
             .not(".line")
@@ -3656,7 +3663,7 @@ $("input.active:checkbox").change(function (evt) {
 
           if (field[i].type === "file") {
             parent
-              .find("input[name=" + field[i].name + "]")
+              .find("input[name=" + safeName + "]")
               .removeAttr("disabled");
             parent
               .find("button.close-img")
@@ -3666,14 +3673,15 @@ $("input.active:checkbox").change(function (evt) {
         }
 
         if (
-          parent.find("textarea.summernote[name=" + field[i].name + "]").length
+          parent.find('textarea.summernote[name="' + safeName + '"]').length
         )
-          parent.find("[name =" + field[i].name + "]").summernote("enable");
+          parent.find('[name="' + safeName + '"]').summernote("enable");
       }
     }
   } else {
     for (let i = 0; i < field.length; i++) {
       if (field[i].name !== "") {
+        let safeName = $.escapeSelector(field[i].name);
         className = field[i].className.split(/\s+/);
 
         // set field is readonly by default
@@ -3688,11 +3696,11 @@ $("input.active:checkbox").change(function (evt) {
           parent
             .find(
               "input:text[name=" +
-                field[i].name +
+                safeName +
                 "], textarea[name=" +
-                field[i].name +
+                safeName +
                 "], input:password[name=" +
-                field[i].name +
+                safeName +
                 "]"
             )
             .not(".line")
@@ -3706,13 +3714,13 @@ $("input.active:checkbox").change(function (evt) {
           parent
             .find(
               "input:checkbox[name=" +
-                field[i].name +
+                safeName +
                 "], input:radio[name=" +
-                field[i].name +
+                safeName +
                 "], select[name=" +
-                field[i].name +
+                safeName +
                 "], button[name=" +
-                field[i].name +
+                safeName +
                 "]"
             )
             .not(".line")
@@ -3720,7 +3728,7 @@ $("input.active:checkbox").change(function (evt) {
 
           if (field[i].type === "file") {
             parent
-              .find("input[name=" + field[i].name + "]")
+              .find("input[name=" + safeName + "]")
               .prop("disabled", true);
             parent
               .find("button.close-img")
@@ -3730,9 +3738,9 @@ $("input.active:checkbox").change(function (evt) {
         }
 
         if (
-          parent.find("textarea.summernote[name=" + field[i].name + "]").length
+          parent.find('textarea.summernote[name="' + safeName + '"]').length
         )
-          parent.find("[name =" + field[i].name + "]").summernote("disable");
+          parent.find('[name="' + safeName + '"]').summernote("disable");
       }
     }
   }
@@ -4035,11 +4043,11 @@ function clearErrorForm(form) {
         form
           .find(
             "input[name=" +
-              field[i].name +
+              safeName +
               "], textarea[name=" +
-              field[i].name +
+              safeName +
               "], select[name=" +
-              field[i].name +
+              safeName +
               "]"
           )
           .closest("div")
@@ -4120,11 +4128,11 @@ function clearForm(evt) {
   //TODO: Clear data, remove attribute readonly, disabled and remove class invalid on the field
   for (let i = 0; i < field.length; i++) {
     if (field[i].name !== "") {
+      let safeName = $.escapeSelector(field[i].name);
       if (
         fieldReadOnly.length == 0 &&
         !form.attr("id").includes("realization")
       ) {
-        let safeName = $.escapeSelector(field[i].name);
         form
           .find(
             "input[name=" +
@@ -4142,9 +4150,9 @@ function clearForm(evt) {
           form
             .find(
               "input[name=" +
-                field[i].name +
+                safeName +
                 "], textarea[name=" +
-                field[i].name +
+                safeName +
                 "]"
             )
             .removeAttr("readonly")
@@ -4154,9 +4162,9 @@ function clearForm(evt) {
           form
             .find(
               "input[name=" +
-                field[i].name +
+                safeName +
                 "], textarea[name=" +
-                field[i].name +
+                safeName +
                 "]"
             )
             .closest(".form-group")
@@ -4169,7 +4177,7 @@ function clearForm(evt) {
         field[i].type === "checkbox"
       )
         form
-          .find("input:checkbox[name=" + field[i].name + "]")
+          .find("input:checkbox[name=" + safeName + "]")
           .removeAttr("disabled");
 
       //TODO: Remove value duplicate array
@@ -4186,7 +4194,7 @@ function clearForm(evt) {
           !form.attr("id").includes("realization")
         ) {
           form
-            .find("select[name=" + field[i].name + "]")
+            .find("select[name=" + safeName + "]")
             .val(defaultLogic[0].id)
             .change()
             .removeAttr("disabled")
@@ -4196,7 +4204,7 @@ function clearForm(evt) {
           // field is not readonly by default
           if (!fieldReadOnly.includes(field[i].name)) {
             form
-              .find("select[name=" + field[i].name + "]")
+              .find("select[name=" + safeName + "]")
               .val(defaultLogic[0].id)
               .change()
               .removeAttr("disabled")
@@ -4204,7 +4212,7 @@ function clearForm(evt) {
               .removeClass("has-error");
           } else {
             form
-              .find("select[name=" + field[i].name + "]")
+              .find("select[name=" + safeName + "]")
               .val(defaultLogic[0].id)
               .change()
               .closest(".form-group")
@@ -4216,7 +4224,6 @@ function clearForm(evt) {
           fieldReadOnly.length == 0 &&
           !form.attr("id").includes("realization")
         ) {
-          let safeName = $.escapeSelector(field[i].name);
           form
             .find("select[name=" + safeName + "]")
             .val(null)
@@ -4228,31 +4235,31 @@ function clearForm(evt) {
           //? field is not readonly by default
           if (!fieldReadOnly.includes(field[i].name)) {
             form
-              .find("select[name=" + field[i].name + "]")
+              .find("select[name=" + safeName + "]")
               .val(null)
               .change()
               .removeAttr("disabled")
               .closest(".form-group")
               .removeClass("has-error");
           } else {
-            if (form.find("select[name=" + field[i].name + "]").length) {
-              let value = form.find("select[name=" + field[i].name + "]").val();
+            if (form.find("select[name=" + safeName + "]").length) {
+              let value = form.find("select[name=" + safeName + "]").val();
               if (value === "")
                 form
-                  .find("select[name=" + field[i].name + "]")
+                  .find("select[name=" + safeName + "]")
                   .val(null)
                   .change()
                   .closest(".form-group")
                   .removeClass("has-error");
             }
-            if (form.find(".datepicker[name=" + field[i].name + "]").length) {
+            if (form.find(".datepicker[name=" + safeName + "]").length) {
               let value = form
-                .find(".datepicker[name=" + field[i].name + "]")
+                .find(".datepicker[name=" + safeName + "]")
                 .val();
 
               if (value === "")
                 form
-                  .find(".datepicker[name=" + field[i].name + "]")
+                  .find(".datepicker[name=" + safeName + "]")
                   .data("DateTimePicker")
                   .clear();
             }
@@ -4264,7 +4271,6 @@ function clearForm(evt) {
       if (field[i].type == "file") $(".close-img").click();
 
       //? Textarea class summernote
-      let safeName = $.escapeSelector(field[i].name);
       if (form.find('textarea.summernote[name="' + safeName + '"]').length) {
         $('[name="' + safeName + '"]').summernote("reset");
         $('[name="' + safeName + '"]').summernote("destroy");
@@ -4288,11 +4294,11 @@ function clearForm(evt) {
         form
           .find(
             "input:checkbox[name=" +
-              field[i].name +
+              safeName +
               "], select[name=" +
-              field[i].name +
+              safeName +
               "], input:radio[name=" +
-              field[i].name +
+              safeName +
               "]"
           )
           .removeAttr("disabled");
@@ -4300,7 +4306,7 @@ function clearForm(evt) {
       //? Check and Remove attribute disabled from field
       if ($(field[i]).attr("edit-readonly"))
         form
-          .find("input:text[name=" + field[i].name + "]")
+          .find("input:text[name=" + safeName + "]")
           .removeAttr("readonly");
 
       form
@@ -4363,6 +4369,7 @@ function readonly(parent, value) {
 
   for (let i = 0; i < field.length; i++) {
     if (field[i].name !== "") {
+      let safeName = $.escapeSelector(field[i].name);
       let className = field[i].className.split(/\s+/);
 
       // field is not readonly by default
@@ -4370,11 +4377,11 @@ function readonly(parent, value) {
         parent
           .find(
             "input:text[name=" +
-              field[i].name +
+              safeName +
               "], textarea[name=" +
-              field[i].name +
+              safeName +
               "], input:password[name=" +
-              field[i].name +
+              safeName +
               "]"
           )
           .not(".line")
@@ -4388,13 +4395,13 @@ function readonly(parent, value) {
         parent
           .find(
             "input:checkbox[name=" +
-              field[i].name +
+              safeName +
               "], select[name=" +
-              field[i].name +
+              safeName +
               "], input:radio[name=" +
-              field[i].name +
+              safeName +
               "], button[name=" +
-              field[i].name +
+              safeName +
               "]"
           )
           .not(".line")
@@ -4403,23 +4410,23 @@ function readonly(parent, value) {
 
       if (field[i].type === "file") {
         parent
-          .find("input[name=" + field[i].name + "]")
+          .find("input[name=" + safeName + "]")
           .not(".line")
           .prop("disabled", value);
       }
 
       if (
-        parent.find("textarea.summernote[name=" + field[i].name + "]").length >
+        parent.find('textarea.summernote[name="' + safeName + '"]').length >
           0 ||
-        parent.find("textarea.summernote-product[name=" + field[i].name + "]")
+        parent.find('textarea.summernote-product[name="' + safeName + '"]')
           .length > 0
       ) {
         if (value) {
-          $("[name =" + field[i].name + "]")
+          $('[name="' + safeName + '"]')
             .not(".line")
             .summernote("disable");
         } else {
-          $("[name =" + field[i].name + "]")
+          $('[name="' + safeName + '"]')
             .not(".line")
             .summernote("enable");
         }
