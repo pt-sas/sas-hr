@@ -3905,16 +3905,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
       var SHORT = { leave: 'Cuti', team: 'Tim', bday: 'Ultah' };
 
-      $cal.find('td.fc-day-top[data-date], td.fc-day-number[data-date]').each(function () {
-        var k = this.getAttribute('data-date'), c = has[k] || {};
-        var html = Object.keys(SHORT).filter(function (t) { return c[t]; }).map(function (t) {
-          return '<div class="k-row t-' + t + '" title="' + TYPES[t] + ': ' + c[t] + '"><i></i><b>' + c[t] + '</b><span>' + SHORT[t] + '</span></div>';
-        }).join('');
+      $cal.find('.fc-row').each(function () {
+        var $row = $(this);
+        var $bgDays = $row.find('.fc-bg td.fc-day');
+        var $topDays = $row.find('.fc-content-skeleton thead td');
 
-        if (companyEvents[k]) {
-          html = '<div class="k-row k-holrow" title="' + esc(companyEvents[k]).replace(/"/g, '&quot;') + '"><span>' + esc(companyEvents[k]) + '</span></div>' + html;
-        }
-        if (html) $(this).append('<div class="k-dots">' + html + '</div>');
+        $bgDays.each(function (idx) {
+          var k = $(this).attr('data-date');
+          if (!k) return;
+          var $topCell = $topDays.eq(idx);
+          if (!$topCell.length) return;
+
+          var c = has[k] || {};
+          var html = Object.keys(SHORT).filter(function (t) { return c[t]; }).map(function (t) {
+            return '<div class="k-row t-' + t + '" title="' + TYPES[t] + ': ' + c[t] + '"><i></i><b>' + c[t] + '</b><span>' + SHORT[t] + '</span></div>';
+          }).join('');
+
+          if (companyEvents[k]) {
+            html = '<div class="k-row k-holrow" title="' + esc(companyEvents[k]).replace(/"/g, '&quot;') + '"><span>' + esc(companyEvents[k]) + '</span></div>' + html;
+            $topCell.addClass('k-hol');
+          }
+          if (html) $topCell.append('<div class="k-dots">' + html + '</div>');
+        });
       });
     }
 
@@ -3993,6 +4005,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $cal.fullCalendar('changeView', viewMap[e.detail.mode]);
       }
       $cal.fullCalendar('gotoDate', e.detail.date);
+      $cal.fullCalendar('refetchEvents');
       pick(e.detail.date);
     });
   }

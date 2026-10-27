@@ -374,10 +374,10 @@
 }
 </style>
 
-<?= $this->endSection() ?>
-
 <script>
 window.APP_URLS = window.APP_URLS || {};
 window.APP_URLS.pesanUpdateRead = '<?= base_url('sas/pesan/updateRead') ?>';
 </script>
+
+<?= $this->endSection() ?>
 
