@@ -3102,3 +3102,45 @@ function getBundling(elem) {
 //     initSelectData(form.find("select.select-data"));
 //   }
 // });
+
+
+// DASHBOARD
+// date_picker
+/* public/assets/js/logic.js */
+window.DP = window.DP || {};
+
+DP.SHORT    = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+DP.MONTHS   = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+DP.DOW      = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+DP.DOW_LONG = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+
+DP.pad       = n => String(n).padStart(2, '0');
+DP.iso       = d => `${d.getFullYear()}-${DP.pad(d.getMonth() + 1)}-${DP.pad(d.getDate())}`;
+DP.parse     = s => { if (!s) return new Date(); const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2] || 1); };
+DP.addDays   = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+DP.monday    = d => DP.addDays(d, -((d.getDay() + 6) % 7));
+DP.sameMonth = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+
+DP.range = function (d, m) {
+    if (m === 'day')  return [d, d];
+    if (m === 'week') { const s = DP.monday(d); return [s, DP.addDays(s, 6)]; }
+    return [new Date(d.getFullYear(), d.getMonth(), 1), new Date(d.getFullYear(), d.getMonth() + 1, 0)];
+};
+
+DP.buildLabel = function (d, m) {
+    if (m === 'day')   return `${DP.DOW[(d.getDay() + 6) % 7]}, ${d.getDate()} ${DP.SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    if (m === 'month') return `${DP.SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    const [s, e] = DP.range(d, 'week');
+    if (s.getFullYear() !== e.getFullYear()) return `${s.getDate()} ${DP.SHORT[s.getMonth()]} ${s.getFullYear()} – ${e.getDate()} ${DP.SHORT[e.getMonth()]} ${e.getFullYear()}`;
+    if (s.getMonth() !== e.getMonth())       return `${s.getDate()} ${DP.SHORT[s.getMonth()]} – ${e.getDate()} ${DP.SHORT[e.getMonth()]} ${e.getFullYear()}`;
+    return `${s.getDate()} – ${e.getDate()} ${DP.SHORT[e.getMonth()]} ${e.getFullYear()}`;
+};
+
+DP.buildNowText = function (d, m) {
+    if (m === 'day')   return `${DP.DOW_LONG[(d.getDay() + 6) % 7]}, ${d.getDate()} ${DP.SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    if (m === 'month') return `${DP.MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    const [s, e] = DP.range(d, 'week');
+    if (s.getFullYear() !== e.getFullYear()) return `${s.getDate()} ${DP.SHORT[s.getMonth()]} ${s.getFullYear()} – ${e.getDate()} ${DP.SHORT[e.getMonth()]} ${e.getFullYear()}`;
+    if (s.getMonth() !== e.getMonth())       return `${s.getDate()} ${DP.SHORT[s.getMonth()]} – ${e.getDate()} ${DP.SHORT[e.getMonth()]} ${e.getFullYear()}`;
+    return `${s.getDate()} – ${e.getDate()} ${DP.SHORT[e.getMonth()]} ${e.getFullYear()}`;
+};
