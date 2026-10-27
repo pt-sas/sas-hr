@@ -842,6 +842,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('lembur-paket/destroy/(:any)', 'Backend\ExecuteBundling::destroy/$1');
     $routes->get('lembur-paket/processIt', 'Backend\ExecuteBundling::processIt');
     $routes->post('lembur-paket/tableLine', 'Backend\ExecuteBundling::tableLine');
+   
     // Bantuan (Help / FAQ)
     // 1. For HR master data
     // Category Article Module
@@ -851,7 +852,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'help-article/show/(:any)', 'Backend\Help::show/$1');
     $routes->match(['get', 'post'], 'help-article/destroy/(:any)', 'Backend\Help::destroy/$1');
     $routes->post('help-article/uploadImage', 'Backend\Help::uploadImage');
-
+    
     $routes->match(['get', 'post'], 'help-article/getListArticle', 'Backend\Help::getListArticle');
     $routes->match(['get', 'post'], 'help-article/getListDocCategory', 'Backend\Help::getListDocCategory');
     $routes->match(['get', 'post'], 'help-article/getListStatus', 'Backend\Help::getListStatus');
@@ -865,8 +866,10 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('help/search', 'Backend\HelpFront::search');
 
     // Dashboard
-    $routes->get('get-today-card', 'Backend\Dashboard::getTodayCard');
+    $routes->get('get-today-card', 'Backend\DashboardAttendance::getTodayCard');
     $routes->get('get-calendar-events', 'Backend\Dashboard::getCalendarEvents');
+    $routes->match(['get', 'post'], 'process-batch', 'Backend\DashboardAttendance::processBatch');
+    
 });
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
