@@ -2,9 +2,115 @@
 
 <?= $this->section('content'); ?>
 
+<link rel="stylesheet" href="<?= base_url('form_appraisal_filling_style.css') ?>">
+
 <style>
+/* Layout tweaks for complete view */
+/* Prevent Atlantis panel spinner from hanging on this page */
+.main-panel.is-loading:after {
+    display: none !important;
+}
+
+/* Hide top toolbar (+ Add New, Refresh) */
+.card-header .float-right,
+.card-header .new_form,
+.card-header .btn_requery,
+.new_form {
+    display: none !important;
+}
+
+.ap-report-header {
+    background: #ffffff;
+    border: 1px solid var(--ap-line);
+    border-radius: var(--ap-radius);
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.ap-report-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ap-ink);
+    letter-spacing: 0.04em;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.ap-score-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    text-align: center;
+}
+
+.ap-score-col {
+    padding: 24px 20px;
+}
+
+.ap-score-col:first-child {
+    border-right: 1px solid var(--ap-line-soft);
+}
+
+.ap-summary-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ap-muted);
+    margin-bottom: 8px;
+}
+
+.ap-summary-score {
+    font-family: var(--ap-mono);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--ap-ink);
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+
+.ap-summary-score small {
+    font-size: 1.25rem;
+    color: var(--ap-muted);
+    font-weight: 600;
+}
+
+.ap-summary-rating {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 999px;
+}
+
+.ap-feedback-block {
+    background: var(--ap-surface-2);
+    border: 1px solid var(--ap-line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    min-height: 60px;
+    font-size: 13.5px;
+    color: var(--ap-ink-2);
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.ap-feedback-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ap-muted);
+    margin-bottom: 6px;
+}
+
 @media print {
-    .main-header, .sidebar, .breadcrumbs, .page-header, .action-buttons-bar, .modal, .badge-action, .btn {
+    .main-header, .sidebar, .breadcrumbs, .page-header, .action-top-bar, .modal, .btn, .badge-action, .ap-report-header button, .ap-report-header a {
         display: none !important;
     }
     .main-panel {
@@ -12,314 +118,531 @@
         margin: 0 !important;
         padding: 0 !important;
     }
-    .card {
-        border: 1px solid #ddd !important;
+    .content {
+        padding: 0 !important;
+    }
+    .ap-wrap {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+    }
+    .ap-card {
+        border: 1px solid #d1d5db !important;
         box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 16px !important;
     }
-    .card-header {
-        background-color: #f8f9fa !important;
+    .ap-card-head {
+        background-color: #f8fafc !important;
         -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
-    .badge {
-        border: 1px solid #999 !important;
-        color: #000 !important;
-        background: transparent !important;
+    .ap-table thead th {
+        background-color: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .ap-subtotal td {
+        background-color: #f8fafc !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .ap-avg-chip, .badge, .ap-summary-rating {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
 </style>
 
-<div class="card-body card-main pb-5">
+<?php
+    // Helper closures
+    $parseActions = function ($raw): array {
+        if (empty($raw)) return [];
+        if (is_array($raw)) return array_values(array_filter(array_map('trim', $raw)));
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                return array_values(array_filter(array_map('trim', $decoded)));
+            }
+            $lines = explode("\n", $raw);
+            return array_values(array_filter(array_map('trim', $lines)));
+        }
+        return [];
+    };
 
-    <!-- ALL STAGES COMPLETED INDICATOR -->
-    <div class="card border mb-4 shadow-sm">
-        <div class="card-body py-3">
-            <div class="d-flex justify-content-between align-items-center text-center">
-                <div class="flex-fill">
-                    <span class="badge badge-success rounded-circle p-2 mb-1"><i class="fas fa-check"></i></span>
-                    <small class="d-block font-weight-bold text-success">1. Pengisian Penilai</small>
-                    <small class="text-muted"><?= esc($evaluator['name'] ?? 'Atasan') ?></small>
-                </div>
-                <div class="border-top border-success flex-fill mx-2"></div>
-                <div class="flex-fill">
-                    <span class="badge badge-success rounded-circle p-2 mb-1"><i class="fas fa-check"></i></span>
-                    <small class="d-block font-weight-bold text-success">2. Review GM</small>
-                    <small class="text-muted"><?= esc($gm['name'] ?? 'General Manager') ?></small>
-                </div>
-                <div class="border-top border-success flex-fill mx-2"></div>
-                <div class="flex-fill">
-                    <span class="badge badge-success rounded-circle p-2 mb-1"><i class="fas fa-check"></i></span>
-                    <small class="d-block font-weight-bold text-success">3. TTD Karyawan</small>
-                    <small class="text-muted"><?= esc($employee['name'] ?? 'Karyawan') ?></small>
-                </div>
-                <div class="border-top border-success flex-fill mx-2"></div>
-                <div class="flex-fill">
-                    <span class="badge badge-success rounded-circle p-2 mb-1"><i class="fas fa-check-circle"></i></span>
-                    <small class="d-block font-weight-bold text-success">4. Final</small>
-                    <small class="text-muted">Tersimpan</small>
-                </div>
-            </div>
-        </div>
-    </div>
+    // Cycle & evaluation date format
+    $cycleTitle = is_object($cycle) ? ($cycle->title ?? '-') : ($cycle['title'] ?? '-');
+    $startDate  = is_object($cycle) ? ($cycle->start_date ?? null) : ($cycle['start_date'] ?? null);
+    $endDate    = is_object($cycle) ? ($cycle->end_date ?? null) : ($cycle['end_date'] ?? null);
 
-    <!-- OFFICIAL RAPOR HEADER -->
-    <div class="card border mb-4" id="printable_scorecard">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <div>
-                <h5 class="font-weight-bold text-dark mb-0">
-                    <i class="fas fa-file-invoice mr-2 text-primary"></i>RAPOR HASIL EVALUASI KINERJA (SCORECARD)
-                </h5>
-                <small class="text-muted">
-                    Siklus: <strong><?= esc(is_object($cycle) ? ($cycle->title ?? '-') : ($cycle['title'] ?? '-')) ?></strong>
-                </small>
-            </div>
-            <span class="badge badge-success px-3 py-2 font-weight-bold text-uppercase" style="font-size: 13px;">
-                <i class="fas fa-check-double mr-1"></i>STATUS: FINALIZED
-            </span>
-        </div>
+    $periodeText = '-';
+    if (!empty($startDate) && !empty($endDate)) {
+        $periodeText = date('d M Y', strtotime($startDate)) . ' s/d ' . date('d M Y', strtotime($endDate));
+    } elseif (!empty($cycleTitle)) {
+        $periodeText = $cycleTitle;
+    }
 
-        <div class="card-body">
-            <!-- EMPLOYEE & STRUCTURAL DETAILS -->
-            <div class="row mb-4 pb-3 border-bottom">
-                <div class="col-md-6 border-right">
-                    <table class="table table-sm table-borderless mb-0">
-                        <tr>
-                            <td style="width: 130px;" class="text-muted">NIK / Nama</td>
-                            <td class="font-weight-bold">: <?= esc($employee['nik'] ?? '-') ?> - <?= esc($employee['name'] ?? '-') ?></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Divisi / Posisi</td>
-                            <td>: <?= esc($employee['division_name'] ?? '-') ?> / <?= esc($employee['position_name'] ?? '-') ?></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Level / Cabang</td>
-                            <td>: <?= esc($employee['level_name'] ?? '-') ?> / <?= esc($employee['branch_name'] ?? '-') ?></td>
-                        </tr>
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    <table class="table table-sm table-borderless mb-0">
-                        <tr>
-                            <td style="width: 150px;" class="text-muted">Atasan Penilai</td>
-                            <td class="font-weight-bold">: <?= esc($evaluator['name'] ?? '-') ?></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Reviewer (GM)</td>
-                            <td>: <?= !empty($appraisal->snapshot_gm_id) ? esc($gm['name'] ?? '-') : '<span class="text-muted font-italic">Tidak diperlukan (Penilaian Direksi Langsung)</span>' ?></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Tgl Finalisasi Resmi</td>
-                            <td>: <?= !empty($appraisal->finalized_at) ? date('d M Y H:i', strtotime($appraisal->finalized_at)) : '-' ?></td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
+    // Sections and items breakdown
+    $sections = $template_snapshot['sections'] ?? [];
+    $items    = $template_snapshot['items'] ?? [];
 
-            <!-- SCORE & RATING SUMMARY BANNER -->
-            <div class="row align-items-center mb-4 p-3 bg-light rounded border mx-0">
-                <div class="col-md-6 text-center border-right">
-                    <small class="text-muted text-uppercase font-weight-bold d-block mb-1">SKOR AKHIR PERFORMA</small>
-                    <h1 class="font-weight-bold text-primary mb-0" style="font-size: 2.8rem;">
-                        <?= number_format((float) ($appraisal->final_score ?? 0), 2) ?>
-                        <small class="text-muted" style="font-size: 1.2rem;">/ 4.00</small>
-                    </h1>
-                </div>
-                <div class="col-md-6 text-center mt-3 mt-md-0">
-                    <small class="text-muted text-uppercase font-weight-bold d-block mb-1">PREDIKAT EVALUASI RESMI</small>
-                    <h3 class="font-weight-bold text-success mb-1">
-                        <?= esc($appraisal->rating ?? 'Baik (Meets Expectations)') ?>
-                    </h3>
-                    <small class="text-muted">Kategori evaluasi berdasarkan akumulasi pembobotan standar</small>
-                </div>
-            </div>
+    $itemsBySection = [];
+    foreach ($items as $item) {
+        $secId = (int) ($item['md_appraisal_section_id'] ?? 0);
+        $itemsBySection[$secId][] = $item;
+    }
 
-            <!-- SECTIONS & CRITERIA BREAKDOWN -->
-            <?php
-                $sections = $template_snapshot['sections'] ?? [];
-                $items    = $template_snapshot['items'] ?? [];
+    // Partition into SCORE (Performance) and BOOLEAN (Additional) sections
+    $scoreSections = [];
+    $booleanSections = [];
 
-                $itemsBySection = [];
-                foreach ($items as $item) {
-                    $secId = (int) ($item['md_appraisal_section_id'] ?? 0);
-                    $itemsBySection[$secId][] = $item;
-                }
-            ?>
+    foreach ($sections as $sec) {
+        $secType = strtoupper($sec['section_type'] ?? '');
+        if ($secType === 'SCORE') {
+            $scoreSections[] = $sec;
+        } elseif ($secType === 'BOOLEAN') {
+            $booleanSections[] = $sec;
+        }
+    }
 
-            <h6 class="font-weight-bold text-dark mb-3">
-                <i class="fas fa-list-check mr-2 text-primary"></i>Rincian Penilaian Per Kriteria
-            </h6>
+    // Fallbacks if section_type is not explicitly defined
+    if (empty($scoreSections) && empty($booleanSections) && !empty($sections)) {
+        foreach ($sections as $sec) {
+            $secId = (int) $sec['md_appraisal_section_id'];
+            $secItems = $itemsBySection[$secId] ?? [];
+            $hasScore = false;
+            $hasBool  = false;
+            foreach ($secItems as $si) {
+                $it = strtoupper($si['input_type'] ?? '');
+                if ($it === 'SCORE') $hasScore = true;
+                if ($it === 'BOOLEAN') $hasBool = true;
+            }
+            if ($hasBool && !$hasScore) {
+                $booleanSections[] = $sec;
+            } else {
+                $scoreSections[] = $sec;
+            }
+        }
+    }
 
-            <?php if (!empty($sections)): ?>
-                <?php foreach ($sections as $sIdx => $sec): ?>
-                    <?php
-                        $secId    = (int) $sec['md_appraisal_section_id'];
-                        $secItems = $itemsBySection[$secId] ?? [];
-                    ?>
-                    <div class="card border mb-3">
-                        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                            <span class="font-weight-bold text-dark">
-                                Section <?= $sIdx + 1 ?>: <?= esc($sec['name']) ?>
-                            </span>
-                            <span class="badge badge-light border">Bobot Section: <strong><?= $sec['weight'] ?>%</strong></span>
-                        </div>
-                        <div class="card-body p-0">
-                            <table class="table table-sm table-striped mb-0">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th style="width: 40px;" class="text-center">No</th>
-                                        <th>Kriteria / Kompetensi</th>
-                                        <th style="width: 100px;" class="text-center">Tipe</th>
-                                        <th style="width: 80px;" class="text-center">Bobot</th>
-                                        <th style="width: 120px;" class="text-center">Skor / Nilai</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($secItems)): ?>
-                                        <?php foreach ($secItems as $iIdx => $item): ?>
-                                            <?php
-                                                $itemId = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id']);
-                                                $resp   = $responses_by_item_id[$itemId] ?? null;
-                                                $score  = $resp ? ($resp->score !== null ? number_format((float) $resp->score, 2) : '-') : '-';
-                                                $isBooleanType = strtoupper($item['input_type'] ?? '') === 'BOOLEAN';
-                                                $isProven = false;
-                                                if ($isBooleanType) {
-                                                    $evalP = ($resp && !empty($resp->evaluator_response)) ? (is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response) : [];
-                                                    $gmP   = ($resp && !empty($resp->gm_response)) ? (is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response) : [];
-                                                    $bVal  = $gmP['boolean_value'] ?? $evalP['boolean_value'] ?? null;
-                                                    $isProven = in_array(strtoupper((string) $bVal), ['Y', '1', 'TRUE'], true);
-                                                }
-                                            ?>
-                                            <tr>
-                                                <td class="text-center align-middle"><?= $iIdx + 1 ?></td>
-                                                <td class="align-middle">
-                                                    <strong><?= esc($item['title']) ?></strong>
-                                                    <?php if (!empty($item['description'])): ?>
-                                                        <br><small class="text-muted"><?= esc($item['description']) ?></small>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="text-center align-middle">
-                                                    <span class="badge badge-light border"><?= esc($item['input_type']) ?></span>
-                                                </td>
-                                                <td class="text-center align-middle"><?= $item['weight'] ?>%</td>
-                                                <td class="text-center align-middle font-weight-bold">
-                                                    <?php if ($isBooleanType): ?>
-                                                        <?php if ($isProven): ?>
-                                                            <span class="badge badge-success px-2 py-1"><i class="fas fa-check mr-1"></i>Terbukti</span>
-                                                        <?php else: ?>
-                                                            <span class="badge badge-light border text-muted px-2 py-1">Tidak Terbukti</span>
-                                                        <?php endif; ?>
-                                                    <?php else: ?>
-                                                        <span class="text-primary"><?= $score ?></span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
+    $allScoreItems = [];
+    foreach ($scoreSections as $sSec) {
+        $sId = (int) $sSec['md_appraisal_section_id'];
+        foreach ($itemsBySection[$sId] ?? [] as $it) {
+            $allScoreItems[] = $it;
+        }
+    }
 
-            <!-- OFFICIAL SIGN-OFF TRAIL & FEEDBACK -->
-            <div class="card border mt-4">
-                <div class="card-header bg-white">
-                    <h6 class="font-weight-bold text-dark mb-0">
-                        <i class="fas fa-signature mr-2 text-primary"></i>Catatan & Lembar Pengesahan Digital
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <!-- 1. ATASAN PENILAI -->
-                        <div class="col-md-4 mb-3 mb-md-0 border-right">
-                            <h6 class="font-weight-bold text-primary mb-2">
-                                <i class="fas fa-user-edit mr-1"></i>Atasan Penilai
-                            </h6>
-                            <p class="font-weight-bold mb-1"><?= esc($evaluator['name'] ?? '-') ?></p>
-                            <small class="text-muted d-block mb-2">
-                                <i class="far fa-clock mr-1"></i>Submit: <?= !empty($appraisal->evaluator_submitted_at) ? date('d M Y H:i', strtotime($appraisal->evaluator_submitted_at)) : '-' ?>
-                            </small>
-                            <label class="small text-muted font-weight-bold">Feedback / Catatan:</label>
-                            <div class="p-2 bg-light rounded border small text-dark mb-2" style="min-height: 60px;">
-                                <?= esc($appraisal->evaluator_comment ?? 'Tidak ada catatan.') ?>
-                            </div>
-                            <?php if (!empty($appraisal->development_plan)): ?>
-                                <label class="small text-muted font-weight-bold">Development Plan:</label>
-                                <div class="p-2 bg-light rounded border small text-dark" style="min-height: 40px;">
-                                    <?= esc($appraisal->development_plan) ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
+    $allBooleanItems = [];
+    foreach ($booleanSections as $bSec) {
+        $bId = (int) $bSec['md_appraisal_section_id'];
+        foreach ($itemsBySection[$bId] ?? [] as $it) {
+            $allBooleanItems[] = $it;
+        }
+    }
 
-                        <!-- 2. REVIEWER GM -->
-                        <div class="col-md-4 mb-3 mb-md-0 border-right">
-                            <h6 class="font-weight-bold text-info mb-2">
-                                <i class="fas fa-user-tie mr-1"></i>General Manager / Reviewer
-                            </h6>
-                            <?php if (!empty($appraisal->snapshot_gm_id)): ?>
-                                <p class="font-weight-bold mb-1"><?= esc($gm['name'] ?? '-') ?></p>
-                                <small class="text-muted d-block mb-2">
-                                    <i class="far fa-clock mr-1"></i>Review: <?= !empty($appraisal->gm_reviewed_at) ? date('d M Y H:i', strtotime($appraisal->gm_reviewed_at)) : '-' ?>
-                                </small>
-                                <label class="small text-muted font-weight-bold">Catatan Reviewer:</label>
-                                <div class="p-2 bg-light rounded border small text-dark" style="min-height: 60px;">
-                                    <?= esc($appraisal->gm_comment ?? 'Tidak ada catatan arahan GM.') ?>
-                                </div>
-                            <?php else: ?>
-                                <p class="text-muted font-italic mb-1">Tidak Diperlukan</p>
-                                <small class="text-muted d-block mb-2">
-                                    <i class="fas fa-info-circle mr-1"></i>Penilaian langsung oleh Direksi
-                                </small>
-                            <?php endif; ?>
-                        </div>
+    $finalScoreVal = (float) ($appraisal->final_score ?? 0);
+    $ratingClass = 'r-good';
+    if ($finalScoreVal >= 3.75) {
+        $ratingClass = 'r-great';
+    } elseif ($finalScoreVal >= 3.00) {
+        $ratingClass = 'r-good';
+    } elseif ($finalScoreVal >= 2.00) {
+        $ratingClass = 'r-fair';
+    } else {
+        $ratingClass = 'r-low';
+    }
 
-                        <!-- 3. KARYAWAN -->
-                        <div class="col-md-4">
-                            <h6 class="font-weight-bold text-success mb-2">
-                                <i class="fas fa-user-check mr-1"></i>Karyawan Yang Dinilai
-                            </h6>
-                            <p class="font-weight-bold mb-1"><?= esc($employee['name'] ?? '-') ?></p>
-                            <small class="text-muted d-block mb-2">
-                                <i class="far fa-clock mr-1"></i>TTD: <?= !empty($appraisal->employee_acknowledged_at) ? date('d M Y H:i', strtotime($appraisal->employee_acknowledged_at)) : '-' ?>
-                            </small>
-                            <label class="small text-muted font-weight-bold">Catatan Karyawan:</label>
-                            <div class="p-2 bg-light rounded border small text-dark" style="min-height: 60px;">
-                                <?= esc($appraisal->employee_comment ?? 'Telah membaca dan menyetujui hasil evaluasi.') ?>
-                            </div>
-                            <div class="text-center mt-3">
-                                <span class="badge badge-success px-3 py-2">
-                                    <i class="fas fa-check-circle mr-1"></i>DITANDATANGANI SECARA DIGITAL
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    $backUrl = base_url('sas/penilaian');
+    if (isset($_SERVER['HTTP_REFERER']) && (strpos($_SERVER['HTTP_REFERER'], 'monitoring-penilaian') !== false || strpos($_SERVER['HTTP_REFERER'], 'performance-appraisal') !== false)) {
+        $backUrl = base_url('sas/monitoring-penilaian');
+    }
+?>
 
-        </div>
-    </div>
+<div class="card-body card-main ap-wrap pb-5">
 
-    <!-- ACTION BUTTONS BAR (HIDDEN IN PRINT) -->
-    <div class="d-flex justify-content-between align-items-center mb-5 action-buttons-bar">
+    <!-- TOP HEADER / ACTION BAR -->
+    <div class="ap-report-header action-top-bar">
         <div>
-            <?php 
-                $backUrl = base_url('penilaian');
-                if (isset($_SERVER['HTTP_REFERER']) && (strpos($_SERVER['HTTP_REFERER'], 'monitoring-penilaian') !== false || strpos($_SERVER['HTTP_REFERER'], 'performance-appraisal') !== false)) {
-                    $backUrl = base_url('monitoring-penilaian');
-                }
-            ?>
-            <a href="<?= $backUrl ?>" class="btn btn-secondary">
-                <i class="fas fa-arrow-left mr-1"></i>Kembali
+            <a href="<?= $backUrl ?>" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas
             </a>
         </div>
+        <div class="text-center flex-grow-1 mx-3">
+            <h5 class="ap-report-title">
+                <i class="fas fa-file-invoice mr-2 text-primary"></i>Laporan Akhir Penilaian Kinerja (PA)
+            </h5>
+        </div>
+        <div class="d-flex align-items-center" style="gap: 8px;">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showAuditLogModal(<?= (int) $appraisal_id ?>)">
+                <i class="fas fa-history mr-1"></i> Riwayat Audit
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                <i class="fas fa-file-pdf mr-1"></i> Unduh PDF
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">
+                <i class="fas fa-print mr-1"></i> Cetak
+            </button>
+        </div>
+    </div>
 
-        <div>
-            <button type="button" class="btn btn-outline-secondary mr-2" onclick="showAuditLogModal(<?= (int) $appraisal_id ?>)">
-                <i class="fas fa-history mr-1"></i>Riwayat Audit
-            </button>
-            <button type="button" class="btn btn-primary" onclick="window.print()">
-                <i class="fas fa-print mr-1"></i>Cetak Rapor / Print
-            </button>
+    <!-- 1. INFORMASI KARYAWAN & SIKLUS EVALUASI -->
+    <div class="ap-card">
+        <div class="ap-card-head">
+            <h5 class="ap-card-title">Informasi Karyawan &amp; Siklus Evaluasi</h5>
+            <!-- <span class="badge badge-success px-3 py-1 font-weight-bold text-uppercase" style="letter-spacing: 0.05em;">
+                <i class="fas fa-check-double mr-1"></i> Finalized
+            </span> -->
+        </div>
+        <div class="ap-card-body">
+            <div class="ap-info-grid">
+                <div class="ap-info-item">
+                    <div class="ap-info-label">NIK / Nama</div>
+                    <div class="ap-info-value"><?= esc($employee['nik'] ?? '-') ?> - <?= esc($employee['name'] ?? '-') ?></div>
+                </div>
+                <div class="ap-info-item">
+                    <div class="ap-info-label">Siklus Penilaian</div>
+                    <div class="ap-info-value"><?= esc($cycleTitle) ?></div>
+                </div>
+                <div class="ap-info-item">
+                    <div class="ap-info-label">Divisi / Pos</div>
+                    <div class="ap-info-value"><?= esc($employee['division_name'] ?? '-') ?> / <?= esc($employee['position_name'] ?? '-') ?></div>
+                </div>
+                <div class="ap-info-item">
+                    <div class="ap-info-label">Periode Evaluasi</div>
+                    <div class="ap-info-value"><?= esc($periodeText) ?></div>
+                </div>
+                <div class="ap-info-item">
+                    <div class="ap-info-label">Cabang / Lokasi</div>
+                    <div class="ap-info-value"><?= esc($employee['branch_name'] ?? '-') ?></div>
+                </div>
+                <div class="ap-info-item">
+                    <div class="ap-info-label">Atasan Penilai</div>
+                    <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RINGKASAN SKOR AKHIR -->
+    <div class="ap-card">
+        <div class="ap-card-head">
+            <h5 class="ap-card-title">Ringkasan Skor Akhir</h5>
+        </div>
+        <div class="ap-card-body p-0">
+            <div class="ap-score-summary-grid">
+                <div class="ap-score-col">
+                    <div class="ap-summary-label">Skor Akhir Performa</div>
+                    <div class="ap-summary-score">
+                        <?= number_format($finalScoreVal, 2) ?> <small>/ 4.00</small>
+                    </div>
+                </div>
+                <div class="ap-score-col">
+                    <div class="ap-summary-label">Predikat Evaluasi Resmi</div>
+                    <div>
+                        <span class="ap-rating ap-summary-rating <?= $ratingClass ?>">
+                            <?= esc($appraisal->rating ?? 'Baik (Meets Expectations)') ?>
+                        </span>
+                    </div>
+                    <!-- <small class="text-muted d-block mt-2">Kategori evaluasi berdasarkan akumulasi pembobotan standar</small> -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. DETAIL PERFORMA (SKALA 1.00 - 4.00) -->
+    <div class="ap-card">
+        <div class="ap-card-head">
+            <h5 class="ap-card-title">2. Detail Performa (Skala 1.00 - 4.00)</h5>
+            <span class="text-muted small">Evaluasi per indikator perilaku</span>
+        </div>
+        <div class="table-responsive">
+            <table class="ap-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45px;" class="text-center">No</th>
+                        <th style="width: 25%;">Kompetensi</th>
+                        <th style="width: 55%;">Indikator Perilaku (Key Actions)</th>
+                        <th style="width: 15%;" class="text-center">Skor</th>
+                    </tr>
+                </thead>
+                <?php if (!empty($allScoreItems)): ?>
+                    <?php foreach ($allScoreItems as $cIdx => $item): ?>
+                        <?php
+                            $itemId      = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id']);
+                            $cfg         = is_string($item['config'] ?? null) ? json_decode($item['config'], true) : ($item['config'] ?? []);
+                            $compTitle   = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($cIdx + 1)));
+                            $definition  = !empty($item['description']) ? $item['description'] : (!empty($cfg['definition']) ? $cfg['definition'] : '-');
+                            $actions     = $parseActions($cfg['key_actions'] ?? null);
+
+                            $resp          = $responses_by_item_id[$itemId] ?? null;
+                            $activePayload = [];
+                            if ($resp && !empty($resp->gm_response)) {
+                                $activePayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                            } elseif ($resp && !empty($resp->evaluator_response)) {
+                                $activePayload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
+                            }
+
+                            $savedActionScores = $activePayload['action_scores'] ?? [];
+                            $savedItemScore    = null;
+                            if (isset($activePayload['score']) && $activePayload['score'] !== '') {
+                                $savedItemScore = (float) $activePayload['score'];
+                            } elseif ($resp && $resp->score !== null) {
+                                $savedItemScore = (float) $resp->score;
+                            }
+
+                            $hasKeyActions = !empty($actions);
+                            $totalActions  = $hasKeyActions ? count($actions) : 1;
+                            $actionSum     = 0;
+                        ?>
+                        <tbody>
+                            <?php if ($hasKeyActions): ?>
+                                <?php foreach ($actions as $aIdx => $actionText): ?>
+                                    <?php
+                                        if (isset($savedActionScores[$aIdx]) && $savedActionScores[$aIdx] !== '') {
+                                            $actionScore = (float) $savedActionScores[$aIdx];
+                                        } elseif (isset($savedActionScores[(string) $aIdx]) && $savedActionScores[(string) $aIdx] !== '') {
+                                            $actionScore = (float) $savedActionScores[(string) $aIdx];
+                                        } elseif ($savedItemScore !== null) {
+                                            $actionScore = $savedItemScore;
+                                        } else {
+                                            $actionScore = 3.00;
+                                        }
+                                        $actionSum += $actionScore;
+
+                                        $letter = chr(97 + $aIdx);
+                                        $hasLetterPrefix = preg_match('/^[a-z0-9][\.\)]\s*/i', $actionText);
+                                    ?>
+                                    <tr>
+                                        <?php if ($aIdx === 0): ?>
+                                            <td rowspan="<?= $totalActions ?>" class="text-center align-middle font-weight-bold" style="background: var(--ap-surface);">
+                                                <?= $cIdx + 1 ?>
+                                            </td>
+                                            <td rowspan="<?= $totalActions ?>" class="ap-comp-cell">
+                                                <div class="ap-comp-name mb-1"><?= esc($compTitle) ?></div>
+                                                <div class="ap-def"><span class="font-weight-bold">Def:</span> <?= esc($definition) ?></div>
+                                            </td>
+                                        <?php endif; ?>
+
+                                        <td>
+                                            <div class="ap-action-text">
+                                                <?php if (!$hasLetterPrefix): ?>
+                                                    <span class="ap-action-letter"><?= $letter ?>.</span>
+                                                <?php endif; ?>
+                                                <?= esc($actionText) ?>
+                                            </div>
+                                        </td>
+
+                                        <td class="text-center align-middle font-weight-bold text-dark">
+                                            <?= number_format($actionScore, 2) ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <?php
+                                    $actionScore = ($savedItemScore !== null) ? $savedItemScore : 3.00;
+                                    $actionSum   = $actionScore;
+                                ?>
+                                <tr>
+                                    <td class="text-center align-middle font-weight-bold" style="background: var(--ap-surface);">
+                                        <?= $cIdx + 1 ?>
+                                    </td>
+                                    <td class="ap-comp-cell">
+                                        <div class="ap-comp-name mb-1"><?= esc($compTitle) ?></div>
+                                        <div class="ap-def"><span class="font-weight-bold">Def:</span> <?= esc($definition) ?></div>
+                                    </td>
+                                    <td>
+                                        <div class="ap-action-text text-muted font-italic">Indikator umum</div>
+                                    </td>
+                                    <td class="text-center align-middle font-weight-bold text-dark">
+                                        <?= number_format($actionScore, 2) ?>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+
+                            <?php
+                                $compAvg = $totalActions > 0 ? ($actionSum / $totalActions) : 3.00;
+                                if ($savedItemScore !== null && !$hasKeyActions) {
+                                    $compAvg = $savedItemScore;
+                                }
+                            ?>
+
+                            <tr class="ap-subtotal">
+                                <td colspan="3" class="ap-subtotal-label font-weight-bold">
+                                    Rata-rata <?= esc($compTitle) ?>
+                                </td>
+                                <td class="text-center align-middle">
+                                    <span class="ap-avg-chip font-weight-bold">
+                                        <?= number_format($compAvg, 2) ?>
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                Tidak ada data butir penilaian performa.
+                            </td>
+                        </tr>
+                    </tbody>
+                <?php endif; ?>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. KOMPETENSI TAMBAHAN -->
+    <div class="ap-card">
+        <div class="ap-card-head">
+            <h5 class="ap-card-title">3. Kompetensi Tambahan</h5>
+            <span class="text-muted small">Kriteria perilaku tambahan</span>
+        </div>
+        <div class="table-responsive">
+            <table class="ap-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45px;" class="text-center">No</th>
+                        <th style="width: 25%;">Kompetensi</th>
+                        <th style="width: 55%;">Indikator Perilaku</th>
+                        <th style="width: 15%;" class="text-center">Terbukti?</th>
+                    </tr>
+                </thead>
+                <?php if (!empty($allBooleanItems)): ?>
+                    <?php foreach ($allBooleanItems as $bIdx => $bItem): ?>
+                        <?php
+                            $bItemId      = (int) ($bItem['md_appraisal_template_item_id'] ?? $bItem['template_item_id']);
+                            $bCfg         = is_string($bItem['config'] ?? null) ? json_decode($bItem['config'], true) : ($bItem['config'] ?? []);
+                            $bTitle       = !empty($bCfg['competency']) ? $bCfg['competency'] : (!empty($bItem['title']) ? $bItem['title'] : ('Kompetensi ' . ($bIdx + 1)));
+                            $bDef         = !empty($bItem['description']) ? $bItem['description'] : (!empty($bCfg['definition']) ? $bCfg['definition'] : '-');
+                            $bKeyActions  = $parseActions($bCfg['key_actions'] ?? null);
+
+                            $bResp       = $responses_by_item_id[$bItemId] ?? null;
+                            $evalPayload = ($bResp && !empty($bResp->evaluator_response))
+                                ? (is_string($bResp->evaluator_response) ? json_decode($bResp->evaluator_response, true) : $bResp->evaluator_response)
+                                : [];
+                            $gmPayload   = ($bResp && !empty($bResp->gm_response))
+                                ? (is_string($bResp->gm_response) ? json_decode($bResp->gm_response, true) : $bResp->gm_response)
+                                : [];
+
+                            $checkedActions = isset($gmPayload['checked_actions'])
+                                ? $gmPayload['checked_actions']
+                                : ($evalPayload['checked_actions'] ?? []);
+                            $booleanValue   = $gmPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
+
+                            $totalActions = !empty($bKeyActions) ? count($bKeyActions) : 1;
+                        ?>
+                        <tbody>
+                            <?php if (!empty($bKeyActions)): ?>
+                                <?php foreach ($bKeyActions as $kIdx => $ka): ?>
+                                    <?php
+                                        $isActionChecked = false;
+                                        if (!empty($checkedActions) && is_array($checkedActions)) {
+                                            $hasYorN = false;
+                                            foreach ($checkedActions as $v) {
+                                                if (in_array(strtoupper((string) $v), ['Y', 'N'], true)) {
+                                                    $hasYorN = true;
+                                                    break;
+                                                }
+                                            }
+                                            if ($hasYorN) {
+                                                $val = $checkedActions[$kIdx] ?? $checkedActions[(string) $kIdx] ?? null;
+                                                $isActionChecked = in_array(strtoupper((string) $val), ['Y', '1', 'TRUE'], true);
+                                            } else {
+                                                $isActionChecked = in_array((string) $kIdx, array_map('strval', $checkedActions), true);
+                                            }
+                                        }
+                                    ?>
+                                    <tr>
+                                        <?php if ($kIdx === 0): ?>
+                                            <td rowspan="<?= $totalActions ?>" class="text-center align-middle font-weight-bold" style="background: var(--ap-surface);">
+                                                <?= $bIdx + 1 ?>
+                                            </td>
+                                            <td rowspan="<?= $totalActions ?>" class="ap-comp-cell">
+                                                <div class="ap-comp-name mb-1"><?= esc($bTitle) ?></div>
+                                                <?php if (!empty($bDef) && $bDef !== '-'): ?>
+                                                    <div class="ap-def"><span class="font-weight-bold">Def:</span> <?= esc($bDef) ?></div>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
+
+                                        <td>
+                                            <div class="ap-action-text">
+                                                <span class="ap-action-letter"><?= chr(97 + $kIdx) ?>.</span><?= esc($ka) ?>
+                                            </div>
+                                        </td>
+
+                                        <td class="text-center align-middle">
+                                            <input type="checkbox" <?= $isActionChecked ? 'checked' : '' ?> disabled style="width: 18px; height: 18px; cursor: default; accent-color: #2563eb;">
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <?php
+                                    $isProven = in_array(strtoupper((string) ($booleanValue ?? '')), ['Y', '1', 'TRUE'], true);
+                                ?>
+                                <tr>
+                                    <td class="text-center align-middle font-weight-bold" style="background: var(--ap-surface);">
+                                        <?= $bIdx + 1 ?>
+                                    </td>
+                                    <td class="ap-comp-cell">
+                                        <div class="ap-comp-name mb-1"><?= esc($bTitle) ?></div>
+                                        <?php if (!empty($bDef) && $bDef !== '-'): ?>
+                                            <div class="ap-def"><span class="font-weight-bold">Def:</span> <?= esc($bDef) ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="ap-action-text text-muted font-italic">Indikator umum</div>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <input type="checkbox" <?= $isProven ? 'checked' : '' ?> disabled style="width: 18px; height: 18px; cursor: default; accent-color: #2563eb;">
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                Tidak ada data kompetensi tambahan.
+                            </td>
+                        </tr>
+                    </tbody>
+                <?php endif; ?>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. CATATAN & FEEDBACK PENILAIAN -->
+    <div class="ap-card">
+        <div class="ap-card-head">
+            <h5 class="ap-card-title">4. Catatan &amp; Feedback Penilaian</h5>
+        </div>
+        <div class="ap-card-body">
+            <!-- Catatan Evaluator -->
+            <div class="mb-4">
+                <div class="ap-feedback-label">
+                    <i class="fas fa-user-edit mr-1 text-primary"></i>Catatan &amp; Feedback Evaluator:
+                </div>
+                <div class="ap-feedback-block">
+                    <?= esc(!empty($appraisal->evaluator_comment) ? $appraisal->evaluator_comment : 'Tidak ada catatan.') ?>
+                </div>
+            </div>
+
+            <!-- Catatan GM -->
+            <div class="mb-0">
+                <div class="ap-feedback-label">
+                    <i class="fas fa-user-tie mr-1 text-info"></i>Catatan Review Atasan (GM):
+                </div>
+                <div class="ap-feedback-block">
+                    <?php if (!empty($appraisal->snapshot_gm_id)): ?>
+                        <?= esc(!empty($appraisal->gm_comment) ? $appraisal->gm_comment : 'Tidak ada catatan review GM.') ?>
+                    <?php else: ?>
+                        <span class="text-muted font-italic">Tidak Diperlukan (Penilaian Langsung oleh Direksi)</span>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -328,9 +651,9 @@
 <!-- AUDIT LOG MODAL -->
 <div class="modal fade" id="modal_audit_log" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title font-weight-bold text-dark">
+        <div class="modal-content" style="border-radius: 14px; border: 0;">
+            <div class="modal-header" style="border-bottom: 1px solid var(--ap-line);">
+                <h5 class="modal-title font-weight-bold" style="color: var(--ap-ink); font-size: 16px;">
                     <i class="fas fa-history mr-2 text-primary"></i>Riwayat Alur Penilaian (Audit Trail)
                 </h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -345,7 +668,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
+            <div class="modal-footer" style="border-top: 1px solid var(--ap-line);">
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
             </div>
         </div>
@@ -353,7 +676,14 @@
 </div>
 
 <script>
+(function () {
+    var mp = document.querySelector('.main-panel');
+    if (mp) mp.classList.remove('is-loading');
+})();
+
 $(document).ready(function () {
+    $('.main-panel').removeClass('is-loading');
+    $('.new_form, .btn_requery, .card-header .float-right').hide();
     var appraisalId = <?= (int) $appraisal_id ?>;
 
     window.showAuditLogModal = function (id) {
@@ -388,7 +718,7 @@ $(document).ready(function () {
                     return;
                 }
 
-                var html = '<ul class="timeline">';
+                var html = '<ul class="timeline" style="list-style: none; padding-left: 0;">';
                 $.each(logs, function (i, log) {
                     var actionTitle = log.action || '-';
                     var timeStr = log.created_at ? log.created_at : '-';
