@@ -879,7 +879,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'help-article/show/(:any)', 'Backend\Help::show/$1');
     $routes->match(['get', 'post'], 'help-article/destroy/(:any)', 'Backend\Help::destroy/$1');
     $routes->post('help-article/uploadImage', 'Backend\Help::uploadImage');
-    
+
     $routes->match(['get', 'post'], 'help-article/getListArticle', 'Backend\Help::getListArticle');
     $routes->match(['get', 'post'], 'help-article/getListDocCategory', 'Backend\Help::getListDocCategory');
     $routes->match(['get', 'post'], 'help-article/getListStatus', 'Backend\Help::getListStatus');
