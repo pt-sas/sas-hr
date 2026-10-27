@@ -1048,7 +1048,12 @@ class AppraisalEvaluationController extends BaseController
                 }
 
             } elseif ($userMode === 'EMPLOYEE') {
-                $this->workflowService->acknowledgeByEmployee($appraisalId, $userId);
+                if ($actionType === 'submit') {
+                    $this->workflowService->acknowledgeByEmployee($appraisalId, $userId);
+                } else {
+                    $appraisal->updated_by = $userId;
+                    $this->model->save($appraisal);
+                }
             }
 
             $db->transComplete();
@@ -1057,7 +1062,13 @@ class AppraisalEvaluationController extends BaseController
                 throw new \RuntimeException('Gagal memproses transaksi database penyimpanan penilaian.');
             }
 
-            $msg = ($actionType === 'submit') ? 'Penilaian berhasil disubmit.' : (($actionType === 'kickback') ? 'Form berhasil dikembalikan untuk revisi.' : 'Data penilaian berhasil disimpan.');
+            if ($actionType === 'submit') {
+                $msg = ($userMode === 'EMPLOYEE') ? 'Penilaian berhasil dikonfirmasi dan difinalisasi.' : 'Penilaian berhasil disubmit.';
+            } elseif ($actionType === 'kickback') {
+                $msg = 'Form berhasil dikembalikan untuk revisi.';
+            } else {
+                $msg = ($userMode === 'EMPLOYEE') ? 'Form tersimpan. Centang konfirmasi untuk menyelesaikan tahap pembacaan.' : 'Data penilaian berhasil disimpan.';
+            }
             return $this->response->setJSON(message('success', true, $msg));
 
         } catch (\Throwable $e) {

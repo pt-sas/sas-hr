@@ -150,7 +150,50 @@
                     </div>
                 <?php endif; ?>
             </div>
-            <input type="hidden" name="action_type" value="submit">
+
+            <!-- Confirmation toggle for employee reading sign-off -->
+            <div class="mt-3 p-3 bg-light rounded border">
+                <input type="hidden" name="is_finalize" value="N">
+                <input type="hidden" name="action_type" id="employee_action_type" value="save_draft">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="check_finalize_employee" name="is_finalize" value="Y">
+                    <label class="custom-control-label font-weight-bold text-primary" for="check_finalize_employee" style="cursor: pointer;">
+                        <i class="fas fa-signature mr-1"></i> Saya telah membaca dan menyetujui hasil penilaian ini (Konfirmasi TTD Digital)
+                    </label>
+                </div>
+                <div id="emp_hint_draft" class="text-muted small mt-2">
+                    <i class="fas fa-info-circle mr-1"></i> Mode saat ini: <strong>Belum dikonfirmasi</strong> (centang kotak di atas untuk menyetujui hasil evaluasi dan melakukan konfirmasi TTD digital).
+                </div>
+                <div id="emp_hint_submit" class="text-success small mt-2 d-none font-weight-bold">
+                    <i class="fas fa-check-circle mr-1"></i> Mode saat ini: <strong>Konfirmasi &amp; TTD Digital</strong> (penilaian akan difinalisasi dan rapor resmi diterbitkan).
+                </div>
+            </div>
+
+            <script>
+            (function () {
+                var chk = document.getElementById('check_finalize_employee');
+                var act = document.getElementById('employee_action_type');
+                var hintDraft = document.getElementById('emp_hint_draft');
+                var hintSubmit = document.getElementById('emp_hint_submit');
+
+                if (chk && act) {
+                    function updateSubmitState() {
+                        if (chk.checked) {
+                            act.value = 'submit';
+                            if (hintDraft) hintDraft.classList.add('d-none');
+                            if (hintSubmit) hintSubmit.classList.remove('d-none');
+                        } else {
+                            act.value = 'save_draft';
+                            if (hintDraft) hintDraft.classList.remove('d-none');
+                            if (hintSubmit) hintSubmit.classList.add('d-none');
+                        }
+                    }
+
+                    chk.addEventListener('change', updateSubmitState);
+                    updateSubmitState();
+                }
+            })();
+            </script>
 
         <?php else: ?>
             <!-- VIEW ONLY MODE -->
