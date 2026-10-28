@@ -7,7 +7,7 @@ $mode    = $mode ?? 'month';
 // Robust key normalization supporting both backend key formats
 $days   = (int) ($attendance_days ?? ($days ?? 0));
 $target = (int) ($work_days ?? ($target ?? 22));
-$rate   = (int) ($my_rate ?? ($rate ?? 0));
+$rate   = (isset($my_rate) && $my_rate !== null) ? (int) $my_rate : null;
 $leave  = (int) ($my_leave_count ?? ($leave ?? 0));
 $absent = (int) ($my_absent_count ?? ($absent ?? 0));
 $late   = (int) ($late_count ?? ($late ?? 0));
@@ -23,13 +23,14 @@ $toneIcons  = ['success' => 'fa-check-circle', 'warning' => 'fa-exclamation-circ
 $toneIcon   = $toneIcons[$tone] ?? $toneIcons['secondary'];
 
 // ---- day view ----
+$isFuture = !empty($my_is_future);
 $none     = ['', '-', '—', 'Belum', 'Belum absen', 'Belum Absen'];
 $hasIn    = isset($my_clock_in_raw) ? trim((string) $my_clock_in_raw) !== '' : ! in_array(trim((string) $clockIn), $none, true);
 $outText  = trim((string) ($my_clock_out_text ?? ($my_clock_out_raw ?? '')));
 $hasOut   = ! in_array($outText, $none, true);
 $schedule = (! empty($my_shift_start) && ! empty($my_shift_end)) ? $my_shift_start . ' – ' . $my_shift_end : '';
-$showChip = $hasIn && trim((string) $punctual) !== '';
-$showNote = ! $hasIn && ! in_array(trim((string) $punctual), ['', 'Belum ada catatan'], true);
+$showChip = ($hasIn || $isFuture) && trim((string) $punctual) !== '';
+$showNote = ! $hasIn && ! $isFuture && ! in_array(trim((string) $punctual), ['', 'Belum ada catatan'], true);
 
 // ---- period view width calculations ----
 $denom   = max(1, $target);
@@ -79,9 +80,13 @@ $ariaSeg = $days . ' dari ' . $target . ' hari hadir' . ($leave ? ', ' . $leave 
         <!-- WEEK & MONTH MODE -->
         <div data-kpi-view="period" class="<?= $mode !== 'day' ? '' : 'd-none' ?>">
             <div class="d-flex align-items-baseline justify-content-between mb-2">
-                <h2 class="fw-extrabold text-dark mb-0 ta-rate-num" style="font-variant-numeric:tabular-nums" data-kpi="my_rate"><?= $rate ?>%</h2>
+                <h2 class="fw-extrabold text-dark mb-0 ta-rate-num" style="font-variant-numeric:tabular-nums" data-kpi="my_rate"><?= $rate !== null ? $rate . '%' : '—' ?></h2>
                 <span class="ta-period-count">
-                    <span data-kpi="attendance_days"><?= $days ?></span> / <span data-kpi="work_days"><?= $target ?></span> hari
+                    <?php if ($rate !== null): ?>
+                        <span data-kpi="attendance_days"><?= $days ?></span> / <span data-kpi="work_days"><?= $target ?></span> hari
+                    <?php else: ?>
+                        <span data-kpi="period_note" class="text-muted">Periode mendatang</span>
+                    <?php endif; ?>
                 </span>
             </div>
 
@@ -90,7 +95,7 @@ $ariaSeg = $days . ' dari ' . $target . ' hari hadir' . ($leave ? ', ' . $leave 
                     <div class="progress-bar bg-success" style="width:<?= $ontimeW ?>%" data-kpi="my_ontime_bar"></div>
                     <div class="progress-bar ta-late" style="width:<?= $lateW ?>%" data-kpi="my_late_bar"></div>
                     <div class="progress-bar ta-leave" style="width:<?= $leaveW ?>%" data-kpi="my_leave_bar"></div>
-                    <div class="progress-bar ta-absent" style="width:<?= $absentW ?>%" data-kpi="my_absent_bar"></div>
+                    <div class="progress-bar <?= !empty($my_is_alpa) ? 'ta-alpa' : 'ta-tidakhadir' ?>" style="width:<?= $absentW ?>%" data-kpi="my_absent_bar"></div>
                 </div>
             </div>
 
@@ -99,7 +104,9 @@ $ariaSeg = $days . ' dari ' . $target . ' hari hadir' . ($leave ? ', ' . $leave 
                     <span><i class="ta-sw bg-success"></i><b data-kpi="my_ontime_count"><?= $ontime ?></b> tepat waktu</span>
                     <?php if ($late > 0): ?><span><i class="ta-sw ta-late"></i><b data-kpi="my_late_count"><?= $late ?></b> terlambat</span><?php endif; ?>
                     <?php if ($leave > 0): ?><span><i class="ta-sw ta-leave"></i><b data-kpi="my_leave_count"><?= $leave ?></b> izin/cuti</span><?php endif; ?>
-                    <?php if ($absent > 0 && $mode !== 'week'): ?><span><i class="ta-sw ta-absent"></i><b data-kpi="my_absent_count"><?= $absent ?></b> alpa</span><?php endif; ?>
+                    <?php if ($absent > 0 && $mode !== 'week'): 
+                        $isAlpa = !empty($my_is_alpa);
+                    ?><span><i class="ta-sw <?= $isAlpa ? 'ta-alpa' : 'ta-tidakhadir' ?>"></i><b data-kpi="my_absent_count"><?= $absent ?></b> <span data-kpi="my_absent_label"><?= $isAlpa ? 'alpa' : 'tidak hadir' ?></span></span><?php endif; ?>
                 </div>
                 
                 <!-- Position-locked Streak Chips Slot -->
@@ -234,9 +241,11 @@ $ariaSeg = $days . ' dari ' . $target . ' hari hadir' . ($leave ? ', ' . $leave 
     display: block; 
 }
 
-.ta-late   { background: #d97706; }
-.ta-leave  { background: #0284c7; }
-.ta-absent { background: repeating-linear-gradient(45deg, #dc2626 0 6px, #fecaca 6px 12px); }
+.ta-late       { background: #d97706; }
+.ta-leave      { background: #0284c7; }
+.ta-tidakhadir { background: #94a3b8; }
+.ta-alpa       { background: repeating-linear-gradient(45deg, #dc2626 0 6px, #fecaca 6px 12px); }
+.ta-absent     { background: repeating-linear-gradient(45deg, #dc2626 0 6px, #fecaca 6px 12px); }
 
 .ta-meta { 
     display: flex; 
