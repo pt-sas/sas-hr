@@ -3253,38 +3253,87 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
-// --- Dynamic Async AJAX Handler ---
+// --- Universal Debounce Utility ---
+window.debounce = window.debounce || function (fn, delay) {
+    let timer = null;
+    return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+};
+
+function setDashboardLoading(isLoading) {
+    document.querySelectorAll('[data-kpi-card]').forEach(function(card) {
+        card.classList.toggle('kpi-card-loading', isLoading);
+    });
+    const picker = document.getElementById('stickyDatePicker');
+    if (picker) {
+        picker.classList.toggle('is-syncing', isLoading);
+    }
+    const cal = document.getElementById('fc-calendar');
+    if (cal) {
+        cal.classList.toggle('cal-loading', isLoading);
+    }
+}
+
+// --- Dynamic Async AJAX Handler with Debounce & Request Cancellation ---
 document.addEventListener('DOMContentLoaded', function() {
+    let activeAbortController = null;
+    let activeRequestId = 0;
+    let debounceTimer = null;
+
     document.addEventListener('dp:change', function(e) {
         const detail = e.detail;
         if (!detail) return;
 
-        const url = new URL(window.location.href);
-        url.searchParams.set('date', detail.date);
-        url.searchParams.set('mode', detail.mode);
-        url.searchParams.set('level', detail.level);
-        url.searchParams.set('ajax', '1');
+        // Immediately activate loading indicators across cards and controls
+        setDashboardLoading(true);
 
-        const kpiElements = document.querySelectorAll('[data-kpi]');
-        kpiElements.forEach(el => el.classList.add('kpi-loading'));
-
-        fetch(url.toString(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            updateDashboardDOM(data);
-
-            if (window.calendar) {
-                window.calendar.refetchEvents();
-            } else if (typeof $!== 'undefined' &&$('#calendar').length && $.isFunction($('#calendar').fullCalendar)) {
-                $('#calendar').fullCalendar('refetchEvents');
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() {
+            if (activeAbortController) {
+                try {
+                    activeAbortController.abort();
+                } catch (ignore) {}
             }
-        })
-        .catch(err => console.error('Dashboard AJAX refresh failed:', err))
-        .finally(() => {
-            kpiElements.forEach(el => el.classList.remove('kpi-loading'));
-        });
+            activeAbortController = new AbortController();
+            const currentRequestId = ++activeRequestId;
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('date', detail.date);
+            url.searchParams.set('mode', detail.mode);
+            url.searchParams.set('level', detail.level);
+            url.searchParams.set('ajax', '1');
+
+            fetch(url.toString(), {
+                signal: activeAbortController.signal,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (currentRequestId !== activeRequestId) return; // Discard stale responses
+                updateDashboardDOM(data);
+
+                if (window.calendar && typeof window.calendar.refetchEvents === 'function') {
+                    window.calendar.refetchEvents();
+                } else if (typeof $ !== 'undefined' && $('#fc-calendar').length && $.isFunction($('#fc-calendar').fullCalendar)) {
+                    $('#fc-calendar').fullCalendar('refetchEvents');
+                }
+            })
+            .catch(function(err) {
+                if (err && err.name === 'AbortError') {
+                    return; // Normal abort on newer interaction
+                }
+                console.error('Dashboard AJAX refresh failed:', err);
+            })
+            .finally(function() {
+                if (currentRequestId === activeRequestId) {
+                    setDashboardLoading(false);
+                }
+            });
+        }, 300);
     });
 
     function updateDashboardDOM(data) {
@@ -3319,6 +3368,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             clockOut:   data.my_clock_out_text || data.clock_out_time || '-',
                             schedule:   data.schedule_range || '',
                             punctual:   data.my_punctuality_text || '',
+                            is_future:  Boolean(data.my_is_future),
                         });
                     }
                 } else {
@@ -3338,17 +3388,24 @@ document.addEventListener('DOMContentLoaded', function() {
         const myAbsent = parseInt(data.my_absent_count || 0, 10);
         const myLate   = parseInt(data.late_count || 0, 10);
         const myStreak = parseInt(data.my_streak || 0, 10);
-        const rate     = Math.min(100, Math.max(0, parseInt(data.my_rate || 0, 10)));
+        const hasRate  = data.my_rate !== null && data.my_rate !== undefined;
+        const rate     = hasRate ? Math.min(100, Math.max(0, parseInt(data.my_rate, 10))) : null;
 
-        setText('[data-kpi="my_rate"]', rate + '%');
-        setText('[data-kpi="attendance_days"]', myDays);
-        setText('[data-kpi="work_days"]', target);
+        setText('[data-kpi="my_rate"]', rate !== null ? rate + '%' : '—');
+        const periodCountEl = document.querySelector('.ta-period-count');
+        if (periodCountEl) {
+            if (rate !== null) {
+                periodCountEl.innerHTML = `<span data-kpi="attendance_days">${myDays}</span> / <span data-kpi="work_days">${target}</span> hari`;
+            } else {
+                periodCountEl.innerHTML = '<span data-kpi="period_note" class="text-muted">Periode mendatang</span>';
+            }
+        }
 
-        const rateTone = rate >= 90 ? 'success' : (rate >= 75 ? 'warning' : 'danger');
+        const rateTone = rate !== null ? (rate >= 90 ? 'success' : (rate >= 75 ? 'warning' : 'danger')) : 'secondary';
 
         // FIX 1: Set main rate bar width using data.my_rate & querySelectorAll
         document.querySelectorAll('[data-kpi="my_rate_bar"]').forEach(bar => {
-            bar.style.width = rate + '%';
+            bar.style.width = (rate !== null ? rate : 0) + '%';
             bar.className = `progress-bar bg-${rateTone}`;
         });
 
@@ -3365,6 +3422,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 leave:           myLeave,
                 my_absent_count: myAbsent,
                 absent:          myAbsent,
+                my_is_alpa:      data.my_is_alpa || false,
+                my_absent_label: data.my_absent_label || 'tidak hadir',
                 late_count:      myLate,
                 late:            myLate,
                 my_ontime_count: parseInt(data.my_ontime_count || 0, 10),
@@ -3394,16 +3453,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        const teamRateText = (data.team_rate ?? 0) + '%';
-        setText('[data-kpi="team_subtitle"]', data.label || (currentMode === 'day' ? 'Hari ini' : (currentMode === 'week' ? 'Minggu ini' : 'Bulan ini')));
+        const isTeamFuture = Boolean(data.team_is_future);
+        const teamHasRate  = data.team_rate !== null && data.team_rate !== undefined;
+        const teamRateText = teamHasRate ? data.team_rate + '%' : '—';
+
+        setText('[data-kpi="team_subtitle"]', data.label || (currentMode === 'day' ? (isTeamFuture ? 'Jadwal mendatang' : 'Hari ini') : (currentMode === 'week' ? 'Minggu ini' : 'Bulan ini')));
         setText('[data-kpi="team_rate"]', teamRateText);
-        setText('[data-kpi="team_rate_day"]', teamRateText);
-        setText('[data-kpi="team_rate_label"]', currentMode === 'week' ? 'kehadiran minggu ini' : 'rata-rata kehadiran');
+        setText('[data-kpi="team_rate_day"]', isTeamFuture ? '—' : teamRateText);
+        setText('[data-kpi="team_rate_label"]', teamHasRate ? (currentMode === 'week' ? 'Rata-rata minggu ini' : 'Rata-rata kehadiran') : 'Periode belum berjalan');
 
         const total      = parseInt(data.team_total || 0, 10);
         const present    = parseInt(data.team_present || 0, 10);
         const leaveCount = parseInt(data.team_on_leave || 0, 10);
         const pending    = Math.max(0, total - present - leaveCount);
+        const scheduled  = Math.max(0, total - leaveCount);
 
         setText('[data-kpi="team_present"]', present);
         setText('[data-kpi="team_present_count"]', present);
@@ -3411,24 +3474,58 @@ document.addEventListener('DOMContentLoaded', function() {
         setText('[data-kpi="team_on_leave"]', leaveCount);
         setText('[data-kpi="team_leave_count"]', leaveCount);
         setText('[data-kpi="team_pending_count"]', pending);
+        setText('[data-kpi="team_scheduled_count"]', scheduled);
 
-        if (total > 0) {
-            setWidth('[data-kpi="team_present_bar"]', (present / total) * 100);
-            setWidth('[data-kpi="team_leave_bar"]', (leaveCount / total) * 100);
+        const countTextEl = document.querySelector('.tk-count-text');
+        if (countTextEl) {
+            if (isTeamFuture) {
+                countTextEl.innerHTML = `<span data-kpi="team_total">${total}</span> orang terjadwal`;
+            } else {
+                countTextEl.innerHTML = `<span data-kpi="team_present">${present}</span> / <span data-kpi="team_total">${total}</span> orang`;
+            }
         }
 
-        // Team Absent Names Update
-        const absentEl = document.querySelector('[data-kpi="team_absent_names"]');
-        if (absentEl) {
-            const absentArr = Array.isArray(data.team_absent_names) ? data.team_absent_names.filter(Boolean) : [];
-            if (absentArr.length > 0) {
-                absentEl.classList.remove('d-none');
-                const namesStr = absentArr.join(', ');
-                const sliceStr = absentArr.slice(0, 2).join(', ') + (absentArr.length > 2 ? ' +' + (absentArr.length - 2) : '');
-                absentEl.title = namesStr;
-                absentEl.innerHTML = `<i class="far fa-clock" aria-hidden="true"></i> Belum hadir: ${sliceStr}`;
+        if (total > 0) {
+            if (isTeamFuture) {
+                setWidth('[data-kpi="team_scheduled_bar"]', (scheduled / total) * 100);
+                setWidth('[data-kpi="team_leave_bar"]', (leaveCount / total) * 100);
             } else {
-                absentEl.classList.add('d-none');
+                setWidth('[data-kpi="team_present_bar"]', (present / total) * 100);
+                setWidth('[data-kpi="team_leave_bar"]', (leaveCount / total) * 100);
+            }
+        }
+
+        // Team Absent Names vs Scheduled Leave Names Update
+        const absentEl = document.querySelector('[data-kpi="team_absent_names"]');
+        const leaveEl  = document.querySelector('[data-kpi="team_leave_names"]');
+        
+        if (isTeamFuture) {
+            if (absentEl) absentEl.classList.add('d-none');
+            if (leaveEl) {
+                const leaveArr = Array.isArray(data.team_leave_names) ? data.team_leave_names.filter(Boolean) : [];
+                if (leaveArr.length > 0) {
+                    leaveEl.classList.remove('d-none');
+                    const namesStr = leaveArr.join(', ');
+                    const sliceStr = leaveArr.slice(0, 2).join(', ') + (leaveArr.length > 2 ? ' +' + (leaveArr.length - 2) : '');
+                    leaveEl.title = namesStr;
+                    leaveEl.innerHTML = `<i class="fas fa-calendar-day" aria-hidden="true"></i> Cuti/Izin: ${sliceStr}`;
+                } else {
+                    leaveEl.classList.add('d-none');
+                }
+            }
+        } else {
+            if (leaveEl) leaveEl.classList.add('d-none');
+            if (absentEl) {
+                const absentArr = Array.isArray(data.team_absent_names) ? data.team_absent_names.filter(Boolean) : [];
+                if (absentArr.length > 0) {
+                    absentEl.classList.remove('d-none');
+                    const namesStr = absentArr.join(', ');
+                    const sliceStr = absentArr.slice(0, 2).join(', ') + (absentArr.length > 2 ? ' +' + (absentArr.length - 2) : '');
+                    absentEl.title = namesStr;
+                    absentEl.innerHTML = `<i class="far fa-clock" aria-hidden="true"></i> Tidak hadir: ${sliceStr}`;
+                } else {
+                    absentEl.classList.add('d-none');
+                }
             }
         }
 
@@ -3965,6 +4062,8 @@ document.addEventListener('DOMContentLoaded', function() {
           success: function (doc) {
             var formatted = (doc || []).map(function(item) {
               var ext = item.extendedProps || {};
+              var itemType = item.type || 'team';
+              var itemColor = item.backgroundColor || item.color || '';
               return {
                 id: item.id || '',
                 documentno: item.id || item.documentno || '',
@@ -3973,13 +4072,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 start: item.start,
                 end: item.end || null,
                 allDay: item.allDay || false,
-                type: item.type || 'team',
+                type: itemType,
+                color: itemColor,
+                backgroundColor: itemColor,
+                borderColor: itemColor,
                 status: item.docstatus || ext.status || 'CO',
                 employee: item.employee || ext.employee || item.employee_name || '',
                 branch: item.branch || ext.branch || '',
                 submissionType: item.submissiontype_name || item.doctype_name || '',
                 reason: item.place || ext.reason || item.reason || '',
-                className: item.className || ['t-' + (item.type || 'team')],
+                className: item.className || ['t-' + itemType],
                 extendedProps: ext
               };
             });
@@ -3992,6 +4094,10 @@ document.addEventListener('DOMContentLoaded', function() {
       dayClick:   function (date) { pick(date.format('YYYY-MM-DD')); },
       eventClick: function (ev)   { pick(first(ev)); return false; },
 
+      loading: function(isLoading) {
+        $cal.toggleClass('cal-loading', isLoading);
+      },
+
       eventAfterAllRender: function () { markSelected(); paintDots(); renderDetail(); },
       viewRender: function () { markSelected(); paintDots(); }
     });
@@ -3999,14 +4105,19 @@ document.addEventListener('DOMContentLoaded', function() {
     $cal.find('.fc-toolbar').after($('.k-legend-bar'));
     $cal.find('.fc-toolbar .fc-left').html($('#fc-filter-template').html());
 
+    var calDebounceTimer = null;
     document.addEventListener('dp:change', function (e) {
       var viewMap = { day: 'agendaDay', week: 'agendaWeek', month: 'month' };
       if (!CFG.lockMonth && viewMap[e.detail.mode]) {
         $cal.fullCalendar('changeView', viewMap[e.detail.mode]);
       }
       $cal.fullCalendar('gotoDate', e.detail.date);
-      $cal.fullCalendar('refetchEvents');
       pick(e.detail.date);
+
+      clearTimeout(calDebounceTimer);
+      calDebounceTimer = setTimeout(function () {
+        $cal.fullCalendar('refetchEvents');
+      }, 300);
     });
   }
 })();

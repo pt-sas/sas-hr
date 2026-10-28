@@ -7057,14 +7057,26 @@ window.KPI.attendanceMeta = function (d) {
     $('[data-kpi="my_ontime_bar"]').css('width', ontimeW + '%');
     $('[data-kpi="my_late_bar"]').css('width', lateW + '%');
     $('[data-kpi="my_leave_bar"]').css('width', leaveW + '%');
-    $('[data-kpi="my_absent_bar"]').css('width', absentW + '%');
+    var isAlpaBar = d.my_is_alpa || false;
+    var $absBar = $('[data-kpi="my_absent_bar"]');
+    $absBar.css('width', absentW + '%');
+    if (isAlpaBar) {
+      $absBar.removeClass('ta-tidakhadir').addClass('ta-alpa');
+    } else {
+      $absBar.removeClass('ta-alpa ta-absent').addClass('ta-tidakhadir');
+    }
   }
 
   var mode = d.mode || 'month';
   var h = '<div class="ta-legend"><span><i class="ta-sw bg-success"></i><b>' + ontime + '</b> tepat waktu</span>';
   if (late > 0)     h += '<span><i class="ta-sw ta-late"></i><b>' + late + '</b> terlambat / tidak lengkap</span>';
   if (leave > 0)    h += '<span><i class="ta-sw ta-leave"></i><b>' + leave + '</b> izin / cuti</span>';
-  if (absent > 0 && mode !== 'week') h += '<span><i class="ta-sw ta-absent"></i><b>' + absent + '</b> alpa</span>';
+  if (absent > 0 && mode !== 'week') {
+    var isAlpa = d.my_is_alpa || false;
+    var swClass = isAlpa ? 'ta-alpa' : 'ta-tidakhadir';
+    var txtLabel = isAlpa ? 'alpa' : 'tidak hadir';
+    h += '<span><i class="ta-sw ' + swClass + '"></i><b>' + absent + '</b> ' + txtLabel + '</span>';
+  }
   h += '</div>';
 
   if (streak >= 3 || overtime > 0) {
@@ -7102,8 +7114,9 @@ window.KPI.attendanceDay = function (d) {
 
   var hasIn    = none.indexOf(inT) === -1;
   var hasOut   = none.indexOf(outT) === -1;
-  var showChip = hasIn && punctual !== '';
-  var showNote = !hasIn && ['', 'Belum ada catatan'].indexOf(punctual) === -1;
+  var isFuture = Boolean(d.my_is_future || d.is_future);
+  var showChip = (hasIn || isFuture) && punctual !== '';
+  var showNote = !hasIn && !isFuture && ['', 'Belum ada catatan'].indexOf(punctual) === -1;
   var hide     = function (c) { return c ? '' : 'd-none'; };
 
   return '<div class="dy-head">' +

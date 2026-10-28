@@ -200,14 +200,19 @@ class Dashboard extends BaseController
             'label'             => $dateLabel ?? ('Hari ini, ' . date('d M Y', strtotime($todayDate))),
             'attendance_days'   => $personalAtt['attendance_days'] ?? 0,     // x in x/y (Hadir)
             'work_days'         => $personalAtt['target_work_days'] ?? 0,    // y in x/y (Total target kerja)
-            'work_days_elapsed' => $personalAtt['elapsed_work_days'] ?? 0,   // Hari kerja berlalu
-            'my_rate'           => $personalAtt['my_rate'] ?? 0,             // Attendance %
-            'my_leave_count'    => $personalAtt['my_leave_count'] ?? 0,       // Total Izin / Cuti
-            'my_absent_count'   => $personalAtt['my_absent_count'] ?? 0,      // Total Alpa / Mangkir
-            'late_count'        => $personalAtt['total_late'] ?? 0,          // Total Terlambat + Tidak Lengkap
-            'incomplete_count'  => $personalAtt['incomplete_count'] ?? 0,    // Tanpa Absen Masuk / Pulang
-            'overtime_count'    => $personalAtt['overtime_count'] ?? 0,      // Total Hari Lembur
-            'my_streak'         => 0,                                        // Streak beruntun
+            'work_days_elapsed'   => $personalAtt['elapsed_work_days'] ?? 0,   // Hari kerja berlalu
+            'my_rate'             => $personalAtt['my_rate'],                  // Attendance % (null for future period)
+            'my_is_future'        => $personalAtt['is_future'] ?? false,
+            'my_is_future_period' => $personalAtt['is_future_period'] ?? false,
+            'my_leave_count'      => $personalAtt['my_leave_count'] ?? 0,       // Total Izin / Cuti
+            'my_absent_count'     => $personalAtt['my_absent_count'] ?? 0,      // Total Alpa / Tidak Hadir
+            'my_is_alpa'          => $personalAtt['my_is_alpa'] ?? false,
+            'my_absent_label'     => $personalAtt['my_absent_label'] ?? 'tidak hadir',
+            'my_absent_tone'      => $personalAtt['my_absent_tone'] ?? 'secondary',
+            'late_count'          => $personalAtt['total_late'] ?? 0,          // Total Terlambat + Tidak Lengkap
+            'incomplete_count'    => $personalAtt['incomplete_count'] ?? 0,    // Tanpa Absen Masuk / Pulang
+            'overtime_count'      => $personalAtt['overtime_count'] ?? 0,      // Total Hari Lembur
+            'my_streak'           => 0,                                        // Streak beruntun
 
             // Text & UI Theme Keys for box_attendance.php
             'my_status_text'      => $personalAtt['my_status_text'] ?? '-',
@@ -223,12 +228,15 @@ class Dashboard extends BaseController
             'my_ontime_count'     => $personalAtt['ontime_count'] ?? 0,
 
             // Team Attendance Stats
-            'team_total'        => $teamStats['team_total'] ?? 0,
-            'team_present'      => $teamStats['team_present'] ?? 0,
-            'team_on_leave'     => $teamStats['team_on_leave'] ?? 0,
-            'team_rate'         => min(100, (float)($teamStats['team_rate'] ?? 0)),
-            'team_trend'        => is_array($teamStats['team_trend'] ?? null) ? $teamStats['team_trend'] : [],
-            'show_team_card'    => $teamStats['can_view_team_card'] ?? false,
+            'team_total'          => $teamStats['team_total'] ?? 0,
+            'team_present'        => $teamStats['team_present'] ?? 0,
+            'team_on_leave'       => $teamStats['team_on_leave'] ?? 0,
+            'team_rate'           => $teamStats['team_rate'] !== null ? min(100, (float)$teamStats['team_rate']) : null,
+            'team_trend'          => is_array($teamStats['team_trend'] ?? null) ? $teamStats['team_trend'] : [],
+            'team_is_future'      => $teamStats['team_is_future'] ?? false,
+            'team_leave_names'    => $teamStats['team_leave_names'] ?? [],
+            'team_absent_names'   => $teamStats['team_absent_names'] ?? [],
+            'show_team_card'      => $teamStats['can_view_team_card'] ?? false,
 
             // Filters & Scope
             'levels'            => $scopeData['levels'] ?? ['me' => 'Saya'],
@@ -449,18 +457,46 @@ class Dashboard extends BaseController
             ->get()
             ->getRow();
 
+        $isFutureDay      = ($today > $todayStr);
         $myClockInRaw     = $todayCalc['clock_in'] ?? null;
         $myClockOutRaw    = $todayCalc['clock_out'] ?? null;
         $haveClockIn      = !empty($myClockInRaw);
         $haveClockOut     = !empty($myClockOutRaw);
 
-        $clockInTime      = $haveClockIn ? date('H:i', strtotime($myClockInRaw)) : 'Belum absen';
-        $clockOutTime     = $haveClockOut ? date('H:i', strtotime($myClockOutRaw)) : 'Belum absen';
+        if ($isFutureDay) {
+            $clockInTime  = '—';
+            $clockOutTime = '—';
+        } else {
+            $clockInTime  = $haveClockIn ? date('H:i', strtotime($myClockInRaw)) : 'Belum absen';
+            $clockOutTime = $haveClockOut ? date('H:i', strtotime($myClockOutRaw)) : 'Belum absen';
+        }
 
         $scheduleRange    = $empSchedule->schedule_range ?? 'Libur / Tidak Ada Jadwal';
         $branchName       = $empSchedule->branch_name ?? '-';
         $attendanceStatus = $todayCalc['attendance_status'] ?? 'ABSENT';
         $tkhAllowance     = (float) ($todayCalc['tkh_allowance'] ?? 1.0);
+
+        if ($isFutureDay && $attendanceStatus === 'ABSENT') {
+            $attendanceStatus = 'UPCOMING_WORK';
+        }
+
+        // Query official `alpa` records strictly from trx_absent
+        $officialAlpaRows = $this->db->table('trx_absent a')
+            ->select('DATE(ad.date) as alpa_date')
+            ->join('trx_absent_detail ad', 'ad.trx_absent_id = a.trx_absent_id', 'inner')
+            ->where('a.md_employee_id', $employeeId)
+            ->where('a.submissiontype', 100002) // Pengajuan_Alpa
+            ->where('a.docstatus', 'CO')
+            ->where('ad.date >=', $rangeStart . ' 00:00:00')
+            ->where('ad.date <=', $rangeEnd . ' 23:59:59')
+            ->get()->getResultArray();
+
+        $officialAlpaDates = array_column($officialAlpaRows, 'alpa_date');
+        $hasOfficialAlpa   = !empty($officialAlpaDates);
+
+        if (!$isFutureDay && $attendanceStatus === 'ABSENT' && in_array($today, $officialAlpaDates, true)) {
+            $attendanceStatus = 'ALPA';
+        }
 
         $statusMap = [
             'NORMAL'                    => ['text' => 'Hadir Tepat Waktu',        'tone' => 'success',   'punctual' => 'Tepat Waktu'],
@@ -472,8 +508,10 @@ class Dashboard extends BaseController
             'MISSING_CHECK_IN'          => ['text' => 'Tidak Absen Masuk',       'tone' => 'danger',    'punctual' => 'Tanpa Absen Masuk'],
             'MISSING_CHECK_OUT'         => ['text' => 'Tidak Absen Pulang',      'tone' => 'danger',    'punctual' => 'Tanpa Absen Pulang'],
             'LATE_AND_MISSING_OUT'      => ['text' => 'Terlambat & Tanpa Pulang', 'tone' => 'danger',    'punctual' => 'Tidak Lengkap'],
-            'ABSENT'                    => ['text' => 'Tidak Hadir',             'tone' => 'danger',    'punctual' => 'Mangkir'],
-            'LEAVE_APPROVED'            => ['text' => 'Izin / Cuti Disetujui',    'tone' => 'info',      'punctual' => 'Izin Disetujui'],
+            'ABSENT'                    => ['text' => 'Tidak Hadir',             'tone' => 'secondary', 'punctual' => 'Tidak Hadir'],
+            'ALPA'                      => ['text' => 'Alpa',                    'tone' => 'danger',    'punctual' => 'Alpa'],
+            'UPCOMING_WORK'             => ['text' => 'Jadwal Kerja Mendatang',   'tone' => 'primary',   'punctual' => 'Belum Berjalan'],
+            'LEAVE_APPROVED'            => ['text' => ($isFutureDay ? 'Izin / Cuti Terjadwal' : 'Izin / Cuti Disetujui'), 'tone' => 'info', 'punctual' => ($isFutureDay ? 'Izin Terjadwal' : 'Izin Disetujui')],
             'HALF_DAY_APPROVED'         => ['text' => 'Izin Setengah Hari',      'tone' => 'info',      'punctual' => 'Setengah Hari'],
             'LATE_EXCUSED'              => ['text' => 'Terlambat (Disetujui)',    'tone' => 'info',      'punctual' => 'Izin Terlambat'],
             'EARLY_LEAVE_EXCUSED'       => ['text' => 'Pulang Cepat (Disetujui)', 'tone' => 'info',      'punctual' => 'Izin Pulang Cepat'],
@@ -605,9 +643,11 @@ class Dashboard extends BaseController
 
         $targetWorkDays = max(1, $targetWorkDays);
         $denomElapsed   = max(1, $elapsedWorkDays);
-        $myRate         = min(100, (int) round(($fulfilledDays / $denomElapsed) * 100));
+        $myRate         = ($elapsedWorkDays > 0) ? min(100, (int) round(($fulfilledDays / $denomElapsed) * 100)) : null;
 
         return [
+            'is_future'           => $isFutureDay,
+            'is_future_period'    => ($elapsedWorkDays === 0),
             'have_clock_in'       => $haveClockIn,
             'have_clock_out'      => $haveClockOut,
             'clock_in_time'       => $clockInTime,
@@ -631,6 +671,9 @@ class Dashboard extends BaseController
             'my_rate'             => $myRate,
             'my_leave_count'      => $myLeaveCount,
             'my_absent_count'     => $myAbsentCount,
+            'my_is_alpa'          => $hasOfficialAlpa,
+            'my_absent_label'     => $hasOfficialAlpa ? 'alpa' : 'tidak hadir',
+            'my_absent_tone'      => $hasOfficialAlpa ? 'danger' : 'secondary',
             'total_late'          => $totalLate,
             'incomplete_count'    => $incompleteCount,
             'overtime_count'      => $overtimeCount,
@@ -667,13 +710,20 @@ class Dashboard extends BaseController
 
         $excludedStatusNames = ['RESIGN', 'PENSIUN'];
 
-        $subordinateIds = [];
+        $subordinateIds   = [];
+        $employeeRegDates = [];
+        $employeeRsgDates = [];
         if (!empty($candidateIds)) {
             $activeRows = $this->db->table('md_employee e')
-                ->select('e.md_employee_id')
+                ->select('e.md_employee_id, e.registerdate, e.resigndate')
                 ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
                 ->whereIn('e.md_employee_id', $candidateIds)
                 ->where('e.isactive', 'Y')
+                ->groupStart()
+                    ->where('e.registerdate IS NULL')
+                    ->orWhere("CAST(e.registerdate AS CHAR) = '0000-00-00'")
+                    ->orWhere('e.registerdate <=', $today)
+                ->groupEnd()
                 ->groupStart()
                     ->where('e.resigndate IS NULL')
                     ->orWhere("CAST(e.resigndate AS CHAR) = '0000-00-00'")
@@ -685,7 +735,9 @@ class Dashboard extends BaseController
                 ->groupEnd()
                 ->get()->getResultArray();
 
-            $subordinateIds = array_column($activeRows, 'md_employee_id');
+            $subordinateIds   = array_column($activeRows, 'md_employee_id');
+            $employeeRegDates = array_column($activeRows, 'registerdate', 'md_employee_id');
+            $employeeRsgDates = array_column($activeRows, 'resigndate', 'md_employee_id');
         }
 
         $teamTotal   = count($subordinateIds);
@@ -749,6 +801,16 @@ class Dashboard extends BaseController
                 ->join('md_work_detail mwd', 'mwd.md_work_id = mew.md_work_id')
                 ->whereIn('mew.md_employee_id', $subordinateIds)
                 ->where('mew.isactive', 'Y')
+                ->groupStart()
+                    ->where('mew.validfrom IS NULL')
+                    ->orWhere("CAST(mew.validfrom AS CHAR) = '0000-00-00 00:00:00'")
+                    ->orWhere('DATE(mew.validfrom) <=', $endDate)
+                ->groupEnd()
+                ->groupStart()
+                    ->where('mew.validto IS NULL')
+                    ->orWhere("CAST(mew.validto AS CHAR) = '0000-00-00 00:00:00'")
+                    ->orWhere('DATE(mew.validto) >=', $startDate)
+                ->groupEnd()
                 ->get()->getResultArray();
 
             $employeeWorkDays = [];
@@ -770,7 +832,24 @@ class Dashboard extends BaseController
                 $attendanceMap[$att['date']][$att['md_employee_id']] = true;
             }
 
-            $evaluateDailyStats = function ($dateStr) use ($subordinateIds, $offDaysMap, $penugasanMap, $employeeWorkDays, $attendanceMap) {
+            $teamLeaveRows = $this->db->table('v_all_submission s')
+                ->select('s.md_employee_id, DATE(s.date) as date')
+                ->whereIn('s.md_employee_id', $subordinateIds)
+                ->where('s.date >=', $startDate . ' 00:00:00')
+                ->where('s.date <=', $endDate . ' 23:59:59')
+                ->whereIn('s.docstatus', ['CO', 'AP'])
+                ->where('s.isagree !=', 'C')
+                ->get()->getResultArray();
+
+            $teamLeaveMap = [];
+            foreach ($teamLeaveRows as $l) {
+                $teamLeaveMap[$l['date']][$l['md_employee_id']] = true;
+            }
+
+            $evaluateDailyStats = function ($dateStr) use (
+                $subordinateIds, $offDaysMap, $penugasanMap, $employeeWorkDays, 
+                $attendanceMap, $employeeRegDates, $employeeRsgDates, $teamLeaveMap
+            ) {
                 $dt        = new \DateTime($dateStr);
                 $dayOfWeek = (int) $dt->format('N'); // 1 (Mon) to 7 (Sun)
                 $isWeekend = ($dayOfWeek >= 6);
@@ -778,15 +857,27 @@ class Dashboard extends BaseController
 
                 $dayCapacity = 0;
                 $dayPresent  = 0;
+                $dayOnLeave  = 0;
 
                 foreach ($subordinateIds as $empId) {
+                    $regDate = $employeeRegDates[$empId] ?? null;
+                    if (!empty($regDate) && $regDate !== '0000-00-00' && $dateStr < $regDate) {
+                        continue;
+                    }
+
+                    $rsgDate = $employeeRsgDates[$empId] ?? null;
+                    if (!empty($rsgDate) && $rsgDate !== '0000-00-00' && $dateStr >= $rsgDate) {
+                        continue;
+                    }
+
                     $hasPenugasan      = isset($penugasanMap[$dateStr][$empId]);
                     $scheduledDays     = $employeeWorkDays[$empId] ?? [1, 2, 3, 4, 5];
                     $isScheduledToWork = in_array($dayOfWeek, $scheduledDays);
+                    $isOnLeave         = isset($teamLeaveMap[$dateStr][$empId]);
 
-                    $isExpected = $hasPenugasan || ($isScheduledToWork && !$isHoliday);
-
-                    if ($isExpected) {
+                    if ($isOnLeave && !$isHoliday && ($isScheduledToWork || $hasPenugasan)) {
+                        $dayOnLeave++;
+                    } elseif ($hasPenugasan || ($isScheduledToWork && !$isHoliday)) {
                         $dayCapacity++;
                         if (isset($attendanceMap[$dateStr][$empId])) {
                             $dayPresent++;
@@ -794,27 +885,80 @@ class Dashboard extends BaseController
                     }
                 }
 
+                $todayStr = date('Y-m-d');
+                $isFuture = ($dateStr > $todayStr);
+                if ($isFuture) {
+                    return [
+                        'capacity'   => $dayCapacity,
+                        'present'    => 0,
+                        'on_leave'   => $dayOnLeave,
+                        'rate'       => null,
+                        'is_holiday' => $isHoliday || ($isWeekend && $dayCapacity === 0),
+                        'is_future'  => true
+                    ];
+                }
+
                 $rate = $dayCapacity > 0 ? (int) round(($dayPresent / $dayCapacity) * 100) : ($isHoliday || $isWeekend ? 100 : 0);
 
                 return [
                     'capacity'   => $dayCapacity,
                     'present'    => $dayPresent,
+                    'on_leave'   => $dayOnLeave,
                     'rate'       => $rate,
-                    'is_holiday' => $isHoliday || ($isWeekend && $dayCapacity === 0)
+                    'is_holiday' => $isHoliday || ($isWeekend && $dayCapacity === 0),
+                    'is_future'  => false
                 ];
             };
 
-            if ($mode === 'day') {
-                $stats             = $evaluateDailyStats($today);
-                $teamPresent       = $stats['present'];
-                $totalTeamCapacity = $stats['capacity'];
-                $teamRate          = $stats['rate'];
+            $todayStr = date('Y-m-d');
 
-                $teamOnLeave = $this->db->table('v_all_submission')
-                    ->whereIn('md_employee_id', $subordinateIds)
-                    ->where('DATE(date)', $today)
-                    ->where('isagree', 'Y')
-                    ->countAllResults();
+            if ($mode === 'day') {
+                $isTargetFuture    = ($today > $todayStr);
+                $stats             = $evaluateDailyStats($today);
+                $teamPresent       = $isTargetFuture ? 0 : $stats['present'];
+                $totalTeamCapacity = $stats['capacity'];
+                $teamRate          = $isTargetFuture ? null : $stats['rate'];
+                $teamOnLeave       = $stats['on_leave'];
+
+                // Query names of subordinates on approved leave on $today
+                $teamLeaveNames = [];
+                if (!empty($subordinateIds)) {
+                    $leaveRows = $this->db->table('v_all_submission s')
+                        ->select('e.fullname')
+                        ->join('md_employee e', 'e.md_employee_id = s.md_employee_id', 'inner')
+                        ->whereIn('s.md_employee_id', $subordinateIds)
+                        ->where('s.date >=', $today . ' 00:00:00')
+                        ->where('s.date <=', $today . ' 23:59:59')
+                        ->whereIn('s.docstatus', ['CO', 'AP'])
+                        ->where('s.isagree !=', 'C')
+                        ->groupBy('e.md_employee_id')
+                        ->get()->getResultArray();
+                    $teamLeaveNames = array_column($leaveRows, 'fullname');
+                }
+
+                $teamAbsentNames = [];
+                if (!$isTargetFuture) {
+                    $dayOfWeek = (int) (new \DateTime($today))->format('N');
+                    $isHoliday = isset($offDaysMap[$today]);
+                    foreach ($subordinateIds as $empId) {
+                        $regDate = $employeeRegDates[$empId] ?? null;
+                        if (!empty($regDate) && $regDate !== '0000-00-00' && $today < $regDate) continue;
+                        $rsgDate = $employeeRsgDates[$empId] ?? null;
+                        if (!empty($rsgDate) && $rsgDate !== '0000-00-00' && $today >= $rsgDate) continue;
+
+                        $hasPenugasan      = isset($penugasanMap[$today][$empId]);
+                        $scheduledDays     = $employeeWorkDays[$empId] ?? [1, 2, 3, 4, 5];
+                        $isScheduledToWork = in_array($dayOfWeek, $scheduledDays);
+                        $isOnLeave         = isset($teamLeaveMap[$today][$empId]);
+
+                        if (($hasPenugasan || ($isScheduledToWork && !$isHoliday)) && !$isOnLeave && !isset($attendanceMap[$today][$empId])) {
+                            $empRow = $this->db->table('md_employee')->select('fullname')->where('md_employee_id', $empId)->get()->getRow();
+                            if ($empRow && !empty($empRow->fullname)) {
+                                $teamAbsentNames[] = $empRow->fullname;
+                            }
+                        }
+                    }
+                }
 
             } elseif ($mode === 'week' && $wStart) {
                 $dayLabels         = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'];
@@ -825,17 +969,21 @@ class Dashboard extends BaseController
                     $dayDate = (clone $monday)->modify("+{$i} days")->format('Y-m-d');
                     $stats   = $evaluateDailyStats($dayDate);
 
-                    $teamPresent       += $stats['present'];
-                    $totalTeamCapacity += $stats['capacity'];
+                    if ($dayDate <= $todayStr) {
+                        $teamPresent       += $stats['present'];
+                        $teamOnLeave       += $stats['on_leave'];
+                        $totalTeamCapacity += $stats['capacity'];
+                    }
 
                     $teamTrend[] = [
                         'label'      => $label,
-                        'rate'       => min(100, $stats['rate']),
-                        'is_holiday' => $stats['is_holiday']
+                        'rate'       => $stats['rate'] !== null ? min(100, $stats['rate']) : null,
+                        'is_holiday' => $stats['is_holiday'],
+                        'is_future'  => !empty($stats['is_future'])
                     ];
                 }
 
-                $teamRate = $totalTeamCapacity > 0 ? (int) round(($teamPresent / $totalTeamCapacity) * 100) : 0;
+                $teamRate = $totalTeamCapacity > 0 ? (int) round(($teamPresent / $totalTeamCapacity) * 100) : null;
 
             } else {
                 $firstDayOfMonth   = new \DateTime("{$currentYear}-{$currentMonth}-01");
@@ -847,28 +995,35 @@ class Dashboard extends BaseController
                         ? (clone $firstDayOfMonth)->modify('last day of this month')
                         : (clone $firstDayOfMonth)->modify('+' . ($w * 7 - 1) . ' days');
 
-                    $weekCapacity = 0;
-                    $weekPresent  = 0;
+                    $weekCapacity   = 0;
+                    $weekPresent    = 0;
+                    $hasElapsedDays = false;
 
                     $curr = clone $wStartBracket;
                     while ($curr <= $wEndBracket) {
-                        $stats        = $evaluateDailyStats($curr->format('Y-m-d'));
-                        $weekCapacity += $stats['capacity'];
-                        $weekPresent  += $stats['present'];
+                        $cDate = $curr->format('Y-m-d');
+                        $stats = $evaluateDailyStats($cDate);
+                        if ($cDate <= $todayStr) {
+                            $weekCapacity   += $stats['capacity'];
+                            $weekPresent    += $stats['present'];
+                            $teamOnLeave    += $stats['on_leave'];
+                            $hasElapsedDays  = true;
+                        }
                         $curr->modify('+1 day');
                     }
 
-                    $wRate       = $weekCapacity > 0 ? (int) round(($weekPresent / $weekCapacity) * 100) : 100;
+                    $wRate = $hasElapsedDays ? ($weekCapacity > 0 ? (int) round(($weekPresent / $weekCapacity) * 100) : 100) : null;
                     $teamTrend[] = [
-                        'label' => 'W' . $w,
-                        'rate'  => min(100, $wRate)
+                        'label'     => 'W' . $w,
+                        'rate'      => $wRate !== null ? min(100, $wRate) : null,
+                        'is_future' => !$hasElapsedDays
                     ];
 
                     $teamPresent       += $weekPresent;
                     $totalTeamCapacity += $weekCapacity;
                 }
 
-                $teamRate = $totalTeamCapacity > 0 ? (int) round(($teamPresent / $totalTeamCapacity) * 100) : 0;
+                $teamRate = $totalTeamCapacity > 0 ? (int) round(($teamPresent / $totalTeamCapacity) * 100) : null;
             }
         }
 
@@ -880,6 +1035,9 @@ class Dashboard extends BaseController
             'team_on_leave'      => $teamOnLeave,
             'team_rate'          => $teamRate,
             'team_trend'         => $teamTrend,
+            'team_is_future'     => ($today > $todayStr),
+            'team_leave_names'   => $teamLeaveNames ?? [],
+            'team_absent_names'  => $teamAbsentNames ?? [],
         ];
     }
 
@@ -1202,16 +1360,28 @@ class Dashboard extends BaseController
                     }
                 } else {
                     $empBuilder->groupStart();
-                    if (!empty($myBranchIds)) {
-                        $empBuilder->orWhereIn('e.md_employee_id', function($sub) use ($myBranchIds) {
+
+                    // 1. Employees in user assigned Branch AND Division
+                    if (!empty($myBranchIds) && !empty($myDivIds)) {
+                        $empBuilder->whereIn('e.md_employee_id', function($sub) use ($myBranchIds, $myDivIds) {
+                            return $sub->select('eb.md_employee_id')
+                                ->from('md_employee_branch eb')
+                                ->join('md_employee_division ed', 'ed.md_employee_id = eb.md_employee_id AND ed.isactive = "Y"', 'inner')
+                                ->whereIn('eb.md_branch_id', $myBranchIds)
+                                ->whereIn('ed.md_division_id', $myDivIds)
+                                ->where('eb.isactive', 'Y');
+                        });
+                    } elseif (!empty($myBranchIds)) {
+                        $empBuilder->whereIn('e.md_employee_id', function($sub) use ($myBranchIds) {
                             return $sub->select('md_employee_id')->from('md_employee_branch')->whereIn('md_branch_id', $myBranchIds)->where('isactive', 'Y');
                         });
-                    }
-                    if (!empty($myDivIds)) {
-                        $empBuilder->orWhereIn('e.md_employee_id', function($sub) use ($myDivIds) {
+                    } elseif (!empty($myDivIds)) {
+                        $empBuilder->whereIn('e.md_employee_id', function($sub) use ($myDivIds) {
                             return $sub->select('md_employee_id')->from('md_employee_division')->whereIn('md_division_id', $myDivIds)->where('isactive', 'Y');
                         });
                     }
+
+                    // 2. OR Employees directly reporting to user in hierarchy
                     if (!empty($allTeamIds)) {
                         $empBuilder->orWhereIn('e.md_employee_id', $allTeamIds);
                     }
@@ -1236,7 +1406,8 @@ class Dashboard extends BaseController
 
             $subCats = array_intersect($categories, ['leave', 'team']);
             $canViewSubmissions = in_array($roleId, $this->superRoleIds, true) 
-                || in_array($levellingId, [100001, 100002], true);
+                || in_array($levellingId, $this->managerialLevellings, true)
+                || $isHrd;
 
             if (!$canViewSubmissions) {
                 $subCats = [];
@@ -1245,7 +1416,7 @@ class Dashboard extends BaseController
                 $builder = $this->db->table('v_all_submission s')
                     ->select('
                         s.documentno,
-                        MAX(s.date) as date, 
+                        DATE(s.date) as event_date, 
                         MAX(s.reason) as reason, 
                         MAX(s.docstatus) as docstatus, 
                         MAX(s.ref_id) as ref_id, 
@@ -1263,25 +1434,26 @@ class Dashboard extends BaseController
                     ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
                     ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id AND ed.isactive = "Y"', 'left')
                     ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
-                    ->whereIn('s.docstatus', ['CO', 'AP', 'IP']);
+                    ->whereIn('s.docstatus', ['CO', 'AP', 'IP'])
+                    ->where('s.isagree !=', 'C');
 
                 if ($targetEmployeeIds !== null) {
                     $builder->whereIn('s.md_employee_id', $targetEmployeeIds);
                 }
                 if ($startDate && $endDate) {
-                    $builder->where('s.date >=', $startDate)->where('s.date <=', $endDate);
+                    $builder->where('s.date >=', $startDate . ' 00:00:00')->where('s.date <=', $endDate . ' 23:59:59');
                 }
 
-                $submissions = $builder->groupBy('s.documentno')->get()->getResult();
+                $submissions = $builder->groupBy('s.documentno, DATE(s.date)')->get()->getResult();
 
                 foreach ($submissions as $sub) {
                     $catKey = (isset($sub->md_doctype_id) && $sub->md_doctype_id == 100003) ? 'leave' : 'team';
                     if (!in_array($catKey, $categories, true)) continue;
 
                     $events[] = [
-                        'id'              => $sub->documentno,
+                        'id'              => $sub->documentno . '-' . date('Ymd', strtotime($sub->event_date)),
                         'title'           => ucwords(strtolower($sub->doctype_name ?? 'Pengajuan')) . " - " . ($sub->employee_name ?? 'Karyawan'),
-                        'start'           => date('Y-m-d', strtotime($sub->date)),
+                        'start'           => date('Y-m-d', strtotime($sub->event_date)),
                         'className'       => 't-' . $catKey,
                         'backgroundColor' => $colorMap[$catKey],
                         'type'            => $catKey,
@@ -1302,6 +1474,12 @@ class Dashboard extends BaseController
             }
 
             if (in_array('bday', $categories, true)) {
+
+                # BUG : Showing non active emp within the list
+                # This due to my assumption of this bday list is included in the subordinatesId
+                $excludedStatusNames = ['RESIGN', 'PENSIUN'];
+                $today = date('Y-m-d');
+
                 $bdayBuilder = $this->db->table('md_employee e')
                     ->select('
                         e.md_employee_id,
@@ -1311,12 +1489,22 @@ class Dashboard extends BaseController
                         MAX(b.name) as branch_name,
                         MAX(d.name) as division_name
                     ')
+                    ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
                     ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id AND eb.isactive = "Y"', 'left')
                     ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
                     ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id AND ed.isactive = "Y"', 'left')
                     ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
                     ->where('e.isactive', 'Y')
                     ->where('e.birthday IS NOT NULL')
+                    ->groupStart()
+                        ->where('e.resigndate IS NULL')
+                        ->orWhere("CAST(e.resigndate AS CHAR) = '0000-00-00'")
+                        ->orWhere('e.resigndate >', $today)
+                    ->groupEnd()
+                    ->groupStart()
+                        ->whereNotIn('s.name', $excludedStatusNames)
+                        ->orWhere('s.name IS NULL')
+                    ->groupEnd()
                     ->groupBy('e.md_employee_id');
 
                 if ($targetEmployeeIds !== null) {
@@ -1766,6 +1954,9 @@ class Dashboard extends BaseController
         if (!$clockIn && !$clockOut) {
             if ($subType) {
                 $status = 'LEAVE_APPROVED';
+                $tkh    = 1.0;
+            } elseif ($workDate > date('Y-m-d')) {
+                $status = 'UPCOMING_WORK';
                 $tkh    = 1.0;
             } else {
                 $status = 'ABSENT';

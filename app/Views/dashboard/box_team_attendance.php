@@ -19,12 +19,14 @@ $pending = max(0, $total - $present - $leave);
 
 $pct = static fn (int $n): float => $total > 0 ? round($n / $total * 100, 1) : 0;
 
-$rate     = isset($team_rate) ? (int) $team_rate : ($total > 0 ? (int) round(($present / $total) * 100) : 0);
-$subtitle = $label ?? ($mode === 'day' ? 'Hari ini' : ($mode === 'week' ? 'Minggu ini' : 'Bulan ini'));
+$isFuture = !empty($team_is_future);
+$rate     = (isset($team_rate) && $team_rate !== null) ? (int) $team_rate : ($mode === 'day' && $total > 0 && !$isFuture ? (int) round(($present / $total) * 100) : null);
+$subtitle = $label ?? ($mode === 'day' ? ($isFuture ? 'Jadwal mendatang' : 'Hari ini') : ($mode === 'week' ? 'Minggu ini' : 'Bulan ini'));
 
 $target   = isset($team_target) ? (int) $team_target : 90;
-$delta    = isset($team_prev_rate) ? $rate - (int) $team_prev_rate : null;
+$delta    = isset($team_prev_rate) && $rate !== null ? $rate - (int) $team_prev_rate : null;
 $absent   = array_values(array_filter((array) ($team_absent_names ?? []), 'strlen'));
+$leaves   = array_values(array_filter((array) ($team_leave_names ?? []), 'strlen'));
 $unit     = $team_trend_unit ?? ($mode === 'week' ? 'hari' : 'minggu');
 
 // ---- trend bars & direct percentage formatting ----
@@ -72,28 +74,52 @@ $ariaChart  = 'Kehadiran per ' . $unit . ': ' . implode(', ', array_map(static f
             <!-- DAY MODE -->
             <div data-kpi-view="day" class="<?= $mode === 'day' ? '' : 'd-none' ?>">
                 <div class="d-flex align-items-baseline justify-content-between my-2">
-                    <h2 class="fw-extrabold text-dark mb-0 tk-rate-num" style="font-variant-numeric:tabular-nums" data-kpi="team_rate_day"><?= $rate ?>%</h2>
+                    <h2 class="fw-extrabold text-dark mb-0 tk-rate-num" style="font-variant-numeric:tabular-nums" data-kpi="team_rate_day"><?= $isFuture ? '—' : ($rate !== null ? $rate . '%' : '—') ?></h2>
                     <span class="tk-count-text">
-                        <span data-kpi="team_present"><?= $present ?></span> / <span data-kpi="team_total"><?= $total ?></span> orang
+                        <?php if ($isFuture): ?>
+                            <span data-kpi="team_total"><?= $total ?></span> orang terjadwal
+                        <?php else: ?>
+                            <span data-kpi="team_present"><?= $present ?></span> / <span data-kpi="team_total"><?= $total ?></span> orang
+                        <?php endif; ?>
                     </span>
                 </div>
 
-                <div class="progress tk-prog w-100 mb-2" role="img" aria-label="<?= $present ?> hadir, <?= $leave ?> cuti atau izin, <?= $pending ?> belum hadir dari <?= $total ?> orang">
-                    <div class="progress-bar bg-success" style="width:<?= $pct($present) ?>%" data-kpi="team_present_bar"></div>
-                    <div class="progress-bar bg-warning" style="width:<?= $pct($leave) ?>%" data-kpi="team_leave_bar"></div>
-                </div>
+                <?php if ($isFuture): ?>
+                    <div class="progress tk-prog w-100 mb-2" role="img" aria-label="<?= $leave ?> cuti atau izin, <?= max(0, $total - $leave) ?> bertugas dari <?= $total ?> orang">
+                        <div class="progress-bar bg-primary" style="width:<?= $pct(max(0, $total - $leave)) ?>%" data-kpi="team_scheduled_bar" title="Terjadwal bertugas"></div>
+                        <div class="progress-bar bg-warning" style="width:<?= $pct($leave) ?>%" data-kpi="team_leave_bar" title="Terjadwal cuti/izin"></div>
+                    </div>
 
-                <div class="tk-legend">
-                    <span><i class="tk-dot" style="background:#059669"></i><b data-kpi="team_present_count"><?= $present ?></b> hadir</span>
-                    <span><i class="tk-dot" style="background:#d97706"></i><b data-kpi="team_leave_count"><?= $leave ?></b> cuti/izin</span>
-                    <span><i class="tk-dot" style="background:#94a3b8"></i><b data-kpi="team_pending_count"><?= $pending ?></b> belum hadir</span>
-                </div>
+                    <div class="tk-legend">
+                        <span><i class="tk-dot" style="background:#1d4ed8"></i><b data-kpi="team_scheduled_count"><?= max(0, $total - $leave) ?></b> terjadwal</span>
+                        <span><i class="tk-dot" style="background:#d97706"></i><b data-kpi="team_leave_count"><?= $leave ?></b> cuti/izin</span>
+                    </div>
 
-                <?php if ($absent): ?>
-                    <p class="tk-names mt-2 mb-0" data-kpi="team_absent_names" title="<?= esc(implode(', ', $absent), 'attr') ?>">
-                        <i class="far fa-clock" aria-hidden="true"></i>
-                        Belum hadir: <?= esc(implode(', ', array_slice($absent, 0, 2))) ?><?= count($absent) > 2 ? ' +' . (count($absent) - 2) : '' ?>
-                    </p>
+                    <?php if ($leaves): ?>
+                        <p class="tk-names mt-2 mb-0" data-kpi="team_leave_names" title="<?= esc(implode(', ', $leaves), 'attr') ?>">
+                            <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                            Cuti/Izin: <?= esc(implode(', ', array_slice($leaves, 0, 2))) ?><?= count($leaves) > 2 ? ' +' . (count($leaves) - 2) : '' ?>
+                        </p>
+                    <?php endif; ?>
+
+                <?php else: ?>
+                    <div class="progress tk-prog w-100 mb-2" role="img" aria-label="<?= $present ?> hadir, <?= $leave ?> cuti atau izin, <?= $pending ?> tidak hadir dari <?= $total ?> orang">
+                        <div class="progress-bar bg-success" style="width:<?= $pct($present) ?>%" data-kpi="team_present_bar"></div>
+                        <div class="progress-bar bg-warning" style="width:<?= $pct($leave) ?>%" data-kpi="team_leave_bar"></div>
+                    </div>
+
+                    <div class="tk-legend">
+                        <span><i class="tk-dot" style="background:#059669"></i><b data-kpi="team_present_count"><?= $present ?></b> hadir</span>
+                        <span><i class="tk-dot" style="background:#d97706"></i><b data-kpi="team_leave_count"><?= $leave ?></b> cuti/izin</span>
+                        <span><i class="tk-dot" style="background:#94a3b8"></i><b data-kpi="team_pending_count"><?= $pending ?></b> tidak hadir</span>
+                    </div>
+
+                    <?php if ($absent): ?>
+                        <p class="tk-names mt-2 mb-0" data-kpi="team_absent_names" title="<?= esc(implode(', ', $absent), 'attr') ?>">
+                            <i class="far fa-clock" aria-hidden="true"></i>
+                            Tidak hadir: <?= esc(implode(', ', array_slice($absent, 0, 2))) ?><?= count($absent) > 2 ? ' +' . (count($absent) - 2) : '' ?>
+                        </p>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
 
@@ -104,13 +130,13 @@ $ariaChart  = 'Kehadiran per ' . $unit . ': ' . implode(', ', array_map(static f
                 <div class="d-flex align-items-center justify-content-between my-1">
                     <div>
                         <div class="d-flex align-items-baseline">
-                            <h2 class="fw-extrabold text-dark mb-0 me-2 tk-rate-num" style="font-variant-numeric:tabular-nums" data-kpi="team_rate"><?= $rate ?>%</h2>
-                            <span class="tk-delta <?= $delta === null ? 'd-none' : ($delta >= 0 ? 'is-up' : 'is-down') ?>" data-kpi="team_delta" title="Dibanding periode sebelumnya">
-                                <?php if ($delta !== null): ?><i class="fas fa-arrow-<?= $delta >= 0 ? 'up' : 'down' ?>" aria-hidden="true"></i> <?= abs($delta) ?> pt<?php endif; ?>
+                            <h2 class="fw-extrabold text-dark mb-0 me-2 tk-rate-num" style="font-variant-numeric:tabular-nums" data-kpi="team_rate"><?= $rate !== null ? $rate . '%' : '—' ?></h2>
+                            <span class="tk-delta <?= ($delta === null || $rate === null) ? 'd-none' : ($delta >= 0 ? 'is-up' : 'is-down') ?>" data-kpi="team_delta" title="Dibanding periode sebelumnya">
+                                <?php if ($delta !== null && $rate !== null): ?><i class="fas fa-arrow-<?= $delta >= 0 ? 'up' : 'down' ?>" aria-hidden="true"></i> <?= abs($delta) ?> pt<?php endif; ?>
                             </span>
                         </div>
                         <span class="tk-rate-tag d-block mt-1" data-kpi="team_rate_label">
-                            <?= $mode === 'week' ? 'Rata-rata minggu ini' : 'Rata-rata kehadiran' ?>
+                            <?= $rate !== null ? ($mode === 'week' ? 'Rata-rata minggu ini' : 'Rata-rata kehadiran') : 'Periode belum berjalan' ?>
                         </span>
                     </div>
                 </div>
