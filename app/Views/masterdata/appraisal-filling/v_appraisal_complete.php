@@ -277,9 +277,9 @@
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showAuditLogModal(<?= (int) $appraisal_id ?>)">
                 <i class="fas fa-history mr-1"></i> Riwayat Audit
             </button>
-            <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.print()">
+            <a href="<?= base_url('sas/penilaian/exportPDF/' . (int) $appraisal_id) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-file-pdf mr-1"></i> Unduh PDF
-            </button>
+            </a>
             <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">
                 <i class="fas fa-print mr-1"></i> Cetak
             </button>

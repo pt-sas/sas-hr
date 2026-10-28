@@ -1004,6 +1004,8 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('penilaian/fill/(:num)/create', 'Backend\AppraisalEvaluationController::create');
     $routes->get('penilaian/fill/(:num)', 'Backend\AppraisalEvaluationController::fill/$1');
     $routes->get('penilaian/complete/(:num)', 'Backend\AppraisalEvaluationController::complete/$1');
+    $routes->get('penilaian/exportPDF/(:num)', 'Backend\AppraisalEvaluationController::exportPDF/$1');
+    $routes->match(['get', 'post'], 'penilaian/print/(:num)', 'Backend\AppraisalEvaluationController::exportPDF/$1');
     $routes->get('penilaian/scoreComparison/(:num)', 'Backend\AppraisalEvaluationController::scoreComparison/$1');
     $routes->get('performance-appraisal/evaluations/scoreComparison/(:any)', 'Backend\AppraisalEvaluationController::scoreComparison/$1');
     $routes->get('penilaian/show/(:num)', 'Backend\AppraisalEvaluationController::show/$1');

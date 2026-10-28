@@ -14,6 +14,7 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Exception;
+use TCPDF;
 
 class AppraisalEvaluationController extends BaseController
 {
@@ -887,6 +888,475 @@ class AppraisalEvaluationController extends BaseController
         ];
 
         return view('masterdata/appraisal-filling/modal_score_comparison', $viewData);
+    }
+
+    /**
+     * GET /penilaian/exportPDF/(:num)
+     * Generate Performance Appraisal (PA) PDF Report using TCPDF (A4 Portrait)
+     */
+    public function exportPDF($id = null)
+    {
+        $id = (int) $id;
+        $appraisal = $this->model->find($id);
+
+        if (! $appraisal) {
+            return redirect()->to(base_url('penilaian'))->with('error', 'Form penilaian tidak ditemukan.');
+        }
+
+        // Fetch Employee, Evaluator, and GM Details with Position Names
+        $employee = $this->db->table('md_employee e')
+            ->select('e.md_employee_id, e.value as nik, e.fullname as name, b.name as branch_name, d.name as division_name, l.name as level_name, p.name as position_name')
+            ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
+            ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
+            ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+            ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
+            ->where('e.md_employee_id', $appraisal->md_employee_id)
+            ->get()
+            ->getRowArray();
+
+        $evaluator = $this->db->table('md_employee e')
+            ->select('e.fullname as name, p.name as position_name')
+            ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
+            ->where('e.md_employee_id', $appraisal->snapshot_evaluator_id)
+            ->get()
+            ->getRowArray();
+
+        $gm = null;
+        if (!empty($appraisal->snapshot_gm_id)) {
+            $gm = $this->db->table('md_employee e')
+                ->select('e.fullname as name, p.name as position_name')
+                ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
+                ->where('e.md_employee_id', $appraisal->snapshot_gm_id)
+                ->get()
+                ->getRowArray();
+        }
+
+        $cycle = $this->cycleModel->find($appraisal->md_appraisal_cycle_id);
+
+        $snapshot = is_string($appraisal->template_snapshot)
+            ? json_decode($appraisal->template_snapshot, true)
+            : ($appraisal->template_snapshot ?: []);
+
+        $responses = $this->modelDetail->where('md_appraisal_id', $id)
+            ->where('isactive', 'Y')
+            ->findAll();
+
+        $responsesByItemId = [];
+        foreach ($responses as $resp) {
+            $responsesByItemId[(int) $resp->md_appraisal_template_item_id] = $resp;
+        }
+
+        // Helper to parse key actions
+        $parseActions = function ($raw): array {
+            if (empty($raw)) return [];
+            if (is_array($raw)) return array_values(array_filter(array_map('trim', $raw)));
+            if (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    return array_values(array_filter(array_map('trim', $decoded)));
+                }
+                $lines = explode("\n", $raw);
+                return array_values(array_filter(array_map('trim', $lines)));
+            }
+            return [];
+        };
+
+        // Date formats
+        $cycleTitle = is_object($cycle) ? ($cycle->title ?? '-') : ($cycle['title'] ?? '-');
+        $startDate  = is_object($cycle) ? ($cycle->start_date ?? null) : ($cycle['start_date'] ?? null);
+        $endDate    = is_object($cycle) ? ($cycle->end_date ?? null) : ($cycle['end_date'] ?? null);
+
+        $periodeText = '-';
+        if (!empty($startDate) && !empty($endDate)) {
+            $periodeText = date('d/m/Y', strtotime($startDate)) . ' - ' . date('d/m/Y', strtotime($endDate));
+        } elseif (!empty($cycleTitle)) {
+            $periodeText = $cycleTitle;
+        }
+
+        // Partition sections into SCORE and BOOLEAN
+        $sections = $snapshot['sections'] ?? [];
+        $items    = $snapshot['items'] ?? [];
+
+        $itemsBySection = [];
+        foreach ($items as $item) {
+            $secId = (int) ($item['md_appraisal_section_id'] ?? 0);
+            $itemsBySection[$secId][] = $item;
+        }
+
+        $scoreSections   = [];
+        $booleanSections = [];
+
+        foreach ($sections as $sec) {
+            $secType = strtoupper($sec['section_type'] ?? '');
+            if ($secType === 'SCORE') {
+                $scoreSections[] = $sec;
+            } elseif ($secType === 'BOOLEAN') {
+                $booleanSections[] = $sec;
+            }
+        }
+
+        if (empty($scoreSections) && empty($booleanSections) && !empty($sections)) {
+            foreach ($sections as $sec) {
+                $secId = (int) $sec['md_appraisal_section_id'];
+                $secItems = $itemsBySection[$secId] ?? [];
+                $hasScore = false;
+                $hasBool  = false;
+                foreach ($secItems as $si) {
+                    $it = strtoupper($si['input_type'] ?? '');
+                    if ($it === 'SCORE') $hasScore = true;
+                    if ($it === 'BOOLEAN') $hasBool = true;
+                }
+                if ($hasBool && !$hasScore) {
+                    $booleanSections[] = $sec;
+                } else {
+                    $scoreSections[] = $sec;
+                }
+            }
+        }
+
+        $allScoreItems = [];
+        foreach ($scoreSections as $sSec) {
+            $sId = (int) $sSec['md_appraisal_section_id'];
+            foreach ($itemsBySection[$sId] ?? [] as $it) {
+                $allScoreItems[] = $it;
+            }
+        }
+
+        $allBooleanItems = [];
+        foreach ($booleanSections as $bSec) {
+            $bId = (int) $bSec['md_appraisal_section_id'];
+            foreach ($itemsBySection[$bId] ?? [] as $it) {
+                $allBooleanItems[] = $it;
+            }
+        }
+
+        $finalScoreVal = (float) ($appraisal->final_score ?? 0);
+        $ratingText    = !empty($appraisal->rating) ? $appraisal->rating : 'Baik (Meets Expectations)';
+
+        $createdYear = !empty($appraisal->created_at) ? date('Y', strtotime($appraisal->created_at)) : date('Y');
+        $docNo       = 'HR-PA-' . $createdYear . '/' . str_pad((string)$appraisal->md_appraisal_id, 5, '0', STR_PAD_LEFT);
+
+        $empAckDate  = !empty($appraisal->employee_acknowledged_at) ? date('d/m/Y H:i', strtotime($appraisal->employee_acknowledged_at)) . ' WIB' : null;
+        $evalSubDate = !empty($appraisal->evaluator_submitted_at) ? date('d/m/Y H:i', strtotime($appraisal->evaluator_submitted_at)) . ' WIB' : null;
+        $gmRevDate   = !empty($appraisal->gm_reviewed_at) ? date('d/m/Y H:i', strtotime($appraisal->gm_reviewed_at)) . ' WIB' : null;
+
+        $empDateStr  = !empty($appraisal->employee_acknowledged_at) ? date('d M Y', strtotime($appraisal->employee_acknowledged_at)) : '-';
+        $evalDateStr = !empty($appraisal->evaluator_submitted_at) ? date('d M Y', strtotime($appraisal->evaluator_submitted_at)) : (!empty($appraisal->created_at) ? date('d M Y', strtotime($appraisal->created_at)) : '-');
+        $gmDateStr   = !empty($appraisal->gm_reviewed_at) ? date('d M Y', strtotime($appraisal->gm_reviewed_at)) : (!empty($appraisal->snapshot_gm_id) ? '-' : 'N/A');
+
+        // Initialize TCPDF in A4 Portrait mode
+        $pdf = new TCPDF('P', PDF_UNIT, 'A4', true, 'UTF-8', false);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(10, 10, 10);
+        $pdf->SetAutoPageBreak(true, 8);
+        $pdf->AddPage();
+
+        // Build HTML for TCPDF writeHTML
+        $html = '
+        <style>
+            table { border-collapse: collapse; font-family: helvetica, sans-serif; font-size: 8pt; color: #1e293b; }
+            .sec-title { background-color: #e2e8f0; font-weight: bold; font-size: 8.5pt; color: #0f172a; }
+            .lbl-cell { background-color: #f8fafc; font-weight: bold; color: #334155; }
+        </style>
+
+        <!-- HEADER -->
+        <table width="100%" cellpadding="3" cellspacing="0" border="0" style="border-bottom: 1.5px solid #0f172a;">
+            <tr>
+                <td width="33%" style="font-size: 9pt; font-weight: bold; color: #0f172a;">
+                    PT. SAHABAT ABADI SEJAHTERA
+                </td>
+                <td width="42%" align="center" style="font-size: 10pt; font-weight: bold; color: #0f172a;">
+                    FORM EVALUASI KINERJA KARYAWAN<br>
+                    <span style="font-size: 8pt; font-weight: normal; color: #475569;">PERFORMANCE APPRAISAL (PA) REPORT</span>
+                </td>
+                <td width="25%" align="right" style="font-size: 7.5pt; color: #334155; line-height: 1.3;">
+                    <b>No:</b> ' . esc($docNo) . '<br>
+                    <b>Hal:</b> 1 dari 1
+                </td>
+            </tr>
+        </table>
+        <br><br>
+
+        <!-- I. DATA KARYAWAN & SIKLUS PENILAIAN -->
+        <table width="100%" cellpadding="3.5" cellspacing="0" border="0.5">
+            <tr>
+                <td colspan="4" class="sec-title">I. DATA KARYAWAN &amp; SIKLUS PENILAIAN</td>
+            </tr>
+            <tr>
+                <td width="16%" class="lbl-cell">NIK</td>
+                <td width="34%">' . esc($employee['nik'] ?? '-') . '</td>
+                <td width="18%" class="lbl-cell">Siklus Penilaian</td>
+                <td width="32%">' . esc($cycleTitle) . '</td>
+            </tr>
+            <tr>
+                <td class="lbl-cell">Nama Karyawan</td>
+                <td><b>' . esc($employee['name'] ?? '-') . '</b></td>
+                <td class="lbl-cell">Periode Evaluasi</td>
+                <td>' . esc($periodeText) . '</td>
+            </tr>
+            <tr>
+                <td class="lbl-cell">Divisi / Posisi</td>
+                <td>' . esc($employee['division_name'] ?? '-') . ' / ' . esc($employee['position_name'] ?? '-') . '</td>
+                <td class="lbl-cell">Atasan Penilai</td>
+                <td><b>' . esc($evaluator['name'] ?? '-') . '</b></td>
+            </tr>
+            <tr>
+                <td class="lbl-cell">Lokasi / Cabang</td>
+                <td>' . esc($employee['branch_name'] ?? '-') . '</td>
+                <td class="lbl-cell">Jabatan Penilai</td>
+                <td>' . esc($evaluator['position_name'] ?? 'SPV / DEPT HEAD') . '</td>
+            </tr>
+        </table>
+        <br><br>
+
+        <!-- II. HASIL PENILAIAN KINERJA (SKALA 1.00 - 4.00) -->
+        <table width="100%" cellpadding="3.5" cellspacing="0" border="0.5">
+            <tr>
+                <td colspan="5" class="sec-title">II. HASIL PENILAIAN KINERJA (SKALA 1.00 - 4.00)</td>
+            </tr>
+            <tr style="background-color: #f1f5f9;">
+                <td colspan="3" style="font-size: 8.5pt; font-weight: bold; color: #0f172a;">
+                    SKOR AKHIR: ' . number_format($finalScoreVal, 2) . ' / 4.00
+                </td>
+                <td colspan="2" align="right" style="font-size: 8.5pt; font-weight: bold; color: #0f172a;">
+                    PREDIKAT: ' . esc($ratingText) . '
+                </td>
+            </tr>
+            <tr align="center" style="background-color: #f8fafc; font-weight: bold; font-size: 7.5pt;">
+                <th width="5%">NO</th>
+                <th width="23%">KOMPETENSI</th>
+                <th width="48%">INDIKATOR PERILAKU</th>
+                <th width="10%">SKOR</th>
+                <th width="14%">SUB-TOTAL</th>
+            </tr>';
+
+        if (!empty($allScoreItems)) {
+            foreach ($allScoreItems as $cIdx => $item) {
+                $itemId      = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id']);
+                $cfg         = is_string($item['config'] ?? null) ? json_decode($item['config'], true) : ($item['config'] ?? []);
+                $compTitle   = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($cIdx + 1)));
+                $actions     = $parseActions($cfg['key_actions'] ?? null);
+
+                $resp          = $responsesByItemId[$itemId] ?? null;
+                $activePayload = [];
+                if ($resp && !empty($resp->gm_response)) {
+                    $activePayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                } elseif ($resp && !empty($resp->evaluator_response)) {
+                    $activePayload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
+                }
+
+                $savedActionScores = $activePayload['action_scores'] ?? [];
+                $savedItemScore    = null;
+                if (isset($activePayload['score']) && $activePayload['score'] !== '') {
+                    $savedItemScore = (float) $activePayload['score'];
+                } elseif ($resp && $resp->score !== null) {
+                    $savedItemScore = (float) $resp->score;
+                }
+
+                $hasKeyActions = !empty($actions);
+                $totalActions  = $hasKeyActions ? count($actions) : 1;
+                $actionSum     = 0;
+                $actionScoresList = [];
+
+                if ($hasKeyActions) {
+                    foreach ($actions as $aIdx => $actionText) {
+                        if (isset($savedActionScores[$aIdx]) && $savedActionScores[$aIdx] !== '') {
+                            $sc = (float) $savedActionScores[$aIdx];
+                        } elseif (isset($savedActionScores[(string) $aIdx]) && $savedActionScores[(string) $aIdx] !== '') {
+                            $sc = (float) $savedActionScores[(string) $aIdx];
+                        } elseif ($savedItemScore !== null) {
+                            $sc = $savedItemScore;
+                        } else {
+                            $sc = 3.00;
+                        }
+                        $actionScoresList[$aIdx] = $sc;
+                        $actionSum += $sc;
+                    }
+                } else {
+                    $sc = ($savedItemScore !== null) ? $savedItemScore : 3.00;
+                    $actionScoresList[0] = $sc;
+                    $actionSum = $sc;
+                }
+
+                $avgScore = $totalActions > 0 ? ($actionSum / $totalActions) : 3.00;
+
+                if ($hasKeyActions) {
+                    foreach ($actions as $aIdx => $actionText) {
+                        $letter = chr(97 + $aIdx);
+                        $hasPrefix = preg_match('/^[a-z0-9][\.\)]\s*/i', $actionText);
+                        $actionLabel = $hasPrefix ? esc($actionText) : ($letter . '. ' . esc($actionText));
+
+                        $html .= '<tr>';
+                        if ($aIdx === 0) {
+                            $html .= '<td width="5%" rowspan="' . $totalActions . '" align="center">' . ($cIdx + 1) . '</td>';
+                            $html .= '<td width="23%" rowspan="' . $totalActions . '"><b>' . esc($compTitle) . '</b></td>';
+                        }
+                        $html .= '<td width="48%">' . $actionLabel . '</td>';
+                        $html .= '<td width="10%" align="center">' . number_format($actionScoresList[$aIdx], 2) . '</td>';
+                        if ($aIdx === 0) {
+                            $html .= '<td width="14%" rowspan="' . $totalActions . '" align="center" style="font-weight: bold; background-color: #f8fafc;">' . number_format($avgScore, 2) . '</td>';
+                        }
+                        $html .= '</tr>';
+                    }
+                } else {
+                    $html .= '<tr>';
+                    $html .= '<td width="5%" align="center">' . ($cIdx + 1) . '</td>';
+                    $html .= '<td width="23%"><b>' . esc($compTitle) . '</b></td>';
+                    $html .= '<td width="48%">Indikator umum</td>';
+                    $html .= '<td width="10%" align="center">' . number_format($actionScoresList[0], 2) . '</td>';
+                    $html .= '<td width="14%" align="center" style="font-weight: bold; background-color: #f8fafc;">Rata2: ' . number_format($avgScore, 2) . '</td>';
+                    $html .= '</tr>';
+                }
+            }
+        } else {
+            $html .= '<tr><td colspan="5" align="center" style="color: #64748b;">Tidak ada data kompetensi performa.</td></tr>';
+        }
+
+        $html .= '
+        </table>
+        <br><br>
+
+        <!-- III. KOMPETENSI TAMBAHAN -->
+        <table width="100%" cellpadding="3.5" cellspacing="0" border="0.5">
+            <tr>
+                <td colspan="4" class="sec-title">III. KOMPETENSI TAMBAHAN</td>
+            </tr>
+            <tr align="center" style="background-color: #f8fafc; font-weight: bold; font-size: 7.5pt;">
+                <th width="5%">NO</th>
+                <th width="27%">KOMPETENSI</th>
+                <th width="50%">INDIKATOR PERILAKU</th>
+                <th width="18%">STATUS</th>
+            </tr>';
+
+        if (!empty($allBooleanItems)) {
+            foreach ($allBooleanItems as $bIdx => $bItem) {
+                $bItemId      = (int) ($bItem['md_appraisal_template_item_id'] ?? $bItem['template_item_id']);
+                $bCfg         = is_string($bItem['config'] ?? null) ? json_decode($bItem['config'], true) : ($bItem['config'] ?? []);
+                $bTitle       = !empty($bCfg['competency']) ? $bCfg['competency'] : (!empty($bItem['title']) ? $bItem['title'] : ('Kompetensi ' . ($bIdx + 1)));
+                $bKeyActions  = $parseActions($bCfg['key_actions'] ?? null);
+
+                $bResp       = $responsesByItemId[$bItemId] ?? null;
+                $evalPayload = ($bResp && !empty($bResp->evaluator_response))
+                    ? (is_string($bResp->evaluator_response) ? json_decode($bResp->evaluator_response, true) : $bResp->evaluator_response)
+                    : [];
+                $gmPayload   = ($bResp && !empty($bResp->gm_response))
+                    ? (is_string($bResp->gm_response) ? json_decode($bResp->gm_response, true) : $bResp->gm_response)
+                    : [];
+
+                $checkedActions = isset($gmPayload['checked_actions'])
+                    ? $gmPayload['checked_actions']
+                    : ($evalPayload['checked_actions'] ?? []);
+                $booleanValue   = $gmPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
+
+                $totalActions = !empty($bKeyActions) ? count($bKeyActions) : 1;
+
+                if (!empty($bKeyActions)) {
+                    foreach ($bKeyActions as $kIdx => $ka) {
+                        $isActionChecked = false;
+                        if (!empty($checkedActions) && is_array($checkedActions)) {
+                            $hasYorN = false;
+                            foreach ($checkedActions as $v) {
+                                if (in_array(strtoupper((string) $v), ['Y', 'N'], true)) {
+                                    $hasYorN = true;
+                                    break;
+                                }
+                            }
+                            if ($hasYorN) {
+                                $val = $checkedActions[$kIdx] ?? $checkedActions[(string) $kIdx] ?? null;
+                                $isActionChecked = in_array(strtoupper((string) $val), ['Y', '1', 'TRUE'], true);
+                            } else {
+                                $isActionChecked = in_array((string) $kIdx, array_map('strval', $checkedActions), true);
+                            }
+                        }
+
+                        $html .= '<tr>';
+                        if ($kIdx === 0) {
+                            $html .= '<td width="5%" rowspan="' . $totalActions . '" align="center">' . ($bIdx + 1) . '</td>';
+                            $html .= '<td width="27%" rowspan="' . $totalActions . '"><b>' . esc($bTitle) . '</b></td>';
+                        }
+                        $html .= '<td width="50%">' . chr(97 + $kIdx) . '. ' . esc($ka) . '</td>';
+                        $html .= '<td width="18%" align="center"><b>' . ($isActionChecked ? '[X]' : '[ &nbsp; ]') . '</b></td>';
+                        $html .= '</tr>';
+                    }
+                } else {
+                    $isProven = in_array(strtoupper((string) ($booleanValue ?? '')), ['Y', '1', 'TRUE'], true);
+                    $html .= '<tr>';
+                    $html .= '<td width="5%" align="center">' . ($bIdx + 1) . '</td>';
+                    $html .= '<td width="27%"><b>' . esc($bTitle) . '</b></td>';
+                    $html .= '<td width="50%">Indikator umum</td>';
+                    $html .= '<td width="18%" align="center"><b>' . ($isProven ? '[X]' : '[ &nbsp; ]') . '</b></td>';
+                    $html .= '</tr>';
+                }
+            }
+        } else {
+            $html .= '<tr><td colspan="4" align="center" style="color: #64748b;">Tidak ada data kompetensi tambahan.</td></tr>';
+        }
+
+        $html .= '
+        </table>
+        <br><br>
+
+        <!-- IV. CATATAN & REKOMENDASI -->
+        <table width="100%" cellpadding="3.5" cellspacing="0" border="0.5">
+            <tr>
+                <td class="sec-title">IV. CATATAN &amp; REKOMENDASI</td>
+            </tr>
+            <tr>
+                <td style="line-height: 1.4;">
+                    <b>Feedback Evaluator:</b><br>
+                    <span style="color: #334155;">' . (!empty($appraisal->evaluator_comment) ? nl2br(esc($appraisal->evaluator_comment)) : '-') . '</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="line-height: 1.4;">
+                    <b>Catatan Reviewer / GM:</b><br>
+                    <span style="color: #334155;">' . (!empty($appraisal->snapshot_gm_id) ? (!empty($appraisal->gm_comment) ? nl2br(esc($appraisal->gm_comment)) : '-') : '<i>Tidak Diperlukan (Penilaian Langsung oleh Direksi)</i>') . '</span>
+                </td>
+            </tr>
+        </table>
+        <br><br>
+
+        <!-- V. PENGESAHAN / TANDA TANGAN ELEKTRONIK (Memo.php format) -->
+        <table width="100%" cellpadding="3" cellspacing="0" border="0.5">
+            <tr>
+                <td colspan="3" class="sec-title">V. PENGESAHAN / TANDA TANGAN ELEKTRONIK</td>
+            </tr>
+            <tr align="center" style="background-color: #f8fafc; font-weight: bold;">
+                <td width="33.33%">Karyawan yang Dinilai</td>
+                <td width="33.34%">Penilai (Evaluator)</td>
+                <td width="33.33%">Peninjau (Reviewer)</td>
+            </tr>
+            <tr align="center">
+                <!-- Karyawan Stamp -->
+                <td height="54" style="vertical-align: middle;">
+                </td>
+                <!-- Evaluator Stamp -->
+                <td height="54" style="vertical-align: middle;">
+                </td>
+                <!-- GM Stamp -->
+                <td height="54" style="vertical-align: middle;">
+                </td>
+            </tr>
+            <tr align="center">
+                <td>
+                    <b> ' . (!empty($gm['name']) ? esc($gm['name']) : '................................') . ' </b><br>
+                </td>
+                <td>
+                    <b> ' . esc($evaluator['name'] ?? '-') . ' </b><br>
+                </td>
+                <td>
+                    <b> ' . esc($employee['name'] ?? '-') . ' </b><br>
+                </td>
+            </tr>
+        </table>';
+
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        $this->response->setContentType('application/pdf');
+        $pdf->Output('laporan-penilaian-' . $id . '.pdf', 'I');
     }
 
     /**
