@@ -1,4 +1,4 @@
-`<?php
+<?php
 /**
 - app/Views/dashboard/box_approval.php - Senior-Friendly Accessibility Version
  */

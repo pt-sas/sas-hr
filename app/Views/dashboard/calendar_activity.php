@@ -94,6 +94,19 @@ $csrfHash = function_exists('csrf_hash')  ? csrf_hash()  : '';
 #kalender .t-bday    { --dot: var(--c-bday);    --bg: var(--bg-bday);    --txt: var(--txt-bday); }
 #kalender .t-holiday { --dot: #dc2626;          --bg: #fef2f2;           --txt: #991b1b; }
 
+/* FullCalendar Agenda / List View Dots */
+#kalender .fc-list-item .fc-event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+#kalender .fc-list-item.t-company .fc-event-dot { background-color: var(--c-company) !important; }
+#kalender .fc-list-item.t-leave .fc-event-dot   { background-color: var(--c-leave) !important; }
+#kalender .fc-list-item.t-team .fc-event-dot    { background-color: var(--c-team) !important; }
+#kalender .fc-list-item.t-bday .fc-event-dot    { background-color: var(--c-bday) !important; }
+#kalender .fc-list-item.t-holiday .fc-event-dot { background-color: #dc2626 !important; }
+
 /* Accessible Center-Aligned Calendar Legend Bar */
 .k-legend-bar {
   display: flex;

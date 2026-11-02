@@ -135,3 +135,7 @@ public/uploads
 # Prettier (Formatter)
 .prettierrc
 .prettierignore
+
+# Local caches & tools
+*graphify-out/
+.playwright-mcp/

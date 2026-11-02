@@ -256,6 +256,74 @@
     filter: blur(0.5px);
 }
 
+/* =========================================================
+   KPI SKELETON & LOADING ANIMATIONS
+   ========================================================= */
+
+@keyframes kpiPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.42; }
+}
+
+@keyframes dpSpin {
+    to { transform: rotate(360deg); }
+}
+
+.kpi-card-loading {
+    pointer-events: none;
+    position: relative;
+}
+
+.kpi-card-loading [data-kpi] {
+    opacity: 0.48;
+    animation: kpiPulse 1.2s ease-in-out infinite;
+    transition: opacity .2s ease;
+}
+
+.kpi-card-loading .progress-bar,
+.kpi-card-loading .k-bar,
+.kpi-card-loading .tk-chart-bar,
+.kpi-card-loading .tk-seg {
+    opacity: 0.45;
+    animation: kpiPulse 1.2s ease-in-out infinite;
+}
+
+/* Sticky Date Picker Syncing Spinner */
+#stickyDatePicker.is-syncing .dp-label::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-left: 8px;
+    border: 2px solid #2563eb;
+    border-right-color: transparent;
+    border-radius: 50%;
+    vertical-align: middle;
+    animation: dpSpin 0.6s linear infinite;
+}
+
+/* Calendar Loading State */
+#fc-calendar {
+    transition: opacity .2s ease;
+}
+
+#fc-calendar.cal-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kpi-card-loading [data-kpi],
+    .kpi-card-loading .progress-bar,
+    .kpi-card-loading .k-bar,
+    .kpi-card-loading .tk-chart-bar,
+    .kpi-card-loading .tk-seg,
+    #stickyDatePicker.is-syncing .dp-label::after {
+        animation: none !important;
+        opacity: 0.6;
+    }
+}
+
 
 /* =========================================================
    KPI ARROWS
