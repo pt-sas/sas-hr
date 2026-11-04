@@ -34,9 +34,9 @@
                                 <div class="select2-input select2-primary">
                                     <select class="form-control select2" id="filter_status" name="status">
                                         <option value="">Semua Status</option>
-                                        <option value="DR">Draft (DR)</option>
-                                        <option value="CO">Published / Completed (CO)</option>
-                                        <option value="VO">Archived / Voided (VO)</option>
+                                        <option value="DRAFT">Draft</option>
+                                        <option value="PUBLISHED">Published</option>
+                                        <option value="ARCHIVED">Archived</option>
                                     </select>
                                 </div>
                             </div>
@@ -49,7 +49,7 @@
                                 <button type="button" class="btn btn-primary btn-sm btn-round btn_filter" title="Filter">
                                     <i class="fas fa-search fa-fw"></i> Filter
                                 </button>
-                                <button type="button" class="btn btn-danger btn-sm btn-round btn_reset ml-1" id="btn_reset_filter" title="Reset">
+                                <button type="button" class="btn btn-danger btn-sm btn-round btn_reset ml-1" id="btn_reset_filter" title="Reset" onclick="$('#filter_appraisal_template')[0].reset(); $('#filter_appraisal_template select').val('').trigger('change'); $('.btn_filter').click();">
                                     <i class="fas fa-undo fa-fw"></i> Reset
                                 </button>
                             </div>

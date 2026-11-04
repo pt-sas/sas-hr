@@ -8,6 +8,7 @@ use App\Models\M_Appraisal;
 use App\Models\M_AppraisalCycle;
 use App\Models\M_Employee;
 use App\Services\AppraisalCycleService;
+use App\Services\AppraisalGeneratorService;
 use App\Services\AppraisalTemplateResolverService;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -73,6 +74,9 @@ class AppraisalCycleController extends BaseController
                     if ($name === 'year') {
                         $where['YEAR(md_appraisal_cycle.start_date)'] = (int) $value;
                     }
+                    if ($name === 'semester') {
+                        $where['md_appraisal_cycle.semester'] = (int) $value;
+                    }
                     if ($name === 'status') {
                         $where['md_appraisal_cycle.status'] = $value;
                     }
@@ -87,11 +91,13 @@ class AppraisalCycleController extends BaseController
 
                     $id        = is_object($value) ? ($value->md_appraisal_cycle_id ?? null) : ($value['md_appraisal_cycle_id'] ?? null);
                     $title     = is_object($value) ? ($value->title ?? '-') : ($value['title'] ?? '-');
+                    $sem       = is_object($value) ? ($value->semester ?? '1') : ($value['semester'] ?? '1');
                     $startDate = is_object($value) ? ($value->start_date ?? null) : ($value['start_date'] ?? null);
                     $endDate   = is_object($value) ? ($value->end_date ?? null) : ($value['end_date'] ?? null);
                     $dlFilling = is_object($value) ? ($value->deadline_filling ?? $value->evaluator_due_date ?? null) : ($value['deadline_filling'] ?? $value['evaluator_due_date'] ?? null);
                     $dlReview  = is_object($value) ? ($value->deadline_review ?? $value->gm_due_date ?? null) : ($value['deadline_review'] ?? $value['gm_due_date'] ?? null);
                     $dlReading = is_object($value) ? ($value->deadline_reading ?? null) : ($value['deadline_reading'] ?? null);
+                    $dlOverride= is_object($value) ? ($value->deadline_override ?? null) : ($value['deadline_override'] ?? null);
                     $status    = is_object($value) ? ($value->status ?? M_AppraisalCycle::STATUS_DRAFT) : ($value['status'] ?? M_AppraisalCycle::STATUS_DRAFT);
 
                     $number++;
@@ -99,9 +105,10 @@ class AppraisalCycleController extends BaseController
                     $periodFormatted = (!empty($startDate) && !empty($endDate))
                         ? date('d/m/Y', strtotime($startDate)) . ' s/d ' . date('d/m/Y', strtotime($endDate))
                         : '-';
-                    $dlFillingFormatted = !empty($dlFilling) ? date('d/m/Y', strtotime($dlFilling)) : '-';
-                    $dlReviewFormatted  = !empty($dlReview) ? date('d/m/Y', strtotime($dlReview)) : '-';
-                    $dlReadingFormatted = !empty($dlReading) ? date('d/m/Y', strtotime($dlReading)) : '-';
+                    $dlFillingFormatted  = !empty($dlFilling) ? date('d/m/Y', strtotime($dlFilling)) : '-';
+                    $dlReviewFormatted   = !empty($dlReview) ? date('d/m/Y', strtotime($dlReview)) : '-';
+                    $dlReadingFormatted  = !empty($dlReading) ? date('d/m/Y', strtotime($dlReading)) : '-';
+                    $dlOverrideFormatted = !empty($dlOverride) ? date('d/m/Y', strtotime($dlOverride)) : '-';
 
                     if ($status === M_AppraisalCycle::STATUS_OPEN) {
                         $statusBadge = '<center><span class="badge badge-success px-2 py-1"><i class="fas fa-play-circle mr-1"></i>OPEN</span></center>';
@@ -126,13 +133,18 @@ class AppraisalCycleController extends BaseController
                         $actions .= '<a class="btn btn-sm" onclick="window.cycProgress(\'' . $id . '\')" title="Laporan Akhir"><i class="fas fa-chart-line text-primary"></i></a>';
                     }
 
+                    $titleCol = '<strong>' . esc($title) . '</strong>';
+                    $semCol   = '<center>Semester ' . esc($sem) . '</center>';
+
                     $row[] = $id;
                     $row[] = $number;
-                    $row[] = $title;
+                    $row[] = $titleCol;
+                    $row[] = $semCol;
                     $row[] = $periodFormatted;
                     $row[] = $dlFillingFormatted;
                     $row[] = $dlReviewFormatted;
                     $row[] = $dlReadingFormatted;
+                    $row[] = $dlOverrideFormatted;
                     $row[] = $statusBadge;
                     $row[] = $actions;
 
@@ -203,14 +215,7 @@ class AppraisalCycleController extends BaseController
      */
     public function create()
     {
-        if (strpos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false) {
-            $json = $this->request->getJSON(true);
-            if (is_array($json)) {
-                $_POST = $json;
-            }
-        }
-
-        $post = !empty($this->request->getPost()) ? $this->request->getPost() : (!empty($this->request->getVar()) ? $this->request->getVar() : $_POST);
+        $post = (array) $this->request->getVar();
         $id   = $this->getID();
 
         // 1. Validation via Config\Validation
@@ -228,84 +233,30 @@ class AppraisalCycleController extends BaseController
             $post['end_date'] = date('Y-m-d', strtotime($post['end_date']));
         }
 
-        $dlFilling = !empty($post['deadline_filling']) ? $post['deadline_filling'] : (!empty($post['evaluator_due_date']) ? $post['evaluator_due_date'] : null);
-        $dlReview  = !empty($post['deadline_review']) ? $post['deadline_review'] : (!empty($post['gm_due_date']) ? $post['gm_due_date'] : null);
-        $dlReading = !empty($post['deadline_reading']) ? $post['deadline_reading'] : null;
+        $dlFilling  = !empty($post['deadline_filling']) ? $post['deadline_filling'] : (!empty($post['evaluator_due_date']) ? $post['evaluator_due_date'] : null);
+        $dlReview   = !empty($post['deadline_review']) ? $post['deadline_review'] : (!empty($post['gm_due_date']) ? $post['gm_due_date'] : null);
+        $dlReading  = !empty($post['deadline_reading']) ? $post['deadline_reading'] : null;
+        $dlOverride = !empty($post['deadline_override']) ? $post['deadline_override'] : null;
 
         $post['deadline_filling']   = !empty($dlFilling) ? date('Y-m-d', strtotime($dlFilling)) : null;
         $post['deadline_review']    = !empty($dlReview) ? date('Y-m-d', strtotime($dlReview)) : null;
         $post['deadline_reading']   = !empty($dlReading) ? date('Y-m-d', strtotime($dlReading)) : null;
+        $post['deadline_override']  = !empty($dlOverride) ? date('Y-m-d', strtotime($dlOverride)) : null;
         $post['evaluator_due_date'] = $post['deadline_filling'];
         $post['gm_due_date']        = $post['deadline_review'];
+        $post['semester']           = $post['semester'] ?? '1';
 
-        $_POST['start_date']         = $post['start_date'];
-        $_POST['end_date']           = $post['end_date'];
-        $_POST['deadline_filling']   = $post['deadline_filling'];
-        $_POST['deadline_review']    = $post['deadline_review'];
-        $_POST['deadline_reading']   = $post['deadline_reading'];
-        $_POST['evaluator_due_date'] = $post['evaluator_due_date'];
-        $_POST['gm_due_date']        = $post['gm_due_date'];
-
-        // 3. Date range and chronological validation
-        $startTs   = strtotime($post['start_date']);
-        $endTs     = strtotime($post['end_date']);
-        $fillingTs = !empty($post['deadline_filling']) ? strtotime($post['deadline_filling']) : null;
-        $reviewTs  = !empty($post['deadline_review']) ? strtotime($post['deadline_review']) : null;
-        $readingTs = !empty($post['deadline_reading']) ? strtotime($post['deadline_reading']) : null;
-
-        if ($endTs < $startTs) {
-            $response = [
-                ['error' => true, 'field' => $this->model->table],
-                ['error' => 'error_end_date', 'field' => 'end_date', 'label' => 'Tanggal selesai harus lebih besar atau sama dengan tanggal mulai.'],
-            ];
-            return $this->response->setJSON($response);
-        }
-
-        if ($fillingTs !== null) {
-            if ($fillingTs < $startTs || $fillingTs > $endTs) {
-                return $this->response->setJSON([
-                    ['error' => true, 'field' => $this->model->table],
-                    ['error' => 'error_deadline_filling', 'field' => 'deadline_filling', 'label' => 'Deadline pengisian harus berada di dalam rentang periode siklus.'],
-                ]);
-            }
-        }
-
-        if ($reviewTs !== null) {
-            if ($reviewTs < $startTs || $reviewTs > $endTs) {
-                return $this->response->setJSON([
-                    ['error' => true, 'field' => $this->model->table],
-                    ['error' => 'error_deadline_review', 'field' => 'deadline_review', 'label' => 'Deadline review harus berada di dalam rentang periode siklus.'],
-                ]);
-            }
-            if ($fillingTs !== null && $reviewTs < $fillingTs) {
-                return $this->response->setJSON([
-                    ['error' => true, 'field' => $this->model->table],
-                    ['error' => 'error_deadline_review', 'field' => 'deadline_review', 'label' => 'Deadline review tidak boleh mendahului deadline pengisian.'],
-                ]);
-            }
-        }
-
-        if ($readingTs !== null) {
-            if ($readingTs < $startTs || $readingTs > $endTs) {
-                return $this->response->setJSON([
-                    ['error' => true, 'field' => $this->model->table],
-                    ['error' => 'error_deadline_reading', 'field' => 'deadline_reading', 'label' => 'Deadline pembacaan harus berada di dalam rentang periode siklus.'],
-                ]);
-            }
-            $prevTs = $reviewTs ?? $fillingTs;
-            if ($prevTs !== null && $readingTs < $prevTs) {
-                return $this->response->setJSON([
-                    ['error' => true, 'field' => $this->model->table],
-                    ['error' => 'error_deadline_reading', 'field' => 'deadline_reading', 'label' => 'Deadline pembacaan tidak boleh mendahului deadline sebelumnya.'],
-                ]);
-            }
+        // 3. Chronological date validation
+        $dateError = $this->validateCycleDates($post);
+        if ($dateError !== null) {
+            return $this->response->setJSON($dateError);
         }
 
         // 4. Guard on closed cycle
         if (!empty($id)) {
             $existing = $this->model->find($id);
             if ($existing && method_exists($existing, 'isClosed') && $existing->isClosed()) {
-                return $this->response->setJSON(message('error', false, '[AppraisalCycleController::create] Siklus penilaian yang sudah CLOSED tidak dapat diubah.'));
+                return $this->response->setJSON(message('error', false, 'Siklus penilaian yang sudah CLOSED tidak dapat diubah.'));
             }
         }
 
@@ -313,10 +264,10 @@ class AppraisalCycleController extends BaseController
 
         $this->entity->fill($post);
 
-        // 🔑 Force "new" semantics for insert path in BaseController::save()
+        // Force "new" semantics for insert path in BaseController::save()
         $pk = $this->model->primaryKey;
         if (empty($id)) {
-            $this->entity->{$pk}      = null;   // <-- critical: null, not ""
+            $this->entity->{$pk}      = null;
             $this->entity->status     = M_AppraisalCycle::STATUS_DRAFT;
             $this->entity->created_by = $userId;
         } else {
@@ -327,9 +278,87 @@ class AppraisalCycleController extends BaseController
         try {
             $saveResult = $this->save();
             return $this->response->setJSON($saveResult);
-        } catch (Throwable $e) {
-            return $this->response->setJSON(message('error', false, '[AppraisalCycleController::create] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
+        } catch (\Throwable $e) {
+            return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
+    }
+
+    /**
+     * Validate cycle date ranges and chronological sequence.
+     */
+    protected function validateCycleDates(array $post): ?array
+    {
+        $startTs    = !empty($post['start_date']) ? strtotime($post['start_date']) : 0;
+        $endTs      = !empty($post['end_date']) ? strtotime($post['end_date']) : 0;
+        $fillingTs  = !empty($post['deadline_filling']) ? strtotime($post['deadline_filling']) : null;
+        $reviewTs   = !empty($post['deadline_review']) ? strtotime($post['deadline_review']) : null;
+        $readingTs  = !empty($post['deadline_reading']) ? strtotime($post['deadline_reading']) : null;
+        $overrideTs = !empty($post['deadline_override']) ? strtotime($post['deadline_override']) : null;
+
+        if ($endTs < $startTs) {
+            return [
+                ['error' => true, 'field' => $this->model->table],
+                ['error' => 'error_end_date', 'field' => 'end_date', 'label' => 'Tanggal selesai harus lebih besar atau sama dengan tanggal mulai.'],
+            ];
+        }
+
+        if ($fillingTs !== null) {
+            if ($fillingTs < $startTs || $fillingTs > $endTs) {
+                return [
+                    ['error' => true, 'field' => $this->model->table],
+                    ['error' => 'error_deadline_filling', 'field' => 'deadline_filling', 'label' => 'Deadline pengisian harus berada di dalam rentang periode siklus.'],
+                ];
+            }
+        }
+
+        if ($reviewTs !== null) {
+            if ($reviewTs < $startTs || $reviewTs > $endTs) {
+                return [
+                    ['error' => true, 'field' => $this->model->table],
+                    ['error' => 'error_deadline_review', 'field' => 'deadline_review', 'label' => 'Deadline review harus berada di dalam rentang periode siklus.'],
+                ];
+            }
+            if ($fillingTs !== null && $reviewTs < $fillingTs) {
+                return [
+                    ['error' => true, 'field' => $this->model->table],
+                    ['error' => 'error_deadline_review', 'field' => 'deadline_review', 'label' => 'Deadline review tidak boleh mendahului deadline pengisian.'],
+                ];
+            }
+        }
+
+        if ($readingTs !== null) {
+            if ($readingTs < $startTs || $readingTs > $endTs) {
+                return [
+                    ['error' => true, 'field' => $this->model->table],
+                    ['error' => 'error_deadline_reading', 'field' => 'deadline_reading', 'label' => 'Deadline pembacaan harus berada di dalam rentang periode siklus.'],
+                ];
+            }
+            $prevTs = $reviewTs ?? $fillingTs;
+            if ($prevTs !== null && $readingTs < $prevTs) {
+                return [
+                    ['error' => true, 'field' => $this->model->table],
+                    ['error' => 'error_deadline_reading', 'field' => 'deadline_reading', 'label' => 'Deadline pembacaan tidak boleh mendahului deadline sebelumnya.'],
+                ];
+            }
+        }
+
+        if ($overrideTs !== null) {
+            if ($overrideTs < $startTs || $overrideTs > $endTs) {
+                return [
+                    ['error' => true, 'field' => $this->model->table],
+                    ['error' => 'error_deadline_override', 'field' => 'deadline_override', 'label' => 'Deadline masa tenggang HR harus berada di dalam rentang periode siklus.'],
+                ];
+            }
+            $prevTs = $readingTs ?? ($reviewTs ?? $fillingTs);
+            if ($prevTs !== null && $overrideTs < $prevTs) {
+                return [
+                    ['error' => true, 'field' => $this->model->table],
+                    ['error' => 'error_deadline_override', 'field' => 'deadline_override', 'label' => 'Deadline masa tenggang HR tidak boleh mendahului deadline sebelumnya.'],
+                ];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -409,150 +438,13 @@ class AppraisalCycleController extends BaseController
     public function previewBlast($id = null)
     {
         try {
-            $cycle = null;
-            if (!empty($id)) {
-                $cycle = $this->model->find((int) $id);
-            }
+            $cycleId   = !empty($id) ? (int) $id : (int) ($this->request->getVar('id') ?? 0);
+            $generator = new AppraisalGeneratorService();
+            $preview   = $generator->previewBatchForCycle($cycleId > 0 ? $cycleId : null);
 
-            $employees = $this->db->table('md_employee e')
-                ->select('e.md_employee_id, e.value as nik, e.fullname, eb.md_branch_id, b.name as branch_name, ed.md_division_id, d.name as division_name, e.md_levelling_id, l.name as level_name, e.md_position_id, p.name as position_name, e.superior_id')
-                ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
-                ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
-                ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
-                ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
-                ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
-                ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
-                ->where('e.isactive', 'Y')
-                ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")')
-                ->orderBy('e.fullname', 'ASC')
-                ->get()
-                ->getResultArray();
-
-            $empNameMap = [];
-            foreach ($employees as $e) {
-                $empNameMap[(int) $e['md_employee_id']] = $e['fullname'];
-            }
-
-            $templateCache = [];
-            $templateRows  = $this->db->table('md_appraisal_template')
-                ->select('md_appraisal_template_id, title, template_code')
-                ->where('status', \App\Models\M_AppraisalTemplate::STATUS_PUBLISHED)
-                ->where('isactive', 'Y')
-                ->get()
-                ->getResultArray();
-            foreach ($templateRows as $tRow) {
-                $templateCache[(int) $tRow['md_appraisal_template_id']] = '[' . $tRow['template_code'] . '] ' . $tRow['title'];
-            }
-
-            $existingGenerated = [];
-            if ($cycle) {
-                $cycleIdVal = is_object($cycle) ? ($cycle->md_appraisal_cycle_id ?? 0) : ($cycle['md_appraisal_cycle_id'] ?? 0);
-                $existingAppraisals = $this->db->table('md_appraisal')
-                    ->select('md_employee_id')
-                    ->where('md_appraisal_cycle_id', (int) $cycleIdVal)
-                    ->where('isactive', 'Y')
-                    ->get()
-                    ->getResultArray();
-                foreach ($existingAppraisals as $app) {
-                    $existingGenerated[(int) $app['md_employee_id']] = true;
-                }
-            }
-
-            $rows             = [];
-            $totalCount       = count($employees);
-            $readyCount       = 0;
-            $missingTplCount  = 0;
-            $missingEvalCount = 0;
-            $generatedCount   = 0;
-
-            foreach ($employees as $emp) {
-                $empId       = (int) $emp['md_employee_id'];
-                $branchId    = (int) ($emp['md_branch_id'] ?? 0);
-                $divisionId  = (int) ($emp['md_division_id'] ?? 0);
-                $levellingId = (int) ($emp['md_levelling_id'] ?? 0);
-
-                $resolvedTplId   = 0;
-                $resolvedTplName = '-';
-                try {
-                    $resolvedTplId = $this->resolverService->resolveTemplateId($branchId, $divisionId, $levellingId);
-                    $resolvedTplName = $templateCache[$resolvedTplId] ?? "Template #{$resolvedTplId}";
-                } catch (Throwable $te) {
-                    $resolvedTplId = 0;
-                    $resolvedTplName = 'Belum ditugaskan';
-                }
-
-                $hierarchy   = $this->mEmployee->getAppraisalHierarchy($empId);
-                $evaluatorId = (int) ($hierarchy['manager_id'] ?? 0);
-                if ($evaluatorId <= 0 && ! empty($emp['superior_id'])) {
-                    $evaluatorId = (int) $emp['superior_id'];
-                }
-                $evaluatorName = ($evaluatorId > 0 && isset($empNameMap[$evaluatorId]))
-                    ? $empNameMap[$evaluatorId]
-                    : ($evaluatorId > 0 ? "Karyawan #{$evaluatorId}" : '-');
-
-                $reviewerId = (int) ($hierarchy['reviewer_id'] ?? 0);
-                $reviewerName = ($reviewerId > 0 && isset($empNameMap[$reviewerId]))
-                    ? $empNameMap[$reviewerId]
-                    : ($reviewerId > 0 ? "Karyawan #{$reviewerId}" : '-');
-
-                $readiness = 'READY';
-                $statusNote = 'Siap didistribusikan';
-
-                if (isset($existingGenerated[$empId])) {
-                    $readiness  = 'ALREADY_GENERATED';
-                    $statusNote = 'Form penilaian sudah dibuat';
-                    $generatedCount++;
-                } elseif ($resolvedTplId <= 0) {
-                    $readiness  = 'MISSING_TEMPLATE';
-                    $statusNote = 'Tidak ada master template PUBLISHED yang cocok';
-                    $missingTplCount++;
-                } elseif ($evaluatorId <= 0) {
-                    $readiness  = 'MISSING_EVALUATOR';
-                    $statusNote = 'Atasan langsung (evaluator) belum terdata';
-                    $missingEvalCount++;
-                } else {
-                    $readyCount++;
-                }
-
-                $rows[] = [
-                    'md_employee_id'   => $empId,
-                    'nik'              => $emp['nik'] ?? '-',
-                    'name'             => $emp['fullname'] ?? '-',
-                    'branch'           => $emp['branch_name'] ?? 'Pusat',
-                    'division'         => $emp['division_name'] ?? 'Semua Divisi',
-                    'level'            => $emp['level_name'] ?? 'Staff',
-                    'position'         => $emp['position_name'] ?? '-',
-                    'template_id'      => $resolvedTplId,
-                    'template_name'    => $resolvedTplName,
-                    'evaluator_id'     => $evaluatorId,
-                    'evaluator_name'   => $evaluatorName,
-                    'reviewer_id'      => $reviewerId,
-                    'reviewer_name'    => $reviewerName,
-                    'readiness_status' => $readiness,
-                    'status_note'      => $statusNote,
-                ];
-            }
-
-            $summary = [
-                'total'             => $totalCount,
-                'ready'             => $readyCount,
-                'missing_template'  => $missingTplCount,
-                'missing_evaluator' => $missingEvalCount,
-                'already_generated' => $generatedCount,
-                'can_blast'         => ($readyCount > 0),
-            ];
-
-            return $this->response->setJSON(message('success', true, [
-                'cycle'   => $cycle ? [
-                    'id'     => is_object($cycle) ? ($cycle->md_appraisal_cycle_id ?? null) : ($cycle['md_appraisal_cycle_id'] ?? null),
-                    'title'  => is_object($cycle) ? ($cycle->title ?? null) : ($cycle['title'] ?? null),
-                    'status' => is_object($cycle) ? ($cycle->status ?? null) : ($cycle['status'] ?? null),
-                ] : null,
-                'summary' => $summary,
-                'rows'    => $rows,
-            ]));
+            return $this->response->setJSON(message('success', true, $preview));
         } catch (Throwable $e) {
-            return $this->response->setJSON(message('error', false, '[AppraisalCycleController::previewBlast] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
+            return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
     }
 
@@ -646,6 +538,7 @@ class AppraisalCycleController extends BaseController
             $dlFilling  = is_object($cycle) ? ($cycle->deadline_filling ?? $cycle->evaluator_due_date ?? null) : ($cycle['deadline_filling'] ?? $cycle['evaluator_due_date'] ?? null);
             $dlReview   = is_object($cycle) ? ($cycle->deadline_review ?? $cycle->gm_due_date ?? null) : ($cycle['deadline_review'] ?? $cycle['gm_due_date'] ?? null);
             $dlReading  = is_object($cycle) ? ($cycle->deadline_reading ?? null) : ($cycle['deadline_reading'] ?? null);
+            $dlOverride = is_object($cycle) ? ($cycle->deadline_override ?? null) : ($cycle['deadline_override'] ?? null);
             $cycleStatus= is_object($cycle) ? ($cycle->status ?? '-') : ($cycle['status'] ?? '-');
 
             return $this->response->setJSON(message('success', true, [
@@ -657,6 +550,7 @@ class AppraisalCycleController extends BaseController
                     'deadline_filling'   => $dlFilling ? date('d/m/Y', strtotime($dlFilling)) : '-',
                     'deadline_review'    => $dlReview ? date('d/m/Y', strtotime($dlReview)) : '-',
                     'deadline_reading'   => $dlReading ? date('d/m/Y', strtotime($dlReading)) : '-',
+                    'deadline_override'  => $dlOverride ? date('d/m/Y', strtotime($dlOverride)) : '-',
                     'evaluator_due_date' => $dlFilling ? date('d/m/Y', strtotime($dlFilling)) : '-',
                     'gm_due_date'        => $dlReview ? date('d/m/Y', strtotime($dlReview)) : '-',
                     'status'             => $cycleStatus,

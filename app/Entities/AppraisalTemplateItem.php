@@ -10,14 +10,16 @@ class AppraisalTemplateItem extends Entity
     protected $dates = ['created_at', 'updated_at'];
 
     protected $casts = [
-        'template_item_id'      => 'integer',
-        'appraisal_template_id' => 'integer',
-        'min_value'             => '?float',
-        'max_value'             => '?float',
-        'weight'                => 'float',
-        'sequence_order'        => 'integer',
-        'created_by'            => 'integer',
-        'updated_by'            => 'integer',
+        'template_item_id'              => 'integer',
+        'md_appraisal_template_item_id' => 'integer',
+        'md_appraisal_section_id'       => 'integer',
+        'min_value'                     => '?float',
+        'max_value'                     => '?float',
+        'weight'                        => 'float',
+        'sequence_order'                => 'integer',
+        'config'                        => 'json-array',
+        'created_by'                    => 'integer',
+        'updated_by'                    => 'integer',
     ];
 
     public function getKeyActionsList(): array

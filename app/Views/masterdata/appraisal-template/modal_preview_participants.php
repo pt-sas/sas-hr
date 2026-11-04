@@ -1,4 +1,4 @@
-<div class="modal fade" id="modal_preview_participants" tabindex="-1" role="dialog" aria-labelledby="modal_preview_participants_title" aria-hidden="true" data-backdrop="static">
+<div class="modal fade" id="modal_preview_participants" modal-type="not-main" tabindex="-1" role="dialog" aria-labelledby="modal_preview_participants_title" aria-hidden="true" data-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
         <div class="modal-content border-0 shadow">
             
@@ -51,8 +51,8 @@
                                 <th>Cabang</th>
                                 <th>Divisi</th>
                                 <th>Level / Jabatan</th>
-                                <th>Penilai (Atasan)</th>
-                                <th>Reviewer (GM)</th>
+                                <th>Penilai (Evaluator)</th>
+                                <th>Peninjau (Reviewer)</th>
                             </tr>
                         </thead>
                         <tbody id="tb_preview_participants_body">
@@ -68,9 +68,6 @@
                     <span class="badge badge-primary px-3 py-2 font-weight-bold" id="badge_preview_total_peserta" style="font-size: 12px;">
                         Total: 0 Karyawan
                     </span>
-                    <small class="text-muted ml-2">
-                        <i class="fas fa-info-circle mr-1 text-primary"></i> Data dihitung dari karyawan berstatus aktif di HRIS.
-                    </small>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm px-4 btn-round" data-dismiss="modal">
                     Tutup

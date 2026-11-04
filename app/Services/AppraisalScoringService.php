@@ -96,9 +96,9 @@ class AppraisalScoringService
                 }
             }
 
-            // Exclude unweighted or non-numeric items (e.g. TEXT, BOOLEAN)
+            // Exclude unweighted or non-numeric items (e.g. TEXT, BOOLEAN, SINGLE_CHECKLIST)
             $inputType = strtoupper($itemDef['input_type'] ?? 'SCORE');
-            if ($inputType === 'TEXT' || $inputType === 'BOOLEAN') {
+            if ($inputType === 'TEXT' || $inputType === 'BOOLEAN' || $inputType === 'SINGLE_CHECKLIST') {
                 $weight = 0.0;
                 $score  = null;
             }
@@ -211,7 +211,7 @@ class AppraisalScoringService
             $actualItemId = (int) $resp->md_appraisal_template_item_id;
             $itemDef      = $itemsDefById[$actualItemId] ?? null;
             $inputType    = strtoupper($itemDef['input_type'] ?? 'SCORE');
-            $isBoolean    = ($inputType === 'BOOLEAN' || isset($row['boolean_value']) || isset($row['checked_actions']));
+            $isBoolean    = ($inputType === 'BOOLEAN' || $inputType === 'SINGLE_CHECKLIST' || isset($row['boolean_value']) || isset($row['checked_actions']));
 
             // Extract numeric score only for scored items
             $score = null;
@@ -226,18 +226,28 @@ class AppraisalScoringService
             $prevScore = $resp->score !== null ? (float) $resp->score : null;
 
             // Assemble payload
-            if ($actorRole === 'GM') {
+            $isPeninjau = in_array(strtoupper((string) $actorRole), ['GM', 'PENINJAU', 'REVIEWER'], true);
+
+            if ($isPeninjau) {
                 $existingGm = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : ($resp->gm_response ?? []);
                 $newGm      = array_merge($existingGm ?: [], $row['gm_response'] ?? $row);
-                if (isset($row['action_scores'])) {
-                    $newGm['action_scores'] = $row['action_scores'];
+                unset($newGm['md_appraisal_template_item_id']);
+
+                if (isset($row['action_scores']) && is_array($row['action_scores'])) {
+                    $newGm['action_scores'] = array_values(array_map('floatval', $row['action_scores']));
+                }
+                if (isset($row['checked_actions']) && is_array($row['checked_actions'])) {
+                    $newGm['checked_actions'] = array_values(array_map('intval', $row['checked_actions']));
+                }
+                if (isset($row['other_text'])) {
+                    $newGm['other_text'] = trim((string) $row['other_text']);
                 }
                 if ($isBoolean) {
                     unset($newGm['score']);
                     $resp->score = null;
                 } else {
                     if ($score !== null) {
-                        $newGm['score'] = number_format($score, 2, '.', '');
+                        $newGm['score'] = round((float) $score, 2);
                         $resp->score    = $score;
                     }
                 }
@@ -252,26 +262,34 @@ class AppraisalScoringService
                     $auditDeltas[] = [
                         'md_appraisal_id'               => $appraisalId,
                         'actor_id'                      => $userId,
-                        'action'                        => 'GM_OVERRIDE_ITEM',
+                        'action'                        => 'PENINJAU_OVERRIDE_ITEM',
                         'md_appraisal_template_item_id' => $actualItemId,
-                        'previous_value'                => json_encode(['score' => $prevScore, 'payload' => $existingGm]),
-                        'new_value'                     => json_encode(['score' => $effectiveScore, 'payload' => $newGm]),
-                        'notes'                         => 'GM memperbarui nilai/catatan butir penilaian.',
+                        'previous_value'                => json_encode(['score' => $prevScore, 'payload' => !empty($existingGm) ? $existingGm : null]),
+                        'new_value'                     => json_encode(['score' => $effectiveScore, 'payload' => !empty($newGm) ? $newGm : null]),
+                        'notes'                         => 'Peninjau memperbarui nilai/catatan butir penilaian.',
                         'created_at'                    => date('Y-m-d H:i:s'),
                     ];
                 }
             } else {
                 $existingEval = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : ($resp->evaluator_response ?? []);
                 $newEval      = array_merge($existingEval ?: [], $row['evaluator_response'] ?? $row);
-                if (isset($row['action_scores'])) {
-                    $newEval['action_scores'] = $row['action_scores'];
+                unset($newEval['md_appraisal_template_item_id']);
+
+                if (isset($row['action_scores']) && is_array($row['action_scores'])) {
+                    $newEval['action_scores'] = array_values(array_map('floatval', $row['action_scores']));
+                }
+                if (isset($row['checked_actions']) && is_array($row['checked_actions'])) {
+                    $newEval['checked_actions'] = array_values(array_map('intval', $row['checked_actions']));
+                }
+                if (isset($row['other_text'])) {
+                    $newEval['other_text'] = trim((string) $row['other_text']);
                 }
                 if ($isBoolean) {
                     unset($newEval['score']);
                     $resp->score = null;
                 } else {
                     if ($score !== null) {
-                        $newEval['score'] = number_format($score, 2, '.', '');
+                        $newEval['score'] = round((float) $score, 2);
                         $resp->score      = $score;
                     }
                 }
@@ -287,8 +305,8 @@ class AppraisalScoringService
                         'actor_id'                      => $userId,
                         'action'                        => 'UPDATE_ITEM_SCORE',
                         'md_appraisal_template_item_id' => $actualItemId,
-                        'previous_value'                => json_encode(['score' => $prevScore, 'payload' => $existingEval]),
-                        'new_value'                     => json_encode(['score' => $score, 'payload' => $newEval]),
+                        'previous_value'                => json_encode(['score' => $prevScore, 'payload' => !empty($existingEval) ? $existingEval : null]),
+                        'new_value'                     => json_encode(['score' => $score, 'payload' => !empty($newEval) ? $newEval : null]),
                         'notes'                         => 'Penilai memperbarui nilai/catatan butir penilaian.',
                         'created_at'                    => date('Y-m-d H:i:s'),
                     ];
@@ -337,14 +355,14 @@ class AppraisalScoringService
         }
 
         if ($score >= 3.50) {
-            return 'Sangat Baik (Exceeds Expectations)';
+            return 'Sangat Baik';
         }
         if ($score >= 2.75) {
-            return 'Baik (Meets Expectations)';
+            return 'Baik';
         }
         if ($score >= 2.00) {
-            return 'Cukup (Needs Improvement)';
+            return 'Cukup';
         }
-        return 'Kurang (Unsatisfactory)';
+        return 'Kurang';
     }
 }

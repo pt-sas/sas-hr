@@ -7,6 +7,7 @@ use App\Models\M_Appraisal;
 use App\Models\M_AppraisalAuditLog;
 use App\Services\AppraisalWorkflowService;
 use App\Services\AppraisalScoringService;
+use App\Services\AppraisalCycleService;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -16,6 +17,7 @@ class AppraisalWorkflowController extends BaseController
 {
     protected AppraisalWorkflowService $workflowService;
     protected AppraisalScoringService $scoringService;
+    protected AppraisalCycleService $cycleService;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
@@ -24,6 +26,7 @@ class AppraisalWorkflowController extends BaseController
         $this->model           = new M_Appraisal();
         $this->workflowService = new AppraisalWorkflowService();
         $this->scoringService  = new AppraisalScoringService();
+        $this->cycleService    = new AppraisalCycleService();
     }
 
     /**
@@ -47,6 +50,14 @@ class AppraisalWorkflowController extends BaseController
         $developmentPlan  = $post['development_plan'] ?? null;
 
         try {
+            $appraisal = $this->model->find((int) $id);
+            if (! $appraisal) {
+                return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
+            }
+
+            $debugDate = $this->session->get('appraisal_debug_date');
+            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
+
             $userId = (int) ($this->access->getSessionUser() ?? 1);
 
             // Optional save responses if provided
@@ -89,6 +100,14 @@ class AppraisalWorkflowController extends BaseController
         $gmComment = $post['gm_comment'] ?? $this->request->getVar('gm_comment');
 
         try {
+            $appraisal = $this->model->find((int) $id);
+            if (! $appraisal) {
+                return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
+            }
+
+            $debugDate = $this->session->get('appraisal_debug_date');
+            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
+
             $userId = (int) ($this->access->getSessionUser() ?? 1);
 
             // Optional save revised responses by GM if provided
@@ -156,6 +175,24 @@ class AppraisalWorkflowController extends BaseController
 
         try {
             $userId    = (int) ($this->access->getSessionUser() ?? 1);
+            $appraisal = $this->model->find((int) $id);
+            if (! $appraisal) {
+                return $this->response->setJSON(message('error', false, 'Data penilaian tidak ditemukan.'));
+            }
+
+            $currentEmpId = (int) ($this->session->get('md_employee_id') ?? 0);
+            $targetEmpId  = (int) $appraisal->md_employee_id;
+            $role         = $this->access->getRole();
+            $roleName     = $role ? $role->getName() : '';
+            $isAdmin      = $this->access->getUserRoleName($userId, 'W_Emp_All_Data') || in_array($roleName, ['Admin', 'Super HRD', 'DEVELOPER', 'ADMINISTRATOR'], true);
+
+            $isDirectEmp  = ($currentEmpId > 0 && $currentEmpId === $targetEmpId);
+            $isDuta       = (! $isDirectEmp && $this->workflowService->isDutaForEmployeeWithoutUser($userId, $targetEmpId));
+
+            if (! $isDirectEmp && ! $isDuta && ! $isAdmin) {
+                return $this->response->setJSON(message('error', false, 'Anda tidak memiliki hak akses untuk menandatangani penilaian ini.'));
+            }
+
             $appraisal = $this->workflowService->acknowledgeByEmployee((int) $id, $userId, $employeeComment);
 
             return $this->response->setJSON(message('success', true, 'Penilaian kinerja berhasil ditandatangani dan difinalisasi.', $appraisal));

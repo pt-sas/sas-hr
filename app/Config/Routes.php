@@ -62,6 +62,14 @@ $routes->get('/iclock/lastlog', 'IclockApi::lastLogMachine');
 $routes->post('/iclock/updatelastlog', 'IclockApi::updateLastLog');
 $routes->post('/telegramHook', 'Backend\Telegram::telegramHook');
 
+// Monitoring Penilaian top-level aliases
+$routes->match(['get', 'post'], 'monitoring-penilaian', 'Backend\PerformanceAppraisal::index', ['filter' => 'auth']);
+$routes->match(['get', 'post'], 'monitoring-penilaian/showAll', 'Backend\PerformanceAppraisal::showAll', ['filter' => 'auth']);
+$routes->match(['get', 'post'], 'monitoring-penilaian/getSummary', 'Backend\PerformanceAppraisal::getSummary', ['filter' => 'auth']);
+$routes->match(['get', 'post'], 'monitoring-penilaian/getCycles', 'Backend\PerformanceAppraisal::getCycles', ['filter' => 'auth']);
+$routes->match(['get', 'post'], 'monitoring-penilaian/getDivisions', 'Backend\PerformanceAppraisal::getDivisions', ['filter' => 'auth']);
+$routes->match(['get', 'post'], 'monitoring-penilaian/nudge', 'Backend\PerformanceAppraisal::nudge', ['filter' => 'auth']);
+
 $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     // Dashboard
     $routes->add('/', 'Backend\Dashboard::index');
@@ -936,6 +944,8 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'monitoring-penilaian/getSummary', 'Backend\PerformanceAppraisal::getSummary');
     $routes->match(['get', 'post'], 'monitoring-penilaian/getCycles', 'Backend\PerformanceAppraisal::getCycles');
     $routes->match(['get', 'post'], 'monitoring-penilaian/getDivisions', 'Backend\PerformanceAppraisal::getDivisions');
+    $routes->post('monitoring-penilaian/nudge', 'Backend\PerformanceAppraisal::nudge');
+    $routes->get('cron-appraisal-nudge', 'Backend\PerformanceAppraisal::cronDailyNudge');
 
     // TEMPLATES (Appraisal Template Routes)
     $routes->add('template-penilaian', 'Backend\AppraisalTemplateController::index');
@@ -943,6 +953,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('template-penilaian/create', 'Backend\AppraisalTemplateController::create');
     $routes->match(['get', 'post'], 'template-penilaian/show/(:any)', 'Backend\AppraisalTemplateController::show/$1');
     $routes->post('template-penilaian/publish/(:any)', 'Backend\AppraisalTemplateController::publish/$1');
+    $routes->post('template-penilaian/unpublish/(:any)', 'Backend\AppraisalTemplateController::unpublish/$1');
     $routes->post('template-penilaian/clone/(:any)', 'Backend\AppraisalTemplateController::cloneVersion/$1');
     $routes->post('template-penilaian/archive/(:any)', 'Backend\AppraisalTemplateController::archive/$1');
     $routes->match(['get', 'post'], 'template-penilaian/destroy/(:any)', 'Backend\AppraisalTemplateController::destroy/$1');
@@ -954,7 +965,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     // Dropdown Select2 Endpoints
     $routes->match(['get', 'post'], 'template-penilaian/getListLevelling', 'Backend\AppraisalTemplateController::getListLevelling');
     $routes->match(['get', 'post'], 'template-penilaian/getListPosition', 'Backend\AppraisalTemplateController::getListPosition');
-    $routes->match(['get', 'post'], 'template-penilaianF/getListDivision', 'Backend\AppraisalTemplateController::getListDivision');
+    $routes->match(['get', 'post'], 'template-penilaian/getListDivision', 'Backend\AppraisalTemplateController::getListDivision');
     $routes->match(['get', 'post'], 'template-penilaian/getListBranch', 'Backend\AppraisalTemplateController::getListBranch');
     $routes->match(['get', 'post'], 'template-penilaian/getOptionsByParent', 'Backend\AppraisalTemplateController::getOptionsByParent');
     $routes->match(['get', 'post'], 'template-penilaian/getHierarchyInfo', 'Backend\AppraisalTemplateController::getHierarchyInfo');

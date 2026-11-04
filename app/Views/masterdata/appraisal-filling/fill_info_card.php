@@ -34,6 +34,14 @@
             </button>
         <?php endif; ?>
     </div>
+    <?php if (!empty($is_duta_acknowledgment)): ?>
+        <div class="alert alert-warning py-2 px-3 mx-3 mt-3 mb-0 border-warning d-flex align-items-center" style="font-size: 13px;">
+            <i class="fas fa-user-shield fa-lg mr-2 text-warning"></i>
+            <div>
+                <strong>Konfirmasi oleh Duta:</strong> Anda menandatangani evaluasi kinerja ini mewakili <strong><?= esc($employee['name'] ?? 'karyawan') ?></strong> karena karyawan yang bersangkutan tidak memiliki akun pengguna sistem.
+            </div>
+        </div>
+    <?php endif; ?>
     <div class="ap-card-body">
         <div class="ap-info-grid">
             <div class="ap-info-item">
@@ -57,8 +65,21 @@
                 <div class="ap-info-value"><?= esc($employee['branch_name'] ?? '-') ?></div>
             </div>
             <div class="ap-info-item">
-                <div class="ap-info-label">Atasan Penilai</div>
+                <div class="ap-info-label">Penilai (Evaluator)</div>
                 <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
+            </div>
+            <div class="ap-info-item">
+                <div class="ap-info-label">Peninjau (Reviewer)</div>
+                <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
+            </div>
+            <div class="ap-info-item">
+                <div class="ap-info-label">Status Penilaian</div>
+                <div class="ap-info-value font-weight-bold text-dark">
+                    <?php
+                        $curSt = $appraisal->status ?? 'DRAFT_EVALUATOR';
+                        echo esc(\App\Models\M_Appraisal::getStatusLabel($curSt));
+                    ?>
+                </div>
             </div>
         </div>
     </div>
@@ -68,7 +89,7 @@
     <div class="ap-kickback">
         <div class="ap-kickback-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <div>
-            <div class="ap-kickback-title">Form dikembalikan oleh General Manager untuk revisi</div>
+            <div class="ap-kickback-title">Form dikembalikan oleh Peninjau (Reviewer) untuk revisi</div>
             <p class="ap-kickback-text"><?= nl2br(esc($appraisal->gm_comment)) ?></p>
         </div>
     </div>

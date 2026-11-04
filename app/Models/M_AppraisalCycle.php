@@ -12,11 +12,13 @@ class M_AppraisalCycle extends Model
     protected $returnType    = \App\Entities\AppraisalCycle::class;
     public $allowedFields    = [
         'title',
+        'semester',
         'start_date',
         'end_date',
         'deadline_filling',
         'deadline_review',
         'deadline_reading',
+        'deadline_override',
         'evaluator_due_date',
         'gm_due_date',
         'status',
@@ -38,8 +40,8 @@ class M_AppraisalCycle extends Model
     // DATATABLES REQUIREMENTS
     // =========================================================================
     
-    public $column_order  = [null, null, 'title', 'start_date', 'deadline_filling', 'deadline_review', 'deadline_reading', 'status', null]; 
-    public $column_search = ['title', 'status'];
+    public $column_order  = [null, null, 'title', 'semester', 'start_date', 'deadline_filling', 'deadline_review', 'deadline_reading', 'deadline_override', 'status', null]; 
+    public $column_search = ['title', 'semester', 'status'];
     public $order         = ['md_appraisal_cycle_id' => 'DESC'];
 
     public function getSelect()

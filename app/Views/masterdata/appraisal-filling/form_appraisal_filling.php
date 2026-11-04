@@ -97,17 +97,17 @@
         var badge = document.getElementById('badge_overall_rating');
         if (!badge) return;
 
-        var label = 'Kurang (Unsatisfactory)';
+        var label = 'Kurang';
         var badgeCls = 'r-low';
 
         if (score >= 3.50) {
-            label = 'Sangat Baik (Exceeds Expectations)';
+            label = 'Sangat Baik';
             badgeCls = 'r-great';
         } else if (score >= 2.75) {
-            label = 'Baik (Meets Expectations)';
+            label = 'Baik';
             badgeCls = 'r-good';
         } else if (score >= 2.00) {
-            label = 'Cukup (Needs Improvement)';
+            label = 'Cukup';
             badgeCls = 'r-fair';
         }
 
@@ -131,7 +131,14 @@
 
             var badgeVal = document.getElementById('badge_val_' + itemId + '_' + actionIdx);
             if (badgeVal) {
-                badgeVal.textContent = val.toFixed(2);
+                // If it's an input box, set .value; otherwise set .textContent
+                if ('value' in badgeVal) {
+                    if (document.activeElement !== badgeVal) {
+                        badgeVal.value = val.toFixed(2);
+                    }
+                } else {
+                    badgeVal.textContent = val.toFixed(2);
+                }
             }
 
             if (!items[itemId]) {
@@ -182,8 +189,61 @@
     }
 
     document.querySelectorAll('.action-slider').forEach(function (el) {
-        el.addEventListener('input', recalcTotals);
+        el.addEventListener('input', function () {
+            var val = parseFloat(this.value);
+            var numInput = document.getElementById('badge_val_' + this.dataset.itemId + '_' + this.dataset.actionIdx);
+            if (numInput && 'value' in numInput) {
+                numInput.value = val.toFixed(2);
+            }
+            var hidden = document.getElementById('action_score_hidden_' + this.dataset.itemId + '_' + this.dataset.actionIdx);
+            if (hidden) {
+                hidden.value = val.toFixed(2);
+            }
+            recalcTotals();
+        });
         el.addEventListener('change', recalcTotals);
+    });
+
+    // Bidirectional sync: live typing into score number inputs
+    document.addEventListener('input', function (e) {
+        if (e.target && e.target.classList.contains('action-score-input')) {
+            var input = e.target;
+            var val = parseFloat(input.value);
+            if (!isNaN(val)) {
+                var slider = document.querySelector('.action-slider[data-item-id="' + input.dataset.itemId + '"][data-action-idx="' + input.dataset.actionIdx + '"]');
+                if (slider) {
+                    slider.value = val;
+                }
+                var hidden = document.getElementById('action_score_hidden_' + input.dataset.itemId + '_' + input.dataset.actionIdx);
+                if (hidden) {
+                    hidden.value = val.toFixed(2);
+                }
+                recalcTotals();
+            }
+        }
+    });
+
+    // Clamp value on change/blur for typed score inputs
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.classList.contains('action-score-input')) {
+            var input = e.target;
+            var val = parseFloat(input.value);
+            if (isNaN(val)) {
+                val = 3.00;
+            }
+            val = Math.max(1.00, Math.min(4.00, Math.round(val / 0.05) * 0.05));
+            input.value = val.toFixed(2);
+
+            var slider = document.querySelector('.action-slider[data-item-id="' + input.dataset.itemId + '"][data-action-idx="' + input.dataset.actionIdx + '"]');
+            if (slider) {
+                slider.value = val;
+            }
+            var hidden = document.getElementById('action_score_hidden_' + input.dataset.itemId + '_' + input.dataset.actionIdx);
+            if (hidden) {
+                hidden.value = val.toFixed(2);
+            }
+            recalcTotals();
+        }
     });
 
     recalcTotals();

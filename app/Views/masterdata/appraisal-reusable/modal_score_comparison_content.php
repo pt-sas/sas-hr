@@ -31,7 +31,6 @@
     <!-- MODAL TOP BAR -->
     <div class="modal-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid var(--ap-line); padding: 16px 24px; background: var(--ap-surface);">
         <h5 class="modal-title font-weight-bold text-dark d-flex align-items-center mb-0" style="font-size: 16px;">
-            <i class="fas fa-chart-bar text-primary mr-2" aria-hidden="true"></i>
             Riwayat &amp; Komparasi Skor Penilaian
         </h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Tutup" style="opacity: 0.7; font-size: 24px;">
@@ -49,11 +48,7 @@
             <div class="ap-card-head d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
                     <h5 class="ap-card-title d-inline-block mb-0 mr-2">Informasi Karyawan &amp; Siklus Evaluasi</h5>
-                    <span class="ap-mode is-gm">Mode: <?= esc($statusText === 'FINALIZED' ? 'FINAL' : 'GM') ?></span>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="$('#modal_score_comparison').modal('hide'); showAuditLogModal(<?= (int) $appraisal_id ?>);" title="Buka riwayat audit trail alur/transaksi">
-                    <i class="fas fa-history mr-1 text-primary"></i> Riwayat Skor
-                </button>
             </div>
             <div class="ap-card-body">
                 <div class="ap-info-grid">
@@ -78,12 +73,12 @@
                         <div class="ap-info-value"><?= esc($employee['branch_name'] ?? '-') ?></div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Atasan Penilai</div>
+                        <div class="ap-info-label">Penilai (Evaluator)</div>
                         <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Reviewer (GM)</div>
-                        <div class="ap-info-value"><?= esc($gm['name'] ?? 'Direksi / GM') ?></div>
+                        <div class="ap-info-label">Peninjau (Reviewer)</div>
+                        <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
                     </div>
                     <div class="ap-info-item">
                         <div class="ap-info-label">Status Penilaian</div>
@@ -115,7 +110,7 @@
                     </div>
                     <span class="text-muted font-weight-bold">|</span>
                     <div class="d-inline-flex align-items-center" style="gap: 8px;">
-                        <span class="text-muted font-weight-bold">Reviewer =</span>
+                        <span class="text-muted font-weight-bold">Peninjau =</span>
                         <?php if ($is_gm_reviewed && $gm_overall_score !== null): ?>
                             <?php
                                 $gmBarColor = '';
@@ -136,7 +131,7 @@
                             <?php endif; ?>
                         <?php else: ?>
                             <span class="ap-score-num text-muted">-</span>
-                            <span class="text-muted small">Menunggu Review</span>
+                            <span class="text-muted small">Menunggu Peninjau</span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -149,7 +144,7 @@
                             <th style="width: 5%; text-align: center;">NO</th>
                             <th style="width: 55%;">KOMPETENSI / KEY ACTIONS (INDIKATOR PERILAKU)</th>
                             <th style="width: 20%; text-align: center;">SKOR PENILAI</th>
-                            <th style="width: 20%; text-align: center;">SKOR REVIEWER</th>
+                            <th style="width: 20%; text-align: center;">SKOR PENINJAU</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -315,7 +310,7 @@
                             <th style="width: 5%; text-align: center;">NO</th>
                             <th style="width: 55%;">KOMPETENSI / INDIKATOR PERILAKU</th>
                             <th style="width: 20%; text-align: center;">PENILAI</th>
-                            <th style="width: 20%; text-align: center;">REVIEWER</th>
+                            <th style="width: 20%; text-align: center;">PENINJAU</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -461,24 +456,24 @@
         <!-- =================================================================== -->
         <div class="ap-card mb-0">
             <div class="ap-card-head">
-                <h5 class="ap-card-title">4. Catatan &amp; Feedback</h5>
+                <h5 class="ap-card-title">4. Catatan</h5>
             </div>
             <div class="ap-card-body p-4">
                 <div class="form-group mb-3">
-                    <label class="font-weight-bold text-muted small text-uppercase mb-2 d-block">
-                        <i class="fas fa-comment-alt mr-1 text-primary"></i> Catatan &amp; Feedback Evaluator:
+                    <label class="font-weight-bold text-dark small mb-2 d-block">
+                        1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
                     </label>
-                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 60px;">
-                        <?= !empty($evaluator_comment) ? esc($evaluator_comment) : '<span class="text-muted font-italic">Tidak ada catatan dari penilai.</span>' ?>
+                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;">
+                        <?= !empty($evaluator_comment) ? esc($evaluator_comment) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?>
                     </div>
                 </div>
 
                 <div class="form-group mb-0">
-                    <label class="font-weight-bold text-muted small text-uppercase mb-2 d-block">
-                        <i class="fas fa-comment-dots mr-1" style="color: #0e7490;"></i> Catatan &amp; Feedback Reviewer (GM):
+                    <label class="font-weight-bold text-dark small mb-2 d-block">
+                        2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
                     </label>
-                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 60px;">
-                        <?= !empty($gm_comment) ? esc($gm_comment) : '<span class="text-muted font-italic">Belum ada catatan atau instruksi dari reviewer GM.</span>' ?>
+                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;">
+                        <?= !empty($development_plan) ? esc($development_plan) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?>
                     </div>
                 </div>
             </div>

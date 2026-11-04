@@ -2,7 +2,9 @@
 
 <?= $this->section('content'); ?>
 
+<?= $this->include('Views/masterdata/appraisal-reusable/modal_score_comparison') ?>
 <link rel="stylesheet" href="<?= base_url('form_appraisal_filling_style.css') ?>">
+
 
 <style>
 /* Layout tweaks for complete view */
@@ -88,16 +90,62 @@
     border-radius: 999px;
 }
 
+/* Catatan / Feedback Card styling */
+.ap-feedback-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ap-feedback-card {
+    background: #ffffff;
+    border: 1px solid var(--ap-line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.ap-feedback-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ap-ink);
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--ap-line-soft);
+}
+
+.ap-feedback-item {
+    margin-bottom: 14px;
+}
+
+.ap-feedback-item:last-child {
+    margin-bottom: 0;
+}
+
+.ap-feedback-q {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ap-ink-2);
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
 .ap-feedback-block {
     background: var(--ap-surface-2);
     border: 1px solid var(--ap-line);
     border-radius: 8px;
-    padding: 14px 16px;
-    min-height: 60px;
+    padding: 12px 16px;
+    min-height: 48px;
     font-size: 13.5px;
     color: var(--ap-ink-2);
-    line-height: 1.5;
+    line-height: 1.6;
     white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .ap-feedback-label {
@@ -274,15 +322,12 @@
             </h5>
         </div>
         <div class="d-flex align-items-center" style="gap: 8px;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showAuditLogModal(<?= (int) $appraisal_id ?>)">
-                <i class="fas fa-history mr-1"></i> Riwayat Audit
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showScoreComparisonModal('<?= (int) $appraisal_id ?>')">
+                <i class="fas fa-history mr-1"></i> Riwayat Komparasi Skor
             </button>
             <a href="<?= base_url('sas/penilaian/exportPDF/' . (int) $appraisal_id) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-file-pdf mr-1"></i> Unduh PDF
             </a>
-            <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">
-                <i class="fas fa-print mr-1"></i> Cetak
-            </button>
         </div>
     </div>
 
@@ -317,8 +362,22 @@
                     <div class="ap-info-value"><?= esc($employee['branch_name'] ?? '-') ?></div>
                 </div>
                 <div class="ap-info-item">
-                    <div class="ap-info-label">Atasan Penilai</div>
+                    <div class="ap-info-label">Penilai (Evaluator)</div>
                     <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
+                </div>
+                <div class="ap-info-item">
+                    <div class="ap-info-label">Peninjau (Reviewer)</div>
+                    <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
+                </div>
+                <div class="ap-info-item">
+                    <div class="ap-info-label">Status Penilaian</div>
+                    <div class="ap-info-value font-weight-bold text-dark">
+                        <?php
+                            $curSt = $appraisal->status ?? 'FINALIZED';
+                            $statusLabel = \App\Models\M_Appraisal::getStatusLabel($curSt);
+                        ?>
+                        <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i><?= esc($statusLabel) ?></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -341,7 +400,7 @@
                     <div class="ap-summary-label">Predikat Evaluasi Resmi</div>
                     <div>
                         <span class="ap-rating ap-summary-rating <?= $ratingClass ?>">
-                            <?= esc($appraisal->rating ?? 'Baik (Meets Expectations)') ?>
+                            <?= esc($appraisal->rating ?? '-') ?>
                         </span>
                     </div>
                     <!-- <small class="text-muted d-block mt-2">Kategori evaluasi berdasarkan akumulasi pembobotan standar</small> -->
@@ -370,7 +429,7 @@
                     <?php foreach ($allScoreItems as $cIdx => $item): ?>
                         <?php
                             $itemId      = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id']);
-                            $cfg         = is_string($item['config'] ?? null) ? json_decode($item['config'], true) : ($item['config'] ?? []);
+                            $cfg         = (array) ($item['config'] ?? []);
                             $compTitle   = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($cIdx + 1)));
                             $definition  = !empty($item['description']) ? $item['description'] : (!empty($cfg['definition']) ? $cfg['definition'] : '-');
                             $actions     = $parseActions($cfg['key_actions'] ?? null);
@@ -512,7 +571,7 @@
                     <?php foreach ($allBooleanItems as $bIdx => $bItem): ?>
                         <?php
                             $bItemId      = (int) ($bItem['md_appraisal_template_item_id'] ?? $bItem['template_item_id']);
-                            $bCfg         = is_string($bItem['config'] ?? null) ? json_decode($bItem['config'], true) : ($bItem['config'] ?? []);
+                            $bCfg         = (array) ($bItem['config'] ?? []);
                             $bTitle       = !empty($bCfg['competency']) ? $bCfg['competency'] : (!empty($bItem['title']) ? $bItem['title'] : ('Kompetensi ' . ($bIdx + 1)));
                             $bDef         = !empty($bItem['description']) ? $bItem['description'] : (!empty($bCfg['definition']) ? $bCfg['definition'] : '-');
                             $bKeyActions  = $parseActions($bCfg['key_actions'] ?? null);
@@ -561,7 +620,7 @@
                                             <td rowspan="<?= $totalActions ?>" class="ap-comp-cell">
                                                 <div class="ap-comp-name mb-1"><?= esc($bTitle) ?></div>
                                                 <?php if (!empty($bDef) && $bDef !== '-'): ?>
-                                                    <div class="ap-def"><span class="font-weight-bold">Def:</span> <?= esc($bDef) ?></div>
+                                                    <div class="ap-def"><?= esc($bDef) ?></div>
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>
@@ -617,31 +676,49 @@
     <!-- 4. CATATAN & FEEDBACK PENILAIAN -->
     <div class="ap-card">
         <div class="ap-card-head">
-            <h5 class="ap-card-title">4. Catatan &amp; Feedback Penilaian</h5>
+            <h5 class="ap-card-title">4. Catatan</h5>
         </div>
         <div class="ap-card-body">
-            <!-- Catatan Evaluator -->
-            <div class="mb-4">
-                <div class="ap-feedback-label">
-                    <i class="fas fa-user-edit mr-1 text-primary"></i>Catatan &amp; Feedback Evaluator:
-                </div>
-                <div class="ap-feedback-block">
-                    <?= esc(!empty($appraisal->evaluator_comment) ? $appraisal->evaluator_comment : 'Tidak ada catatan.') ?>
-                </div>
-            </div>
+            <div class="ap-feedback-section">
+                <!-- Catatan Evaluator -->
+                <div class="ap-feedback-card">
+                    <div class="ap-feedback-header">
+                        <span>Penilai (Evaluator)</span>
+                    </div>
 
-            <!-- Catatan GM -->
-            <div class="mb-0">
-                <div class="ap-feedback-label">
-                    <i class="fas fa-user-tie mr-1 text-info"></i>Catatan Review Atasan (GM):
+                    <div class="ap-feedback-item">
+                        <div class="ap-feedback-q">
+                            1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
+                        </div>
+                        <div class="ap-feedback-block">
+                            <?= esc(!empty($appraisal->evaluator_comment) ? $appraisal->evaluator_comment : '(Tidak ada catatan)') ?>
+                        </div>
+                    </div>
+
+                    <div class="ap-feedback-item">
+                        <div class="ap-feedback-q">
+                            2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
+                        </div>
+                        <div class="ap-feedback-block">
+                            <?= esc(!empty($appraisal->development_plan) ? $appraisal->development_plan : '(Tidak ada catatan)') ?>
+                        </div>
+                    </div>
                 </div>
-                <div class="ap-feedback-block">
-                    <?php if (!empty($appraisal->snapshot_gm_id)): ?>
-                        <?= esc(!empty($appraisal->gm_comment) ? $appraisal->gm_comment : 'Tidak ada catatan review GM.') ?>
-                    <?php else: ?>
-                        <span class="text-muted font-italic">Tidak Diperlukan (Penilaian Langsung oleh Direksi)</span>
-                    <?php endif; ?>
+
+                <?php if (!empty($appraisal->employee_comment)): ?>
+                <!-- Catatan Karyawan / Duta -->
+                <div class="ap-feedback-card">
+                    <div class="ap-feedback-header">
+                        <i class="fas fa-signature text-success mr-1"></i>
+                        <span>Tanggapan / Catatan Konfirmasi Karyawan (<?= esc($employee['name'] ?? 'Karyawan') ?>)</span>
+                    </div>
+                    <div class="ap-feedback-item">
+                        <div class="ap-feedback-block">
+                            <?= esc($appraisal->employee_comment) ?>
+                        </div>
+                    </div>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

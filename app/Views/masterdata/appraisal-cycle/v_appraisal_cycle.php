@@ -19,10 +19,12 @@
                     <th>ID</th>
                     <th style="width: 45px;" class="text-center">No</th>
                     <th>Nama Siklus Penilaian</th>
+                    <th style="width: 90px;" class="text-center">Semester</th>
                     <th style="width: 170px;">Periode Pengisian</th>
-                    <th style="width: 110px;" class="text-center">Due Filling</th>
-                    <th style="width: 110px;" class="text-center">Due Review</th>
-                    <th style="width: 110px;" class="text-center">Due Reading</th>
+                    <th style="width: 105px;" class="text-center">Due Filling</th>
+                    <th style="width: 105px;" class="text-center">Due Review</th>
+                    <th style="width: 105px;" class="text-center">Due Reading</th>
+                    <th style="width: 105px;" class="text-center">Due Override</th>
                     <th style="width: 90px;" class="text-center">Status</th>
                     <th style="width: 130px;" class="text-center">Aksi</th>
                 </tr>
@@ -184,9 +186,9 @@
 
                 // Header Cycle Info
                 if (cycle && cycle.title) {
-                    $('#blast_cycle_info').html('&mdash; Siklus: <span class="badge badge-primary px-2 py-1">' + esc(cycle.title) + '</span>');
+                    $('#blast_cycle_info').html('&mdash; Siklus: <span class="font-weight-600 text-dark">' + esc(cycle.title) + '</span>');
                 } else {
-                    // $('#blast_cycle_info').html('&mdash; <span class="badge badge-secondary px-2 py-1">Simulasi Global (Semua Karyawan)</span>');
+                    $('#blast_cycle_info').html('&mdash; <span class="text-muted">Simulasi Global</span>');
                 }
 
                 // Update KPI Cards
@@ -200,7 +202,10 @@
                 var $alertText = $('#blast_alert_text');
                 if (summary.missing_template > 0 || summary.missing_evaluator > 0) {
                     $alert.removeClass('alert-info alert-success').addClass('alert-warning');
-                    $alertText.html('<b>Perhatian:</b> Terdapat <b>' + (summary.missing_template || 0) + '</b> karyawan tanpa template PUBLISHED dan <b>' + (summary.missing_evaluator || 0) + '</b> karyawan tanpa atasan langsung. Karyawan yang belum siap akan dilewati saat generate form.');
+                    $alertText.html('<b>Perhatian:</b> Terdapat <b>' + (summary.missing_template || 0) + '</b> karyawan tanpa template dan <b>' + (summary.missing_evaluator || 0) + '</b> karyawan tanpa atasan langsung. Karyawan yang belum siap akan dilewati saat generate form.');
+                } else if (summary.draft_template > 0) {
+                    $alert.removeClass('alert-info alert-success').addClass('alert-warning');
+                    $alertText.html('<b>Simulasi Template DRAFT:</b> Ditemukan <b>' + (summary.draft_template || 0) + '</b> karyawan cocok dengan template berstatus DRAFT. Terbitkan (publish) template tersebut terlebih dahulu agar form dapat dibuat saat siklus dibuka.');
                 } else {
                     $alert.removeClass('alert-info alert-warning').addClass('alert-success');
                     $alertText.html('<b>Semua Karyawan Siap:</b> 100% karyawan aktif telah terhubung dengan template yang tepat dan atasan langsung.');
@@ -273,7 +278,7 @@
                                 data: 'level',
                                 className: 'align-middle',
                                 render: function (d) {
-                                    return '<span class="badge badge-light border">' + esc(d) + '</span>';
+                                    return esc(d);
                                 }
                             },
                             {
@@ -281,9 +286,12 @@
                                 className: 'align-middle',
                                 render: function (d, t, r) {
                                     if (r.template_id > 0) {
-                                        return '<span class="text-success font-weight-bold" style="font-size:11.5px;"><i class="fas fa-check-circle mr-1"></i>' + esc(d) + '</span>';
+                                        if (r.template_status === 'DRAFT') {
+                                            return '<span class="text-warning font-weight-bold" style="font-size:11.5px;">' + esc(d) + '</span>';
+                                        }
+                                        return '<span class="text-dark font-weight-bold" style="font-size:11.5px;">' + esc(d) + '</span>';
                                     }
-                                    return '<span class="text-danger font-weight-bold" style="font-size:11.5px;"><i class="fas fa-times-circle mr-1"></i>' + esc(d) + '</span>';
+                                    return '<span class="text-danger font-weight-bold" style="font-size:11.5px;">' + esc(d) + '</span>';
                                 }
                             },
                             {
@@ -293,7 +301,7 @@
                                     if (r.evaluator_id > 0) {
                                         return '<span class="text-dark">' + esc(d) + '</span>';
                                     }
-                                    return '<span class="text-danger font-weight-bold" style="font-size:11.5px;"><i class="fas fa-exclamation-circle mr-1"></i>Belum Terdata</span>';
+                                    return '<span class="text-danger font-weight-bold" style="font-size:11.5px;">Belum Terdata</span>';
                                 }
                             },
                             {
@@ -308,13 +316,13 @@
                                 className: 'text-center align-middle',
                                 render: function (d, t, r) {
                                     if (d === 'READY') {
-                                        return '<span class="badge badge-success px-2 py-1"><i class="fas fa-check mr-1"></i>Siap</span>';
+                                        return '<span class="text-success font-weight-bold">Siap</span>';
                                     } else if (d === 'ALREADY_GENERATED') {
-                                        return '<span class="badge badge-info px-2 py-1"><i class="fas fa-check-double mr-1"></i>Digenerate</span>';
+                                        return '<span class="text-info font-weight-bold">Digenerate</span>';
                                     } else if (d === 'MISSING_TEMPLATE') {
-                                        return '<span class="badge badge-warning px-2 py-1" data-toggle="tooltip" title="' + esc(r.status_note) + '"><i class="fas fa-exclamation-triangle mr-1"></i>No Template</span>';
+                                        return '<span class="text-warning font-weight-bold" data-toggle="tooltip" title="' + esc(r.status_note) + '">No Template</span>';
                                     } else {
-                                        return '<span class="badge badge-danger px-2 py-1" data-toggle="tooltip" title="' + esc(r.status_note) + '"><i class="fas fa-user-times mr-1"></i>No Atasan</span>';
+                                        return '<span class="text-danger font-weight-bold" data-toggle="tooltip" title="' + esc(r.status_note) + '">No Atasan</span>';
                                     }
                                 }
                             }
@@ -382,6 +390,7 @@
                 var dlFill = cycle.deadline_filling || cycle.evaluator_due_date;
                 var dlRev  = cycle.deadline_review || cycle.gm_due_date;
                 var dlRead = cycle.deadline_reading;
+                var dlOver = cycle.deadline_override;
                 if (dlFill && dlFill !== '-') {
                     deadlineText += ' | Due Filling: ' + dlFill;
                 }
@@ -390,6 +399,9 @@
                 }
                 if (dlRead && dlRead !== '-') {
                     deadlineText += ' | Due Reading: ' + dlRead;
+                }
+                if (dlOver && dlOver !== '-') {
+                    deadlineText += ' | Due Override: ' + dlOver;
                 }
                 $('#prog_cycle_deadlines').text(deadlineText);
 

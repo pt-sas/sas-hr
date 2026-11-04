@@ -20,9 +20,9 @@ class AppraisalResponse extends Entity
     ];
 
     /**
-     * Helper to retrieve value from evaluator_response payload
+     * Helper to retrieve value from Penilai (evaluator_response) payload
      */
-    public function getResponseData(?string $key = null, $default = null)
+    public function getPenilaiResponse(?string $key = null, $default = null)
     {
         $payload = is_string($this->attributes['evaluator_response'] ?? null)
             ? json_decode($this->attributes['evaluator_response'], true)
@@ -33,5 +33,29 @@ class AppraisalResponse extends Entity
         }
 
         return $payload[$key] ?? $default;
+    }
+
+    /**
+     * Helper to retrieve value from Peninjau (gm_response) payload
+     */
+    public function getPeninjauResponse(?string $key = null, $default = null)
+    {
+        $payload = is_string($this->attributes['gm_response'] ?? null)
+            ? json_decode($this->attributes['gm_response'], true)
+            : ($this->attributes['gm_response'] ?? []);
+
+        if ($key === null) {
+            return $payload;
+        }
+
+        return $payload[$key] ?? $default;
+    }
+
+    /**
+     * Alias for getPenilaiResponse
+     */
+    public function getResponseData(?string $key = null, $default = null)
+    {
+        return $this->getPenilaiResponse($key, $default);
     }
 }

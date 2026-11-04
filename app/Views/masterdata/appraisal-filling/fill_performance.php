@@ -95,7 +95,7 @@
                 <?php foreach ($allScoreItems as $cIdx => $item): ?>
                     <?php
                         $itemId      = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id']);
-                        $cfg         = is_string($item['config'] ?? null) ? json_decode($item['config'], true) : ($item['config'] ?? []);
+                        $cfg         = (array) ($item['config'] ?? []);
                         $compTitle   = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($cIdx + 1)));
                         $definition  = !empty($item['description']) ? $item['description'] : (!empty($cfg['definition']) ? $cfg['definition'] : '-');
                         $actions     = $parseActions($cfg['key_actions'] ?? null);
@@ -189,8 +189,16 @@
                                                     <span>1</span><span>2</span><span>3</span><span>4</span>
                                                 </div>
                                             </div>
-                                            <div class="ap-val" id="badge_val_<?= $itemId ?>_<?= $aIdx ?>">
-                                                <?= number_format($actionScore, 2) ?>
+                                            <div class="ap-val-box ml-2">
+                                                <input type="number"
+                                                    class="form-control form-control-sm action-score-input"
+                                                    id="badge_val_<?= $itemId ?>_<?= $aIdx ?>"
+                                                    min="1.00" max="4.00" step="0.05"
+                                                    value="<?= number_format($actionScore, 2, '.', '') ?>"
+                                                    data-item-id="<?= $itemId ?>"
+                                                    data-action-idx="<?= $aIdx ?>"
+                                                    style="width: 74px; text-align: center; font-weight: 700; font-size: 13.5px; border-radius: 6px;"
+                                                    <?= !$canEditScores ? 'readonly disabled' : '' ?>>
                                             </div>
                                         </div>
                                     </td>
@@ -235,8 +243,16 @@
                                                 <span>1</span><span>2</span><span>3</span><span>4</span>
                                             </div>
                                         </div>
-                                        <div class="ap-val" id="badge_val_<?= $itemId ?>_0">
-                                            <?= number_format($actionScore, 2) ?>
+                                        <div class="ap-val-box ml-2">
+                                            <input type="number"
+                                                class="form-control form-control-sm action-score-input"
+                                                id="badge_val_<?= $itemId ?>_0"
+                                                min="1.00" max="4.00" step="0.05"
+                                                value="<?= number_format($actionScore, 2, '.', '') ?>"
+                                                data-item-id="<?= $itemId ?>"
+                                                data-action-idx="0"
+                                                style="width: 74px; text-align: center; font-weight: 700; font-size: 13.5px; border-radius: 6px;"
+                                                <?= !$canEditScores ? 'readonly disabled' : '' ?>>
                                         </div>
                                     </div>
                                 </td>

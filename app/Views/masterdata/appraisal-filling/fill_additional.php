@@ -80,7 +80,7 @@
                 <?php foreach ($allBooleanItems as $bIdx => $bItem): ?>
                     <?php
                         $bItemId      = (int) ($bItem['md_appraisal_template_item_id'] ?? $bItem['template_item_id']);
-                        $bCfg         = is_string($bItem['config'] ?? null) ? json_decode($bItem['config'], true) : ($bItem['config'] ?? []);
+                        $bCfg         = (array) ($bItem['config'] ?? []);
                         $bTitle       = !empty($bCfg['competency']) ? $bCfg['competency'] : (!empty($bItem['title']) ? $bItem['title'] : ('Kompetensi ' . ($bIdx + 1)));
                         $bDef         = !empty($bItem['description']) ? $bItem['description'] : (!empty($bCfg['definition']) ? $bCfg['definition'] : '-');
                         $bKeyActions  = $parseActions($bCfg['key_actions'] ?? null);

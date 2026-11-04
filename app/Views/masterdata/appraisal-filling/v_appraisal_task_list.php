@@ -1,6 +1,8 @@
 <?= $this->extend('backend/_partials/overview') ?>
 
 <?= $this->section('content'); ?>
+<?= $this->include('Views/masterdata/appraisal-reusable/modal_score_comparison') ?>
+
 
 <?php
     $hasActiveCycle = !empty($active_cycle);
@@ -11,6 +13,7 @@
     $cycDlFill  = is_object($active_cycle) ? ($active_cycle->deadline_filling ?? '') : ($active_cycle['deadline_filling'] ?? '');
     $cycDlRev   = is_object($active_cycle) ? ($active_cycle->deadline_review ?? '') : ($active_cycle['deadline_review'] ?? '');
     $cycDlRead  = is_object($active_cycle) ? ($active_cycle->deadline_reading ?? '') : ($active_cycle['deadline_reading'] ?? '');
+    $cycDlOver  = is_object($active_cycle) ? ($active_cycle->deadline_override ?? '') : ($active_cycle['deadline_override'] ?? '');
     $cycStatus  = is_object($active_cycle) ? ($active_cycle->status ?? 'OPEN') : ($active_cycle['status'] ?? 'OPEN');
 
     $cycCode     = $cycId !== '' ? '#' . $cycId : '-';
@@ -44,11 +47,12 @@
         $stages = method_exists($active_cycle, 'getStageDeadlines') ? $active_cycle->getStageDeadlines() : (method_exists($active_cycle, 'getStagedDeadlines') ? $active_cycle->getStagedDeadlines() : $active_cycle->getStagedDeadline());
     } else {
         $stages = [
-            1 => ['name' => 'Assignment',         'sub' => 'HR memulai',          'date' => null, 'date_fmt' => '-'],
-            2 => ['name' => 'Form filling',       'sub' => 'Penilai mengisi',     'date' => null, 'date_fmt' => '-'],
-            3 => ['name' => 'Review superior',     'sub' => 'Atasan meninjau',     'date' => null, 'date_fmt' => '-'],
-            4 => ['name' => 'Pembacaan karyawan', 'sub' => 'Karyawan menyetujui', 'date' => null, 'date_fmt' => '-'],
-            5 => ['name' => 'Finalisasi',         'sub' => 'Finalisasi penilaian', 'date' => null, 'date_fmt' => '-'],
+            1 => ['name' => 'Assignment',         'sub' => 'HR memulai',                   'date' => null, 'date_fmt' => '-'],
+            2 => ['name' => 'Form filling',       'sub' => 'Penilai mengisi',              'date' => null, 'date_fmt' => '-'],
+            3 => ['name' => 'Review superior',     'sub' => 'Atasan meninjau',              'date' => null, 'date_fmt' => '-'],
+            4 => ['name' => 'Pembacaan karyawan', 'sub' => 'Karyawan menyetujui',          'date' => null, 'date_fmt' => '-'],
+            5 => ['name' => 'Masa Tenggang HR',   'sub' => 'Intervensi & Override HR',    'date' => null, 'date_fmt' => '-'],
+            6 => ['name' => 'Finalisasi',         'sub' => 'Finalisasi penilaian',        'date' => null, 'date_fmt' => '-'],
         ];
     }
 
@@ -206,9 +210,9 @@
 
 <div class="card-body card-main atl-page">
 
-    <?php if (!$hasActiveCycle): ?>
+    <?php if (!$hasActiveCycle && empty($count_history)): ?>
     <!-- =================================================================== -->
-    <!-- EMPTY STATE: NO ACTIVE CYCLE                                        -->
+    <!-- EMPTY STATE: NO ACTIVE CYCLE & NO HISTORY                           -->
     <!-- =================================================================== -->
     <div class="atl-card">
         <div class="atl-nocycle">
@@ -219,6 +223,7 @@
     </div>
     <?php else: ?>
 
+    <?php if ($hasActiveCycle): ?>
     <!-- =================================================================== -->
     <!-- 1. SIKLUS AKTIF (HERO)                                              -->
     <!-- =================================================================== -->
@@ -227,14 +232,15 @@
             <p class="atl-eyebrow">Siklus penilaian aktif</p>
             <h1 class="atl-hero-title"><?= esc($cycTitle ?: 'Performance Review ' . date('Y')) ?></h1>
             <div class="atl-chips">
-                <span class="atl-chip"><i class="fas fa-hashtag" aria-hidden="true"></i>Kode <strong><?= esc($cycCode) ?></strong></span>
+                <!-- TODO : Need to clean this up -->
+                <!-- <span class="atl-chip"><i class="fas fa-hashtag" aria-hidden="true"></i>Kode <strong><?= esc($cycCode) ?></strong></span> -->
                 <?php if ($periodStr !== ''): ?>
                 <span class="atl-chip"><i class="far fa-calendar-alt" aria-hidden="true"></i>Periode <strong><?= esc($periodStr) ?></strong></span>
                 <?php endif; ?>
             </div>
         </div>
         <div class="atl-hero-side">
-            <div id="hero_deadline_box" class="atl-deadline atl-deadline--<?= $dlState ?>" data-fill="<?= esc($cycDlFill) ?>" data-review="<?= esc($cycDlRev) ?>" data-reading="<?= esc($cycDlRead) ?>" data-end="<?= esc($cycEnd) ?>">
+            <div id="hero_deadline_box" class="atl-deadline atl-deadline--<?= $dlState ?>" data-fill="<?= esc($cycDlFill) ?>" data-review="<?= esc($cycDlRev) ?>" data-reading="<?= esc($cycDlRead) ?>" data-override="<?= esc($cycDlOver) ?>" data-end="<?= esc($cycEnd) ?>">
                 <small id="hero_deadline_label">Deadline Pengisian</small>
                 <strong id="hero_deadline_date"><?= esc($deadlineStr) ?></strong>
                 <span id="hero_deadline_desc">
@@ -270,6 +276,7 @@
             <?php endforeach; ?>
         </ol>
     </nav>
+    <?php endif; ?>
 
     <!-- =================================================================== -->
     <!-- 3. DAFTAR TUGAS EVALUASI KARYAWAN                                   -->
@@ -278,10 +285,18 @@
 
         <!-- Role Tabs Navigation -->
         <ul class="atl-tabs" id="appraisal_role_tabs" role="tablist" aria-label="Peran penilaian">
+            <?php if (!empty($can_all)): ?>
+            <li role="presentation">
+                <button type="button" class="atl-tab" id="tab_all" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'ALL' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'ALL' ? '0' : '-1' ?>" data-role="ALL">
+                    <i class="fas fa-layer-group" aria-hidden="true"></i> Semua Penilaian
+                    <span class="atl-count ml-1"><?= (int) ($count_all ?? 0) ?></span>
+                </button>
+            </li>
+            <?php endif; ?>
             <?php if (!empty($can_evaluator)): ?>
             <li role="presentation">
                 <button type="button" class="atl-tab" id="tab_evaluator" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'EVALUATOR' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'EVALUATOR' ? '0' : '-1' ?>" data-role="EVALUATOR">
-                    <i class="fas fa-edit" aria-hidden="true"></i> Penilaian Langsung
+                    <i class="fas fa-edit" aria-hidden="true"></i> Penilai (Evaluator)
                     <span class="atl-count ml-1"><?= (int) ($count_evaluator ?? 0) ?></span>
                 </button>
             </li>
@@ -289,7 +304,7 @@
             <?php if (!empty($can_gm)): ?>
             <li role="presentation">
                 <button type="button" class="atl-tab" id="tab_gm" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'GM' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'GM' ? '0' : '-1' ?>" data-role="GM">
-                    <i class="fas fa-user-tie" aria-hidden="true"></i> Review Atasan
+                    <i class="fas fa-user-tie" aria-hidden="true"></i> Peninjau (Reviewer)
                     <span class="atl-count ml-1"><?= (int) ($count_gm ?? 0) ?></span>
                 </button>
             </li>
@@ -297,12 +312,33 @@
             <?php if (!empty($can_employee)): ?>
             <li role="presentation">
                 <button type="button" class="atl-tab" id="tab_employee" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'EMPLOYEE' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'EMPLOYEE' ? '0' : '-1' ?>" data-role="EMPLOYEE">
-                    <i class="fas fa-user-check" aria-hidden="true"></i> Penilaian Saya
+                    <i class="fas fa-user-check" aria-hidden="true"></i> <?= !empty($has_delegated_emp) ? 'Penilaian Saya &amp; Delegasi Duta' : 'Penilaian Saya' ?>
                     <span class="atl-count ml-1"><?= (int) ($count_employee ?? 0) ?></span>
                 </button>
             </li>
             <?php endif; ?>
+            <?php if (!empty($can_history)): ?>
+            <li role="presentation">
+                <button type="button" class="atl-tab" id="tab_history" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'HISTORY' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'HISTORY' ? '0' : '-1' ?>" data-role="HISTORY">
+                    <i class="fas fa-history" aria-hidden="true"></i> Riwayat Penilaian
+                    <span class="atl-count ml-1"><?= (int) ($count_history ?? 0) ?></span>
+                </button>
+            </li>
+            <?php endif; ?>
         </ul>
+
+        <!-- Informational banner when employee is in Stages 1-3 (Reading phase not reached) -->
+        <div id="notice_reading_not_started" class="alert alert-info border-info mx-3 mt-3 mb-2" style="<?= (($default_tab ?? 'EVALUATOR') === 'EMPLOYEE' && ($currentStage < 4)) ? '' : 'display: none;' ?>">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle fa-2x text-info mr-3"></i>
+                <div>
+                    <h6 class="font-weight-bold mb-1 text-dark">Tahap Pembacaan Karyawan Belum Dimulai</h6>
+                    <p class="mb-0 text-muted small">
+                        Siklus penilaian saat ini berada pada tahap pengisian / review atasan. Formulir evaluasi kinerja Anda akan dapat diakses secara otomatis saat tahap pembacaan karyawan dimulai (Jadwal: <strong><?= esc($cycDlRead ? date('d M Y', strtotime($cycDlRead)) : '-') ?></strong>).
+                    </p>
+                </div>
+            </div>
+        </div>
 
         <!-- Main Datatables Overview Section -->
         <div class="atl-table-wrap">
@@ -315,9 +351,9 @@
                             <th>Karyawan</th>
                             <th>Divisi & Posisi</th>
                             <th>Penilai</th>
+                            <th>Reviewer</th>
                             <th class="text-center">Siklus Penilaian</th>
-                            <th class="text-center">Tahapan</th>
-                            <th class="text-center" style="width: 110px;">Status</th>
+                            <th class="text-center" style="width: 150px;">Tahapan</th>
                             <th class="text-center" style="width: 90px;">Aksi</th>
                         </tr>
                     </thead>
@@ -331,19 +367,6 @@
 
     <?php endif; ?>
 
-</div>
-
-<!-- =================================================================== -->
-<!-- SCORE COMPARISON & HISTORY MODAL                                    -->
-<!-- =================================================================== -->
-<div class="modal fade" id="modal_score_comparison" modal-type="not-main" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl" role="document" style="max-width: 1280px; width: 95vw;">
-        <div class="modal-content shadow-lg" style="border-radius: 12px; border: 0; overflow: hidden; background: var(--ap-surface-2);">
-            <div id="score_comparison_container">
-                <!-- Dynamically populated via AJAX -->
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- =================================================================== -->
@@ -384,6 +407,7 @@
         }
         var $ = window.jQuery;
         var activeRole = $('#filter_role_tab').val() || 'EVALUATOR';
+        var currentStage = <?= (int) $currentStage ?>;
         var auditTrigger = null;
 
         function esc(v) {
@@ -414,12 +438,25 @@
             activeRole = $tab.data('role') || 'EVALUATOR';
             updateHeroDeadline(activeRole);
             $('#filter_role_tab').val(activeRole);
+            if (activeRole === 'EMPLOYEE' && currentStage < 4) {
+                $('#notice_reading_not_started').slideDown(150);
+            } else {
+                $('#notice_reading_not_started').slideUp(150);
+            }
             $('.btn_requery').click();
         }
 
         function updateHeroDeadline(role) {
             var $box = $('#hero_deadline_box');
             if (!$box.length) return;
+
+            if (role === 'HISTORY') {
+                $('#hero_deadline_label').text('Status Arsip');
+                $box.attr('class', 'atl-deadline atl-deadline--ok');
+                $('#hero_deadline_date').text('Arsip Selesai');
+                $('#hero_deadline_desc').html('<i class="fas fa-check-circle mr-1 text-success"></i>Penilaian Final');
+                return;
+            }
 
             var rawDate = '';
             var label = 'Deadline';
@@ -429,6 +466,9 @@
             } else if (role === 'EMPLOYEE') {
                 rawDate = $box.data('reading') || $box.data('end') || '';
                 label = 'Deadline Pembacaan';
+            } else if (role === 'ALL') {
+                rawDate = $box.data('override') || $box.data('end') || '';
+                label = 'Batas Waktu HR Override';
             } else {
                 rawDate = $box.data('fill') || $box.data('end') || '';
                 label = 'Deadline Pengisian';
@@ -482,6 +522,11 @@
 
         // Initialize hero deadline based on active role
         updateHeroDeadline(activeRole);
+        if (activeRole === 'EMPLOYEE' && currentStage < 4) {
+            $('#notice_reading_not_started').show();
+        } else {
+            $('#notice_reading_not_started').hide();
+        }
 
         $('#appraisal_role_tabs').on('click', '.atl-tab', function () { selectTab($(this)); });
         $('#appraisal_role_tabs').on('keydown', '.atl-tab', function (e) {

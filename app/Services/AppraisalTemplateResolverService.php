@@ -18,20 +18,36 @@ class AppraisalTemplateResolverService
     }
 
     /**
-     * Resolve the appropriate PUBLISHED template ID for a given branch, division, and levelling.
+     * Resolve the appropriate template ID for a given branch, division, and levelling.
      *
      * Specificity Hierarchy:
      * - Levelling: 4 points
      * - Division:  2 points
      * - Branch:    1 point
      * - Global:    0 points
+     *
+     * @param int|array $branchId
+     * @param int|array $divisionId
+     * @param int       $levellingId
+     * @param bool      $includeDraft Whether to consider DRAFT templates (e.g. for simulations)
+     * @return int
      */
-    public function resolveTemplateId(int $branchId, int $divisionId, int $levellingId): int
+    public function resolveTemplateId($branchId, $divisionId, int $levellingId, bool $includeDraft = false): int
     {
-        // 1. Fetch all published active templates, prioritizing higher version numbers
+        $branchIds = is_array($branchId) ? array_filter(array_map('intval', $branchId)) : ($branchId > 0 ? [(int) $branchId] : []);
+        $divisionIds = is_array($divisionId) ? array_filter(array_map('intval', $divisionId)) : ($divisionId > 0 ? [(int) $divisionId] : []);
+
+        $allowedStatuses = [M_AppraisalTemplate::STATUS_PUBLISHED, 'PUBLISHED', 'CO'];
+        if ($includeDraft) {
+            $allowedStatuses[] = M_AppraisalTemplate::STATUS_DRAFT;
+            $allowedStatuses[] = 'DRAFT';
+            $allowedStatuses[] = 'DR';
+        }
+
+        // 1. Fetch active templates, prioritizing higher version numbers
         $candidates = $this->db->table('md_appraisal_template')
-            ->select('md_appraisal_template_id, template_code, title, version')
-            ->whereIn('status', [M_AppraisalTemplate::STATUS_PUBLISHED, 'PUBLISHED', 'CO'])
+            ->select('md_appraisal_template_id, template_code, title, version, status')
+            ->whereIn('status', $allowedStatuses)
             ->where('isactive', 'Y')
             ->orderBy('version', 'DESC')
             ->orderBy('md_appraisal_template_id', 'DESC')
@@ -39,7 +55,8 @@ class AppraisalTemplateResolverService
             ->getResultArray();
 
         if (empty($candidates)) {
-            throw new Exception("Tidak ada template appraisal PUBLISHED yang aktif di sistem.");
+            $statusLabel = $includeDraft ? 'aktif' : 'PUBLISHED yang aktif';
+            throw new Exception("Tidak ada template appraisal {$statusLabel} di sistem.");
         }
 
         $bestMatch = null;
@@ -87,11 +104,15 @@ class AppraisalTemplateResolverService
             if (! empty($tplLevellings) && ($levellingId <= 0 || ! in_array($levellingId, $tplLevellings, true))) {
                 continue;
             }
-            if (! empty($tplDivisions) && ($divisionId <= 0 || ! in_array($divisionId, $tplDivisions, true))) {
-                continue;
+            if (! empty($tplDivisions)) {
+                if (empty($divisionIds) || empty(array_intersect($divisionIds, $tplDivisions))) {
+                    continue;
+                }
             }
-            if (! empty($tplBranches) && ($branchId <= 0 || ! in_array($branchId, $tplBranches, true))) {
-                continue;
+            if (! empty($tplBranches)) {
+                if (empty($branchIds) || empty(array_intersect($branchIds, $tplBranches))) {
+                    continue;
+                }
             }
 
             // Specificity score: Levelling (4) > Division (2) > Branch (1) > Global (0)
@@ -106,7 +127,9 @@ class AppraisalTemplateResolverService
         }
 
         if (! $bestMatch) {
-            throw new Exception("No published appraisal template found matching Branch: {$branchId}, Division: {$divisionId}, Levelling: {$levellingId}.");
+            $branchStr = implode(',', $branchIds);
+            $divisionStr = implode(',', $divisionIds);
+            throw new Exception("No published appraisal template found matching Branch: [{$branchStr}], Division: [{$divisionStr}], Levelling: {$levellingId}.");
         }
 
         return (int) $bestMatch['md_appraisal_template_id'];

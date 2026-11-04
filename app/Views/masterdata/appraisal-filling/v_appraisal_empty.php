@@ -11,7 +11,7 @@
         </div>
         <h4 class="font-weight-bold text-dark mb-2">Tidak Ada Tugas Penilaian Saat Ini</h4>
         <p class="text-muted mx-auto" style="max-width: 520px; font-size: 15px;">
-            Saat ini tidak ada siklus evaluasi kinerja yang aktif, atau semua form penilaian yang ditugaskan kepada Anda sebagai Atasan, Reviewer (GM), maupun Karyawan telah selesai diproses.
+            Saat ini tidak ada siklus evaluasi kinerja yang aktif, atau semua form penilaian yang ditugaskan kepada Anda sebagai Penilai (Evaluator), Peninjau (Reviewer), maupun Karyawan telah selesai diproses.
         </p>
         <div class="mt-4">
             <a href="<?= base_url('sas/penilaian') ?>" class="btn btn-outline-primary btn-round mr-2">

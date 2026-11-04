@@ -9,7 +9,7 @@
                         <h5 class="modal-title font-weight-bold text-dark mb-0" id="modalPreviewBlastLabel" style="font-size: 16px; letter-spacing: -0.2px;">
                             Simulasi Distribusi Form Penilaian
                         </h5>
-                        <span id="blast_cycle_info" class="badge badge-light border ml-2 text-secondary font-weight-normal py-1 px-2" style="font-size: 11px;"></span>
+                        <span id="blast_cycle_info" class="text-muted ml-2 font-weight-normal" style="font-size: 13px;"></span>
                     </div>
                 </div>
                 <button type="button" class="close p-2 m-0 text-muted" data-dismiss="modal" aria-label="Close" style="outline: none; opacity: 0.6;">
@@ -93,8 +93,8 @@
                                 <th>Divisi</th>
                                 <th>Level Jabatan</th>
                                 <th>Template Terpilih</th>
-                                <th>Penilai (Atasan)</th>
-                                <th>Reviewer (GM)</th>
+                                <th>Penilai (Evaluator)</th>
+                                <th>Peninjau (Reviewer)</th>
                                 <th style="width: 130px;" class="text-center">Kesiapan</th>
                             </tr>
                         </thead>
@@ -108,15 +108,14 @@
             <!-- Modal Footer -->
             <div class="modal-footer bg-light border-top d-flex justify-content-between">
                 <div id="blast_action_container">
-                    <button type="button" class="btn btn-success btn-sm btn-round" id="btn_blast_open_cycle" style="display: none;">
-                        <i class="fas fa-play mr-1"></i> Buka Siklus &amp; Generate Form Sekarang
+                    <button type="button" class="btn btn-primary btn-sm" id="btn_blast_open_cycle" style="display: none;">
+                        Buka Siklus &amp; Generate Form Sekarang
                     </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 
 <style>
     /* Lightweight utility for modern status indicators */

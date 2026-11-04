@@ -37,12 +37,42 @@ class M_Appraisal extends Model
         'updated_by',
     ];
 
-    // Workflow Status Constants
-    public const STATUS_DRAFT_EVALUATOR     = 'DRAFT_EVALUATOR';
-    public const STATUS_SUBMITTED_EVALUATOR = 'SUBMITTED_EVALUATOR';
-    public const STATUS_REVIEW_GM           = 'REVIEW_GM';
-    public const STATUS_PENDING_ACK         = 'PENDING_ACK';
-    public const STATUS_FINALIZED           = 'FINALIZED';
+    // Workflow Status Constants (Unified Option A)
+    public const STATUS_PENILAIAN        = 'PENILAIAN';
+    public const STATUS_SUBMIT_PENILAIAN = 'SUBMIT_PENILAIAN';
+    public const STATUS_REVIEW           = 'REVIEW';
+    public const STATUS_SUBMIT_REVIEW    = 'SUBMIT_REVIEW';
+    public const STATUS_FINAL            = 'FINAL';
+
+    // Backward-compatibility aliases
+    public const STATUS_DRAFT_EVALUATOR     = self::STATUS_PENILAIAN;
+    public const STATUS_SUBMITTED_EVALUATOR = self::STATUS_SUBMIT_PENILAIAN;
+    public const STATUS_REVIEW_GM           = self::STATUS_REVIEW;
+    public const STATUS_PENDING_ACK         = self::STATUS_SUBMIT_REVIEW;
+    public const STATUS_FINALIZED           = self::STATUS_FINAL;
+
+    /**
+     * Standardized human-readable status labels across all appraisal views
+     */
+    public static function getStatusLabels(): array
+    {
+        return [
+            self::STATUS_PENILAIAN        => 'Penilaian',
+            self::STATUS_SUBMIT_PENILAIAN => 'Submit Penilaian',
+            self::STATUS_REVIEW           => 'Review',
+            self::STATUS_SUBMIT_REVIEW    => 'Submit Review',
+            self::STATUS_FINAL            => 'Final',
+        ];
+    }
+
+    /**
+     * Get label for a given status code
+     */
+    public static function getStatusLabel(?string $status): string
+    {
+        $labels = self::getStatusLabels();
+        return $labels[$status] ?? ($status ?: '-');
+    }
 
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';

@@ -53,6 +53,13 @@ class Validation
                 'required' => 'Mohon mengisi {field} dahulu',
             ],
         ],
+        'semester' => [
+            'label'  => 'Semester',
+            'rules'  => 'required',
+            'errors' => [
+                'required' => 'Mohon memilih {field} dahulu',
+            ],
+        ],
         'start_date' => [
             'label'  => 'Tanggal Mulai Periode',
             'rules'  => 'required',
@@ -77,6 +84,34 @@ class Validation
         ],
         'deadline_reading' => [
             'label'  => 'Deadline Pembacaan',
+            'rules'  => 'permit_empty',
+        ],
+        'deadline_override' => [
+            'label'  => 'Deadline Masa Tenggang HR',
+            'rules'  => 'permit_empty',
+        ],
+    ];
+
+    public $appraisal_template = [
+        'template_code' => [
+            'label'  => 'Kode Template',
+            'rules'  => 'trim|required|min_length[3]|max_length[40]',
+            'errors' => [
+                'required'   => 'Mohon mengisi {field} dahulu',
+                'min_length' => '{field} minimal {param} karakter',
+                'max_length' => '{field} maksimal {param} karakter',
+            ],
+        ],
+        'title' => [
+            'label'  => 'Judul Template',
+            'rules'  => 'trim|required|min_length[3]|max_length[255]',
+            'errors' => [
+                'required'   => 'Mohon mengisi {field} dahulu',
+                'min_length' => '{field} minimal {param} karakter',
+            ],
+        ],
+        'description' => [
+            'label'  => 'Deskripsi Template',
             'rules'  => 'permit_empty',
         ],
     ];

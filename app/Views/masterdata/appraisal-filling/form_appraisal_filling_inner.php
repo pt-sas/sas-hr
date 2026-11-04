@@ -1,3 +1,26 @@
+<?php
+    $snapshot = $template_snapshot ?? [];
+    $sections = $snapshot['sections'] ?? [];
+    $items    = $snapshot['items'] ?? [];
+
+    $is_operator = false;
+    foreach ($sections as $s) {
+        $st = strtoupper($s['section_type'] ?? '');
+        if ($st === 'WEIGHTED_CHECKLIST' || $st === 'SINGLE_CHECKLIST') {
+            $is_operator = true;
+            break;
+        }
+    }
+    if (!$is_operator) {
+        foreach ($items as $it) {
+            $itType = strtoupper($it['input_type'] ?? '');
+            if ($itType === 'WEIGHTED_CHECKLIST' || $itType === 'SINGLE_CHECKLIST') {
+                $is_operator = true;
+                break;
+            }
+        }
+    }
+?>
 <link rel="stylesheet" href="/form_appraisal_filling_style.css">
 
 <div class="ap-wrap pb-3">
@@ -14,11 +37,19 @@
                 <!-- 1. INFO CARD -->
                 <?= $this->include('Views/masterdata/appraisal-filling/fill_info_card'); ?>
 
-                <!-- 2. PERFORMA -->
-                <?= $this->include('Views/masterdata/appraisal-filling/fill_performance'); ?>
+                <?php if ($is_operator): ?>
+                    <!-- 2. OPERATOR PENILAIAN KINERJA -->
+                    <?= $this->include('Views/masterdata/appraisal-filling/fill_operator_performance'); ?>
 
-                <!-- 3. KOMPETENSI TAMBAHAN -->
-                <?= $this->include('Views/masterdata/appraisal-filling/fill_additional'); ?>
+                    <!-- 3. OPERATOR KRITERIA TAMBAHAN -->
+                    <?= $this->include('Views/masterdata/appraisal-filling/fill_operator_additional'); ?>
+                <?php else: ?>
+                    <!-- 2. PERFORMA -->
+                    <?= $this->include('Views/masterdata/appraisal-filling/fill_performance'); ?>
+
+                    <!-- 3. KOMPETENSI TAMBAHAN -->
+                    <?= $this->include('Views/masterdata/appraisal-filling/fill_additional'); ?>
+                <?php endif; ?>
 
                 <!-- 4. CATATAN & FEEDBACK EVALUATOR -->
                 <?= $this->include('Views/masterdata/appraisal-filling/fill_feedback'); ?>
@@ -28,6 +59,7 @@
 </div>
 
 <script>
+<?php if ($is_operator): ?>
 (function () {
     'use strict';
 
@@ -42,17 +74,128 @@
         var badge = document.getElementById('badge_overall_rating');
         if (!badge) return;
 
-        var label = 'Kurang (Unsatisfactory)';
+        var label = 'Kurang';
+        var badgeCls = 'r-low';
+
+        if (score >= 2.60) {
+            label = 'Sangat Baik';
+            badgeCls = 'r-great';
+        } else if (score >= 1.80) {
+            label = 'Baik';
+            badgeCls = 'r-good';
+        } else {
+            label = 'Kurang';
+            badgeCls = 'r-low';
+        }
+
+        badge.className = 'ap-rating ' + badgeCls;
+        badge.textContent = label;
+    }
+
+    function syncOperatorPayload() {
+        var payloadArr = [];
+        var totalWeightedScore = 0;
+        var totalWeight = 0;
+
+        // Collect Weighted Checklist responses
+        document.querySelectorAll('.operator-aspect-row').forEach(function (row) {
+            var itemId = row.dataset.itemId;
+            var weight = parseNum(row.dataset.weight, 1.0);
+            var checkedRadio = row.querySelector('.operator-score-radio:checked');
+            var score = checkedRadio ? parseNum(checkedRadio.value, null) : null;
+
+            if (score !== null) {
+                totalWeightedScore += (score * weight);
+                totalWeight += weight;
+            }
+
+            payloadArr.push({
+                md_appraisal_template_item_id: itemId,
+                score: score !== null ? score : null
+            });
+        });
+
+        // Collect Single Checklist responses
+        document.querySelectorAll('.operator-kriteria-row').forEach(function (row) {
+            var itemId = row.dataset.itemId;
+            var cb = row.querySelector('.operator-kriteria-checkbox');
+            var isChecked = cb ? cb.checked : false;
+            var otherInput = row.querySelector('.operator-other-input');
+            var otherText = otherInput ? otherInput.value.trim() : '';
+
+            var itemObj = {
+                md_appraisal_template_item_id: itemId,
+                boolean_value: isChecked ? 'Y' : 'N'
+            };
+            if (otherText !== '') {
+                itemObj.other_text = otherText;
+            }
+            payloadArr.push(itemObj);
+        });
+
+        var finalScore = 0.00;
+        if (totalWeight > 0) {
+            finalScore = totalWeightedScore / totalWeight;
+        }
+
+        var badgeOverall = document.getElementById('badge_total_overall_score');
+        if (badgeOverall) {
+            badgeOverall.textContent = finalScore > 0 ? finalScore.toFixed(2) : '-';
+        }
+        var finalScoreInput = document.getElementById('final_score');
+        if (finalScoreInput) {
+            finalScoreInput.value = finalScore.toFixed(2);
+        }
+
+        updateRatingBadge(finalScore);
+
+        var payloadEl = document.getElementById('hidden_responses_payload');
+        if (payloadEl) {
+            payloadEl.value = JSON.stringify(payloadArr);
+        }
+    }
+
+    document.querySelectorAll('.operator-score-radio').forEach(function (el) {
+        el.addEventListener('change', syncOperatorPayload);
+    });
+
+    document.querySelectorAll('.operator-kriteria-checkbox').forEach(function (el) {
+        el.addEventListener('change', syncOperatorPayload);
+    });
+
+    document.querySelectorAll('.operator-other-input').forEach(function (el) {
+        el.addEventListener('input', syncOperatorPayload);
+        el.addEventListener('change', syncOperatorPayload);
+    });
+
+    syncOperatorPayload();
+})();
+<?php else: ?>
+(function () {
+    'use strict';
+
+    function parseNum(val, fallback) {
+        if (val === null || val === undefined) return fallback;
+        var s = String(val).trim().replace(',', '.');
+        var n = parseFloat(s);
+        return isNaN(n) ? fallback : n;
+    }
+
+    function updateRatingBadge(score) {
+        var badge = document.getElementById('badge_overall_rating');
+        if (!badge) return;
+
+        var label = 'Kurang';
         var badgeCls = 'r-low';
 
         if (score >= 3.50) {
-            label = 'Sangat Baik (Exceeds Expectations)';
+            label = 'Sangat Baik';
             badgeCls = 'r-great';
         } else if (score >= 2.75) {
-            label = 'Baik (Meets Expectations)';
+            label = 'Baik';
             badgeCls = 'r-good';
         } else if (score >= 2.00) {
-            label = 'Cukup (Needs Improvement)';
+            label = 'Cukup';
             badgeCls = 'r-fair';
         }
 
@@ -121,7 +264,13 @@
 
             var badgeVal = document.getElementById('badge_val_' + itemId + '_' + actionIdx);
             if (badgeVal) {
-                badgeVal.textContent = val.toFixed(2);
+                if ('value' in badgeVal) {
+                    if (document.activeElement !== badgeVal) {
+                        badgeVal.value = val.toFixed(2);
+                    }
+                } else {
+                    badgeVal.textContent = val.toFixed(2);
+                }
             }
             var hiddenActionInput = document.getElementById('action_score_hidden_' + itemId + '_' + actionIdx);
             if (hiddenActionInput) {
@@ -200,8 +349,61 @@
     }
 
     document.querySelectorAll('.action-slider').forEach(function (el) {
-        el.addEventListener('input', recalcTotals);
+        el.addEventListener('input', function () {
+            var val = parseNum(this.value, 3.0);
+            var numInput = document.getElementById('badge_val_' + this.dataset.itemId + '_' + this.dataset.actionIdx);
+            if (numInput && 'value' in numInput) {
+                numInput.value = val.toFixed(2);
+            }
+            var hidden = document.getElementById('action_score_hidden_' + this.dataset.itemId + '_' + this.dataset.actionIdx);
+            if (hidden) {
+                hidden.value = val.toFixed(2);
+            }
+            recalcTotals();
+        });
         el.addEventListener('change', recalcTotals);
+    });
+
+    // Bidirectional sync: live typing into score number inputs
+    document.addEventListener('input', function (e) {
+        if (e.target && e.target.classList.contains('action-score-input')) {
+            var input = e.target;
+            var val = parseFloat(input.value);
+            if (!isNaN(val)) {
+                var slider = document.querySelector('.action-slider[data-item-id="' + input.dataset.itemId + '"][data-action-idx="' + input.dataset.actionIdx + '"]');
+                if (slider) {
+                    slider.value = val;
+                }
+                var hidden = document.getElementById('action_score_hidden_' + input.dataset.itemId + '_' + input.dataset.actionIdx);
+                if (hidden) {
+                    hidden.value = val.toFixed(2);
+                }
+                recalcTotals();
+            }
+        }
+    });
+
+    // Clamp value on change/blur for typed score inputs
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.classList.contains('action-score-input')) {
+            var input = e.target;
+            var val = parseFloat(input.value);
+            if (isNaN(val)) {
+                val = 3.00;
+            }
+            val = Math.max(1.00, Math.min(4.00, Math.round(val / 0.05) * 0.05));
+            input.value = val.toFixed(2);
+
+            var slider = document.querySelector('.action-slider[data-item-id="' + input.dataset.itemId + '"][data-action-idx="' + input.dataset.actionIdx + '"]');
+            if (slider) {
+                slider.value = val;
+            }
+            var hidden = document.getElementById('action_score_hidden_' + input.dataset.itemId + '_' + input.dataset.actionIdx);
+            if (hidden) {
+                hidden.value = val.toFixed(2);
+            }
+            recalcTotals();
+        }
     });
 
     document.querySelectorAll('.ka-item-checkbox, .boolean-item-checkbox').forEach(function (el) {
@@ -210,4 +412,5 @@
 
     recalcTotals();
 })();
+<?php endif; ?>
 </script>

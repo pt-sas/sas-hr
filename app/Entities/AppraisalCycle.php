@@ -14,6 +14,7 @@ class AppraisalCycle extends Entity
 
     protected $casts = [
         'md_appraisal_cycle_id' => 'integer',
+        'semester'              => 'string',
         'created_by'            => 'integer',
         'updated_by'            => 'integer',
     ];
@@ -91,6 +92,17 @@ class AppraisalCycle extends Entity
         return $this;
     }
 
+    public function getDeadlineOverride()
+    {
+        return $this->attributes['deadline_override'] ?? null;
+    }
+
+    public function setDeadlineOverride($date)
+    {
+        $this->attributes['deadline_override'] = $date;
+        return $this;
+    }
+
     public function getEvaluatorDueDate()
     {
         return $this->getDeadlineFilling();
@@ -148,16 +160,18 @@ class AppraisalCycle extends Entity
         $start   = $this->getStartDate();
         $end     = $this->getEndDate();
         
-        $fill    = $this->getDeadlineFilling();
-        $review  = $this->getDeadlineReview();
-        $reading = $this->getDeadlineReading();
+        $fill     = $this->getDeadlineFilling();
+        $review   = $this->getDeadlineReview();
+        $reading  = $this->getDeadlineReading();
+        $override = $this->getDeadlineOverride();
 
         $stages = [
-            1 => ['name' => 'Assignment',         'sub' => 'HR memulai',          'key' => 'start_date',       'date' => $start],
-            2 => ['name' => 'Form filling',       'sub' => 'Penilai mengisi',     'key' => 'deadline_filling', 'date' => $fill],
-            3 => ['name' => 'Review superior',     'sub' => 'Atasan meninjau',     'key' => 'deadline_review',  'date' => $review],
-            4 => ['name' => 'Pembacaan karyawan', 'sub' => 'Karyawan menyetujui', 'key' => 'deadline_reading', 'date' => $reading],
-            5 => ['name' => 'Finalisasi',         'sub' => 'Finalisasi penilaian', 'key' => 'end_date',         'date' => $end],
+            1 => ['name' => 'Assignment',         'sub' => 'HR memulai',                   'key' => 'start_date',        'date' => $start],
+            2 => ['name' => 'Form filling',       'sub' => 'Penilai mengisi',              'key' => 'deadline_filling',  'date' => $fill],
+            3 => ['name' => 'Review superior',     'sub' => 'Atasan meninjau',              'key' => 'deadline_review',   'date' => $review],
+            4 => ['name' => 'Pembacaan karyawan', 'sub' => 'Karyawan menyetujui',          'key' => 'deadline_reading',  'date' => $reading],
+            5 => ['name' => 'Masa Tenggang HR',   'sub' => 'Intervensi & Override HR',    'key' => 'deadline_override', 'date' => $override],
+            6 => ['name' => 'Finalisasi',         'sub' => 'Finalisasi penilaian',        'key' => 'end_date',          'date' => $end],
         ];
 
         $result = [];
@@ -194,10 +208,10 @@ class AppraisalCycle extends Entity
     }
 
     /**
-     * Resolve the active stage (1 to 5) based on the supplied date (or today).
+     * Resolve the active stage (1 to 6) based on the supplied date (or today).
      *
      * @param string|null $currentDate Format: Y-m-d
-     * @return int Stage number (1 to 5)
+     * @return int Stage number (1 to 6)
      */
     public function getCurrentStage(?string $currentDate = null): int
     {
@@ -208,13 +222,15 @@ class AppraisalCycle extends Entity
         $fillStr  = $this->getDeadlineFilling();
         $revStr   = $this->getDeadlineReview();
         $readStr  = $this->getDeadlineReading();
+        $overStr  = $this->getDeadlineOverride();
         $endStr   = $this->getEndDate();
 
-        $start = ! empty($startStr) ? strtotime($startStr) : null;
-        $fill  = ! empty($fillStr) ? strtotime($fillStr) : null;
-        $rev   = ! empty($revStr) ? strtotime($revStr) : null;
-        $read  = ! empty($readStr) ? strtotime($readStr) : null;
-        $end   = ! empty($endStr) ? strtotime($endStr) : null;
+        $start    = ! empty($startStr) ? strtotime($startStr) : null;
+        $fill     = ! empty($fillStr) ? strtotime($fillStr) : null;
+        $rev      = ! empty($revStr) ? strtotime($revStr) : null;
+        $read     = ! empty($readStr) ? strtotime($readStr) : null;
+        $override = ! empty($overStr) ? strtotime($overStr) : null;
+        $end      = ! empty($endStr) ? strtotime($endStr) : null;
 
         // If before start date
         if ($start && $today < $start) {
@@ -232,14 +248,18 @@ class AppraisalCycle extends Entity
         if ($read && $today <= $read) {
             return 4; // Pembacaan karyawan
         }
-        // If past reading deadline or at/past end date
-        return 5; // Finalisasi
+        // If within or at HR override grace period deadline
+        if ($override && $today <= $override) {
+            return 5; // Masa Tenggang HR
+        }
+        // If past override deadline or at/past end date
+        return 6; // Finalisasi
     }
 
     /**
      * Get a target calendar date representing a specific stage for jumping/debugging.
      *
-     * @param int $stage Stage number 1 to 5
+     * @param int $stage Stage number 1 to 6
      * @return string Format: Y-m-d
      */
     public function getStageTargetDate(int $stage): string
@@ -248,6 +268,7 @@ class AppraisalCycle extends Entity
         $fillStr  = $this->getDeadlineFilling();
         $revStr   = $this->getDeadlineReview();
         $readStr  = $this->getDeadlineReading();
+        $overStr  = $this->getDeadlineOverride();
         $endStr   = $this->getEndDate() ?: date('Y-m-d', strtotime('+30 days', strtotime($startStr)));
 
         switch ($stage) {
@@ -271,6 +292,12 @@ class AppraisalCycle extends Entity
                 $base = ! empty($revStr) ? $revStr : (! empty($fillStr) ? $fillStr : $startStr);
                 return date('Y-m-d', strtotime('+3 days', strtotime($base)));
             case 5:
+                if (! empty($overStr)) {
+                    return $overStr;
+                }
+                $base = ! empty($readStr) ? $readStr : (! empty($revStr) ? $revStr : $startStr);
+                return date('Y-m-d', strtotime('+3 days', strtotime($base)));
+            case 6:
             default:
                 return $endStr;
         }

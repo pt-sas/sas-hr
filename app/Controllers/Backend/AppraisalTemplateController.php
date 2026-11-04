@@ -76,7 +76,16 @@ class AppraisalTemplateController extends BaseController
                         $where[] = "EXISTS (SELECT 1 FROM {$tbl} f WHERE f.md_appraisal_template_id = md_appraisal_template.md_appraisal_template_id AND f.{$name} = {$val} AND f.isactive = 'Y')";
                     }
                     if ($name === 'status') {
-                        $where['md_appraisal_template.status'] = $value;
+                        $statusMap = [
+                            'DR' => [M_AppraisalTemplate::STATUS_DRAFT, 'DR', 'DRAFT'],
+                            'CO' => [M_AppraisalTemplate::STATUS_PUBLISHED, 'CO', 'PUBLISHED'],
+                            'VO' => [M_AppraisalTemplate::STATUS_ARCHIVED, 'VO', 'ARCHIVED'],
+                        ];
+                        if (isset($statusMap[$value])) {
+                            $where['md_appraisal_template.status'] = $statusMap[$value];
+                        } else {
+                            $where['md_appraisal_template.status'] = $value;
+                        }
                     }
                 }
 
@@ -102,6 +111,40 @@ class AppraisalTemplateController extends BaseController
 
                     $dateFormatted = !empty($createdAt) ? date('d-m-Y', strtotime($createdAt)) : '-';
 
+                    // Contextual Action & Usage Check
+                    $usageCount   = (int) (is_object($value) ? ($value->appraisal_usage_count ?? 0) : ($value['appraisal_usage_count'] ?? 0));
+                    $latestPubVer = (int) (is_object($value) ? ($value->latest_published_version ?? 0) : ($value['latest_published_version'] ?? 0));
+                    $inUse        = ($usageCount > 0);
+
+                    $isDraft     = in_array($status, [M_AppraisalTemplate::STATUS_DRAFT, 'DRAFT', 'DR'], true);
+                    $isPublished = in_array($status, [M_AppraisalTemplate::STATUS_PUBLISHED, 'PUBLISHED', 'CO'], true);
+                    $isArchived  = in_array($status, [M_AppraisalTemplate::STATUS_ARCHIVED, 'ARCHIVED', 'VO'], true);
+
+                    // Descriptive 2-line Status Display
+                    if ($isDraft) {
+                        $primaryText = 'Draft';
+                        $subText     = '<small class="text-muted">Sedang Disusun</small>';
+                    } elseif ($isPublished) {
+                        $primaryText = 'Published';
+                        if ($inUse) {
+                            $subText = '<small class="text-muted">Terkunci (' . $usageCount . ' Penilaian)</small>';
+                        } else {
+                            $subText = '<small class="text-muted">Aktif (0 Penilaian)</small>';
+                        }
+                    } elseif ($isArchived) {
+                        $primaryText = ($latestPubVer > $version) ? ('Tergantikan (v' . $latestPubVer . ')') : ('Versi Lalu (v' . $version . ')');
+                        if ($inUse) {
+                            $subText = '<small class="text-muted">Arsip Siklus Lalu (' . $usageCount . ' Penilaian)</small>';
+                        } else {
+                            $subText = '<small class="text-muted">Belum Terpakai</small>';
+                        }
+                    } else {
+                        $primaryText = ucfirst(strtolower((string) $status));
+                        $subText     = '';
+                    }
+
+                    $statusCol = '<div><p class="mb-0 font-weight-bold">' . $primaryText . '</p>' . $subText . '</div>';
+
                     $row[] = $ID;
                     $row[] = $number;
                     $row[] = $branchName;
@@ -110,10 +153,35 @@ class AppraisalTemplateController extends BaseController
                     $row[] = $templateCode;
                     $row[] = 'v' . $version;
                     $row[] = $dateFormatted;
-                    $row[] = function_exists('docStatus') ? docStatus($status) : $status;
-                    $btnTable   = isset($this->template) ? $this->template->tableButton($ID) : '';
-                    $btnPreview = '<button type="button" class="btn btn-sm btn_preview_template" data-id="' . $ID . '" data-toggle="tooltip" title="Pratinjau Form" data-original-title="Pratinjau Form"><i class="fas fa-eye text-primary"></i></button>';
-                    $row[]      = $btnTable . $btnPreview;
+                    $row[] = $statusCol;
+
+                    // Contextual Action Buttons based on Template Status & Usage
+                    $actionBtns = '';
+                    if ($isDraft) {
+                        $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\')" id="' . $ID . '" title="Edit Template"><i class="fas fa-edit text-info"></i></a>';
+                        $actionBtns .= '<a class="btn btn-sm" onclick="window.tplPublish(\'' . $ID . '\')" title="Publish Template"><i class="fas fa-check-circle text-success"></i></a>';
+                        $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $ID . '\')" title="Hapus Draft"><i class="fas fa-trash-alt text-danger"></i></a>';
+                    } elseif ($isPublished) {
+                        if (! $inUse) {
+                            // Unused Published: Allow in-place edit, undo/unpublish, and clean deletion
+                            $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\')" id="' . $ID . '" title="Edit Template (Belum Pernah Digunakan)"><i class="fas fa-edit text-info"></i></a>';
+                            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplUnpublish(\'' . $ID . '\')" title="Batalkan Publish (Kembalikan ke Draft)"><i class="fas fa-undo text-warning"></i></a>';
+                            $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $ID . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
+                        } else {
+                            // In-Use Published: Strictly view-only, require new version for updates
+                            $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\', \'CO\')" id="' . $ID . '" data-status="CO" title="Lihat Detail (Terkunci: ' . $usageCount . ' Penilaian)"><i class="fas fa-eye text-info"></i></a>';
+                            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplClone(\'' . $ID . '\')" title="Buat Versi Baru (Draft)"><i class="fas fa-code-branch text-warning"></i></a>';
+                        }
+                    } else {
+                        // ARCHIVED or others
+                        $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\', \'VO\')" id="' . $ID . '" data-status="VO" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
+                        if (! $inUse) {
+                            $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $ID . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
+                        }
+                    }
+
+                    $btnPreview = '<button type="button" class="btn btn-sm btn_preview_template" data-id="' . $ID . '" data-toggle="tooltip" title="Pratinjau Form" data-original-title="Pratinjau Form"><i class="fas fa-file-alt text-primary"></i></button>';
+                    $row[]      = $actionBtns . $btnPreview;
 
                     $data[] = $row;
                 }
@@ -149,197 +217,41 @@ class AppraisalTemplateController extends BaseController
                 $post = (array) $this->request->getVar();
                 $id   = $this->getID();
 
-                // 1. Immutability Check
+                // 1. Immutability Check (Zero-Usage Immunity)
                 if (!empty($id)) {
                     $existing = $this->model->find($id);
                     if ($existing && ! $existing->isDraft()) {
-                        return $this->response->setJSON(message('error', false, 'Template yang sudah dipublish tidak dapat diubah.'));
+                        $inUse = $this->templateService->isTemplateInUse((int) $id);
+                        if ($inUse) {
+                            return $this->response->setJSON(message('error', false, 'Template ini sudah digunakan oleh data penilaian karyawan aktif sehingga tidak dapat diubah secara langsung. Silakan buat Versi Baru.'));
+                        }
                     }
                 }
 
-                // 2. Decode unified payload (built entirely by the frontend)
+                // 2. Decode unified payload from form submission
                 $payload = json_decode((string) ($post['payload'] ?? ''), true);
                 if (!is_array($payload)) {
-                    // TEMP DEBUG: remove once the payload issue is resolved
-                    $raw = (string) ($post['payload'] ?? '');
-                    return $this->response->setJSON(message('error', false, 'Payload template tidak valid. '
-                        . 'json_error=' . json_last_error_msg()
-                        . '; payload_len=' . strlen($raw)
-                        . '; head=' . substr($raw, 0, 80)
-                        . '; post_keys=' . implode(',', array_keys($post))));
+                    return $this->response->setJSON(message('error', false, 'Payload template tidak valid.'));
                 }
 
-                $sections = array_values(array_filter(
-                    (array) ($payload['sections'] ?? []),
-                    fn($s) => !empty($s['items']) && is_array($s['items'])
-                ));
-                $scoping = (array) ($payload['scoping'] ?? []);
-
-                // 3. Light sanity re-check (primary validation is done in the frontend)
-                if (trim((string) ($payload['template_code'] ?? '')) === '' || trim((string) ($payload['title'] ?? '')) === '') {
-                    return $this->response->setJSON(message('error', false, 'Kode dan judul template wajib diisi.'));
-                }
-                if (empty($sections)) {
-                    return $this->response->setJSON(message('error', false, 'Template harus memiliki minimal satu kelompok kompetensi.'));
-                }
-
-                $totalScoreWeight = 0.0;
-                $hasScore         = false;
-                foreach ($sections as $sec) {
-                    foreach ($sec['items'] as $item) {
-                        if (($item['input_type'] ?? '') === 'SCORE') {
-                            $hasScore          = true;
-                            $totalScoreWeight += (float) ($item['weight'] ?? 0);
-                        }
-                    }
-                }
-                if ($hasScore && abs($totalScoreWeight - 100.0) > 0.05) {
-                    return $this->response->setJSON(message('error', false, 'Total bobot kelompok skala harus tepat 100%. Total saat ini: ' . $totalScoreWeight . '%'));
-                }
-
-                $this->db->transStart();
-
-                // 4. Header
-                $this->entity->fill([
-                    'template_code' => trim($payload['template_code']),
-                    'title'         => trim($payload['title']),
-                    'isactive'      => (($payload['isactive'] ?? 'N') === 'Y') ? 'Y' : 'N',
-                ]);
-                if (empty($id)) {
-                    $this->entity->status  = M_AppraisalTemplate::STATUS_DRAFT;
-                    $this->entity->version = (int) ($payload['version'] ?? 1) ?: 1;
-                }
-
-                $response = $this->save();
-
-                if (isset($response['status']) && $response['status'] === false) {
-                    $this->db->transRollback();
-                    return $this->response->setJSON($response);
-                }
-
-                $templateId = !empty($id) ? $id : ($response['id'] ?? $this->model->getInsertID());
-                if (empty($templateId)) {
-                    $this->db->transRollback();
-                    return $this->response->setJSON(message('error', false, 'Gagal menyimpan header template.'));
-                }
-
-                $userId = $this->access->getSessionUser();
-
-                // 5. Scoping (replace-all)
-                $maps = [
-                    'md_template_branch'    => ['md_branch_id',    'branch_ids'],
-                    'md_template_division'  => ['md_division_id',  'division_ids'],
-                    'md_template_levelling' => ['md_levelling_id', 'levelling_ids'],
+                // 3. Centralized validation via Config\Validation ($appraisal_template)
+                $validationData = [
+                    'template_code' => $payload['template_code'] ?? ($post['template_code'] ?? null),
+                    'title'         => $payload['title'] ?? ($post['title'] ?? null),
+                    'description'   => $payload['description'] ?? ($post['description'] ?? null),
                 ];
-                foreach ($maps as $table => [$col, $key]) {
-                    $this->db->table($table)->where('md_appraisal_template_id', $templateId)->delete();
-                    $rawIds = $scoping[$key] ?? [];
-                    if ($key === 'levelling_ids' && empty($rawIds)) {
-                        $rawIds = $scoping['leveling_ids'] ?? $scoping['position_ids'] ?? [];
-                    }
-                    $ids = array_unique(array_filter(array_map('intval', (array) $rawIds)));
-                    foreach ($ids as $scopeId) {
-                        $this->db->table($table)->insert([
-                            'md_appraisal_template_id' => $templateId,
-                            $col                       => $scopeId,
-                            'created_by'               => $userId,
-                            'updated_by'               => $userId,
-                        ]);
-                    }
+
+                $this->validation->reset();
+                if (!$this->validation->run($validationData, 'appraisal_template')) {
+                    return $this->response->setJSON($this->field->errorValidation($this->model->table, $validationData));
                 }
 
-                // 6. Sections & items (clean sync)
-                $sectionModel = new \App\Models\M_AppraisalSection();
-                $keptSections = [];
-                $keptItems    = [];
+                // 4. Persist template, scoping, sections, and items via Service layer
+                $userId     = (int) $this->access->getSessionUser();
+                $templateId = $this->templateService->saveTemplate($payload, $userId, !empty($id) ? (int) $id : null);
 
-                foreach ($sections as $sIdx => $sec) {
-                    $sectionData = [
-                        'md_appraisal_template_id' => $templateId,
-                        'name'                     => trim((string) ($sec['name'] ?? 'Section')),
-                        'section_type'             => $sec['section_type'] ?? 'SCORE',
-                        'weight'                   => (float) ($sec['weight'] ?? 0),
-                        'sequence_order'           => (int) ($sec['sequence_order'] ?? ($sIdx + 1)),
-                        'description'              => $sec['description'] ?? null,
-                        'isactive'                 => 'Y',
-                        'updated_by'               => $userId,
-                    ];
-
-                    $sectionId = (int) ($sec['md_appraisal_section_id'] ?? 0);
-                    $owned     = $sectionId > 0 && $sectionModel->where('md_appraisal_template_id', $templateId)->find($sectionId);
-                    if ($owned) {
-                        $sectionModel->update($sectionId, $sectionData);
-                    } else {
-                        $sectionData['created_by'] = $userId;
-                        $sectionId = (int) $sectionModel->insert($sectionData, true);
-                    }
-                    if (!$sectionId) {
-                        $this->db->transRollback();
-                        return $this->response->setJSON(message('error', false, 'Gagal simpan section: ' . json_encode($sectionModel->errors())));
-                    }
-                    $keptSections[] = $sectionId;
-
-                    foreach ($sec['items'] as $iIdx => $item) {
-                        $type     = $item['input_type'] ?? ($sec['section_type'] ?? 'SCORE');
-                        $lineData = [
-                            'md_appraisal_section_id' => $sectionId,
-                            'input_type'              => $type,
-                            'title'                   => trim((string) ($item['title'] ?? '')),
-                            'description'             => $item['description'] ?? null,
-                            'weight'                  => $type === 'BOOLEAN' ? 0 : (float) ($item['weight'] ?? 0),
-                            'sequence_order'          => (int) ($item['sequence_order'] ?? ($iIdx + 1)),
-                            'is_required'             => (($item['is_required'] ?? 'Y') === 'N') ? 'N' : 'Y',
-                            'config'                  => json_encode($item['config'] ?? new \stdClass(), JSON_UNESCAPED_UNICODE),
-                            'isactive'                => 'Y',
-                            'updated_by'              => $userId,
-                        ];
-
-                        $itemId = (int) ($item['md_appraisal_template_item_id'] ?? 0);
-                        $ok     = $itemId > 0 && $this->db->table('md_appraisal_template_item')
-                            ->where('md_appraisal_template_item_id', $itemId)
-                            ->whereIn('md_appraisal_section_id', $keptSections)
-                            ->countAllResults() > 0;
-
-                        if ($ok) {
-                            $this->modelDetail->update($itemId, $lineData);
-                        } else {
-                            $lineData['created_by'] = $userId;
-                            $itemId = (int) $this->modelDetail->insert($lineData, true);
-                        }
-                        if (!$itemId) {
-                            $this->db->transRollback();
-                            return $this->response->setJSON(message('error', false, 'Gagal simpan item: ' . json_encode($this->modelDetail->errors())));
-                        }
-                        $keptItems[] = $itemId;
-                    }
-                }
-
-                // Delete removed items & sections (items first; FK cascades cover the rest)
-                $sectionIds = array_column(
-                    $this->db->table('md_appraisal_section')->select('md_appraisal_section_id')->where('md_appraisal_template_id', $templateId)->get()->getResultArray(),
-                    'md_appraisal_section_id'
-                );
-                if (!empty($sectionIds)) {
-                    $b = $this->db->table('md_appraisal_template_item')->whereIn('md_appraisal_section_id', $sectionIds);
-                    if (!empty($keptItems)) {
-                        $b->whereNotIn('md_appraisal_template_item_id', $keptItems);
-                    }
-                    $b->delete();
-                }
-                $b = $this->db->table('md_appraisal_section')->where('md_appraisal_template_id', $templateId);
-                if (!empty($keptSections)) {
-                    $b->whereNotIn('md_appraisal_section_id', $keptSections);
-                }
-                $b->delete();
-
-                $this->db->transComplete();
-
-                if ($this->db->transStatus() === false) {
-                    return $this->response->setJSON(message('error', false, 'Gagal menyimpan template.'));
-                }
-
+                $response = message('success', true, notification(!empty($id) ? 'updated' : 'insert'), ['id' => $templateId]);
             } catch (\Exception $e) {
-                $this->db->transRollback();
                 $response = message('error', false, $e->getMessage());
             }
 
@@ -466,14 +378,44 @@ class AppraisalTemplateController extends BaseController
     }
 
     /**
-     * Delete Header & Lines with M_ChangeLog Integration
+     * Unpublish Template ('CO' -> 'DR')
+     * Allowed only if 0 employee appraisals have snapshotted it.
+     */
+    public function unpublish($id = null)
+    {
+        if ($this->request->isAJAX()) {
+            try {
+                $templateId = (int) ($id ?? $this->request->getVar('id') ?? 0);
+                if ($templateId <= 0) {
+                    return $this->response->setJSON(message('error', false, 'ID template tidak valid.'));
+                }
+
+                $userId = (int) ($this->access->getSessionUser() ?? 0);
+                $this->templateService->unpublishTemplate($templateId, $userId);
+
+                $response = message('success', true, 'Publish template berhasil dibatalkan. Template dikembalikan ke status DRAFT.');
+            } catch (Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    /**
+     * Delete Header & Lines with M_ChangeLog Integration & Safe Cleanup
      */
     public function destroy($id = null)
     {
         if ($this->request->isAJAX()) {
             try {
-                $result   = $this->delete((int) $id);
-                $response = message('success', $result, notification('updated'));
+                $templateId = (int) ($id ?? $this->request->getVar('id') ?? 0);
+                if ($templateId <= 0) {
+                    return $this->response->setJSON(message('error', false, 'ID template tidak valid.'));
+                }
+
+                $this->templateService->deleteTemplate($templateId);
+                $response = message('success', true, 'Template appraisal berhasil dihapus.');
             } catch (Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -743,7 +685,7 @@ class AppraisalTemplateController extends BaseController
                     'md_appraisal_id'   => 0,
                     'final_score'       => 3.00,
                     'status'            => 'PREVIEW',
-                    'evaluator_comment' => 'Ini adalah pratinjau lembar formulir evaluasi kinerja template ' . $templateCode . ' (v' . $version . '). Formulir dalam mode VIEW (hanya-baca).',
+                    'evaluator_comment' => '',
                     'gm_comment'        => '',
                 ],
                 'employee'             => [
@@ -759,10 +701,10 @@ class AppraisalTemplateController extends BaseController
                     'end_date'   => date('Y-m-d', strtotime('+30 days')),
                 ],
                 'evaluator'            => [
-                    'name' => 'Atasan Penilai Langsung (Evaluator)',
+                    'name' => 'Penilai (Evaluator)',
                 ],
                 'gm'                   => [
-                    'name' => 'Reviewer Atasan (General Manager)',
+                    'name' => 'Peninjau (Reviewer)',
                 ],
             ];
 
