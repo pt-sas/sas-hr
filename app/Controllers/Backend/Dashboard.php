@@ -201,7 +201,7 @@ class Dashboard extends BaseController
             'attendance_days'   => $personalAtt['attendance_days'] ?? 0,     // x in x/y (Hadir)
             'work_days'         => $personalAtt['target_work_days'] ?? 0,    // y in x/y (Total target kerja)
             'work_days_elapsed'   => $personalAtt['elapsed_work_days'] ?? 0,   // Hari kerja berlalu
-            'my_rate'             => $personalAtt['my_rate'],                  // Attendance % (null for future period)
+            'my_rate'             => $personalAtt['my_rate'] ?? null,                  // Attendance % (null for future period)
             'my_is_future'        => $personalAtt['is_future'] ?? false,
             'my_is_future_period' => $personalAtt['is_future_period'] ?? false,
             'my_leave_count'      => $personalAtt['my_leave_count'] ?? 0,       // Total Izin / Cuti
@@ -231,7 +231,7 @@ class Dashboard extends BaseController
             'team_total'          => $teamStats['team_total'] ?? 0,
             'team_present'        => $teamStats['team_present'] ?? 0,
             'team_on_leave'       => $teamStats['team_on_leave'] ?? 0,
-            'team_rate'           => $teamStats['team_rate'] !== null ? min(100, (float)$teamStats['team_rate']) : null,
+            'team_rate'           => isset($teamStats['team_rate']) && $teamStats['team_rate'] !== null ? min(100, (float)$teamStats['team_rate']) : null,
             'team_trend'          => is_array($teamStats['team_trend'] ?? null) ? $teamStats['team_trend'] : [],
             'team_is_future'      => $teamStats['team_is_future'] ?? false,
             'team_leave_names'    => $teamStats['team_leave_names'] ?? [],
@@ -1035,7 +1035,7 @@ class Dashboard extends BaseController
             'team_on_leave'      => $teamOnLeave,
             'team_rate'          => $teamRate,
             'team_trend'         => $teamTrend,
-            'team_is_future'     => ($today > $todayStr),
+            'team_is_future'     => ($mode === 'day') ? ($today > $todayStr) : (!empty($startDate) && $startDate > $todayStr),
             'team_leave_names'   => $teamLeaveNames ?? [],
             'team_absent_names'  => $teamAbsentNames ?? [],
         ];
