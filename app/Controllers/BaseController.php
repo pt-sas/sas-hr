@@ -339,7 +339,16 @@ class BaseController extends Controller
 
 			foreach ($data as $key => $val) :
 				if ($newRecord) {
-					$newV->{$key} = $val;
+					foreach ($fields as $field) :
+						if ($field->name === $key) {
+							if ($field->type === 'int' && empty($data[$key]) && $field->nullable) {
+								$newV->{$key} = null;
+							} else {
+								$newV->{$key} = $val;
+							}
+							break;
+						}
+					endforeach;
 
 					if ($this->createdByField && !array_key_exists($this->createdByField, $data))
 						$newV->{$this->createdByField} = $this->access->getSessionUser();
