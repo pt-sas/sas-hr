@@ -47,12 +47,19 @@
             aria-label="Ringkasan KPI"
             tabindex="0">
 
-            <!-- Filled Card 1: Personal Attendance -->
-            <div class="kc-slide">
-                <?= $this->include('dashboard/box_attendance') ?>
-            </div>
+            <?php 
+                $isDireksi = (isset($levelling_id) && (int) $levelling_id === 100001);
+                $showPersonalCard = !empty($employee_id) && !empty($nik) && !$isDireksi;
+            ?>
 
-            <!-- Filled Card 2 (Conditional): Team Attendance -->
+            <!-- Filled Card 1: Personal Attendance (Hidden for system admin & DIREKSI) -->
+            <?php if ($showPersonalCard): ?>
+                <div class="kc-slide">
+                    <?= $this->include('dashboard/box_attendance') ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Filled Card 2 (Conditional): Team / Company Attendance -->
             <?php if (!empty($show_team_card)): ?>
                 <div class="kc-slide">
                     <?= $this->include('dashboard/box_team_attendance') ?>
@@ -65,7 +72,11 @@
             </div>
 
             <!-- Placeholders (Pushed to the far right to maintain 4 total slides) -->
-            <?php if (empty($show_team_card)): ?>
+            <?php 
+                $visibleFilled = ($showPersonalCard ? 1 : 0) + (!empty($show_team_card) ? 1 : 0) + 1;
+                $placeholdersNeeded = max(0, 4 - $visibleFilled);
+                for ($p = 0; $p < $placeholdersNeeded; $p++):
+            ?>
                 <div class="kc-slide">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body d-flex flex-column align-items-center justify-content-center p-4 text-center text-muted">
@@ -73,15 +84,7 @@
                         </div>
                     </div>
                 </div>
-            <?php endif; ?>
-
-            <div class="kc-slide">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center p-4 text-center text-muted">
-                        <i class="fas fa-layer-group fa-2x mb-2 opacity-25"></i>
-                    </div>
-                </div>
-            </div>
+            <?php endfor; ?>
 
         </div>
     </div>
@@ -265,10 +268,6 @@
     50% { opacity: 0.42; }
 }
 
-@keyframes dpSpin {
-    to { transform: rotate(360deg); }
-}
-
 .kpi-card-loading {
     pointer-events: none;
     position: relative;
@@ -288,19 +287,6 @@
     animation: kpiPulse 1.2s ease-in-out infinite;
 }
 
-/* Sticky Date Picker Syncing Spinner */
-#stickyDatePicker.is-syncing .dp-label::after {
-    content: '';
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    margin-left: 8px;
-    border: 2px solid #2563eb;
-    border-right-color: transparent;
-    border-radius: 50%;
-    vertical-align: middle;
-    animation: dpSpin 0.6s linear infinite;
-}
 
 /* Calendar Loading State */
 #fc-calendar {
@@ -317,8 +303,7 @@
     .kpi-card-loading .progress-bar,
     .kpi-card-loading .k-bar,
     .kpi-card-loading .tk-chart-bar,
-    .kpi-card-loading .tk-seg,
-    #stickyDatePicker.is-syncing .dp-label::after {
+    .kpi-card-loading .tk-seg {
         animation: none !important;
         opacity: 0.6;
     }

@@ -2,7 +2,7 @@
 /**
 - app/Views/dashboard/box_attendance.php - Senior-Friendly (Position-Locked Version)
  */
-$mode    = $mode ?? 'month';
+$mode    = $mode ?? 'day';
 
 // Robust key normalization supporting both backend key formats
 $days   = (int) ($attendance_days ?? ($days ?? 0));

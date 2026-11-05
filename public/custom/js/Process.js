@@ -6802,7 +6802,7 @@ DP.picker = (function () {
         nowEl    = dom.nowEl;
         todayBtn = dom.todayBtn;
 
-        mode  = root.dataset.mode  || 'month';
+        mode  = root.dataset.mode  || 'day';
         level = root.dataset.level || 'me';
 
         const boot = function () {
@@ -7067,7 +7067,7 @@ window.KPI.attendanceMeta = function (d) {
     }
   }
 
-  var mode = d.mode || 'month';
+  var mode = d.mode || 'day';
   var h = '<div class="ta-legend"><span><i class="ta-sw bg-success"></i><b>' + ontime + '</b> tepat waktu</span>';
   if (late > 0)     h += '<span><i class="ta-sw ta-late"></i><b>' + late + '</b> terlambat / tidak lengkap</span>';
   if (leave > 0)    h += '<span><i class="ta-sw ta-leave"></i><b>' + leave + '</b> izin / cuti</span>';
@@ -7163,7 +7163,7 @@ window.KPI.updateApprovalCard = function (data) {
       summaryEl.innerHTML = '<span class="text-success fw-medium"><i class="fas fa-check-circle me-1"></i>Tidak ada yang tertunda</span>';
     } else {
       var text = data.pending_summary || 'Perlu ditinjau';
-      summaryEl.innerHTML = '<i class="fas fa-circle text-warning me-1" style="font-size:.45rem;vertical-align:middle"></i><span>' + text + '</span>';
+      summaryEl.innerHTML = '<span>' + text + '</span>';
       summaryEl.setAttribute('title', text);
     }
   }

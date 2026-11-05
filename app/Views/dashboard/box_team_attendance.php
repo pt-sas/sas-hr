@@ -10,7 +10,7 @@
 -   $team_absent_names ['Rina','Dodi']               day view: who is not in yet
 -   $team_trend_unit ('hari' | 'minggu')             wording of footer note
  */
-$mode    = $mode ?? 'month';
+$mode    = $mode ?? 'day';
 $hasData = isset($team_present, $team_total) || isset($team_rate);
 $total   = isset($team_total) ? max(0, (int) $team_total) : 0;
 $present = isset($team_present) ? min($total, max(0, (int) $team_present)) : 0;
@@ -57,7 +57,7 @@ $ariaChart  = 'Kehadiran per ' . $unit . ': ' . implode(', ', array_map(static f
         <!-- HEADER & CARD SUBTITLE -->
         <div class="d-flex justify-content-between align-items-start mb-1">
             <div class="min-w-0 me-2">
-                <p class="tk-card-title mb-0 text-truncate">Kehadiran Tim</p>
+                <p class="tk-card-title mb-0 text-truncate"><?= (empty($employee_id) || empty($nik)) ? 'Kehadiran Karyawan' : 'Kehadiran Tim' ?></p>
                 <small class="tk-card-sub text-truncate d-block" data-kpi="team_subtitle"><?= esc($subtitle) ?></small>
             </div>
             <span class="tk-header-icon-wrap" aria-hidden="true">
@@ -113,13 +113,6 @@ $ariaChart  = 'Kehadiran per ' . $unit . ': ' . implode(', ', array_map(static f
                         <span><i class="tk-dot" style="background:#d97706"></i><b data-kpi="team_leave_count"><?= $leave ?></b> cuti/izin</span>
                         <span><i class="tk-dot" style="background:#94a3b8"></i><b data-kpi="team_pending_count"><?= $pending ?></b> tidak hadir</span>
                     </div>
-
-                    <?php if ($absent): ?>
-                        <p class="tk-names mt-2 mb-0" data-kpi="team_absent_names" title="<?= esc(implode(', ', $absent), 'attr') ?>">
-                            <i class="far fa-clock" aria-hidden="true"></i>
-                            Tidak hadir: <?= esc(implode(', ', array_slice($absent, 0, 2))) ?><?= count($absent) > 2 ? ' +' . (count($absent) - 2) : '' ?>
-                        </p>
-                    <?php endif; ?>
                 <?php endif; ?>
             </div>
 
