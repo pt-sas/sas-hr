@@ -3266,10 +3266,6 @@ function setDashboardLoading(isLoading) {
     document.querySelectorAll('[data-kpi-card]').forEach(function(card) {
         card.classList.toggle('kpi-card-loading', isLoading);
     });
-    const picker = document.getElementById('stickyDatePicker');
-    if (picker) {
-        picker.classList.toggle('is-syncing', isLoading);
-    }
     const cal = document.getElementById('fc-calendar');
     if (cal) {
         cal.classList.toggle('cal-loading', isLoading);
@@ -3345,7 +3341,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll(selector).forEach(el => el.style.width = (pct ?? 0) + '%');
         };
 
-        const currentMode = data.mode || 'month';
+        const currentMode = data.mode || 'day';
 
         // ---------------------------------------------------------
         // 1. Personal Attendance (Kehadiran Saya)
@@ -3515,18 +3511,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             if (leaveEl) leaveEl.classList.add('d-none');
-            if (absentEl) {
-                const absentArr = Array.isArray(data.team_absent_names) ? data.team_absent_names.filter(Boolean) : [];
-                if (absentArr.length > 0) {
-                    absentEl.classList.remove('d-none');
-                    const namesStr = absentArr.join(', ');
-                    const sliceStr = absentArr.slice(0, 2).join(', ') + (absentArr.length > 2 ? ' +' + (absentArr.length - 2) : '');
-                    absentEl.title = namesStr;
-                    absentEl.innerHTML = `<i class="far fa-clock" aria-hidden="true"></i> Tidak hadir: ${sliceStr}`;
-                } else {
-                    absentEl.classList.add('d-none');
-                }
-            }
+            if (absentEl) absentEl.classList.add('d-none');
         }
 
         // Delta indicator
@@ -3590,7 +3575,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 summarySpan.title = 'Tidak ada yang tertunda';
             } else {
                 const summaryText = data.pending_summary || 'Perlu ditinjau';
-                summarySpan.innerHTML = `<i class="fas fa-circle text-warning me-1" style="font-size:.45rem;vertical-align:middle"></i><span>${summaryText}</span>`;
+                summarySpan.innerHTML = `<span>${summaryText}</span>`;
                 summarySpan.title = summaryText;
             }
         }
@@ -3635,7 +3620,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof DP.picker.setYear === 'function') DP.picker.setYear(liveToday.getFullYear());
         if (typeof DP.picker.setMonth === 'function') DP.picker.setMonth(liveToday.getMonth());
 
-        DP.picker.emitChange(liveToday, st ? st.mode : 'month', st ? st.level : 'me');
+        DP.picker.emitChange(liveToday, st ? st.mode : 'day', st ? st.level : 'me');
         DP.picker.close();
     }
 
@@ -3902,13 +3887,13 @@ document.addEventListener('DOMContentLoaded', function() {
       status = (status || '').toUpperCase();
       switch (status) {
         case 'CO': case 'AP': case 'APPROVED': case 'Y':
-          return '<span class="badge bg-success text-white" style="font-size:0.65rem; padding: 3px 6px;">Approved</span>';
+          return '<span class="badge bg-success text-white" style="font-size:0.65rem; padding: 3px 6px;">Disetujui</span>';
         case 'IP': case 'PENDING':
-          return '<span class="badge bg-warning text-dark" style="font-size:0.65rem; padding: 3px 6px;">Pending</span>';
+          return '<span class="badge bg-warning text-dark" style="font-size:0.65rem; padding: 3px 6px;">Menunggu</span>';
         case 'DR': case 'DRAFT':
-          return '<span class="badge bg-secondary text-white" style="font-size:0.65rem; padding: 3px 6px;">Draft</span>';
+          return '<span class="badge bg-secondary text-white" style="font-size:0.65rem; padding: 3px 6px;">Draf</span>';
         case 'VO': case 'RJ': case 'REJECTED': case 'N':
-          return '<span class="badge bg-danger text-white" style="font-size:0.65rem; padding: 3px 6px;">Rejected</span>';
+          return '<span class="badge bg-danger text-white" style="font-size:0.65rem; padding: 3px 6px;">Ditolak</span>';
         default:
           return '<span class="badge bg-info text-white" style="font-size:0.65rem; padding: 3px 6px;">' + esc(status) + '</span>';
       }
@@ -3925,11 +3910,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return '<div class="k-card-box t-bday" style="border-left-color: #8b5cf6;">' +
           '<div class="k-card-head">' +
             '<div class="k-card-head-title"><span class="k-time-tag" style="color: #8b5cf6;"><i class="fas fa-birthday-cake me-1"></i> [Ulang Tahun]</span> <b>' + esc(empName) + '</b></div>' +
-            '<span class="badge text-white" style="font-size:0.65rem; padding: 3px 6px; background-color: #8b5cf6;">Birthday</span>' +
+            '<span class="badge text-white" style="font-size:0.65rem; padding: 3px 6px; background-color: #8b5cf6;">Ulang Tahun</span>' +
           '</div>' +
           '<div class="k-card-body-content">' +
-            '<div class="k-card-row"><strong>Employee:</strong> ' + esc(empName) + esc(empNik) + '</div>' +
-            '<div class="k-card-row"><strong>Branch:</strong> ' + esc(branch) + ' <span class="k-sep">|</span> <strong>Division:</strong> ' + esc(division) + '</div>' +
+            '<div class="k-card-row"><strong>Karyawan:</strong> ' + esc(empName) + esc(empNik) + '</div>' +
+            '<div class="k-card-row"><strong>Cabang:</strong> ' + esc(branch) + ' <span class="k-sep">|</span> <strong>Divisi:</strong> ' + esc(division) + '</div>' +
           '</div>' +
         '</div>';
       }
@@ -3958,10 +3943,10 @@ document.addEventListener('DOMContentLoaded', function() {
           '<div>' + getStatusBadge(status) + '</div>' +
         '</div>' +
         '<div class="k-card-body-content">' +
-          '<div class="k-card-row"><strong>Employee:</strong> ' + esc(empName) + esc(empNik) + '</div>' +
-          '<div class="k-card-row"><strong>Branch:</strong> ' + esc(branch) + ' <span class="k-sep">|</span> <strong>Division:</strong> ' + esc(division) + '</div>' +
-          '<div class="k-card-row"><strong>Submission Type:</strong> ' + esc(docType) + '</div>' +
-          '<div class="k-card-row text-truncate-2"><strong>Reason:</strong> ' + esc(reason) + '</div>' +
+          '<div class="k-card-row"><strong>Karyawan:</strong> ' + esc(empName) + esc(empNik) + '</div>' +
+          '<div class="k-card-row"><strong>Cabang:</strong> ' + esc(branch) + ' <span class="k-sep">|</span> <strong>Divisi:</strong> ' + esc(division) + '</div>' +
+          '<div class="k-card-row"><strong>Tipe Pengajuan:</strong> ' + esc(docType) + '</div>' +
+          '<div class="k-card-row text-truncate-2"><strong>Alasan:</strong> ' + esc(reason) + '</div>' +
         '</div>' +
       '</div>';
     }

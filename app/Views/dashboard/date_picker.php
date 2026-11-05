@@ -8,7 +8,7 @@
 - either whole view (div and branch under) or team
 */
 $modes  = $modes ?? ['day' => 'Hari', 'week' => 'Minggu', 'month' => 'Bulan'];
-$mode   = in_array($mode ?? 'month', ['day', 'week', 'month'], true) ? $mode : 'month';
+$mode   = in_array($mode ?? 'day', ['day', 'week', 'month'], true) ? $mode : 'day';
 
 $levels = $levels ?? ['me' => 'Saya', 'team' => 'Tim Saya', 'all' => 'Semua'];
 $level  = $level ?? 'me';
@@ -158,6 +158,7 @@ $label  = $label ?? date('M Y', strtotime($date));
   border-radius: 999px; 
 }
 .dp-step { 
+  flex-shrink: 0;
   width: 36px; 
   height: 36px; 
   border-radius: 50%; 
@@ -176,14 +177,23 @@ $label  = $label ?? date('M Y', strtotime($date));
   justify-content: center; 
   gap: .55rem; 
   height: 36px; 
-  min-width: 150px; 
-  padding: 0 1rem; 
+  width: 200px;
+  min-width: 200px;
+  max-width: 200px; 
+  padding: 0 .75rem; 
   border-radius: 999px;
   font-size: .95rem; 
   font-weight: 800; 
   color: var(--dp-ink); 
   white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background .15s; 
+}
+.dp-label [data-dp-label] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dp-label i { color: var(--dp-accent); font-size: .95rem; }
 .dp-label:hover, .dp-label[aria-expanded="true"] { background: var(--dp-soft); }

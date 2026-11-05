@@ -87,6 +87,7 @@ class Dashboard extends BaseController
         // 2. Employee Identity
         $employeeName = $this->access->getUser('name') ?? $this->access->getUser('username');
         $employeeId   = session()->get('md_employee_id');
+        $levellingId  = (int) (session()->get('md_levelling_id') ?? 0);
         $nik          = $this->resolveEmployeeNik($employeeId ? (int) $employeeId : null);
 
         // Pre-fetch shared holidays & mass leaves
@@ -126,50 +127,60 @@ class Dashboard extends BaseController
             );
             $checkpoint('1_attendance_engine');
 
-            // 4. Team Attendance Stats
-            $teamStats = $this->calculateTeamAttendanceStats(
-                (int) $employeeId,
-                $mode,
-                $today,
-                $currentYear,
-                $currentMonth,
-                $wStart,
-                $holidayRows,
-                $massLeaveRows
-            );
-            $checkpoint('2_team_stats');
-
             // 5. Leave Balance Calculation
             $leaveData = $this->getLeaveBalanceData((int) $employeeId, $today, $currentYear);
             $checkpoint('3_leave_balance');
-
-            // 6. Pending Approvals
-            $pendingData = $this->getPendingApprovalsData((int) $employeeId, $rangeEnd);
-            $checkpoint('4_pending_approvals');
-
-            // 7. Calendar Subordinates & Birthday Events
-            $calEvents = $this->getSubordinateCalendarEvents($teamStats['subordinate_ids'] ?? [], $currentYear);
-            $checkpoint('5_calendar_birthdays');
-
-            // 8. Announcements
-            $announcements = $this->getUnreadAnnouncements((int) $employeeId, 25);
-            $checkpoint('6_announcements');
-
-            // 9. Greetings & Personalization
-            $greetingData = $this->getEmployeeGreetingData((int) $employeeId);
-            $checkpoint('7_greetings');
-
-            // 10. Scope Levels & Access Lookup
-            $scopeData = $this->resolveDashboardScope((int) $employeeId, $teamStats['subordinate_ids'] ?? []);
-            $checkpoint('8_access_resolution');
         }
+
+        // 4. Team / Company Attendance Stats (Accessible for Managers & Super Admins)
+        $teamStats = $this->calculateTeamAttendanceStats(
+            (int) ($employeeId ?? 0),
+            $mode,
+            $today,
+            $currentYear,
+            $currentMonth,
+            $wStart,
+            $holidayRows,
+            $massLeaveRows
+        );
+        $checkpoint('2_team_stats');
+
+        // 6. Pending Approvals (Own submissions for employees, Company-wide for Super Admins)
+        $pendingData = $this->getPendingApprovalsData((int) ($employeeId ?? 0), $rangeEnd);
+        $checkpoint('4_pending_approvals');
+
+        // 7. Calendar Subordinates & Birthday Events
+        // $calSubordinateIds = $teamStats['subordinate_ids'] ?? [];
+        // if ($employeeId && !in_array((int) $employeeId, array_map('intval', $calSubordinateIds), true)) {
+        //     $calSubordinateIds[] = (int) $employeeId;
+        // }
+        // $calEvents = $this->getSubordinateCalendarEvents($calSubordinateIds, $currentYear);
+        $checkpoint('5_calendar_birthdays');
+
+        // 8. Announcements
+        $announcements = $this->getUnreadAnnouncements((int) ($employeeId ?? 0), 25);
+        $checkpoint('6_announcements');
+
+        // 9. Greetings & Personalization
+        $greetingData = $this->getEmployeeGreetingData((int) ($employeeId ?? 0));
+        $checkpoint('7_greetings');
+
+        // 10. Scope Levels & Access Lookup
+        $scopeData = $this->resolveDashboardScope((int) ($employeeId ?? 0), $teamStats['subordinate_ids'] ?? []);
+        $checkpoint('8_access_resolution');
 
         $todayDate = $today ?? date('Y-m-d');
 
+        $rawDisplayName = $greetingData['greeting_row']['fullname'] ?? ($employeeName ?? 'Karyawan');
+        $normalizedEmployeeName = !empty($rawDisplayName) ? ucwords(strtolower(trim($rawDisplayName))) : 'Karyawan';
+
         $data = [
             // Employee Profile & Greeting Header
-            'employee_name'     => $employeeName ?? ($greetingData['greeting_row']['fullname'] ?? 'Karyawan'),
-            'employee_nickname' => $greetingData['employee_nickname'] ?? ($employeeName ?? 'Karyawan'),
+            'employee_id'       => $employeeId ? (int) $employeeId : 0,
+            'levelling_id'      => $levellingId,
+            'nik'               => $nik,
+            'employee_name'     => $normalizedEmployeeName,
+            'employee_nickname' => $greetingData['employee_nickname'] ?? $normalizedEmployeeName,
             'employee_photo'    => $greetingData['employee_photo'] ?? null,
             'employee_position' => $greetingData['employee_position'] ?? '-',
             'salutation'        => $greetingData['salutation'] ?? null,
@@ -196,7 +207,7 @@ class Dashboard extends BaseController
             'tkh_allowance'     => $personalAtt['tkh_allowance'] ?? 0,
 
             // Personal Attendance Card (box_attendance.php)
-            'mode'              => $mode ?? 'month',
+            'mode'              => $mode ?? 'day',
             'label'             => $dateLabel ?? ('Hari ini, ' . date('d M Y', strtotime($todayDate))),
             'attendance_days'   => $personalAtt['attendance_days'] ?? 0,     // x in x/y (Hadir)
             'work_days'         => $personalAtt['target_work_days'] ?? 0,    // y in x/y (Total target kerja)
@@ -298,7 +309,7 @@ class Dashboard extends BaseController
     {
         $mode = $this->request->getGet('mode');
         if (!in_array($mode, ['day', 'week', 'month'], true)) {
-            $mode = 'month';
+            $mode = 'day';
         }
 
         $rawDate = $this->request->getGet('date') ?? $this->request->getGet('period') ?? date('Y-m-d');
@@ -701,24 +712,31 @@ class Dashboard extends BaseController
             || in_array($levellingId, $this->managerialLevellings, true);
 
         $candidateIds = [];
+        $isSuperAdminView = false;
 
         if ($canViewTeamCard) {
-            $mEmployee    = new M_Employee($this->request);
-            $allTeamIds   = $mEmployee->getChartEmployee($employeeId) ?? [];
-            $candidateIds = array_values(array_diff($allTeamIds, [$employeeId]));
+            if (empty($employeeId)) {
+                // System Admin (SAS, SuperHRD) without employee profile: Target all active employees company-wide
+                $isSuperAdminView = true;
+            } else {
+                $mEmployee    = new M_Employee($this->request);
+                $allTeamIds   = $mEmployee->getChartEmployee($employeeId) ?? [];
+                $candidateIds = array_values(array_diff($allTeamIds, [$employeeId]));
+            }
         }
 
         $excludedStatusNames = ['RESIGN', 'PENSIUN'];
+        $excludedLevellings  = [100001]; // DIREKSI: Whitelisted from mandatory attendance tracking
 
         $subordinateIds   = [];
         $employeeRegDates = [];
         $employeeRsgDates = [];
-        if (!empty($candidateIds)) {
-            $activeRows = $this->db->table('md_employee e')
+        if (!empty($candidateIds) || $isSuperAdminView) {
+            $activeQuery = $this->db->table('md_employee e')
                 ->select('e.md_employee_id, e.registerdate, e.resigndate')
                 ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
-                ->whereIn('e.md_employee_id', $candidateIds)
                 ->where('e.isactive', 'Y')
+                ->whereNotIn('e.md_levelling_id', $excludedLevellings)
                 ->groupStart()
                     ->where('e.registerdate IS NULL')
                     ->orWhere("CAST(e.registerdate AS CHAR) = '0000-00-00'")
@@ -732,8 +750,13 @@ class Dashboard extends BaseController
                 ->groupStart()
                     ->whereNotIn('s.name', $excludedStatusNames)
                     ->orWhere('s.name IS NULL')
-                ->groupEnd()
-                ->get()->getResultArray();
+                ->groupEnd();
+
+            if (!empty($candidateIds)) {
+                $activeQuery->whereIn('e.md_employee_id', $candidateIds);
+            }
+
+            $activeRows = $activeQuery->get()->getResultArray();
 
             $subordinateIds   = array_column($activeRows, 'md_employee_id');
             $employeeRegDates = array_column($activeRows, 'registerdate', 'md_employee_id');
@@ -1068,13 +1091,22 @@ class Dashboard extends BaseController
      */
     private function getPendingApprovalsData(int $employeeId, string $rangeEnd): array
     {
-        $pendingGroups = $this->db->table('v_all_submission')
+        $roleId   = (int) (session()->get('sys_role_id') ?? 0);
+        $roleName = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
+        $isSuper  = in_array($roleId, $this->superRoleIds, true) || (strpos($roleName, 'HRD') !== false);
+
+        $builder = $this->db->table('v_all_submission')
             ->select('doctype, COUNT(DISTINCT documentno) as total')
-            ->where('md_employee_id', $employeeId)
             ->where('date <=', $rangeEnd . ' 23:59:59')
-            ->whereIn('docstatus', $this->pendingDocStatuses)
-            ->groupBy('doctype')
-            ->get()->getResult();
+            ->whereIn('docstatus', $this->pendingDocStatuses);
+
+        if (empty($employeeId) && $isSuper) {
+            // System Admin / SuperHRD without employee ID: View all pending submissions company-wide
+        } else {
+            $builder->where('md_employee_id', $employeeId);
+        }
+
+        $pendingGroups = $builder->groupBy('doctype')->get()->getResult();
 
         $pendingApprovals = 0;
         $summaryParts     = [];
@@ -1129,7 +1161,7 @@ class Dashboard extends BaseController
                 $isLeaveType = isset($this->submissionTypes[$sub->md_doctype_id]);
                 $eventType   = $isLeaveType ? 'leave' : 'team';
                 $cleanLabel  = ucwords(strtolower($sub->doctype_name ?? 'Pengajuan'));
-                $empName     = $sub->employee_name ?? 'Karyawan';
+                $empName     = !empty($sub->employee_name) ? ucwords(strtolower(trim($sub->employee_name))) : 'Karyawan';
 
                 $calendarEvents[] = [
                     'start' => date('Y-m-d', strtotime($sub->date)),
@@ -1151,9 +1183,10 @@ class Dashboard extends BaseController
         foreach ($birthdays as $bday) {
             $timestamp = strtotime($bday->birthday);
             if (!empty($bday->birthday) && $timestamp > 0) {
+                $bdayName = !empty($bday->fullname) ? ucwords(strtolower(trim($bday->fullname))) : 'Karyawan';
                 $calendarEvents[] = [
                     'start' => $currentYear . '-' . date('m-d', $timestamp),
-                    'title' => "Ulang Tahun - {$bday->fullname}",
+                    'title' => "Ulang Tahun - {$bdayName}",
                     'type'  => 'bday',
                     'place' => 'Ulang Tahun Karyawan'
                 ];
@@ -1245,9 +1278,13 @@ class Dashboard extends BaseController
                 $salutation = in_array($g, ['L', 'M'], true) ? 'Pak' : (in_array($g, ['P', 'F'], true) ? 'Bu' : null);
             }
 
-            $employeeNickname = $greetingRow['nickname'] ?: null;
+            $rawEmployeeName = $greetingRow['fullname'] ?? ($employeeName ?? 'Karyawan');
+            $employeeNormalizedName = !empty($rawEmployeeName) ? ucwords(strtolower(trim($rawEmployeeName))) : 'Karyawan';
+            $employeeNickname = !empty($greetingRow['nickname']) ? ucwords(strtolower(trim($greetingRow['nickname']))) : $employeeNormalizedName;
             $employeePosition = $greetingRow['position_name'] ?: null;
-            $supervisorName   = ($greetingRow['sup_nick'] ?: $greetingRow['sup_full']) ?: null;
+
+            $rawSupervisorName = $greetingRow['sup_full'] ?: ($greetingRow['sup_nick'] ?: null);
+            $supervisorName   = !empty($rawSupervisorName) ? ucwords(strtolower(trim($rawSupervisorName))) : null;
         }
 
         return [
@@ -1342,7 +1379,7 @@ class Dashboard extends BaseController
             $selectedDiv    = (!empty($divisionId) && $divisionId !== 'all') ? (string) $divisionId : null;
             $isFiltering    = ($selectedBranch !== null) || ($selectedDiv !== null);
 
-            if ($hasSuperAccess && !$isFiltering && ($scope === 'all' || empty($scope))) {
+            if ($hasSuperAccess && !$isFiltering && ($scope === 'all' || empty($scope) || empty($employeeId))) {
                 $targetEmployeeIds = null;
             } else {
                 $empBuilder = $this->db->table('md_employee e')
@@ -1409,9 +1446,6 @@ class Dashboard extends BaseController
                 || in_array($levellingId, $this->managerialLevellings, true)
                 || $isHrd;
 
-            if (!$canViewSubmissions) {
-                $subCats = [];
-            }
             if (!empty($subCats)) {
                 $builder = $this->db->table('v_all_submission s')
                     ->select('
@@ -1437,7 +1471,10 @@ class Dashboard extends BaseController
                     ->whereIn('s.docstatus', ['CO', 'AP', 'IP'])
                     ->where('s.isagree !=', 'C');
 
-                if ($targetEmployeeIds !== null) {
+                if (!$canViewSubmissions) {
+                    // Non-managerial users can always view their own submissions regardless of permissions
+                    $builder->where('s.md_employee_id', $employeeId);
+                } elseif ($targetEmployeeIds !== null) {
                     $builder->whereIn('s.md_employee_id', $targetEmployeeIds);
                 }
                 if ($startDate && $endDate) {
@@ -1450,17 +1487,20 @@ class Dashboard extends BaseController
                     $catKey = (isset($sub->md_doctype_id) && $sub->md_doctype_id == 100003) ? 'leave' : 'team';
                     if (!in_array($catKey, $categories, true)) continue;
 
+                    $cleanEmpName = !empty($sub->employee_name) ? ucwords(strtolower(trim($sub->employee_name))) : 'Karyawan';
+                    $cleanDocName = ucwords(strtolower($sub->doctype_name ?? 'Pengajuan'));
+
                     $events[] = [
                         'id'              => $sub->documentno . '-' . date('Ymd', strtotime($sub->event_date)),
-                        'title'           => ucwords(strtolower($sub->doctype_name ?? 'Pengajuan')) . " - " . ($sub->employee_name ?? 'Karyawan'),
+                        'title'           => $cleanDocName . " - " . $cleanEmpName,
                         'start'           => date('Y-m-d', strtotime($sub->event_date)),
                         'className'       => 't-' . $catKey,
                         'backgroundColor' => $colorMap[$catKey],
                         'type'            => $catKey,
                         'extendedProps'   => [
                             'documentno'   => $sub->documentno,
-                            'doctype_name' => ucwords(strtolower($sub->doctype_name ?? 'Pengajuan')),
-                            'employee'     => $sub->employee_name ?? 'Karyawan',
+                            'doctype_name' => $cleanDocName,
+                            'employee'     => $cleanEmpName,
                             'nik'          => $sub->employee_nik ?? '',
                             'branch'       => $sub->branch_name ?? '-',
                             'division'     => $sub->division_name ?? '-',
@@ -1518,19 +1558,20 @@ class Dashboard extends BaseController
                 foreach ($bdayEmps as $emp) {
                     if (empty($emp->birthday)) continue;
                     $dobMonthDay = date('m-d', strtotime($emp->birthday));
+                    $cleanBdayEmpName = !empty($emp->employee_name) ? ucwords(strtolower(trim($emp->employee_name))) : 'Karyawan';
 
                     for ($yr = $startYear; $yr <= $endYear; $yr++) {
                         $bdayDate = $yr . '-' . $dobMonthDay;
                         if ($bdayDate >= $startDate && $bdayDate <= $endDate) {
                             $events[] = [
                                 'id'              => 'bday_' . $emp->md_employee_id . '_' . $yr,
-                                'title'           => 'Ulang Tahun - ' . ($emp->employee_name ?? 'Karyawan'),
+                                'title'           => 'Ulang Tahun - ' . $cleanBdayEmpName,
                                 'start'           => $bdayDate,
                                 'className'       => 't-bday',
                                 'backgroundColor' => $colorMap['bday'],
                                 'type'            => 'bday',
                                 'extendedProps'   => [
-                                    'employee' => $emp->employee_name ?? 'Karyawan',
+                                    'employee' => $cleanBdayEmpName,
                                     'nik'      => $emp->employee_nik ?? '',
                                     'branch'   => $emp->branch_name ?? '-',
                                     'division' => $emp->division_name ?? '-'
