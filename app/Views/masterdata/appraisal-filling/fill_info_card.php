@@ -69,10 +69,6 @@
                 <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
             </div>
             <div class="ap-info-item">
-                <div class="ap-info-label">Peninjau (Reviewer)</div>
-                <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
-            </div>
-            <div class="ap-info-item">
                 <div class="ap-info-label">Status Penilaian</div>
                 <div class="ap-info-value font-weight-bold text-dark">
                     <?php
@@ -80,6 +76,10 @@
                         echo esc(\App\Models\M_Appraisal::getStatusLabel($curSt));
                     ?>
                 </div>
+            </div>
+            <div class="ap-info-item">
+                <div class="ap-info-label">Peninjau (Reviewer)</div>
+                <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
             </div>
         </div>
     </div>

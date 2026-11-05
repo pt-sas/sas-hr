@@ -366,19 +366,20 @@
                     <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
                 </div>
                 <div class="ap-info-item">
-                    <div class="ap-info-label">Peninjau (Reviewer)</div>
-                    <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
-                </div>
-                <div class="ap-info-item">
                     <div class="ap-info-label">Status Penilaian</div>
                     <div class="ap-info-value font-weight-bold text-dark">
                         <?php
                             $curSt = $appraisal->status ?? 'FINALIZED';
                             $statusLabel = \App\Models\M_Appraisal::getStatusLabel($curSt);
                         ?>
-                        <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i><?= esc($statusLabel) ?></span>
+                        <?= esc($statusLabel) ?>
                     </div>
                 </div>
+                <div class="ap-info-item">
+                    <div class="ap-info-label">Peninjau (Reviewer)</div>
+                    <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -399,9 +400,9 @@
                 <div class="ap-score-col">
                     <div class="ap-summary-label">Predikat Evaluasi Resmi</div>
                     <div>
-                        <span class="ap-rating ap-summary-rating <?= $ratingClass ?>">
+                        <!-- <span class="ap-rating ap-summary-rating <?= $ratingClass ?>"> -->
                             <?= esc($appraisal->rating ?? '-') ?>
-                        </span>
+                        <!-- </span> -->
                     </div>
                     <!-- <small class="text-muted d-block mt-2">Kategori evaluasi berdasarkan akumulasi pembobotan standar</small> -->
                 </div>
@@ -676,32 +677,24 @@
     <!-- 4. CATATAN & FEEDBACK PENILAIAN -->
     <div class="ap-card">
         <div class="ap-card-head">
-            <h5 class="ap-card-title">4. Catatan</h5>
+            <h5 class="ap-card-title">4. Catatan &amp; Evaluasi</h5>
         </div>
         <div class="ap-card-body">
             <div class="ap-feedback-section">
                 <!-- Catatan Evaluator -->
                 <div class="ap-feedback-card">
-                    <div class="ap-feedback-header">
-                        <span>Penilai (Evaluator)</span>
-                    </div>
-
                     <div class="ap-feedback-item">
                         <div class="ap-feedback-q">
                             1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
                         </div>
-                        <div class="ap-feedback-block">
-                            <?= esc(!empty($appraisal->evaluator_comment) ? $appraisal->evaluator_comment : '(Tidak ada catatan)') ?>
-                        </div>
+                        <div class="ap-feedback-block"><?= esc(!empty($appraisal->evaluator_comment) ? trim($appraisal->evaluator_comment) : '(Tidak ada catatan)') ?></div>
                     </div>
 
                     <div class="ap-feedback-item">
                         <div class="ap-feedback-q">
                             2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
                         </div>
-                        <div class="ap-feedback-block">
-                            <?= esc(!empty($appraisal->development_plan) ? $appraisal->development_plan : '(Tidak ada catatan)') ?>
-                        </div>
+                        <div class="ap-feedback-block"><?= esc(!empty($appraisal->development_plan) ? trim($appraisal->development_plan) : '(Tidak ada catatan)') ?></div>
                     </div>
                 </div>
 
@@ -713,9 +706,7 @@
                         <span>Tanggapan / Catatan Konfirmasi Karyawan (<?= esc($employee['name'] ?? 'Karyawan') ?>)</span>
                     </div>
                     <div class="ap-feedback-item">
-                        <div class="ap-feedback-block">
-                            <?= esc($appraisal->employee_comment) ?>
-                        </div>
+                        <div class="ap-feedback-block"><?= esc(trim($appraisal->employee_comment)) ?></div>
                     </div>
                 </div>
                 <?php endif; ?>

@@ -73,22 +73,26 @@
             </script>
 
         <?php elseif ($user_mode === 'GM'): ?>
-            <!-- Evaluator's original comments (Read-only preview) -->
             <div class="form-group mb-3">
-                <label class="font-weight-bold text-muted small text-uppercase">
-                    <i class="fas fa-comment-dots mr-1"></i> Catatan &amp; Feedback Evaluator (Penilai Langsung):
+                <label class="font-weight-bold" for="evaluator_comment">
+                    1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
                 </label>
-                <div class="p-3 bg-light rounded border text-dark mb-2" style="white-space: pre-wrap; font-size: 13.5px;">
-                    <div class="font-weight-bold text-primary small mb-1">1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?</div>
-                    <?= esc($appraisal->evaluator_comment ?: '(Tidak ada catatan)') ?>
-                </div>
-                <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px;">
-                    <div class="font-weight-bold text-primary small mb-1">2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?</div>
-                    <?= esc($appraisal->development_plan ?: '(Tidak ada catatan)') ?>
-                </div>
-                <!-- Hidden inputs to preserve evaluator comments on save -->
-                <input type="hidden" name="evaluator_comment" value="<?= esc($appraisal->evaluator_comment ?? '') ?>">
-                <input type="hidden" name="development_plan" value="<?= esc($appraisal->development_plan ?? '') ?>">
+                <textarea class="form-control ap-textarea"
+                          name="evaluator_comment"
+                          id="evaluator_comment"
+                          rows="3"
+                          placeholder="Tuliskan apresiasi, kelebihan, atau kompetensi yang paling menonjol..."><?= esc($appraisal->evaluator_comment ?? '') ?></textarea>
+            </div>
+
+            <div class="form-group mb-0">
+                <label class="font-weight-bold" for="development_plan">
+                    2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
+                </label>
+                <textarea class="form-control ap-textarea"
+                          name="development_plan"
+                          id="development_plan"
+                          rows="3"
+                          placeholder="Tuliskan aspek yang perlu ditingkatkan, arahan, atau rencana pengembangan..."><?= esc($appraisal->development_plan ?? '') ?></textarea>
             </div>
 
             <!-- Action toggle: like manager evaluation -->
@@ -140,14 +144,9 @@
                 <label class="font-weight-bold text-muted small text-uppercase">
                     Catatan &amp; Feedback Evaluator:
                 </label>
-                <div class="p-3 bg-light rounded border text-dark mb-2" style="white-space: pre-wrap; font-size: 13.5px;">
-                    <div class="font-weight-bold text-primary small mb-1">1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?</div>
-                    <?= esc($appraisal->evaluator_comment ?: '(Tidak ada catatan)') ?>
-                </div>
-                <div class="p-3 bg-light rounded border text-dark mb-3" style="white-space: pre-wrap; font-size: 13.5px;">
-                    <div class="font-weight-bold text-primary small mb-1">2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?</div>
-                    <?= esc($appraisal->development_plan ?: '(Tidak ada catatan)') ?>
-                </div>
+                <div class="p-3 bg-light rounded border text-dark mb-2" style="white-space: pre-wrap; font-size: 13.5px;"><div class="font-weight-bold text-dark small mb-1">Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
+                </div><?= esc(!empty($appraisal->evaluator_comment) ? trim($appraisal->evaluator_comment) : '(Tidak ada catatan)') ?></div>
+                <div class="p-3 bg-light rounded border text-dark mb-3" style="white-space: pre-wrap; font-size: 13.5px;"><div class="font-weight-bold text-dark small mb-1">2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?</div><?= esc(!empty($appraisal->development_plan) ? trim($appraisal->development_plan) : '(Tidak ada catatan)') ?></div>
             </div>
 
             <!-- Confirmation toggle for employee reading sign-off -->
@@ -157,7 +156,7 @@
                     $isDifferentUser = ($currEmpId !== (int) ($appraisal->md_employee_id ?? 0));
                     $isDutaAck = !empty($is_duta_acknowledgment);
                 ?>
-                <?php if ($isDutaAck): ?>
+                <!-- <?php if ($isDutaAck): ?>
                     <div class="alert alert-warning py-2 px-3 mb-2 font-weight-bold" style="font-size: 12px;">
                         <i class="fas fa-user-shield mr-1"></i> Mode Konfirmasi Duta: Anda sedang menandatangani evaluasi kinerja ini mewakili <?= esc($employee['name'] ?? 'karyawan') ?> (Karyawan tanpa akun sistem).
                     </div>
@@ -165,27 +164,26 @@
                     <div class="alert alert-info py-2 px-3 mb-2 font-weight-bold" style="font-size: 12px;">
                         <i class="fas fa-user-shield mr-1"></i> Mode Intervensi HR / Admin: Anda sedang melakukan konfirmasi penerimaan dan TTD digital atas nama karyawan.
                     </div>
-                <?php endif; ?>
+                <?php endif; ?> -->
                 <input type="hidden" name="is_finalize" value="N">
                 <input type="hidden" name="action_type" id="employee_action_type" value="save_draft">
                 <div class="custom-control custom-checkbox">
                     <input type="checkbox" class="custom-control-input" id="check_finalize_employee" name="is_finalize" value="Y">
                     <label class="custom-control-label font-weight-bold text-primary" for="check_finalize_employee" style="cursor: pointer;">
-                        <i class="fas fa-signature mr-1"></i> 
                         <?php if ($isDutaAck): ?>
-                            Saya selaku Duta mewakili <?= esc($employee['name'] ?? 'karyawan') ?> telah membaca dan menyetujui hasil penilaian ini (Konfirmasi TTD Digital oleh Duta)
+                            Saya selaku Duta mewakili <?= esc($employee['name'] ?? 'karyawan') ?> telah membaca dan menyetujui hasil penilaian ini (Konfirmasi Duta)
                         <?php elseif ($isDifferentUser): ?>
-                            Konfirmasi dan tandatangani hasil penilaian ini atas nama karyawan (TTD Digital HR/Admin)
+                            Konfirmasi dan tandatangani hasil penilaian ini atas nama karyawan (Konfirmasi HR/Admin)
                         <?php else: ?>
-                            Saya telah membaca dan menyetujui hasil penilaian ini (Konfirmasi TTD Digital)
+                            Saya telah membaca dan menyetujui hasil penilaian ini (Konfirmasi Karyawan)
                         <?php endif; ?>
                     </label>
                 </div>
                 <div id="emp_hint_draft" class="text-muted small mt-2">
-                    <i class="fas fa-info-circle mr-1"></i> Mode saat ini: <strong>Belum dikonfirmasi</strong> (centang kotak di atas untuk menyetujui hasil evaluasi dan melakukan konfirmasi TTD digital).
+                    Hapus centang untuk konfirmasi
                 </div>
                 <div id="emp_hint_submit" class="text-success small mt-2 d-none font-weight-bold">
-                    <i class="fas fa-check-circle mr-1"></i> Mode saat ini: <strong>Konfirmasi penilaian</strong> (penilaian akan difinalisasi dan rapor resmi diterbitkan).
+                    <i class="fas fa-check-circle mr-1"></i> Penilaian akan difinalisasi
                 </div>
             </div>
 

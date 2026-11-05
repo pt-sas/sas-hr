@@ -77,15 +77,16 @@
                         <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Peninjau (Reviewer)</div>
-                        <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
-                    </div>
-                    <div class="ap-info-item">
                         <div class="ap-info-label">Status Penilaian</div>
                         <div class="ap-info-value">
                             <span class="badge badge-light border text-dark font-weight-bold"><?= $statusText ?></span>
                         </div>
                     </div>
+                    <div class="ap-info-item">
+                        <div class="ap-info-label">Peninjau (Reviewer)</div>
+                        <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -463,18 +464,14 @@
                     <label class="font-weight-bold text-dark small mb-2 d-block">
                         1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
                     </label>
-                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;">
-                        <?= !empty($evaluator_comment) ? esc($evaluator_comment) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?>
-                    </div>
+                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($evaluator_comment) ? esc(trim($evaluator_comment)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
                 </div>
 
                 <div class="form-group mb-0">
                     <label class="font-weight-bold text-dark small mb-2 d-block">
                         2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
                     </label>
-                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;">
-                        <?= !empty($development_plan) ? esc($development_plan) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?>
-                    </div>
+                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($development_plan) ? esc(trim($development_plan)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
                 </div>
             </div>
         </div>

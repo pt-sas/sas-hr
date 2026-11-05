@@ -400,17 +400,13 @@
                 <label class="font-weight-bold text-dark small mb-2 d-block">
                     1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
                 </label>
-                <div class="p-3 rounded bg-light border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;">
-                    <?= !empty($appraisal->evaluator_comment) ? esc($appraisal->evaluator_comment) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?>
-                </div>
+                <div class="p-3 rounded bg-light border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($appraisal->evaluator_comment) ? esc(trim($appraisal->evaluator_comment)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
             </div>
             <div class="form-group mb-0">
                 <label class="font-weight-bold text-dark small mb-2 d-block">
                     2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
                 </label>
-                <div class="p-3 rounded bg-light border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;">
-                    <?= !empty($appraisal->development_plan) ? esc($appraisal->development_plan) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?>
-                </div>
+                <div class="p-3 rounded bg-light border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($appraisal->development_plan) ? esc(trim($appraisal->development_plan)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
             </div>
         </div>
     </div>

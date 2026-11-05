@@ -615,14 +615,31 @@ class AppraisalTemplateController extends BaseController
                         foreach ($sec['items'] ?? [] as $it) {
                             $itemId    = (int) ($it['md_appraisal_template_item_id'] ?? $itemCounter++);
                             $configVal = $it['config'] ?? [];
-                            if (is_array($configVal)) {
-                                $configVal = json_encode($configVal);
+                            if (is_string($configVal)) {
+                                $decoded = json_decode($configVal, true);
+                                if (is_array($decoded)) {
+                                    $configVal = $decoded;
+                                }
                             }
+                            if (!is_array($configVal)) {
+                                $configVal = [];
+                            }
+
+                            // Contract normalization: ensure title, competency, and definition align
+                            $title       = !empty($it['title']) ? $it['title'] : ($configVal['competency'] ?? ('Item ' . $itemCounter));
+                            $description = !empty($it['description']) ? $it['description'] : ($configVal['definition'] ?? '');
+                            if (empty($configVal['competency']) && !empty($title)) {
+                                $configVal['competency'] = $title;
+                            }
+                            if (empty($configVal['definition']) && !empty($description)) {
+                                $configVal['definition'] = $description;
+                            }
+
                             $items[] = [
                                 'md_appraisal_template_item_id' => $itemId,
                                 'md_appraisal_section_id'       => $secId,
-                                'title'                         => $it['title'] ?? '',
-                                'description'                   => $it['description'] ?? '',
+                                'title'                         => $title,
+                                'description'                   => $description,
                                 'input_type'                    => strtoupper($it['input_type'] ?? $secType),
                                 'sequence_order'                => (int) ($it['sequence_order'] ?? $itemCounter),
                                 'weight'                        => (float) ($it['weight'] ?? 0),
@@ -657,6 +674,12 @@ class AppraisalTemplateController extends BaseController
                         ->get()->getResultArray();
 
                     foreach ($secItems as $si) {
+                        if (isset($si['config']) && is_string($si['config'])) {
+                            $decodedCfg = json_decode($si['config'], true);
+                            if (is_array($decodedCfg)) {
+                                $si['config'] = $decodedCfg;
+                            }
+                        }
                         $items[] = $si;
                     }
                 }

@@ -947,7 +947,7 @@ class AppraisalEvaluationController extends BaseController
             foreach ($items as $idx => $item) {
                 $itemId    = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id'] ?? 0);
                 $weight    = (float) ($item['weight'] ?? 1.0);
-                $cfg       = is_string($item['config'] ?? null) ? json_decode($item['config'], true) : ($item['config'] ?? []);
+                $cfg       = (array) ($item['config'] ?? []);
                 $inputType = strtoupper($item['input_type'] ?? 'SCORE');
                 $title     = ! empty($item['title']) ? $item['title'] : ($cfg['aspect'] ?? ('Butir ' . ($idx + 1)));
 
@@ -1058,7 +1058,7 @@ class AppraisalEvaluationController extends BaseController
             foreach ($secItems as $itIdx => $item) {
                 $itemId    = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id'] ?? 0);
                 $weight    = (float) ($item['weight'] ?? 1.0);
-                $cfg       = is_string($item['config'] ?? null) ? json_decode($item['config'], true) : ($item['config'] ?? []);
+                $cfg       = (array) ($item['config'] ?? []);
                 $inputType = strtoupper($item['input_type'] ?? 'SCORE');
 
                 $compTitle  = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($itIdx + 1)));
@@ -1628,9 +1628,14 @@ class AppraisalEvaluationController extends BaseController
                 }
 
             } elseif ($userMode === 'GM') {
-                $gmComment = isset($post['gm_comment']) ? trim($post['gm_comment']) : $appraisal->gm_comment;
-                $appraisal->gm_comment = $gmComment;
-                $appraisal->updated_by = $userId;
+                $evaluatorComment = isset($post['evaluator_comment']) ? trim($post['evaluator_comment']) : $appraisal->evaluator_comment;
+                $developmentPlan  = isset($post['development_plan']) ? trim($post['development_plan']) : $appraisal->development_plan;
+                $gmComment        = isset($post['gm_comment']) ? trim($post['gm_comment']) : $appraisal->gm_comment;
+
+                $appraisal->evaluator_comment = $evaluatorComment;
+                $appraisal->development_plan  = $developmentPlan;
+                $appraisal->gm_comment        = $gmComment;
+                $appraisal->updated_by        = $userId;
                 $this->model->save($appraisal);
 
                 if (! empty($responseList)) {

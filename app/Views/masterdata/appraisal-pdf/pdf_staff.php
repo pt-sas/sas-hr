@@ -192,7 +192,7 @@ $itemsKompetensiTambahan = [];
         <?php foreach ($allScoreItems as $cIdx => $item): ?>
             <?php
                 $itemId      = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id']);
-                $cfg         = is_string($item['config'] ?? null) ? json_decode($item['config'], true) : ($item['config'] ?? []);
+                $cfg         = (array) ($item['config'] ?? []);
                 $compTitle   = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($cIdx + 1)));
                 $actions     = $parseActions($cfg['key_actions'] ?? null);
 
@@ -316,7 +316,7 @@ $itemsKompetensiTambahan = [];
         <?php foreach ($allBooleanItems as $bIdx => $bItem): ?>
             <?php
                 $bItemId      = (int) ($bItem['md_appraisal_template_item_id'] ?? $bItem['template_item_id']);
-                $bCfg         = is_string($bItem['config'] ?? null) ? json_decode($bItem['config'], true) : ($bItem['config'] ?? []);
+                $bCfg         = (array) ($bItem['config'] ?? []);
                 $bTitle       = !empty($bCfg['competency']) ? $bCfg['competency'] : (!empty($bItem['title']) ? $bItem['title'] : ('Kompetensi ' . ($bIdx + 1)));
                 $bKeyActions  = $parseActions($bCfg['key_actions'] ?? null);
 

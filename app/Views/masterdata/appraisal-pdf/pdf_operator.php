@@ -140,7 +140,7 @@ $totNilai = 0;
 if (!empty($weightedItems)) {
     foreach ($weightedItems as $idx => $it) {
         $itemId = (int) ($it['md_appraisal_template_item_id'] ?? $it['template_item_id'] ?? ($idx + 1));
-        $cfg    = is_string($it['config'] ?? null) ? json_decode($it['config'], true) : ($it['config'] ?? []);
+        $cfg    = (array) ($it['config'] ?? []);
         $title  = !empty($it['title']) ? $it['title'] : ($cfg['aspect'] ?? ('Aspek Operasional ' . ($idx + 1)));
         $desc   = !empty($it['description']) ? $it['description'] : ($cfg['description'] ?? '');
         
@@ -199,7 +199,7 @@ $checkedCount = 0;
 if (!empty($singleItems)) {
     foreach ($singleItems as $sIdx => $sItem) {
         $sItemId = (int) ($sItem['md_appraisal_template_item_id'] ?? $sItem['template_item_id'] ?? ($sIdx + 1));
-        $sCfg    = is_string($sItem['config'] ?? null) ? json_decode($sItem['config'], true) : ($sItem['config'] ?? []);
+        $sCfg    = (array) ($sItem['config'] ?? []);
         $sActions = $parseActions($sCfg['key_actions'] ?? null);
 
         $sResp       = $responses_by_item_id[$sItemId] ?? null;
@@ -316,7 +316,7 @@ if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
     <?php foreach ($singleItems as $sIdx => $sItem): ?>
         <?php
             $sItemId = (int) ($sItem['md_appraisal_template_item_id'] ?? $sItem['template_item_id'] ?? ($sIdx + 1));
-            $sCfg    = is_string($sItem['config'] ?? null) ? json_decode($sItem['config'], true) : ($sItem['config'] ?? []);
+            $sCfg    = (array) ($sItem['config'] ?? []);
             $sTitle  = !empty($sItem['title']) ? $sItem['title'] : ($sCfg['competency'] ?? ('Item Checklist ' . ($sIdx + 1)));
             $sDesc   = !empty($sItem['description']) ? $sItem['description'] : ($sCfg['description'] ?? 'Pemeriksaan standar operasional');
             $sActions = $parseActions($sCfg['key_actions'] ?? null);

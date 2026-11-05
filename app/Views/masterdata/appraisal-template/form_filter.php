@@ -49,7 +49,7 @@
                                 <button type="button" class="btn btn-primary btn-sm btn-round btn_filter" title="Filter">
                                     <i class="fas fa-search fa-fw"></i> Filter
                                 </button>
-                                <button type="button" class="btn btn-danger btn-sm btn-round btn_reset ml-1" id="btn_reset_filter" title="Reset" onclick="$('#filter_appraisal_template')[0].reset(); $('#filter_appraisal_template select').val('').trigger('change'); $('.btn_filter').click();">
+                                <button type="button" class="btn btn-danger btn-sm btn-round btn_reset ml-1" id="btn_reset_filter" title="Reset">
                                     <i class="fas fa-undo fa-fw"></i> Reset
                                 </button>
                             </div>

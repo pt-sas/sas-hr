@@ -96,7 +96,7 @@
                     <?php
                         $itemId      = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id']);
                         $cfg         = (array) ($item['config'] ?? []);
-                        $compTitle   = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($cIdx + 1)));
+                        $compTitle   = !empty($item['title']) ? $item['title'] : (!empty($cfg['competency']) ? $cfg['competency'] : ('Kompetensi ' . ($cIdx + 1)));
                         $definition  = !empty($item['description']) ? $item['description'] : (!empty($cfg['definition']) ? $cfg['definition'] : '-');
                         $actions     = $parseActions($cfg['key_actions'] ?? null);
                         $itemWeight  = (float) ($item['weight'] ?? 1.0);
@@ -174,7 +174,7 @@
                                             <div class="ap-slider-col">
                                                 <input type="range"
                                                     class="ap-range action-slider"
-                                                    min="1.0" max="4.0" step="0.05"
+                                                    min="1.0" max="4.0" step="0.25"
                                                     value="<?= number_format($actionScore, 2, '.', '') ?>"
                                                     data-item-id="<?= $itemId ?>"
                                                     data-action-idx="<?= $aIdx ?>"
@@ -193,7 +193,7 @@
                                                 <input type="number"
                                                     class="form-control form-control-sm action-score-input"
                                                     id="badge_val_<?= $itemId ?>_<?= $aIdx ?>"
-                                                    min="1.00" max="4.00" step="0.05"
+                                                    min="1.00" max="4.00" step="0.25"
                                                     value="<?= number_format($actionScore, 2, '.', '') ?>"
                                                     data-item-id="<?= $itemId ?>"
                                                     data-action-idx="<?= $aIdx ?>"
@@ -228,7 +228,7 @@
                                         <div class="ap-slider-col">
                                             <input type="range"
                                                 class="ap-range action-slider"
-                                                min="1.0" max="4.0" step="0.05"
+                                                min="1.0" max="4.0" step="0.25"
                                                 value="<?= number_format($actionScore, 2, '.', '') ?>"
                                                 data-item-id="<?= $itemId ?>"
                                                 data-action-idx="0"
@@ -247,7 +247,7 @@
                                             <input type="number"
                                                 class="form-control form-control-sm action-score-input"
                                                 id="badge_val_<?= $itemId ?>_0"
-                                                min="1.00" max="4.00" step="0.05"
+                                                min="1.00" max="4.00" step="0.25"
                                                 value="<?= number_format($actionScore, 2, '.', '') ?>"
                                                 data-item-id="<?= $itemId ?>"
                                                 data-action-idx="0"

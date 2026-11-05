@@ -81,7 +81,7 @@
                     <?php
                         $bItemId      = (int) ($bItem['md_appraisal_template_item_id'] ?? $bItem['template_item_id']);
                         $bCfg         = (array) ($bItem['config'] ?? []);
-                        $bTitle       = !empty($bCfg['competency']) ? $bCfg['competency'] : (!empty($bItem['title']) ? $bItem['title'] : ('Kompetensi ' . ($bIdx + 1)));
+                        $bTitle       = !empty($bItem['title']) ? $bItem['title'] : (!empty($bCfg['competency']) ? $bCfg['competency'] : ('Kompetensi ' . ($bIdx + 1)));
                         $bDef         = !empty($bItem['description']) ? $bItem['description'] : (!empty($bCfg['definition']) ? $bCfg['definition'] : '-');
                         $bKeyActions  = $parseActions($bCfg['key_actions'] ?? null);
 
