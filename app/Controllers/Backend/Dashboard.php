@@ -768,6 +768,7 @@ class Dashboard extends BaseController
         $teamOnLeave = 0;
         $teamRate    = 0;
         $teamTrend   = [];
+        $todayStr    = date('Y-m-d');
 
         if (!empty($subordinateIds)) {
             if ($mode === 'day') {
