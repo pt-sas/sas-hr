@@ -142,3 +142,8 @@ graphify-out/
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# Agent & Antigravity IDE configuration
+.agent/
+.agents/
+.antigravity/
