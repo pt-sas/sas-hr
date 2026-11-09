@@ -12,6 +12,7 @@ class M_BundlingParticipant extends Model
     protected $allowedFields        = [
         'trx_bundling_id',
         'md_employee_id',
+        'isjoined',
         'total_time',
         'total_amount'
     ];

@@ -61,97 +61,105 @@
 <script src="<?= base_url('custom/js/Event.js') ?>"></script>
 <!-- Custom Logic -->
 <script src="<?= base_url('custom/js/Logic.js') ?>"></script>
+
+<!-- Master Bundling -->
+<script src="<?= base_url('custom/js/masterdata/masterbundling/masterbundling.js') ?>"></script>
+
+<!-- Bundling -->
+<script src="<?= base_url('custom/js/bundling/bundling-form.js') ?>"></script>
+<script src="<?= base_url('custom/js/bundling/bundling-realization.js') ?>"></script>
+
 <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
 <!-- PDF to Image View -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.13.216/pdf.min.js"></script>
 <script type="text/javascript">
-const preview = document.getElementById('preview');
+    const preview = document.getElementById('preview');
 
-let scanner = new Instascan.Scanner({
-    video: preview
-});
-scanner.addListener('scan', function(content) {
-    let formData = new FormData();
-    let date = new Date();
-    let datetime = moment(date).format('YYYY-MM-DD HH:mm:ss');
-    formData.append("nik", content);
-    formData.append("checktime", datetime);
-
-    let url = CURRENT_URL + CREATE;
-
-    $.ajax({
-        url: url,
-        type: "POST",
-        data: formData,
-        processData: false,
-        contentType: false,
-        cache: false,
-        dataType: "JSON",
-        beforeSend: function() {
-            loadingForm('scan_preview', "facebook");
-        },
-        complete: function() {
-            hideLoadingForm('scan_preview');
-        },
-        success: function(result) {
-            if (result[0].success) {
-                speak("Terima kasih data berhasil tersimpan");
-                reloadTable();
-            } else {
-                speak(result[0].message);
-                Toast.fire({
-                    type: "error",
-                    title: result[0].message,
-                });
-            }
-        },
+    let scanner = new Instascan.Scanner({
+        video: preview
     });
-});
-Instascan.Camera.getCameras().then(function(cameras) {
-    if (cameras.length) {
-        let selectedCamera = cameras[0];
+    scanner.addListener('scan', function(content) {
+        let formData = new FormData();
+        let date = new Date();
+        let datetime = moment(date).format('YYYY-MM-DD HH:mm:ss');
+        formData.append("nik", content);
+        formData.append("checktime", datetime);
 
-        cameras.forEach(function(camera) {
-            if (camera.name.toLowerCase().includes('back')) {
-                selectedCamera = camera;
-            }
+        let url = CURRENT_URL + CREATE;
+
+        $.ajax({
+            url: url,
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            cache: false,
+            dataType: "JSON",
+            beforeSend: function() {
+                loadingForm('scan_preview', "facebook");
+            },
+            complete: function() {
+                hideLoadingForm('scan_preview');
+            },
+            success: function(result) {
+                if (result[0].success) {
+                    speak("Terima kasih data berhasil tersimpan");
+                    reloadTable();
+                } else {
+                    speak(result[0].message);
+                    Toast.fire({
+                        type: "error",
+                        title: result[0].message,
+                    });
+                }
+            },
         });
+    });
+    Instascan.Camera.getCameras().then(function(cameras) {
+        if (cameras.length) {
+            let selectedCamera = cameras[0];
 
-        scanner.start(selectedCamera);
-    } else {
-        console.error('No cameras found.');
-    }
-}).catch(function(e) {
-    console.error(e);
-});
+            cameras.forEach(function(camera) {
+                if (camera.name.toLowerCase().includes('back')) {
+                    selectedCamera = camera;
+                }
+            });
 
-$(function() {
-    let serverTime = <?php if (!empty($timestamp)) {
+            scanner.start(selectedCamera);
+        } else {
+            console.error('No cameras found.');
+        }
+    }).catch(function(e) {
+        console.error(e);
+    });
+
+    $(function() {
+        let serverTime = <?php if (!empty($timestamp)) {
                                 echo $timestamp;
                             } ?>;
-    let counterTime = 0;
-    let date;
+        let counterTime = 0;
+        let date;
 
-    setInterval(function() {
-        date = new Date();
+        setInterval(function() {
+            date = new Date();
 
-        serverTime = serverTime + 1;
+            serverTime = serverTime + 1;
 
-        date.setTime(serverTime * 1000);
-        let dateOnly = moment(date).format('D-MMM-YYYY');
-        time = date.toLocaleTimeString('it-IT');
+            date.setTime(serverTime * 1000);
+            let dateOnly = moment(date).format('D-MMM-YYYY');
+            time = date.toLocaleTimeString('it-IT');
 
-        $("#timestamp").html(dateOnly + " " + time);
-    }, 1000);
-});
+            $("#timestamp").html(dateOnly + " " + time);
+        }, 1000);
+    });
 
-function speak(text) {
-    var speech = new SpeechSynthesisUtterance();
-    speech.lang = "id-ID"; // Set the language
-    speech.text = text; // Set the text to be spoken
-    speech.volume = 1; // Volume level from 0 to 1
-    speech.rate = 1; // Rate of speech (1 is normal speed)
-    speech.pitch = 1; // Pitch level (1 is normal pitch)
-    window.speechSynthesis.speak(speech);
-}
+    function speak(text) {
+        var speech = new SpeechSynthesisUtterance();
+        speech.lang = "id-ID"; // Set the language
+        speech.text = text; // Set the text to be spoken
+        speech.volume = 1; // Volume level from 0 to 1
+        speech.rate = 1; // Rate of speech (1 is normal speed)
+        speech.pitch = 1; // Pitch level (1 is normal pitch)
+        window.speechSynthesis.speak(speech);
+    }
 </script>

@@ -66,7 +66,12 @@ class WActivity extends BaseController
 
                     if ($trx && is_null($tableLine)) {
                         $created_at = format_dmytime($trx->created_at, "-");
-                        $summary = "{$menuName} {$trx->documentno} : {$trx->usercreated_by}";
+
+                        if ($table === "trx_master_bundling") {
+                            $summary = "{$menuName} - {$trx->name} : {$trx->usercreated_by}";
+                        } else {
+                            $summary = "{$menuName} {$trx->documentno} : {$trx->usercreated_by}";
+                        }
 
                         if ($trx->docstatus === $this->DOCSTATUS_Requested) {
                             $node = "Request Anulir {$menuName}";
@@ -77,6 +82,8 @@ class WActivity extends BaseController
                         $created_at = format_dmytime($trx->created_at, "-");
 
                         if ($value->table == "trx_overtime") {
+                            $date = format_dmy($trx->startdate, "-");
+                        } else if ($value->table == "trx_bundling") {
                             $date = format_dmy($trx->startdate, "-");
                         } else {
                             $date = format_dmy($trx->date, "-");

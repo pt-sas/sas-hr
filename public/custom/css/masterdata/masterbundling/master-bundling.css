@@ -1,0 +1,80 @@
+/* Master Paket: lapisan visual di atas template Atlantis. Semua selector di bawah .mp */
+.mp {
+  --ink: #17212b;
+  --muted: #667385;
+  --line: #e3e8ee;
+  --surface: #f6f8fa;
+  --accent: #0f766e;
+  --accent-soft: #e2f3f0;
+  --amber: #8a5300;
+  --amber-soft: #fcefd6;
+  --red: #b42318;
+  --red-soft: #fde8e6;
+  color: var(--ink);
+}
+.mp .card-title { font-weight: 700; letter-spacing: -.01em; }
+.mp .d-contents { display: contents; }
+
+/* Filter */
+/* .mp-filter {
+  display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between;
+  padding: 0 0 .9rem;
+}
+.mp-tabs { display: flex; flex-wrap: wrap; gap: .35rem; }
+.mp-tab {
+  border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 999px;
+  padding: .3rem .85rem; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.mp-tab b { margin-left: .4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mp-tab:hover { border-color: var(--ink); color: var(--ink); }
+.mp-tab.is-active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.mp-tab:focus-visible, .mp-act:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mp-filter-select { width: auto; min-width: 160px; border-radius: 8px; } */
+
+/* Tabel */
+/* .mp-table thead th { background: var(--surface); color: var(--muted); font-size: 12.5px; font-weight: 600; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.mp-table tbody td { vertical-align: middle; border-top: 1px solid var(--line); }
+.mp-table tbody tr:hover { background: #fbfcfd; }
+.mp-sub { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.mp-code { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--muted); font-size: 12.5px; }
+.mp-money { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.mp-status { display: inline-block; padding: .2rem .65rem; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.mp-status--dr { background: #eef1f4; color: #4a5563; }
+.mp-status--ip { background: var(--amber-soft); color: var(--amber); }
+.mp-status--co { background: var(--accent-soft); color: var(--accent); }
+.mp-status--vo { background: var(--red-soft); color: var(--red); }
+
+.mp-actions { display: flex; gap: .25rem; }
+.mp-act {
+  width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.mp-act:hover { background: var(--accent-soft); color: var(--accent); }
+.mp-act--danger:hover { background: var(--red-soft); color: var(--red); } */
+
+/* Tabel aturan divisi */
+.mp-rule-table thead th { background: var(--surface); font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.mp-rule-table td { vertical-align: middle; }
+
+/* Pratinjau: tiket paket */
+.mp-preview { position: sticky; top: 84px; }
+.mp-ticket {
+  position: relative; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1.25rem 1rem;
+  box-shadow: 0 1px 2px rgba(23, 33, 43, .04);
+}
+.mp-ticket-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; }
+.mp-chip { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: .15rem .6rem; font-size: 12px; font-weight: 600; }
+.mp-ticket h5 { font-weight: 700; margin: 0 0 .9rem; overflow-wrap: anywhere; }
+.mp-ticket-amount { padding-bottom: .9rem; margin-bottom: .75rem; border-bottom: 2px dashed var(--line); }
+.mp-ticket-amount span { display: block; font-size: 1.85rem; line-height: 1.15; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.mp-ticket-amount small { color: var(--muted); font-size: 13px; }
+.mp-ticket-rows { margin: 0; }
+.mp-ticket-rows > div { display: flex; justify-content: space-between; gap: 1rem; padding: .3rem 0; font-size: 13.5px; }
+.mp-ticket-rows dt { color: var(--muted); font-weight: 500; }
+.mp-ticket-rows dd { margin: 0; font-weight: 600; text-align: right; }
+
+@media (max-width: 991.98px) { .mp-preview { position: static; margin-top: 1.5rem; } }
+@media (prefers-reduced-motion: reduce) { .mp * { transition: none !important; } }

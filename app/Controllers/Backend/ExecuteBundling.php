@@ -5,6 +5,7 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Bundling;
 use App\Models\M_BundlingParticipant;
+use App\Models\M_MasterBundling;
 use App\Models\M_Overtime;
 use App\Models\M_OvertimeDetail;
 use App\Models\M_Division;
@@ -252,6 +253,7 @@ class ExecuteBundling extends BaseController
     {
         $mEmployee = new M_Employee($this->request);
         $mBundling = new M_Bundling($this->request);
+        $mMasterBundling = new M_MasterBundling($this->request);
 
         if ($this->request->isAJAX()) {
             try {
@@ -262,8 +264,11 @@ class ExecuteBundling extends BaseController
                 $list = $this->field->setDataSelect($mEmployee->table, $list, $mEmployee->primaryKey, $rowEmp->getEmployeeId(), $rowEmp->getValue());
 
                 $rowBundling = $mBundling->where($mBundling->primaryKey, $list[0]->trx_bundling_id)->first();
+                $rowMasterBundling = $mMasterBundling
+                    ->where($mMasterBundling->primaryKey, $rowBundling->getMasterBundlingId())
+                    ->first();
 
-                $list = $this->field->setDataSelect($mBundling->table, $list, $mBundling->primaryKey, $rowBundling->getBundlingId(), $rowBundling->getDocumentNo() . '-' . $rowBundling->getName());
+                $list = $this->field->setDataSelect($mBundling->table, $list, $mBundling->primaryKey, $rowBundling->getBundlingId(), $rowBundling->getDocumentNo() . '-' . $rowMasterBundling->getName());
 
                 $title = $list[0]->getDocumentNo() . "_" . $rowEmp->getFullName();
                 $list[0]->setStartDate(format_dmy($list[0]->startdate, "-"));

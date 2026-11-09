@@ -830,18 +830,41 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('master-paket/showAll', 'Backend\MasterBundling::showAll');
     $routes->get('master-paket/show/(:any)', 'Backend\MasterBundling::show/$1');
     $routes->post('master-paket/create', 'Backend\MasterBundling::create');
+    $routes->get('master-paket/destroy/(:any)', 'Backend\MasterBundling::destroy/$1');
     $routes->match(['get', 'post'], 'master-paket/getList', 'Backend\MasterBundling::getList');
     $routes->post('master-paket/getDetail', 'Backend\MasterBundling::getPacketDetail');
+    $routes->get('master-paket/getSeqCode', 'Backend\MasterBundling::getSeqCode');
 
-    $routes->add('paket', 'Backend\Bundling::index');
-    $routes->post('paket/showAll', 'Backend\Bundling::showAll');
-    $routes->get('paket/show/(:any)', 'Backend\Bundling::show/$1');
-    $routes->post('paket/create', 'Backend\Bundling::create');
-    $routes->get('paket/destroy/(:any)', 'Backend\Bundling::destroy/$1');
-    $routes->get('paket/processIt', 'Backend\Bundling::processIt');
-    $routes->post('paket/tableLine', 'Backend\Bundling::tableLine');
-    $routes->post('paket/getList', 'Backend\Bundling::getList');
-    $routes->post('paket/getSubData', 'Backend\Bundling::getSubData');
+    $routes->add('paket', 'Backend\BundlingRegular::index');
+    $routes->post('paket/showAll', 'Backend\BundlingRegular::showAll');
+    $routes->get('paket/show/(:any)', 'Backend\BundlingRegular::show/$1');
+    $routes->post('paket/create', 'Backend\BundlingRegular::create');
+    $routes->get('paket/destroy/(:any)', 'Backend\BundlingRegular::destroy/$1');
+    $routes->get('paket/processIt', 'Backend\BundlingRegular::processIt');
+    $routes->post('paket/tableLine', 'Backend\BundlingRegular::tableLine');
+    $routes->post('paket/getList', 'Backend\BundlingRegular::getList');
+    $routes->post('paket/getSubData', 'Backend\BundlingRegular::getSubData');
+
+    $routes->add('paket-project', 'Backend\BundlingProject::index');
+    $routes->post('paket-project/showAll', 'Backend\BundlingProject::showAll');
+    $routes->get('paket-project/show/(:any)', 'Backend\BundlingProject::show/$1');
+    $routes->post('paket-project/create', 'Backend\BundlingProject::create');
+    $routes->get('paket-project/destroy/(:any)', 'Backend\BundlingProject::destroy/$1');
+    $routes->get('paket-project/processIt', 'Backend\BundlingProject::processIt');
+    $routes->post('paket-project/tableLine', 'Backend\BundlingProject::tableLine');
+    $routes->post('paket-project/getList', 'Backend\BundlingProject::getList');
+    $routes->post('paket-project/getSubData', 'Backend\BundlingProject::getSubData');
+
+    $routes->add('paket-idulfitri', 'Backend\BundlingIdulFitri::index');
+    $routes->post('paket-idulfitri/showAll', 'Backend\BundlingIdulFitri::showAll');
+    $routes->get('paket-idulfitri/show/(:any)', 'Backend\BundlingIdulFitri::show/$1');
+    $routes->post('paket-idulfitri/create', 'Backend\BundlingIdulFitri::create');
+    $routes->get('paket-idulfitri/destroy/(:any)', 'Backend\BundlingIdulFitri::destroy/$1');
+    $routes->get('paket-idulfitri/processIt', 'Backend\BundlingIdulFitri::processIt');
+    $routes->post('paket-idulfitri/tableLine', 'Backend\BundlingIdulFitri::tableLine');
+    $routes->post('paket-idulfitri/getList', 'Backend\BundlingIdulFitri::getList');
+    $routes->post('paket-idulfitri/getSubData', 'Backend\BundlingIdulFitri::getSubData');
+
 
     $routes->add('lembur-paket', 'Backend\ExecuteBundling::index');
     $routes->match(['get', 'post'], 'lembur-paket/showAll', 'Backend\ExecuteBundling::showAll');
@@ -850,7 +873,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('lembur-paket/destroy/(:any)', 'Backend\ExecuteBundling::destroy/$1');
     $routes->get('lembur-paket/processIt', 'Backend\ExecuteBundling::processIt');
     $routes->post('lembur-paket/tableLine', 'Backend\ExecuteBundling::tableLine');
-   
+
     // Bantuan (Help / FAQ)
     // 1. For HR master data
     // Category Article Module
@@ -860,7 +883,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'help-article/show/(:any)', 'Backend\Help::show/$1');
     $routes->match(['get', 'post'], 'help-article/destroy/(:any)', 'Backend\Help::destroy/$1');
     $routes->post('help-article/uploadImage', 'Backend\Help::uploadImage');
-    
+
     $routes->match(['get', 'post'], 'help-article/getListArticle', 'Backend\Help::getListArticle');
     $routes->match(['get', 'post'], 'help-article/getListDocCategory', 'Backend\Help::getListDocCategory');
     $routes->match(['get', 'post'], 'help-article/getListStatus', 'Backend\Help::getListStatus');
@@ -877,7 +900,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('get-today-card', 'Backend\DashboardAttendance::getTodayCard');
     $routes->get('get-calendar-events', 'Backend\Dashboard::getCalendarEvents');
     $routes->match(['get', 'post'], 'process-batch', 'Backend\DashboardAttendance::processBatch');
-    
+
 
     // Performance Appraisal Overview & Monitoring Dashboard
     $routes->match(['get', 'post'], 'performance-appraisal', 'Backend\PerformanceAppraisal::index');
@@ -906,7 +929,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'template-penilaian/previewParticipants', 'Backend\AppraisalTemplateController::previewParticipants');
     $routes->match(['get', 'post'], 'template-penilaian/previewForm/(:any)', 'Backend\AppraisalTemplateController::previewForm/$1');
     $routes->match(['get', 'post'], 'template-penilaian/previewForm', 'Backend\AppraisalTemplateController::previewForm');
-    
+
     // Cascading Options & Hierarchy Lookup
     // Dropdown Select2 Endpoints
     $routes->match(['get', 'post'], 'template-penilaian/getListLevelling', 'Backend\AppraisalTemplateController::getListLevelling');
@@ -980,6 +1003,12 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('performance-appraisal/workflow/kickbackGm/(:any)', 'Backend\AppraisalWorkflowController::kickbackGm/$1');
     $routes->post('performance-appraisal/workflow/acknowledgeEmployee/(:any)', 'Backend\AppraisalWorkflowController::acknowledgeEmployee/$1');
     $routes->match(['get', 'post'], 'performance-appraisal/workflow/auditLogs/(:any)', 'Backend\AppraisalWorkflowController::auditLogs/$1');
+
+    $routes->add('realisasi-paket', 'Backend\RealizationBundling::index');
+    $routes->match(['get', 'post'], 'realisasi-paket/showAll', 'Backend\RealizationBundling::showAll');
+    $routes->post('realisasi-paket/create', 'Backend\RealizationBundling::create');
+    $routes->match(['get', 'post'], 'realisasi-paket/getRealizationData', 'Backend\RealizationBundling::getRealizationData');
+    $routes->match(['get', 'post'], 'realisasi-paket/getAttendance', 'Backend\RealizationBundling::getAttendance');
 });
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
@@ -1038,6 +1067,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'api', 
     $routes->post('fcm/register', 'FCM::registerToken');
     $routes->delete('fcm/remove', 'FCM::removeToken');
     $routes->post('fcm/sendMessage', 'FCM::sendTestMessage');
+
+    $routes->post('lembur/processIt', 'Overtime::proccessSubmission');
+    $routes->resource('lembur', ['controller' => 'Overtime']);
 });
 
 /*

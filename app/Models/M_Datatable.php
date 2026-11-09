@@ -299,11 +299,6 @@ class M_Datatable extends Model
                 $model = new M_Adjustment($this->request);
                 $model->doAfterUpdate($rows);
             }
-
-            if ($this->table === "trx_bundling") {
-                $model = new M_Bundling($this->request);
-                $model->doAfterUpdate($rows);
-            }
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage(), $e->getCode(), $e);
         }

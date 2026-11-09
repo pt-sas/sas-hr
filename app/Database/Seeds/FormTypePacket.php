@@ -15,6 +15,16 @@ class FormTypePacket extends Seeder
                 'updated_by'    => 1,
                 'name'          => 'Paket',
                 'isactive'      => 'Y',
+                'isrealization' => 'Y',
+                'isapprovedline' => 'N',
+                'auto_not_approve_days' => 2,
+            ],
+            [
+                'md_doctype_id' => 100032,
+                'created_by'    => 1,
+                'updated_by'    => 1,
+                'name'          => 'Master Paket',
+                'isactive'      => 'Y',
                 'isrealization' => 'N',
                 'isapprovedline' => 'N',
                 'auto_not_approve_days' => 2

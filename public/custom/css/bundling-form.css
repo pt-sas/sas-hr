@@ -1,0 +1,78 @@
+/* bundling-form.css — tambahan untuk tema Atlantis (ThemeKita) */
+
+#form_bundling .bundling-section {
+    background: #fff;
+    border: 1px solid #ebedf2;
+    border-radius: 10px;
+    padding: 20px 20px 6px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
+}
+
+#form_bundling .bundling-section__head {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #ebedf2;
+}
+
+#form_bundling .bundling-section__icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    margin-right: 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1572e8;
+    background: rgba(21, 114, 232, .12);
+}
+
+#form_bundling .bundling-section__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+#form_bundling label {
+    font-weight: 600;
+    font-size: .85rem;
+}
+
+/* Field read-only / disabled (diisi otomatis dari paket) tampil lebih lembut */
+#form_bundling .form-control[readonly],
+#form_bundling .form-control:disabled {
+    background-color: #f7f8fa;
+}
+
+/* Select Paket + tombol Detail */
+#form_bundling .paket-field__select {
+    min-width: 0;
+}
+
+#form_bundling .paket-field .select2-container {
+    width: 100% !important;
+}
+
+/* Kolom jam muncul dengan animasi halus */
+#form_bundling .js-hour-col:not(.d-none) {
+    animation: bundlingFade .2s ease-out;
+}
+
+@keyframes bundlingFade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* HP: ikon saja pada tombol Detail, padding lebih rapat */
+@media (max-width: 575.98px) {
+    #form_bundling .bundling-section {
+        padding: 16px 14px 2px;
+    }
+
+    #form_bundling #btn_paket_detail .btn-text {
+        display: none;
+    }
+}

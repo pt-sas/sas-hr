@@ -10,9 +10,15 @@ class M_Bundling extends Model
     protected $table                = 'trx_bundling';
     protected $primaryKey           = 'trx_bundling_id';
     protected $allowedFields        = [
+        'trx_master_bundling_id',
+        'minimum_hour',
+        'maximum_hour',
+        'compensation_type',
+        'period_type',
+        'result_oriented',
+        'task_description',
+        'project_value',
         'documentno',
-        'name',
-        'bundling_type',
         'md_employee_id',
         'md_branch_id',
         'md_division_id',
@@ -20,7 +26,6 @@ class M_Bundling extends Model
         'submissiondate',
         'startdate',
         'enddate',
-        'estimate_time',
         'description',
         'docstatus',
         'isapproved',
@@ -30,6 +35,7 @@ class M_Bundling extends Model
         'sys_wfscenario_id',
         'created_by',
         'updated_by',
+        'image'
     ];
     protected $useTimestamps        = true;
     protected $returnType           = 'App\Entities\Bundling';
@@ -132,28 +138,5 @@ class M_Bundling extends Model
         $prefix = $first . "/" . $year . "/" . $month . "/" . $code;
 
         return $prefix;
-    }
-
-    public function doAfterUpdate(array $rows)
-    {
-        $mBundlingParticipant = new M_BundlingParticipant($this->request);
-        $mBundlingEvent = new M_BundlingEvent($this->request);
-        $ID = isset($rows['id'][0]) ? $rows['id'][0] : $rows['id'];
-        $trx = $this->find($ID);
-
-        if ($trx->docstatus == 'CO' && $trx->isapproved == 'Y') {
-            $line = $mBundlingParticipant->where($this->primaryKey, $ID)->findAll();
-            $lineID = array_column($line, $mBundlingParticipant->primaryKey);
-            $subLine = $mBundlingEvent->whereIn($mBundlingParticipant->primaryKey, $lineID)->first();
-
-            if (!$subLine) {
-                $entity = new \App\Entities\Bundling();
-
-                $entity->{$this->primaryKey} = $ID;
-                $entity->docstatus = 'IP';
-
-                $this->save($entity);
-            }
-        }
     }
 }

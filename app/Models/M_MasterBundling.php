@@ -11,21 +11,19 @@ class M_MasterBundling extends Model
     protected $primaryKey           = 'trx_master_bundling_id';
 
     protected $allowedFields        = [
+        'value',
         'name',
-        'bundling_type',
-        'nomimal_type',
-        'recurring_type',
-        'md_division_id',
-        'submissiondate',
-        'minimal_time',
-        'estimate_time',
-        'recurring_type',
-        'nominal_type',
-        'startdate',
-        'enddate',
+        'md_doctype_id',
+        'minimum_hour',
+        'compensation_type',
+        'period_type',
+        'project_value',
+        'divisionrule',
+        'isprorate',
+        'submissiontype',
         'description',
+        'docstatus',
         'isapproved',
-        'approved_by',
         'approveddate',
         'sys_wfscenario_id',
         'created_by',
@@ -36,7 +34,6 @@ class M_MasterBundling extends Model
     protected $returnType           = 'App\Entities\MasterBundling';
 
     protected $order                = [
-        'submissiondate' => 'DESC',
         'name'           => 'DESC'
     ];
 
@@ -44,18 +41,14 @@ class M_MasterBundling extends Model
         '', // Hide column
         '', // Number column
         'trx_master_bundling.name',
-        'md_division.name',
-        'trx_master_bundling.bundling_type',
-        'trx_master_bundling.startdate',
+        'trx_master_bundling.created_at',
         'trx_master_bundling.description',
         'sys_user.username'
     ];
 
     protected $column_search        = [
         'trx_master_bundling.name',
-        'md_division.name',
-        'trx_master_bundling.bundling_type',
-        'trx_master_bundling.startdate',
+        'trx_master_bundling.created_at',
         'trx_master_bundling.description',
         'sys_user.username'
     ];
@@ -63,6 +56,8 @@ class M_MasterBundling extends Model
     protected $request;
     protected $db;
     protected $builder;
+
+    protected $Pengajuan_Master_Paket = 100032;
 
     public function __construct(RequestInterface $request)
     {
@@ -76,8 +71,8 @@ class M_MasterBundling extends Model
     public function getSelect()
     {
         $sql = $this->table . '.*,
-                sys_user.name as createdby,
-                md_division.name as division';
+                md_doctype.name as doctype_name,
+                sys_user.name as createdby';
 
         return $sql;
     }
@@ -85,7 +80,7 @@ class M_MasterBundling extends Model
     public function getJoin()
     {
         $sql = [
-            $this->setDataJoin('md_division', 'md_division.md_division_id = ' . $this->table . '.md_division_id', 'left'),
+            $this->setDataJoin('md_doctype', 'md_doctype.md_doctype_id = ' . $this->table . '.md_doctype_id', 'left'),
             $this->setDataJoin('sys_user', 'sys_user.sys_user_id = ' . $this->table . '.created_by', 'left')
         ];
 

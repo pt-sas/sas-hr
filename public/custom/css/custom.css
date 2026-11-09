@@ -512,3 +512,9 @@ tr.shown td.details-control:before {
     .action-notif {
         cursor: pointer;
     }
+
+    /*Form Section */
+    .form-section { padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--line); }
+    .form-section.mb-0 { border-bottom: 0; padding-bottom: 0; }
+    .form-section h5 { font-weight: 700; margin: 0 0 .15rem; }
+    .form-section-hint { color: var(--muted); font-size: 13px; margin-bottom: 1rem; }

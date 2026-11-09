@@ -3,14 +3,15 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Models\M_Branch;
 use App\Models\M_Division;
+use App\Models\M_Employee;
 use App\Models\M_MasterBundling;
-use App\Models\M_Year;
+use App\Services\MasterBundlingServices;
 use Config\Services;
 
 class MasterBundling extends BaseController
 {
-
     public function __construct()
     {
         $this->request = Services::request();
@@ -20,8 +21,17 @@ class MasterBundling extends BaseController
 
     public function index()
     {
+        $mBranch = new M_Branch($this->request);
+        $mDiv = new M_Division($this->request);
+
         $data = [
             'today'         => date('d-M-Y'),
+            'branch'      => $mBranch->where('isactive', 'Y')
+                ->orderBy('name', 'ASC')
+                ->findAll(),
+            'division'    => $mDiv->where('isactive', 'Y')
+                ->orderBy('name', 'ASC')
+                ->findAll(),
         ];
 
         return $this->template->render('transaction/masterbundling/v_master_bundling', $data);
@@ -51,12 +61,11 @@ class MasterBundling extends BaseController
                 $row[] = $ID;
                 $row[] = $number;
                 $row[] = $value->name;
-                $row[] = $value->division;
-                $row[] = $value->bundling_type;
-                $row[] = format_dmy($value->startdate, '-') . ' s/d ' . format_dmy($value->enddate, '-');
+                $row[] = $value->doctype_name;
+                $row[] = format_dmy($value->created_at, '-');
                 $row[] = $value->description;
                 $row[] = $value->createdby;
-                $row[] = $this->template->tableButton($ID, 'DR', $this->BTN_Print);
+                $row[] = $this->template->tableButton($ID);
                 $data[] = $row;
             endforeach;
 
@@ -77,9 +86,25 @@ class MasterBundling extends BaseController
             $post = $this->request->getVar();
 
             try {
-                $this->entity->fill($post);
+                if (!$this->validation->run($post, 'pendaftaran_paket')) {
+                    $response = $this->field->errorValidation($this->model->table, $post);
+                } else {
+                    //* Set ID Data
+                    $post['trx_master_bundling_id'] = !empty($post['id']) ? $post['id'] : null;
 
-                $response = $this->save();
+                    $service = new MasterBundlingServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+                    $result = $service->create($post);
+
+                    if ($result && !empty($post['id'])) {
+                        $response = message('success', true, "Your data has been updated successfully !");
+                    } else if ($result) {
+                        $response = message('success', true, "Your data has been inserted successfully !");
+                    } else {
+                        $response = message('error', false, "No data to Insert");
+                    }
+                }
+            } catch (\App\Exceptions\BaseException $e) {
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -90,31 +115,32 @@ class MasterBundling extends BaseController
 
     public function show($id)
     {
-        $mDivision = new M_Division($this->request);
-
         if ($this->request->isAJAX()) {
             try {
-                $list = $this->model->where($this->model->primaryKey, $id)->findAll();
+                $service = new MasterBundlingServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
 
-                $rowDiv = $mDivision->where($mDivision->primaryKey, $list[0]->md_division_id)->first();
+                $data = $service->show($id);
 
-                $list = $this->field->setDataSelect($mDivision->table, $list, $mDivision->primaryKey, $rowDiv->getDivisionId(), $rowDiv->getName());
-
-                $title = $list[0]->name;
-                $list[0]->startdate = format_dmy($list[0]->startdate, "-");
-                $list[0]->enddate = format_dmy($list[0]->enddate, "-");
+                //* Formating for Web
+                $header = $data['header'][0];
 
                 $fieldHeader = new \App\Entities\Table();
-                $fieldHeader->setTitle($title);
+                $fieldHeader->setTitle($header->name);
                 $fieldHeader->setTable($this->model->table);
-                $fieldHeader->setList($list);
+                $fieldHeader->setField(['md_doctype_id']);
+                $fieldHeader->setList($data['header']);
 
                 $result = [
                     'header'    => $this->field->store($fieldHeader),
+                    'rules'  => $data['rules']
                 ];
 
                 $response = message('success', true, $result);
+            } catch (\App\Exceptions\BaseException $e) {
+                $response = message('error', false, $e->getMessage());
             } catch (\Exception $e) {
+                log_message('error', 'MasterBundling [show] Error: ' . $e->getMessage() . ' | Line: ' . $e->getLine());
+
                 $response = message('error', false, $e->getMessage());
             }
 
@@ -139,49 +165,38 @@ class MasterBundling extends BaseController
     public function processIt()
     {
         if ($this->request->isAJAX()) {
-            $cWfs = new WScenario();
-            $mYear = new M_Year($this->request);
-
             $post = $this->request->getVar();
 
-            $_ID = $post['id'];
-            $_DocAction = $post['docaction'];
-            $row = $this->model->find($_ID);
-            $menu = $this->request->uri->getSegment(2);
-
             try {
-                if (!empty($_DocAction)) {
-                    // TODO : Checking Period
-                    $dateRange = getDatesFromRange($row->startdate, $row->enddate, [], 'Y-m-d', "all");
-                    foreach ($dateRange as $date) {
-                        $period = $mYear->getPeriodStatus($date, $row->submissiontype)->getRow();
+                if (empty($post['docaction']))
+                    throw new ValidationException("Silahkan pilih tindakan terlebih dahulu");
 
-                        if (empty($period) || $period->period_status == $this->PERIOD_CLOSED) {
-                            break;
-                        }
-                    }
+                $service = new MasterBundlingServices($this->session->get('sys_user_id'), $this->session->get('md_employee_id'));
+                $message = $service->proccessTransaction($post['id'], $post['docaction'], $post['subtype']);
 
-                    if (empty($period)) {
-                        $response = message('error', true, "Periode belum dibuat");
-                    } else if ($period->period_status == $this->PERIOD_CLOSED) {
-                        $response = message('error', true, "Periode {$period->name} ditutup");
-                    } else if ($_DocAction === $row->getDocStatus()) {
-                        $response = message('error', true, 'Silahkan refresh terlebih dahulu');
-                    } else if ($_DocAction === $this->DOCSTATUS_Completed) {
-                        $this->message = $cWfs->setScenario($this->entity, $this->model, $this->modelDetail, $_ID, $_DocAction, $menu, $this->session);
-                        $response = message('success', true, true);
-                    } else if ($_DocAction === $this->DOCSTATUS_Voided) {
-                        $this->entity->setDocStatus($this->DOCSTATUS_Voided);
-                        $response = $this->save();
-                    } else if ($_DocAction === $this->DOCSTATUS_Reopen) {
-                        $response = message('error', true, 'Dokumen ini tidak bisa direopen.');
-                    } else {
-                        $this->entity->setDocStatus($_DocAction);
-                        $response = $this->save();
-                    }
-                } else {
-                    $response = message('error', true, 'Silahkan pilih tindakan terlebih dahulu.');
+                $response = message('success', true, $message);
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    public function getSeqCode()
+    {
+        if ($this->request->isAJAX()) {
+            try {
+                $number = $this->model->countAll();
+                $number += 1;
+
+                while (strlen($number) < 5) {
+                    $number = "0" . $number;
                 }
+
+                $docno = "PK" . $number;
+
+                $response = message('success', true, $docno);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -198,17 +213,47 @@ class MasterBundling extends BaseController
             $response = [];
 
             try {
-                if (isset($post['search'])) {
-                    $list = $this->model->like('name', $post['search'])
-                        ->orderBy('name', 'ASC')
-                        ->findAll();
-                } else {
-                    $list = $this->model->orderBy('name', 'ASC')
-                        ->findAll();
+                $mEmployee = new M_Employee($this->request);
+
+                $md_employee_id = $post["md_employee_id"] ?? null;
+                $md_division_id = $post["md_division_id"] ?? null;
+                $md_branch_id = $post["md_branch_id"] ?? null;
+
+                // $today = date('Y-m-d');
+
+                // $whereClause = "docstatus = '{$this->DOCSTATUS_Completed}'";
+                // $whereClause .= " AND '{$today}' <= enddate";
+
+                $whereClause = "1=1";
+
+                if ($md_employee_id) {
+                    $employee = $mEmployee->getDetail($md_employee_id)->getResult();
+
+                    $branchIdsStr = implode(",", array_column($employee, 'md_branch_id'));
+                    $divisionIdsStr = implode(", ", array_column($employee, 'md_division_id'));
+
+                    $whereClause .= " AND ((mbb.md_branch_id IN ({$branchIdsStr}) AND mbd.md_division_id IN ({$divisionIdsStr})) OR (mbb.md_branch_id IS NULL AND mbd.md_division_id IN ({$divisionIdsStr})) OR (mbb.md_branch_id IN ({$branchIdsStr}) AND mbd.md_division_id IS NULL) OR (mbb.md_branch_id IS NULL AND mbd.md_division_id IS NULL))";
                 }
 
+                if ($md_branch_id && $md_division_id) {
+                    $whereClause .= " AND ((mbb.md_branch_id = {$md_branch_id} AND mbd.md_division_id = {$md_division_id}) OR (mbb.md_branch_id IS NULL AND mbd.md_division_id = {$md_division_id}) OR (mbb.md_branch_id = {$md_branch_id} AND mbd.md_division_id IS NULL) OR (mbb.md_branch_id IS NULL AND mbd.md_division_id IS NULL))";
+                }
+
+                $builder = $this->model;
+                $builder->select("trx_master_bundling.trx_master_bundling_id, trx_master_bundling.name")->distinct();
+                $builder->join("trx_master_bundling_branch mbb", "mbb.trx_master_bundling_id = trx_master_bundling.trx_master_bundling_id", "left");
+                $builder->join("trx_master_bundling_division mbd", "mbd.trx_master_bundling_id = trx_master_bundling.trx_master_bundling_id", "left");
+                $builder->where($whereClause);
+
+                if (isset($post['search'])) {
+                    $builder->like('name', $post['search']);
+                }
+
+                $builder->orderBy('name', 'ASC');
+                $list = $builder->findAll();
+
                 foreach ($list as $key => $row) :
-                    $response[$key]['id'] = $row->name;
+                    $response[$key]['id'] = $row->{$this->model->primaryKey};
                     $response[$key]['text'] = $row->name;
                 endforeach;
             } catch (\Exception $e) {
@@ -225,9 +270,18 @@ class MasterBundling extends BaseController
             $post = $this->request->getVar();
 
             try {
-                $packet = $this->model->where('name', $post['name'])->first();
+                $ID = $post['trx_master_bundling_id'] ?? null;
+                $masterBundling = $this->model->where($this->model->primaryKey, $ID)->first();
 
-                $response['nominal_type'] = $packet->nominal_type;
+                $response = message('success', true, [
+                    // 'startdate' => $masterBundling->startdate,
+                    // 'enddate' => $masterBundling->enddate,
+                    'period_type' => $masterBundling->period_type,
+                    'compensation_type' => $masterBundling->compensation_type,
+                    'project_value' => $masterBundling->project_value,
+                    'minimum_hour' => $masterBundling->minimum_hour,
+                    'maximum_hour' => $masterBundling->maximum_hour
+                ]);
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }

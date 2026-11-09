@@ -3026,73 +3026,100 @@ $("#form_adjustment").on(
   }
 );
 
-function getBundling(elem) {
-  if(isLoadingForm) return;
+// function getOptionBundling(elem) {
+//     if (setSave == "detail") return;
 
-    const form = elem.closest("form");
-    const field = form.find('select[name=trx_bundling_id]');
-    let url = ADMIN_URL + '/paket/getList';
+//     const form = elem.closest("form");
+//     const field = form.find('select[name=trx_master_bundling_id]');
+//     let url = ADMIN_URL + 'master-paket/getList';
 
-    let employeeID = form.find('select[name=md_employee_id]').val();
-    let date = form.find('input[name=startdate]').val();
+//     let employeeID = form.find('select[name=md_employee_id]').val();
 
-    field.empty();
-    
-    if (date != "" && employeeID != "") {
-      let formData = new FormData();
-      formData.append('startdate', date);
-      formData.append('md_employee_id', employeeID);
+//     field.empty();
 
-      $.ajax({
-      url: url,
-      type: "POST",
-      data: formData,
-      processData: false,
-      contentType: false,
-      cache: false,
-      dataType: "JSON",
-          beforeSend: function () {
-            loadingForm(form.prop("id"), "facebook");
-            $(".save_form").prop("disabled", true);
-            $(".close_form").prop("disabled", true);
-          },
-          complete: function () {
-            hideLoadingForm(form.prop("id"));
-            $(".save_form").removeAttr("disabled");
-            $(".close_form").removeAttr("disabled");
-          },
-      success: function (result) {
-        if (result.length) {
-          field.append('<option value=""></option>');
-  
-          $.each(result, function (idx, item) {
-            if (setSave === "detail")
-              field
-                .append(
-                  '<option value="' +
-                    item.id +
-                    '">' +
-                    item.text +
-                    "</option>"
-                )
-                .prop("disabled", true);
-            else
-              field.append(
-                '<option value="' +
-                  item.id +
-                  '">' +
-                  item.text +
-                  "</option>"
-              );
-          });
-          }
-      },
-      error: function (jqXHR, exception) {
-        showError(jqXHR, exception);
-      },
-      });
-    }
-}
+//     if (employeeID != "") {
+//       let formData = new FormData();
+//       formData.append('md_employee_id', employeeID);
+
+//       $.ajax({
+//       url: url,
+//       type: "POST",
+//       data: formData,
+//       processData: false,
+//       contentType: false,
+//       cache: false,
+//       dataType: "JSON",
+//           beforeSend: function () {
+//             loadingForm(form.prop("id"), "facebook");
+//             $(".save_form").prop("disabled", true);
+//             $(".close_form").prop("disabled", true);
+//           },
+//           complete: function () {
+//             hideLoadingForm(form.prop("id"));
+//             $(".save_form").removeAttr("disabled");
+//             $(".close_form").removeAttr("disabled");
+//           },
+//       success: function (result) {
+//         if (result.length) {
+//           field.append('<option value=""></option>');
+          
+//           let id = 0;
+
+//           if (option.length) {
+//             $.each(option, function (i, item) {
+//               if (item.fieldName == field.attr('name')) id = item.option_ID;
+//             });
+//           }
+
+//           $.each(result, function (idx, item) {
+//             if (item.id == id) {
+//               if (setSave === "detail")
+//               field
+//                 .append(
+//                   '<option value="' +
+//                     item.id +
+//                     '" selected>' +
+//                     item.text +
+//                     "</option>"
+//                 )
+//                 .prop("disabled", true);
+//               else
+//                 field.append(
+//                   '<option value="' +
+//                     item.id +
+//                     '" selected>' +
+//                     item.text +
+//                     "</option>"
+//                 );
+//             } else {
+//               if (setSave === "detail")
+//                 field
+//                   .append(
+//                     '<option value="' +
+//                       item.id +
+//                       '">' +
+//                       item.text +
+//                       "</option>"
+//                   )
+//                   .prop("disabled", true);
+//               else
+//                 field.append(
+//                   '<option value="' +
+//                     item.id +
+//                     '">' +
+//                     item.text +
+//                     "</option>"
+//                 );
+//             }
+//           });
+//           }
+//       },
+//       error: function (jqXHR, exception) {
+//         showError(jqXHR, exception);
+//       },
+//       });
+//     }
+// }
 
 // $("#saldo_cuti_detail").ready(function () {
 //   const _this = $(this);

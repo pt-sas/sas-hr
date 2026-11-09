@@ -7,9 +7,12 @@ use CodeIgniter\Entity\Entity;
 class Bundling extends Entity
 {
     protected $trx_bundling_id;
+    protected $trx_master_bundling_id;
+    protected $minimum_hour;
+    protected $maximum_hour;
+    protected $compensation_type;
+    protected $project_value;
     protected $documentno;
-    protected $name;
-    protected $bundling_type;
     protected $md_employee_id;
     protected $md_branch_id;
     protected $md_division_id;
@@ -17,7 +20,6 @@ class Bundling extends Entity
     protected $submissiondate;
     protected $startdate;
     protected $enddate;
-    protected $estimate_time;
     protected $description;
     protected $docstatus;
     protected $isapproved;
@@ -28,7 +30,7 @@ class Bundling extends Entity
     protected $created_by;
     protected $updated_by;
 
-    protected $dates   = [
+    protected $dates = [
         'created_at',
         'updated_at',
         'deleted_at',
@@ -44,34 +46,64 @@ class Bundling extends Entity
         $this->attributes['trx_bundling_id'] = $trx_bundling_id;
     }
 
-    public function getDocumentno()
+    public function getMasterBundlingId()
+    {
+        return $this->attributes['trx_master_bundling_id'];
+    }
+
+    public function setMasterBundlingId($trx_master_bundling_id)
+    {
+        $this->attributes['trx_master_bundling_id'] = $trx_master_bundling_id;
+    }
+
+    public function getMinimumHour()
+    {
+        return $this->attributes['minimum_hour'];
+    }
+
+    public function setMinimumHour($minimum_hour)
+    {
+        $this->attributes['minimum_hour'] = $minimum_hour;
+    }
+
+    public function getMaximumHour()
+    {
+        return $this->attributes['maximum_hour'];
+    }
+
+    public function setMaximumHour($maximum_hour)
+    {
+        $this->attributes['maximum_hour'] = $maximum_hour;
+    }
+
+    public function getCompensationType()
+    {
+        return $this->attributes['compensation_type'];
+    }
+
+    public function setCompensationType($compensation_type)
+    {
+        $this->attributes['compensation_type'] = $compensation_type;
+    }
+
+    public function getProjectValue()
+    {
+        return $this->attributes['project_value'];
+    }
+
+    public function setProjectValue($project_value)
+    {
+        $this->attributes['project_value'] = $project_value;
+    }
+
+    public function getDocumentNo()
     {
         return $this->attributes['documentno'];
     }
 
-    public function setDocumentno($documentno)
+    public function setDocumentNo($documentno)
     {
         $this->attributes['documentno'] = $documentno;
-    }
-
-    public function getName()
-    {
-        return $this->attributes['name'];
-    }
-
-    public function setName($name)
-    {
-        $this->attributes['name'] = $name;
-    }
-
-    public function getBundlingType()
-    {
-        return $this->attributes['bundling_type'];
-    }
-
-    public function setBundlingType($bundling_type)
-    {
-        $this->attributes['bundling_type'] = $bundling_type;
     }
 
     public function getEmployeeId()
@@ -104,22 +136,22 @@ class Bundling extends Entity
         $this->attributes['md_division_id'] = $md_division_id;
     }
 
-    public function getSubmissiontype()
+    public function getSubmissionType()
     {
         return $this->attributes['submissiontype'];
     }
 
-    public function setSubmissiontype($submissiontype)
+    public function setSubmissionType($submissiontype)
     {
         $this->attributes['submissiontype'] = $submissiontype;
     }
 
-    public function getSubmissiondate()
+    public function getSubmissionDate()
     {
         return $this->attributes['submissiondate'];
     }
 
-    public function setSubmissiondate($submissiondate)
+    public function setSubmissionDate($submissiondate)
     {
         $this->attributes['submissiondate'] = $submissiondate;
     }
@@ -144,16 +176,6 @@ class Bundling extends Entity
         $this->attributes['enddate'] = $enddate;
     }
 
-    public function getEstimateTime()
-    {
-        return $this->attributes['estimate_time'];
-    }
-
-    public function setEstimateTime($estimate_time)
-    {
-        $this->attributes['estimate_time'] = $estimate_time;
-    }
-
     public function getDescription()
     {
         return $this->attributes['description'];
@@ -164,22 +186,22 @@ class Bundling extends Entity
         $this->attributes['description'] = $description;
     }
 
-    public function getDocstatus()
+    public function getDocStatus()
     {
         return $this->attributes['docstatus'];
     }
 
-    public function setDocstatus($docstatus)
+    public function setDocStatus($docstatus)
     {
         $this->attributes['docstatus'] = $docstatus;
     }
 
-    public function getIsapproved()
+    public function getIsApproved()
     {
         return $this->attributes['isapproved'];
     }
 
-    public function setIsapproved($isapproved)
+    public function setIsApproved($isapproved)
     {
         $this->attributes['isapproved'] = $isapproved;
     }
@@ -194,25 +216,26 @@ class Bundling extends Entity
         $this->attributes['approved_by'] = $approved_by;
     }
 
-    public function getReceiveddate()
+    public function getReceivedDate()
     {
         return $this->attributes['receiveddate'];
     }
 
-    public function setReceiveddate($receiveddate)
+    public function setReceivedDate($receiveddate)
     {
         $this->attributes['receiveddate'] = $receiveddate;
     }
 
-    public function getApproveddate()
+    public function getApprovedDate()
     {
-        if ($this->attributes['approveddate'] == '0000-00-00 00:00:00')
+        if ($this->attributes['approveddate'] == '0000-00-00 00:00:00') {
             return null;
+        }
 
         return $this->attributes['approveddate'];
     }
 
-    public function setApproveddate($approveddate)
+    public function setApprovedDate($approveddate)
     {
         $this->attributes['approveddate'] = $approveddate;
     }

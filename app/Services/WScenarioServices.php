@@ -110,7 +110,7 @@ class WScenarioServices extends BaseServices
                 }
 
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, $trx->md_branch_id, $trx->md_division_id, null, null, $totalTKH, $trx->submissiontype);
-            } else if ($table === "trx_proxy_special") {
+            } else if ($table === "trx_proxy_special" || $table === "trx_master_bundling") {
                 $this->sys_wfscenario_id = $mWfs->getScenario($menu, null, null, null, null, null, null, null, $trx->submissiontype);
             } else if ($table === "trx_employee_allocation") {
                 if ($trx->submissiontype == 100023 || $trx->submissiontype == 100024) {

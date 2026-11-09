@@ -3671,12 +3671,11 @@ class Validation
     ];
 
     public $paket = [
-        'name'        => [
-            'label'             => 'nama paket',
-            'rules'             => 'required|is_unique[sys_menu.name,sys_menu_id,{id}]',
+        'trx_master_bundling_id'        => [
+            'label'             => 'Paket',
+            'rules'             => 'required',
             'errors'            => [
-                'required'      => 'Mohon isi {field} dahulu',
-                'is_unique'     => 'This {field} already exists.'
+                'required'      => 'Mohon isi {field} dahulu'
             ]
         ],
         'md_employee_id'        => [
@@ -3729,6 +3728,7 @@ class Validation
             ]
         ]
     ];
+
     public $article = [
         'title' => [
             'rules'  => 'required|max_length[255]',
@@ -3747,4 +3747,85 @@ class Validation
         ],
     ];
 
+
+    public $pendaftaran_paket = [
+        'name'        => [
+            'label'             => 'nama paket',
+            'rules'             => 'required|is_unique[trx_master_bundling.name,trx_master_bundling_id,{id}]',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu',
+                'is_unique'     => 'This {field} already exists.'
+            ]
+        ],
+        'md_doctype_id' => [
+            'label'             => 'Jenis Paket',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'minimum_hour'        => [
+            'label'             => 'Minimal Jam',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu'
+            ]
+        ],
+        'compensation_type'        => [
+            'label'             => 'Kompensansi',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'period_type'        => [
+            'label'             => 'Tipe Periode',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'project_value'        => [
+            'label'             => 'Nominal',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon isi {field} dahulu'
+            ]
+        ],
+    ];
+
+    public $realisasi_paket_jam = [
+        'employees'             => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'lines'                 => [
+            'label'             => 'Tanggal Lembur',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+    ];
+
+    public $realisasi_paket_hasil = [
+        'employees'             => [
+            'label'             => 'Karyawan',
+            'rules'             => 'required',
+            'errors'            => [
+                'required'      => 'Mohon pilih {field} dahulu'
+            ]
+        ],
+        'description'           => [
+            'label'             => 'Deskripsi Pengerjaan',
+            'rules'             => 'required|max_length[255]',
+            'errors'            => [
+                'required'      => 'Mohon mengisi {field} dahulu',
+                'max_length'    => 'Maksimal {field} harus {param} karakter'
+            ]
+        ],
+    ];
 }

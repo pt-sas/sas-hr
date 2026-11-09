@@ -136,16 +136,28 @@ class DocumentType extends BaseController
 
             $response = [];
 
-            $docSubmission = [
-                100001, // Sakit
-                100003, // Cuti
-                100004, // Ijin
-                100005, // Ijin Resmi
-                100007, // Tugas Kantor
-                100008, // Penugasan
-                100009, // Tugas Kantor (Setengah Hari)
-                100013, // Pulang Cepat
+            $docGroup = [
+                'Submission' => [
+                    100001, // Sakit
+                    100003, // Cuti
+                    100004, // Ijin
+                    100005, // Ijin Resmi
+                    100007, // Tugas Kantor
+                    100008, // Penugasan
+                    100009, // Tugas Kantor (Setengah Hari)
+                    100013, // Pulang Cepat
+                ],
+                'Paket' => [
+                    100031,
+                    100033,
+                    100034
+                ]
             ];
+
+            $docSubmission = [];
+
+            if (isset($post['name']) && !empty($post['name']))
+                $docSubmission = $docGroup[$post['name']];
 
             try {
                 if (isset($post['search'])) {

@@ -190,7 +190,10 @@ class WActivityServices extends BaseServices
                                 100011 => $this->LINESTATUS_Realisasi_Atasan, // Lupa Absen Pulang
                                 100018 => $this->LINESTATUS_Realisasi_HRD, // Pembatalan
                                 100013 => $this->LINESTATUS_Realisasi_Atasan, // Pulang Cepat
-                                100009 => $this->LINESTATUS_Realisasi_Atasan  // Tugas Kantor 1/2 Hari
+                                100009 => $this->LINESTATUS_Realisasi_Atasan,  // Tugas Kantor 1/2 Hari
+                                100031 => $this->LINESTATUS_Realisasi_Atasan, // Tugas Kantor 1/2 Hari
+                                100033 => $this->LINESTATUS_Realisasi_Atasan,  // Tugas Kantor 1/2 Hari
+                                100034 => $this->LINESTATUS_Realisasi_Atasan  // Tugas Kantor 1/2 Hari
                             ];
 
                             $this->entity->isagree = $subType[$docType->md_doctype_id];
@@ -320,6 +323,13 @@ class WActivityServices extends BaseServices
             } else {
                 $message = str_replace(['(Var1)', '(Var2)', '(Var3)'], [$trx->documentno, ucwords(strtolower($branch->name)), ucwords(strtolower($division->name))], $dataNotif->getText());
             }
+        } else if ($table == "trx_master_bundling") {
+            $mDocType = new M_DocumentType($this->request);
+
+            $docType = $mDocType->find($trx->submissiontype);
+
+            $dataNotif = $mNotifText->where('name', "Email {$notifType}")->first();
+            $message = str_replace(['(Var1)'], ["{$docType->name} : {$trx->name}"], $dataNotif->getText());
         } else {
             $dataNotif = $mNotifText->where('name', "Email {$notifType}")->first();
             $message = str_replace(['(Var1)'], [$trx->documentno], $dataNotif->getText());

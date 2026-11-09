@@ -844,6 +844,9 @@ $(".form-absent").on("change", "#md_employee_id", function (e) {
           if (form.find("select[name=md_position_id]").length)
             getPosition(_this, result[0].md_position_id);
 
+          if (form.find("select[name=trx_master_bundling_id]").length)
+            getOptionBundling(_this);
+
           if (form.find("input[name=registerdate]").length)
             form
               .find("input[name=registerdate]")
@@ -2577,6 +2580,32 @@ _tableRealization.on("click", ".btn_agree, .btn_not_agree", function (e) {
 
       form.find("input[name=isagree]").val("N");
     }
+  } else if (parent.hasClass("table_bundling")) {
+    startdate = tr.find("td:eq(5)").text();
+    enddate = tr.find("td:eq(6)").text();
+    starttime = tr.find("td:eq(7)").text();
+    endtime = tr.find("td:eq(8)").text();
+    date_out = tr.find("td:eq(9)").text();
+    clock_out = tr.find("td:eq(10)").text();
+    ID = id;
+
+    if (this.name === "agree") {
+      const form = $("#form_bundling_realization_agree");
+
+      $("#modal_bundling_realization_agree").modal({
+        backdrop: "static",
+        keyboard: false,
+      });
+    } else {
+      const form = $("#form_overtime_realization_not_agree");
+
+      $("#modal_overtime_realization_not_agree").modal({
+        backdrop: "static",
+        keyboard: false,
+      });
+
+      form.find("input[name=isagree]").val("N");
+    }
   }
 });
 
@@ -3021,6 +3050,7 @@ $("#form_overtime").on("change", "input[name=isemployee], input[name=ispacket]",
   
   const fields = _this.attr(attributeName)?.split(",").map(f => f.trim()) || [];
 
+  //* THIS IS MUST BE ROLLBACK BECAUSE OVERTIME NOT USED FOR PACKET FEATURE
   if (!isEmployee && isChecked) {
     form.find('input[name=isemployee]').prop({'disabled': true, 'checked' : true}).change();
     getBundling(_this);
@@ -4378,30 +4408,111 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initial Sync
   setTimeout(syncUI, 50);
 })();
-$("#form_bundling").on("change", '#name', function(e) {
+//* Event listener if there's change on Division or Branch 
+// $("#form_bundling").on("change", '#md_division_id, #md_branch_id', function(e) {
+//   if(isLoadingForm == true) return;
+
+//   const _this = $(this);
+//   const form = _this.closest('form');
+//   const field = form.find('select[name=trx_master_bundling_id]');
+
+//   let divisionID = form.find("#md_division_id").val();
+//   let branchID = form.find("#md_branch_id").val();
+  
+//   if (_tableLine.context.length) _tableLine.clear().draw();
+
+//   //* Clearing
+//   field.empty();
+
+//   if (divisionID != "" && branchID != "") {
+//     $.ajax({
+//         url: ADMIN_URL + 'master-paket/getList',
+//         type: "POST",
+//         data: {
+//           "md_branch_id"   : branchID,
+//           "md_division_id" : divisionID
+//         },
+//         cache: false,
+//         dataType: "JSON",
+//           beforeSend: function () {
+//             loadingForm(form.prop("id"), "facebook");
+//             $(".save_form").prop("disabled", true);
+//             $(".close_form").prop("disabled", true);
+//           },
+//           complete: function () {
+//             hideLoadingForm(form.prop("id"));
+//             $(".save_form").removeAttr("disabled");
+//             $(".close_form").removeAttr("disabled");
+//           },
+//         success: function (result) {
+//           if (result.length) {
+//           field.append('<option value=""></option>');
+  
+//           $.each(result, function (idx, item) {
+//             if (setSave === "detail")
+//               field
+//                 .append(
+//                   '<option value="' +
+//                     item.id +
+//                     '">' +
+//                     item.text +
+//                     "</option>"
+//                 )
+//                 .prop("disabled", true);
+//             else
+//               field.append(
+//                 '<option value="' +
+//                   item.id +
+//                   '">' +
+//                   item.text +
+//                   "</option>"
+//               );
+//           });
+//           }
+//         },
+//         error: function (jqXHR, exception) {
+//           showError(jqXHR, exception);
+//         },
+//       });
+//   }
+// });
+
+$("#form_bundling").on("change", '#trx_master_bundling_id', function(e) {
+  if(isLoadingForm == true) return;
+
   const form = $(this).closest('form');
-  let packetName = $(this).val();
-
-  let formData = new FormData();
-
-  formData.append('name', packetName);
+  let masterBundlingID = $(this).val();
 
   let url = ADMIN_URL + "master-paket/getDetail";
 
   $.ajax({
         url: url,
         type: "POST",
-        data: formData,
-        processData: false,
-        contentType: false,
+        data: {
+          'trx_master_bundling_id' : masterBundlingID
+        },
         dataType: "JSON",
         success: function (result) {
-            let value = result.nominal_type;
-            console.log(value);
-            form.find("#nominal_type").val(value).change();
+          let data = result[0].message;
+          form.find("#compensation_type").val(data.compensation_type).change();
+          form.find("#period_type").val(data.period_type).change();
+          form.find("#project_value").val(formatRupiah(data.project_value));
+          form.find("#minimum_hour").val(data.minimum_hour);
         },
         error: function (jqXHR, exception) {
           showError(jqXHR, exception);
         },
       });
-});
+  });
+
+
+  $("#form_bundling").on("change", "#period_type", function(e) {
+    const _this = $(this);
+      const form = _this.closest('form');
+
+      if (_this.val() == "day") {
+        form.find("input[name=enddate]").closest(".form-group").hide();
+      } else {
+        form.find("input[name=enddate]").closest(".form-group").show();
+      }
+  });
