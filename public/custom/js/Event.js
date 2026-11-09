@@ -522,6 +522,128 @@ $(document).ready(function () {
     },
   });
 
+  // Cascading multiple select
+  // THIS ONLY AFFORD TOP -> DOWN
+  // 1. JABATAN (Paling atas - independen)
+  $(".cascading-position").select2({
+      placeholder: "Pilih Jabatan Target",
+      width: "100%",
+      theme: "bootstrap",
+      multiple: true,
+      allowClear: true,
+      ajax: {
+          url: ADMIN_URL + "template-penilaian/getOptionsByParent",
+          dataType: "JSON",
+          delay: 250,
+          data: function (params) {
+              return {
+                  type: "position",
+                  search: params.term
+              };
+          },
+          processResults: function (response) {
+              return { results: response.data || [] };
+          },
+          cache: true
+      }
+  });
+
+  // 2. DIVISI (Difilter oleh Jabatan di atasnya)
+  $(".cascading-division").select2({
+      placeholder: "Pilih Divisi Target",
+      width: "100%",
+      theme: "bootstrap",
+      multiple: true,
+      allowClear: true,
+      ajax: {
+          url: ADMIN_URL + "template-penilaian/getOptionsByParent",
+          dataType: "JSON",
+          delay: 250,
+          data: function (params) {
+              return {
+                  type: "division",
+                  md_position_id: $(".cascading-position").val(),
+                  search: params.term
+              };
+          },
+          processResults: function (response) {
+              return { results: response.data || [] };
+          },
+          cache: true
+      }
+  });
+
+  // 3. CABANG (Difilter oleh Jabatan & Divisi)
+  $(".cascading-branch").select2({
+      placeholder: "Pilih Cabang Target",
+      width: "100%",
+      theme: "bootstrap",
+      multiple: true,
+      allowClear: true,
+      ajax: {
+          url: ADMIN_URL + "template-penilaian/getOptionsByParent",
+          dataType: "JSON",
+          delay: 250,
+          data: function (params) {
+              return {
+                  type: "branch",
+                  md_position_id: $(".cascading-position").val(),
+                  md_division_id: $(".cascading-division").val(),
+                  search: params.term
+              };
+          },
+          processResults: function (response) {
+              return { results: response.data || [] };
+          },
+          cache: true
+      }
+  });
+
+  // 4. KARYAWAN (Difilter oleh semua pilihan di atas)
+  $(".cascading-employee").select2({
+      placeholder: "Pilih Karyawan...",
+      width: "100%",
+      theme: "bootstrap",
+      multiple: true,
+      allowClear: true,
+      ajax: {
+          url: ADMIN_URL + "template-penilaian/getOptionsByParent",
+          dataType: "JSON",
+          delay: 250,
+          data: function (params) {
+              return {
+                  type: "employee",
+                  md_position_id: $(".cascading-position").val(),
+                  md_division_id: $(".cascading-division").val(),
+                  md_branch_id: $(".cascading-branch").val(),
+                  search: params.term
+              };
+          },
+          processResults: function (response) {
+              return { results: response.data || [] };
+          },
+          cache: true
+      }
+  });
+  // RESET EVENTS (Aliran dari Atas ke Bawah)
+  // Kalau Jabatan berubah -> Reset Divisi, Cabang, dan Karyawan
+  $(".cascading-position").on("change", function () {
+      $(".cascading-division").val(null).trigger("change");
+      $(".cascading-branch").val(null).trigger("change");
+      $(".cascading-employee").val(null).trigger("change");
+  });
+
+  // Kalau Divisi berubah -> Reset Cabang dan Karyawan
+  $(".cascading-division").on("change", function () {
+      $(".cascading-branch").val(null).trigger("change");
+      $(".cascading-employee").val(null).trigger("change");
+  });
+
+  // Kalau Cabang berubah -> Reset Karyawan saja
+  $(".cascading-branch").on("change", function () {
+      $(".cascading-employee").val(null).trigger("change");
+  });
+
   $(".select-submissiontype").select2({
     placeholder: "Pilih opsi tipe form",
     width: "100%",

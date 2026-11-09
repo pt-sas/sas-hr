@@ -108,11 +108,11 @@ class M_Employee extends Model
 	protected $db;
 	protected $builder;
 
-	public function __construct(RequestInterface $request)
+	public function __construct(?RequestInterface $request = null)
 	{
 		parent::__construct();
 		$this->db = db_connect();
-		$this->request = $request;
+		$this->request = $request ?? \Config\Services::request();
 		$this->builder = $this->db->table($this->table);
 	}
 
@@ -413,4 +413,204 @@ class M_Employee extends Model
 
 		return $result;
 	}
+
+	/**
+     * Get active branches for dropdown/Select2
+     */
+    public function getBranches(?string $search = null): array
+    {
+        $builder = $this->db->table('md_branch')
+            ->select('md_branch_id as id, name as text')
+            ->where('isactive', 'Y');
+
+        if (!empty(trim((string) $search))) {
+            $builder->like('name', trim($search));
+        }
+
+        return $builder->orderBy('name', 'ASC')->get()->getResultArray();
+    }
+	
+/**
+     * Get divisions linked to specific position(s) via active employee assignments
+     */
+    public function getDivisionsByPosition($positionIds = [])
+    {
+        $builder = $this->db->table('md_division d');
+        $builder->select('DISTINCT(d.md_division_id) as id, d.name as text');
+        $builder->join('md_employee_division ed', 'ed.md_division_id = d.md_division_id');
+        $builder->join('md_employee e', 'e.md_employee_id = ed.md_employee_id');
+        $builder->where('d.isactive', 'Y');
+        $builder->where('e.isactive', 'Y');
+
+        if (!empty($positionIds) && $positionIds !== '0') {
+            $builder->whereIn('e.md_position_id', (array) $positionIds);
+        }
+
+        $builder->orderBy('d.name', 'ASC');
+        return $builder->get()->getResultArray();
+    }
+
+    /**
+     * Get branches filtered by selected position and/or division
+     */
+    public function getBranchesByPositionAndDivision($positionIds = [], $divisionIds = [])
+    {
+        $builder = $this->db->table('md_branch b');
+        $builder->select('DISTINCT(b.md_branch_id) as id, b.name as text');
+        $builder->join('md_employee_branch eb', 'eb.md_branch_id = b.md_branch_id');
+        $builder->join('md_employee e', 'e.md_employee_id = eb.md_employee_id');
+        $builder->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left');
+        $builder->where('b.isactive', 'Y');
+        $builder->where('e.isactive', 'Y');
+
+        if (!empty($positionIds) && $positionIds !== '0') {
+            $builder->whereIn('e.md_position_id', (array) $positionIds);
+        }
+
+        if (!empty($divisionIds) && $divisionIds !== '0') {
+            $builder->whereIn('ed.md_division_id', (array) $divisionIds);
+        }
+
+        $builder->orderBy('b.name', 'ASC');
+        return $builder->get()->getResultArray();
+    }
+	
+	public function getFilteredEmployees($arrB = [], $arrD = [], $positionID = null, $search = null)
+    {
+        $this->builder->select($this->table . '.md_employee_id, ' . $this->table . '.fullname, ' . $this->table . '.value');
+        $this->builder->join('md_employee_branch', 'md_employee_branch.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+        $this->builder->join('md_employee_division', 'md_employee_division.md_employee_id = ' . $this->table . '.md_employee_id', 'left');
+        $this->builder->where($this->table . '.isactive', 'Y');
+
+        if (!empty($arrB) && $arrB !== '0') {
+            $this->builder->whereIn('md_employee_branch.md_branch_id', (array) $arrB);
+        }
+
+        if (!empty($arrD) && $arrD !== '0') {
+            $this->builder->whereIn('md_employee_division.md_division_id', (array) $arrD);
+        }
+
+        if (!empty($positionID) && $positionID !== '0') {
+            $this->builder->whereIn($this->table . '.md_position_id', (array) $positionID);
+        }
+
+        if (!empty($search)) {
+            $this->builder->groupStart()
+                ->like($this->table . '.fullname', trim($search))
+                ->orLike($this->table . '.value', trim($search))
+                ->groupEnd();
+        }
+
+        $this->builder->distinct();
+        $this->builder->orderBy($this->table . '.fullname', 'ASC');
+        $this->builder->limit(30);
+
+        return $this->builder->get()->getResultArray();
+    }
+
+	public function getAppraisalHierarchy($employeeId)
+	{
+		$employee = $this->where('md_employee_id', $employeeId)->first();
+		if (!$employee) {
+			return ['manager_id' => 0, 'reviewer_id' => 0];
+		}
+
+		$managerId = $this->getEmployeeManagerID($employeeId);
+		if (!$managerId && !empty($employee->superior_id)) {
+			$managerId = $employee->superior_id;
+		}
+
+		$reviewerId = 0;
+		if ($managerId) {
+			$manager = $this->where('md_employee_id', $managerId)->first();
+			if ($manager && !empty($manager->superior_id)) {
+				$reviewerId = $manager->superior_id;
+			}
+		}
+
+		return [
+			'manager_id'  => $managerId ?: 0,
+			'reviewer_id' => $reviewerId ?: 0,
+		];
+	}
+
+	/**
+     * Deduce hierarchy (Manager & Reviewer) by Position, Division, and Branch
+     */
+    public function getHierarchyByPosition($positionId, $divisionId = null, $branchId = null): array
+    {
+        $arrB = (!empty($branchId) && $branchId !== '0') ? (array) $branchId : [];
+        $arrD = (!empty($divisionId) && $divisionId !== '0') ? (array) $divisionId : [];
+
+        // 1. Find active representative employees holding this position
+        $employees = $this->getFilteredEmployees($arrB, $arrD, $positionId);
+
+        if (empty($employees)) {
+            return ['manager_id' => 0, 'reviewer_id' => 0];
+        }
+
+        // 2. Use the first active employee to resolve reporting line
+        $sampleEmpId = $employees[0]['md_employee_id'];
+
+        return $this->getAppraisalHierarchy($sampleEmpId);
+    }
+
+	/**
+     * Get Positions filtered by Division and/or Branch
+     */
+    public function getPositionsByBranchAndDivision($branchIds = [], $divisionIds = [])
+    {
+        $builder = $this->db->table('md_position p');
+        $builder->select('DISTINCT(p.md_position_id) as id, p.name as text');
+        $builder->join('md_employee e', 'e.md_position_id = p.md_position_id');
+        $builder->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left');
+        $builder->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left');
+        $builder->where('p.isactive', 'Y');
+        $builder->where('e.isactive', 'Y');
+
+        if (!empty($branchIds) && $branchIds !== '0') {
+            $builder->whereIn('eb.md_branch_id', (array) $branchIds);
+        }
+
+        if (!empty($divisionIds) && $divisionIds !== '0') {
+            $builder->whereIn('ed.md_division_id', (array) $divisionIds);
+        }
+
+        $builder->orderBy('p.name', 'ASC');
+        return $builder->get()->getResultArray();
+    }
+
+    /**
+     * Get Divisions filtered by Branch
+     */
+    public function getDivisionsByBranch($branchIds = [])
+    {
+        $builder = $this->db->table('md_division d');
+        $builder->select('DISTINCT(d.md_division_id) as id, d.name as text');
+        $builder->join('md_employee_division ed', 'ed.md_division_id = d.md_division_id');
+        $builder->join('md_employee e', 'e.md_employee_id = ed.md_employee_id');
+        $builder->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left');
+        $builder->where('d.isactive', 'Y');
+        $builder->where('e.isactive', 'Y');
+
+        if (!empty($branchIds) && $branchIds !== '0') {
+            $builder->whereIn('eb.md_branch_id', (array) $branchIds);
+        }
+
+        $builder->orderBy('d.name', 'ASC');
+        return $builder->get()->getResultArray();
+    }
+	
+	public function getPositions(?string $search = null): array
+    {
+        $builder = $this->db->table('md_position')
+            ->select('md_position_id as id, name as text')
+            ->where('isactive', 'Y');
+
+        if (!empty(trim((string) $search))) {
+            $builder->like('name', trim($search));
+        }
+
+        return $builder->orderBy('name', 'ASC')->get()->getResultArray();
+    }
 }
