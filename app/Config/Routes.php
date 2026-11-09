@@ -956,6 +956,7 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('template-penilaian/unpublish/(:any)', 'Backend\AppraisalTemplateController::unpublish/$1');
     $routes->post('template-penilaian/clone/(:any)', 'Backend\AppraisalTemplateController::cloneVersion/$1');
     $routes->post('template-penilaian/archive/(:any)', 'Backend\AppraisalTemplateController::archive/$1');
+    $routes->post('template-penilaian/activate/(:any)', 'Backend\AppraisalTemplateController::activate/$1');
     $routes->match(['get', 'post'], 'template-penilaian/destroy/(:any)', 'Backend\AppraisalTemplateController::destroy/$1');
     $routes->match(['get', 'post'], 'template-penilaian/previewParticipants', 'Backend\AppraisalTemplateController::previewParticipants');
     $routes->match(['get', 'post'], 'template-penilaian/previewForm/(:any)', 'Backend\AppraisalTemplateController::previewForm/$1');

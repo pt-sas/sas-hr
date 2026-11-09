@@ -71,10 +71,29 @@ class AppraisalScoringService
             }
         }
 
+        // Determine if scored items in sections have zero/unspecified weights and need equal distribution
+        $sectionItemWeights = [];
+        foreach ($snapshot['items'] ?? [] as $it) {
+            $sId = (int) ($it['md_appraisal_section_id'] ?? 0);
+            $inType = strtoupper($it['input_type'] ?? 'SCORE');
+            if ($inType === 'SCORE' || $inType === 'WEIGHTED_CHECKLIST') {
+                $sectionItemWeights[$sId][] = (float) ($it['weight'] ?? 0);
+            }
+        }
+        $sectionNeedsEqualWeights = [];
+        foreach ($sectionItemWeights as $sId => $wList) {
+            $sumW = array_sum($wList);
+            if ($sumW <= 0) {
+                $sectionNeedsEqualWeights[$sId] = true;
+            }
+        }
+
         // Group item scores per section
         $sectionScores = [];
         $totalDirectWeightedScore = 0.0;
         $totalDirectWeight        = 0.0;
+        $unweightedScoresSum      = 0.0;
+        $unweightedScoresCount    = 0;
 
         foreach ($responses as $resp) {
             $itemId  = (int) $resp->md_appraisal_template_item_id;
@@ -85,20 +104,46 @@ class AppraisalScoringService
             }
 
             $secId = (int) ($itemDef['md_appraisal_section_id'] ?? 0);
-            $weight = (float) ($itemDef['weight'] ?? 1.0);
-            $score  = $resp->score !== null ? (float) $resp->score : null;
+            $rawWeight = (float) ($itemDef['weight'] ?? 0);
+            $inputType = strtoupper($itemDef['input_type'] ?? 'SCORE');
+            $isScoredType = ($inputType === 'SCORE' || $inputType === 'WEIGHTED_CHECKLIST');
 
-            // If score is not yet set in normalized column, try extract from evaluator_response
-            if ($score === null && ! empty($resp->evaluator_response)) {
-                $payload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
-                if (isset($payload['score']) && $payload['score'] !== '') {
-                    $score = (float) $payload['score'];
+            if ($isScoredType && ($rawWeight <= 0 || ! empty($sectionNeedsEqualWeights[$secId]))) {
+                $weight = 1.0;
+            } else {
+                $weight = $rawWeight;
+            }
+
+            $score = $resp->score !== null ? (float) $resp->score : null;
+
+            // If score is not yet set in normalized column, check GM or evaluator payload
+            if ($score === null) {
+                if (! empty($resp->gm_response)) {
+                    $gmPayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                    if (isset($gmPayload['score']) && $gmPayload['score'] !== '') {
+                        $score = (float) $gmPayload['score'];
+                    } elseif (! empty($gmPayload['action_scores']) && is_array($gmPayload['action_scores'])) {
+                        $validActs = array_filter($gmPayload['action_scores'], 'is_numeric');
+                        if (! empty($validActs)) {
+                            $score = array_sum($validActs) / count($validActs);
+                        }
+                    }
+                }
+                if ($score === null && ! empty($resp->evaluator_response)) {
+                    $evalPayload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
+                    if (isset($evalPayload['score']) && $evalPayload['score'] !== '') {
+                        $score = (float) $evalPayload['score'];
+                    } elseif (! empty($evalPayload['action_scores']) && is_array($evalPayload['action_scores'])) {
+                        $validActs = array_filter($evalPayload['action_scores'], 'is_numeric');
+                        if (! empty($validActs)) {
+                            $score = array_sum($validActs) / count($validActs);
+                        }
+                    }
                 }
             }
 
             // Exclude unweighted or non-numeric items (e.g. TEXT, BOOLEAN, SINGLE_CHECKLIST)
-            $inputType = strtoupper($itemDef['input_type'] ?? 'SCORE');
-            if ($inputType === 'TEXT' || $inputType === 'BOOLEAN' || $inputType === 'SINGLE_CHECKLIST') {
+            if (! $isScoredType) {
                 $weight = 0.0;
                 $score  = null;
             }
@@ -107,15 +152,24 @@ class AppraisalScoringService
                 $sectionScores[$secId] = [
                     'weighted_sum' => 0.0,
                     'weight_sum'   => 0.0,
+                    'unweighted_sum'   => 0.0,
+                    'unweighted_count' => 0,
                 ];
             }
 
-            if ($score !== null && $weight > 0) {
-                $sectionScores[$secId]['weighted_sum'] += ($score * $weight);
-                $sectionScores[$secId]['weight_sum']   += $weight;
+            if ($score !== null) {
+                $sectionScores[$secId]['unweighted_sum'] += $score;
+                $sectionScores[$secId]['unweighted_count']++;
+                $unweightedScoresSum   += $score;
+                $unweightedScoresCount++;
 
-                $totalDirectWeightedScore += ($score * $weight);
-                $totalDirectWeight        += $weight;
+                if ($weight > 0) {
+                    $sectionScores[$secId]['weighted_sum'] += ($score * $weight);
+                    $sectionScores[$secId]['weight_sum']   += $weight;
+
+                    $totalDirectWeightedScore += ($score * $weight);
+                    $totalDirectWeight        += $weight;
+                }
             }
         }
 
@@ -130,11 +184,15 @@ class AppraisalScoringService
 
             if ($sData['weight_sum'] > 0) {
                 $secAvg = $sData['weighted_sum'] / $sData['weight_sum'];
+            } elseif ($sData['unweighted_count'] > 0) {
+                $secAvg = $sData['unweighted_sum'] / $sData['unweighted_count'];
+            } else {
+                continue;
+            }
 
-                if ($secWeight > 0) {
-                    $totalSectionWeightedScore += ($secAvg * $secWeight);
-                    $totalSectionWeight        += $secWeight;
-                }
+            if ($secWeight > 0) {
+                $totalSectionWeightedScore += ($secAvg * $secWeight);
+                $totalSectionWeight        += $secWeight;
             }
         }
 
@@ -142,6 +200,8 @@ class AppraisalScoringService
             $finalScore = round($totalSectionWeightedScore / $totalSectionWeight, 2);
         } elseif ($totalDirectWeight > 0) {
             $finalScore = round($totalDirectWeightedScore / $totalDirectWeight, 2);
+        } elseif ($unweightedScoresCount > 0) {
+            $finalScore = round($unweightedScoresSum / $unweightedScoresCount, 2);
         }
 
         $ratingScale = $snapshot['config']['rating_scale'] ?? null;

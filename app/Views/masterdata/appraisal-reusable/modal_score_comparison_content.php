@@ -29,32 +29,33 @@
 <div class="ap-wrap" style="max-width: 100%;">
 
     <!-- MODAL TOP BAR -->
-    <div class="modal-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid var(--ap-line); padding: 16px 24px; background: var(--ap-surface);">
-        <h5 class="modal-title font-weight-bold text-dark d-flex align-items-center mb-0" style="font-size: 16px;">
+    <div class="modal-header d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #94a3b8; padding: 14px 20px; background: #e2eaf4;">
+        <h5 class="modal-title font-weight-bold d-flex align-items-center mb-0" style="font-size: 16px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.3px;">
             Riwayat &amp; Komparasi Skor Penilaian
         </h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Tutup" style="opacity: 0.7; font-size: 24px;">
-            <span aria-hidden="true">&times;</span>
+        <button type="button" class="btn btn-sm btn-close-preview" data-dismiss="modal" aria-label="Tutup">
+            <i class="fas fa-times mr-1"></i> Tutup
         </button>
     </div>
 
     <!-- MODAL BODY -->
-    <div class="modal-body p-4" style="background: var(--ap-surface-2); max-height: calc(88vh - 120px); overflow-y: auto;">
+    <div class="modal-body p-3 p-md-4 ap-modal-uniform-body">
 
         <!-- =================================================================== -->
         <!-- 1. INFORMASI KARYAWAN & SIKLUS EVALUASI                             -->
         <!-- =================================================================== -->
         <div class="ap-card mb-4">
             <div class="ap-card-head d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    <h5 class="ap-card-title d-inline-block mb-0 mr-2">Informasi Karyawan &amp; Siklus Evaluasi</h5>
+                <div class="ap-card-title-group d-flex align-items-center">
+                    <h5 class="ap-card-title d-inline-block mb-0 mr-2">I. Informasi Karyawan &amp; Siklus Evaluasi PA</h5>
+                    <span class="ap-mode is-gm">STATUS: KOMPARASI SKOR</span>
                 </div>
             </div>
             <div class="ap-card-body">
                 <div class="ap-info-grid">
                     <div class="ap-info-item">
                         <div class="ap-info-label">NIK / Nama</div>
-                        <div class="ap-info-value"><?= $empNik ?> &middot; <?= $empName ?></div>
+                        <div class="ap-info-value highlight"><?= $empNik ?> &middot; <?= mb_strtoupper($empName, 'UTF-8') ?></div>
                     </div>
                     <div class="ap-info-item">
                         <div class="ap-info-label">Siklus Penilaian</div>
@@ -69,22 +70,20 @@
                         <div class="ap-info-value"><?= esc($periodeText) ?></div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Cabang / Lokasi</div>
+                        <div class="ap-info-label">Cabang</div>
                         <div class="ap-info-value"><?= esc($employee['branch_name'] ?? '-') ?></div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Penilai (Evaluator)</div>
-                        <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
+                        <div class="ap-info-label">Penilai</div>
+                        <div class="ap-info-value"><?= esc(mb_strtoupper($evaluator['name'] ?? '-', 'UTF-8')) ?></div>
                     </div>
                     <div class="ap-info-item">
                         <div class="ap-info-label">Status Penilaian</div>
-                        <div class="ap-info-value">
-                            <span class="badge badge-light border text-dark font-weight-bold"><?= $statusText ?></span>
-                        </div>
+                        <div class="ap-info-value"><?= $statusText ?></div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Peninjau (Reviewer)</div>
-                        <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
+                        <div class="ap-info-label">Peninjau</div>
+                        <div class="ap-info-value"><?= esc(mb_strtoupper($gm['name'] ?? '-', 'UTF-8')) ?></div>
                     </div>
 
                 </div>
@@ -95,9 +94,11 @@
         <!-- 2. PERFORMA                                                         -->
         <!-- =================================================================== -->
         <div class="ap-card mb-4">
-            <div class="ap-card-head">
-                <h5 class="ap-card-title">2. Performa</h5>
-                <span class="text-muted small">Skala 1.00 – 4.00</span>
+            <div class="ap-card-head d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center" style="gap: 12px;">
+                    <h5 class="ap-card-title mb-0">II. Performa</h5>
+                    <span class="ap-category-badge">Skala 0.00 – 4.00</span>
+                </div>
             </div>
 
             <!-- Sticky-style Score Bar with Penilai vs Reviewer comparison -->
@@ -142,10 +143,11 @@
                 <table class="ap-table mb-0">
                     <thead>
                         <tr>
-                            <th style="width: 5%; text-align: center;">NO</th>
-                            <th style="width: 55%;">KOMPETENSI / KEY ACTIONS (INDIKATOR PERILAKU)</th>
-                            <th style="width: 20%; text-align: center;">SKOR PENILAI</th>
-                            <th style="width: 20%; text-align: center;">SKOR PENINJAU</th>
+                            <th style="width: 50px; text-align: center;">NO</th>
+                            <th style="width: 20%;">KOMPETENSI</th>
+                            <th style="width: 45%;">KEY ACTIONS (INDIKATOR PERILAKU)</th>
+                            <th style="width: 15%; text-align: center;">SKOR PENILAI</th>
+                            <th style="width: 15%; text-align: center;">SKOR PENINJAU</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -162,68 +164,41 @@
                                         $itemDef      = esc($item['definition'] ?? '-');
                                         $evalSubtotal = $item['eval_avg'] ?? 3.00;
                                         $gmSubtotal   = $item['gm_avg'] ?? null;
+                                        $totalRowSpan = $hasActions ? $actionCount : 1;
                                     ?>
 
-                                    <!-- Competency Header Row -->
-                                    <tr>
-                                        <td rowspan="<?= $hasActions ? ($actionCount + 1) : 1 ?>" class="text-center font-weight-bold align-top ap-comp-cell" style="width: 5%;">
-                                            <?= $scoreItemNumber ?>.
-                                        </td>
-                                        <td class="ap-comp-cell">
-                                            <div class="ap-comp-name mb-1">
-                                                <?= $itemTitle ?>
-                                            </div>
-                                            <?php if ($itemDef !== '-' && !empty($itemDef)): ?>
-                                                <div class="ap-def">
-                                                    <?= $itemDef ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </td>
-
-                                        <?php if (!$hasActions): ?>
-                                            <td class="text-center align-middle font-weight-bold ap-comp-cell">
-                                                <?= number_format((float) $evalSubtotal, 2) ?>
-                                            </td>
-                                            <td class="text-center align-middle font-weight-bold ap-comp-cell">
-                                                <?php if ($gmSubtotal !== null): ?>
-                                                    <?php
-                                                        $singleColor = '';
-                                                        if (round($gmSubtotal, 2) > round($evalSubtotal, 2)) {
-                                                            $singleColor = 'color: #059669; font-weight: 700; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;';
-                                                        } elseif (round($gmSubtotal, 2) < round($evalSubtotal, 2)) {
-                                                            $singleColor = 'color: #dc2626; font-weight: 700; background: #fef2f2; padding: 2px 8px; border-radius: 4px;';
-                                                        }
-                                                    ?>
-                                                    <span style="<?= $singleColor ?>">
-                                                        <?= number_format((float) $gmSubtotal, 2) ?>
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="text-muted">-</span>
-                                                <?php endif; ?>
-                                            </td>
-                                        <?php else: ?>
-                                            <td class="ap-comp-cell"></td>
-                                            <td class="ap-comp-cell"></td>
-                                        <?php endif; ?>
-                                    </tr>
-
                                     <?php if ($hasActions): ?>
-                                        <!-- Key Actions Sub-rows with Red & Green Diff -->
-                                        <?php foreach ($actions as $act): ?>
+                                        <?php foreach ($actions as $aIdx => $act): ?>
                                             <?php
                                                 $gmScore   = $act['gm_score'];
                                                 $evalScore = $act['eval_score'];
-                                                $gmStyle   = 'color: #334155; font-weight: 600;';
+                                                $gmStyle   = 'color: #334155; font-weight: 700;';
 
                                                 if ($gmScore !== null) {
                                                     if (round($gmScore, 2) > round($evalScore, 2)) {
-                                                        $gmStyle = 'color: #059669; font-weight: 700; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;';
+                                                        $gmStyle = 'color: #059669; font-weight: 800; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;';
                                                     } elseif (round($gmScore, 2) < round($evalScore, 2)) {
-                                                        $gmStyle = 'color: #dc2626; font-weight: 700; background: #fef2f2; padding: 2px 8px; border-radius: 4px;';
+                                                        $gmStyle = 'color: #dc2626; font-weight: 800; background: #fef2f2; padding: 2px 8px; border-radius: 4px;';
                                                     }
                                                 }
                                             ?>
                                             <tr>
+                                                <?php if ($aIdx === 0): ?>
+                                                    <td rowspan="<?= $totalRowSpan ?>" class="text-center font-weight-bold align-top ap-comp-cell" style="width: 50px;">
+                                                        <?= $scoreItemNumber ?>.
+                                                    </td>
+                                                    <td rowspan="<?= $totalRowSpan ?>" class="ap-comp-cell">
+                                                        <div class="ap-comp-name mb-1">
+                                                            <?= $itemTitle ?>
+                                                        </div>
+                                                        <?php if ($itemDef !== '-' && !empty($itemDef)): ?>
+                                                            <div class="ap-def">
+                                                                <?= $itemDef ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                <?php endif; ?>
+
                                                 <td>
                                                     <div class="ap-action-text">
                                                         <span class="ap-action-letter"><?= esc($act['letter']) ?>.</span>
@@ -248,44 +223,83 @@
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
-
-                                        <!-- Subtotal Row -->
-                                        <tr class="ap-subtotal">
-                                            <td class="ap-subtotal-label font-weight-bold text-dark">
-                                                Rata-rata <?= $itemTitle ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td class="text-center font-weight-bold align-top ap-comp-cell" style="width: 50px;">
+                                                <?= $scoreItemNumber ?>.
                                             </td>
-                                            <td class="text-center">
-                                                <span class="ap-avg-chip">
-                                                    Avg: <span class="ap-avg-num"><?= number_format((float) $evalSubtotal, 2) ?></span>
-                                                </span>
+                                            <td class="ap-comp-cell">
+                                                <div class="ap-comp-name mb-1">
+                                                    <?= $itemTitle ?>
+                                                </div>
+                                                <?php if ($itemDef !== '-' && !empty($itemDef)): ?>
+                                                    <div class="ap-def">
+                                                        <?= $itemDef ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             </td>
-                                            <td class="text-center">
+                                            <td>
+                                                <div class="ap-action-text text-muted font-italic">Indikator umum</div>
+                                            </td>
+                                            <td class="text-center align-middle font-weight-bold">
+                                                <?= number_format((float) $evalSubtotal, 2) ?>
+                                            </td>
+                                            <td class="text-center align-middle font-weight-bold">
                                                 <?php if ($gmSubtotal !== null): ?>
                                                     <?php
-                                                        $chipStyle = '';
-                                                        $numStyle  = 'color: var(--ap-ink);';
+                                                        $singleColor = '';
                                                         if (round($gmSubtotal, 2) > round($evalSubtotal, 2)) {
-                                                            $chipStyle = 'background: #ecfdf5; border-color: #a7f3d0;';
-                                                            $numStyle  = 'color: #059669;';
+                                                            $singleColor = 'color: #059669; font-weight: 800; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;';
                                                         } elseif (round($gmSubtotal, 2) < round($evalSubtotal, 2)) {
-                                                            $chipStyle = 'background: #fef2f2; border-color: #fecaca;';
-                                                            $numStyle  = 'color: #dc2626;';
+                                                            $singleColor = 'color: #dc2626; font-weight: 800; background: #fef2f2; padding: 2px 8px; border-radius: 4px;';
                                                         }
                                                     ?>
-                                                    <span class="ap-avg-chip" style="<?= $chipStyle ?>">
-                                                        Avg: <span class="ap-avg-num" style="<?= $numStyle ?>"><?= number_format((float) $gmSubtotal, 2) ?></span>
+                                                    <span style="<?= $singleColor ?>">
+                                                        <?= number_format((float) $gmSubtotal, 2) ?>
                                                     </span>
                                                 <?php else: ?>
-                                                    <span class="text-muted">-</span>
+                                                    <span class="text-muted font-weight-normal">-</span>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endif; ?>
+
+                                    <!-- Subtotal Row -->
+                                    <tr class="ap-subtotal">
+                                        <td colspan="3" class="ap-subtotal-label font-weight-bold text-dark">
+                                            Rata-rata <?= $itemTitle ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="ap-avg-chip font-weight-bold">
+                                                <?= number_format((float) $evalSubtotal, 2) ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <?php if ($gmSubtotal !== null): ?>
+                                                <?php
+                                                    $chipStyle = '';
+                                                    $numStyle  = 'color: var(--ap-ink); font-weight: 800;';
+                                                    if (round($gmSubtotal, 2) > round($evalSubtotal, 2)) {
+                                                        $chipStyle = 'background: #ecfdf5; border-color: #a7f3d0;';
+                                                        $numStyle  = 'color: #059669; font-weight: 800;';
+                                                    } elseif (round($gmSubtotal, 2) < round($evalSubtotal, 2)) {
+                                                        $chipStyle = 'background: #fef2f2; border-color: #fecaca;';
+                                                        $numStyle  = 'color: #dc2626; font-weight: 800;';
+                                                    }
+                                                ?>
+                                                <span class="ap-avg-chip" style="<?= $chipStyle ?>">
+                                                    <span class="ap-avg-num" style="<?= $numStyle ?>"><?= number_format((float) $gmSubtotal, 2) ?></span>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="text-muted font-weight-normal">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
                                 <?php endforeach; ?>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">
+                                <td colspan="5" class="text-center py-4 text-muted">
                                     Tidak ada butir indikator performa dalam template penilaian ini.
                                 </td>
                             </tr>
@@ -299,19 +313,22 @@
         <!-- 3. KOMPETENSI TAMBAHAN                                              -->
         <!-- =================================================================== -->
         <div class="ap-card mb-4">
-            <div class="ap-card-head">
-                <h5 class="ap-card-title">3. Kompetensi tambahan</h5>
-                <span class="text-muted small">Centang jika terbukti</span>
+            <div class="ap-card-head d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center" style="gap: 12px;">
+                    <h5 class="ap-card-title mb-0">III. Kompetensi Tambahan</h5>
+                    <span class="ap-category-badge">Ya / Tidak</span>
+                </div>
             </div>
 
             <div class="table-responsive">
                 <table class="ap-table mb-0">
                     <thead>
                         <tr>
-                            <th style="width: 5%; text-align: center;">NO</th>
-                            <th style="width: 55%;">KOMPETENSI / INDIKATOR PERILAKU</th>
-                            <th style="width: 20%; text-align: center;">PENILAI</th>
-                            <th style="width: 20%; text-align: center;">PENINJAU</th>
+                            <th style="width: 50px; text-align: center;">NO</th>
+                            <th style="width: 20%;">KOMPETENSI</th>
+                            <th style="width: 45%;">KEY ACTIONS (INDIKATOR PERILAKU)</th>
+                            <th style="width: 15%; text-align: center;">PENILAI</th>
+                            <th style="width: 15%; text-align: center;">PENINJAU</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -326,71 +343,28 @@
                                         $bActionCount = count($bActions);
                                         $bTitle       = esc($bItem['title'] ?? ('Kompetensi ' . $boolItemNumber));
                                         $bDef         = esc($bItem['definition'] ?? '-');
+                                        $bRowSpan     = $hasBActions ? $bActionCount : 1;
                                     ?>
 
-                                    <!-- Main Boolean Competency Row -->
-                                    <tr>
-                                        <td rowspan="<?= $hasBActions ? ($bActionCount + 1) : 1 ?>" class="text-center font-weight-bold align-top ap-comp-cell" style="width: 5%;">
-                                            <?= $boolItemNumber ?>.
-                                        </td>
-                                        <td class="ap-comp-cell">
-                                            <div class="ap-comp-name mb-1">
-                                                <?= $bTitle ?>
-                                            </div>
-                                            <?php if ($bDef !== '-' && !empty($bDef)): ?>
-                                                <div class="ap-def">
-                                                    <?= $bDef ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <?php if ($hasBActions): ?>
-                                            <td class="ap-comp-cell"></td>
-                                            <td class="ap-comp-cell"></td>
-                                        <?php else: ?>
-                                            <?php $singleAct = $bActions[0] ?? []; ?>
-                                            <!-- Penilai Check for single boolean item -->
-                                            <td class="text-center align-middle">
-                                                <?php if (!empty($singleAct['eval_checked'])): ?>
-                                                    <span style="color: #059669; font-weight: 700; font-size: 14px; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;">
-                                                        [ &check; ]
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="text-muted" style="font-size: 14px; padding: 2px 8px;">
-                                                        [ &nbsp; ]
-                                                    </span>
-                                                <?php endif; ?>
-                                            </td>
-
-                                            <!-- Reviewer Check for single boolean item -->
-                                            <td class="text-center align-middle">
-                                                <?php if (isset($singleAct['gm_checked']) && $singleAct['gm_checked'] !== null): ?>
-                                                    <?php if (!empty($singleAct['gm_checked'])): ?>
-                                                        <span style="color: #059669; font-weight: 700; font-size: 14px; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;">
-                                                            [ &check; ]
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <?php if (!empty($singleAct['is_overridden'])): ?>
-                                                            <span style="color: #dc2626; font-weight: 700; font-size: 14px; background: #fef2f2; padding: 2px 8px; border-radius: 4px;">
-                                                                [ &mdash; ]
-                                                            </span>
-                                                        <?php else: ?>
-                                                            <span class="text-muted" style="font-size: 14px; padding: 2px 8px;">
-                                                                [ &nbsp; ]
-                                                            </span>
-                                                        <?php endif; ?>
-                                                    <?php endif; ?>
-                                                <?php else: ?>
-                                                    <span class="text-muted" style="font-size: 14px; padding: 2px 8px;">
-                                                        [ &nbsp; ]
-                                                    </span>
-                                                <?php endif; ?>
-                                            </td>
-                                        <?php endif; ?>
-                                    </tr>
-
                                     <?php if ($hasBActions): ?>
-                                        <?php foreach ($bActions as $bAct): ?>
+                                        <?php foreach ($bActions as $bIdx => $bAct): ?>
                                             <tr>
+                                                <?php if ($bIdx === 0): ?>
+                                                    <td rowspan="<?= $bRowSpan ?>" class="text-center font-weight-bold align-top ap-comp-cell" style="width: 50px;">
+                                                        <?= $boolItemNumber ?>.
+                                                    </td>
+                                                    <td rowspan="<?= $bRowSpan ?>" class="ap-comp-cell">
+                                                        <div class="ap-comp-name mb-1">
+                                                            <?= $bTitle ?>
+                                                        </div>
+                                                        <?php if ($bDef !== '-' && !empty($bDef)): ?>
+                                                            <div class="ap-def">
+                                                                <?= $bDef ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                <?php endif; ?>
+
                                                 <td>
                                                     <div class="ap-action-text">
                                                         <span class="ap-action-letter"><?= esc($bAct['letter']) ?>.</span>
@@ -401,12 +375,12 @@
                                                 <!-- Penilai Check [ ✓ ] or [   ] -->
                                                 <td class="text-center align-middle">
                                                     <?php if (!empty($bAct['eval_checked'])): ?>
-                                                        <span style="color: #059669; font-weight: 700; font-size: 14px; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;">
-                                                            [ &check; ]
+                                                        <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                                            &check; 
                                                         </span>
                                                     <?php else: ?>
-                                                        <span class="text-muted" style="font-size: 14px; padding: 2px 8px;">
-                                                            [ &nbsp; ]
+                                                        <span class="text-muted" style="font-size: 13px; font-weight: 600;">
+                                                            &mdash;
                                                         </span>
                                                     <?php endif; ?>
                                                 </td>
@@ -415,35 +389,89 @@
                                                 <td class="text-center align-middle">
                                                     <?php if ($bAct['gm_checked'] !== null): ?>
                                                         <?php if (!empty($bAct['gm_checked'])): ?>
-                                                            <span style="color: #059669; font-weight: 700; font-size: 14px; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;">
-                                                                [ &check; ]
+                                                            <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                                                &check; 
                                                             </span>
                                                         <?php else: ?>
                                                             <?php if (!empty($bAct['is_overridden'])): ?>
-                                                                <span style="color: #dc2626; font-weight: 700; font-size: 14px; background: #fef2f2; padding: 2px 8px; border-radius: 4px;">
-                                                                    [ &mdash; ]
+                                                                <span style="color: #dc2626; font-weight: 800; font-size: 13px; background: #fef2f2; border: 1.5px solid #fecaca; padding: 3px 10px; border-radius: 4px;">
+                                                                    &times;
                                                                 </span>
                                                             <?php else: ?>
-                                                                <span class="text-muted" style="font-size: 14px; padding: 2px 8px;">
-                                                                    [ &nbsp; ]
+                                                                <span class="text-muted" style="font-size: 13px; font-weight: 600;">
+                                                                    &mdash;
                                                                 </span>
                                                             <?php endif; ?>
                                                         <?php endif; ?>
                                                     <?php else: ?>
-                                                        <span class="text-muted" style="font-size: 14px; padding: 2px 8px;">
-                                                            [ &nbsp; ]
+                                                        <span class="text-muted" style="font-size: 13px; font-weight: 600;">
+                                                            &mdash;
                                                         </span>
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td class="text-center font-weight-bold align-top ap-comp-cell" style="width: 50px;">
+                                                <?= $boolItemNumber ?>.
+                                            </td>
+                                            <td class="ap-comp-cell">
+                                                <div class="ap-comp-name mb-1">
+                                                    <?= $bTitle ?>
+                                                </div>
+                                                <?php if ($bDef !== '-' && !empty($bDef)): ?>
+                                                    <div class="ap-def">
+                                                        <?= $bDef ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <div class="ap-action-text text-muted font-italic">Indikator umum</div>
+                                            </td>
+                                            <?php $singleAct = $bActions[0] ?? []; ?>
+                                            <td class="text-center align-middle">
+                                                <?php if (!empty($singleAct['eval_checked'])): ?>
+                                                    <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                                        &check; 
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="text-muted" style="font-size: 13px; font-weight: 600;">
+                                                        &mdash;
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <?php if (isset($singleAct['gm_checked']) && $singleAct['gm_checked'] !== null): ?>
+                                                    <?php if (!empty($singleAct['gm_checked'])): ?>
+                                                        <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                                            &check; 
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <?php if (!empty($singleAct['is_overridden'])): ?>
+                                                            <span style="color: #dc2626; font-weight: 800; font-size: 13px; background: #fef2f2; border: 1.5px solid #fecaca; padding: 3px 10px; border-radius: 4px;">
+                                                                &times;
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="text-muted" style="font-size: 13px; font-weight: 600;">
+                                                                &mdash;
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="text-muted" style="font-size: 13px; font-weight: 600;">
+                                                        &mdash;
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">
-                                    Tidak ada butir kompetensi tambahan dalam template penilaian ini.
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    Tidak ada butir kriteria tambahan dalam template penilaian ini.
                                 </td>
                             </tr>
                         <?php endif; ?>
@@ -457,21 +485,37 @@
         <!-- =================================================================== -->
         <div class="ap-card mb-0">
             <div class="ap-card-head">
-                <h5 class="ap-card-title">4. Catatan</h5>
+                <h5 class="ap-card-title">IV. Catatan</h5>
             </div>
-            <div class="ap-card-body p-4">
-                <div class="form-group mb-3">
-                    <label class="font-weight-bold text-dark small mb-2 d-block">
-                        1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
-                    </label>
-                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($evaluator_comment) ? esc(trim($evaluator_comment)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
-                </div>
+            <div class="ap-card-body p-0">
+                <div class="ap-feedback-section">
+                    <div class="ap-feedback-card">
+                        <div class="ap-feedback-item">
+                            <div class="ap-feedback-q">
+                                1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
+                            </div>
+                            <div class="ap-feedback-block"><?= !empty($evaluator_comment) ? esc(trim($evaluator_comment)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+                        </div>
 
-                <div class="form-group mb-0">
-                    <label class="font-weight-bold text-dark small mb-2 d-block">
-                        2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
-                    </label>
-                    <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($development_plan) ? esc(trim($development_plan)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+                        <div class="ap-feedback-item">
+                            <div class="ap-feedback-q">
+                                2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
+                            </div>
+                            <div class="ap-feedback-block"><?= !empty($development_plan) ? esc(trim($development_plan)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($appraisal->employee_comment)): ?>
+                    <div class="ap-feedback-card">
+                        <div class="ap-feedback-header">
+                            <i class="fas fa-signature text-success mr-1"></i>
+                            <span>Tanggapan / Catatan Konfirmasi Karyawan (<?= $empName ?>)</span>
+                        </div>
+                        <div class="ap-feedback-item">
+                            <div class="ap-feedback-block"><?= esc(trim($appraisal->employee_comment)) ?></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -479,10 +523,10 @@
     </div>
 
     <!-- MODAL FOOTER -->
-    <div class="modal-footer d-flex justify-content-end" style="border-top: 1px solid var(--ap-line); padding: 14px 24px; background: var(--ap-surface);">
-        <button type="button" class="btn btn-secondary px-4 font-weight-bold" data-dismiss="modal">
-            Tutup (Esc)
+    <!-- <div class="modal-footer d-flex justify-content-end" style="border-top: 2px solid #94a3b8; padding: 12px 24px; background: #e2eaf4;">
+        <button type="button" class="btn btn-sm btn-close-preview" data-dismiss="modal">
+            <i class="fas fa-times mr-1"></i> Tutup (Esc)
         </button>
-    </div>
+    </div> -->
 
 </div>

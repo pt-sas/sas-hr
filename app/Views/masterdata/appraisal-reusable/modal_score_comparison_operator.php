@@ -43,31 +43,31 @@
 <div class="ap-wrap" style="max-width: 100%;">
 
     <!-- MODAL TOP BAR -->
-    <div class="modal-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid var(--ap-line); padding: 16px 24px; background: var(--ap-surface);">
-        <h5 class="modal-title font-weight-bold text-dark d-flex align-items-center mb-0" style="font-size: 16px;">
-            Riwayat &amp; Komparasi Skor Penilaian (Operator / Pelaksana)
+    <div class="modal-header d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #94a3b8; padding: 14px 20px; background: #e2eaf4;">
+        <h5 class="modal-title font-weight-bold d-flex align-items-center mb-0" style="font-size: 16px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.3px;">
+            <i class="far fa-file-alt text-primary mr-2" aria-hidden="true"></i>Riwayat &amp; Komparasi Skor Penilaian (Operator / Pelaksana)
         </h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Tutup" style="opacity: 0.7; font-size: 24px;">
-            <span aria-hidden="true">&times;</span>
+        <button type="button" class="btn btn-sm btn-close-preview" data-dismiss="modal" aria-label="Tutup">
+            <i class="fas fa-times mr-1"></i> Tutup
         </button>
     </div>
 
     <!-- MODAL BODY -->
-    <div class="modal-body p-4" style="background: var(--ap-surface-2); max-height: calc(88vh - 120px); overflow-y: auto;">
+    <div class="modal-body p-3 p-md-4 ap-modal-uniform-body">
 
         <!-- 1. INFORMASI KARYAWAN & SIKLUS EVALUASI -->
         <div class="ap-card mb-4">
             <div class="ap-card-head d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    <h5 class="ap-card-title d-inline-block mb-0 mr-2">Informasi Karyawan &amp; Siklus Evaluasi</h5>
-                    <span class="ap-mode is-gm">Mode: <?= esc($statusText === 'FINALIZED' ? 'FINAL' : 'GM') ?></span>
+                <div class="ap-card-title-group d-flex align-items-center">
+                    <h5 class="ap-card-title d-inline-block mb-0 mr-2">I. Informasi Karyawan &amp; Siklus Evaluasi PA</h5>
+                    <span class="ap-mode is-gm">STATUS: <?= esc($statusText === 'FINALIZED' ? 'FINAL' : 'GENERAL MANAGER') ?></span>
                 </div>
             </div>
             <div class="ap-card-body">
                 <div class="ap-info-grid">
                     <div class="ap-info-item">
                         <div class="ap-info-label">NIK / Nama</div>
-                        <div class="ap-info-value"><?= $empNik ?> &middot; <?= $empName ?></div>
+                        <div class="ap-info-value highlight"><?= $empNik ?> &middot; <?= mb_strtoupper($empName, 'UTF-8') ?></div>
                     </div>
                     <div class="ap-info-item">
                         <div class="ap-info-label">Siklus Penilaian</div>
@@ -82,12 +82,12 @@
                         <div class="ap-info-value"><?= esc($periodeText) ?></div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Cabang / Lokasi</div>
+                        <div class="ap-info-label">Cabang</div>
                         <div class="ap-info-value"><?= esc($employee['branch_name'] ?? '-') ?></div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Penilai (Evaluator)</div>
-                        <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
+                        <div class="ap-info-label">Penilai</div>
+                        <div class="ap-info-value"><?= esc(mb_strtoupper($evaluator['name'] ?? '-', 'UTF-8')) ?></div>
                     </div>
                     <div class="ap-info-item">
                         <div class="ap-info-label">Status Penilaian</div>
@@ -96,8 +96,8 @@
                         </div>
                     </div>
                     <div class="ap-info-item">
-                        <div class="ap-info-label">Peninjau (Reviewer)</div>
-                        <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
+                        <div class="ap-info-label">Peninjau</div>
+                        <div class="ap-info-value"><?= esc(mb_strtoupper($gm['name'] ?? '-', 'UTF-8')) ?></div>
                     </div>
 
                 </div>
@@ -107,9 +107,9 @@
         <!-- 2. KOMPARASI REKAP PENILAIAN KINERJA (WITHOUT STATUS COLUMN) -->
         <div class="ap-card mb-4">
             <div class="ap-card-head d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="ap-card-title mb-0">Komparasi Rekap Penilaian Kinerja</h5>
-                    <small class="text-muted d-block mt-1">Perbandingan rekapitulasi penilaian penilai vs peninjau</small>
+                <div class="d-flex align-items-center" style="gap: 12px;">
+                    <h5 class="ap-card-title mb-0">II. Penilaian Kinerja</h5>
+                    <span class="ap-category-badge">Sangat Baik / Baik / Kurang</span>
                 </div>
             </div>
 
@@ -214,9 +214,9 @@
         <!-- 3. KOMPARASI KRITERIA TAMBAHAN -->
         <div class="ap-card mb-4">
             <div class="ap-card-head d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="ap-card-title mb-0">Komparasi Kriteria Tambahan</h5>
-                    <small class="text-muted d-block mt-1">Perbandingan checklist kriteria tambahan antara penilai dan peninjau</small>
+                <div class="d-flex align-items-center" style="gap: 12px;">
+                    <h5 class="ap-card-title mb-0">III. Penilaian Tambahan</h5>
+                    <span class="ap-category-badge">Ya / Tidak</span>
                 </div>
             </div>
 
@@ -297,23 +297,40 @@
             </div>
         </div>
 
-        <!-- 4. CATATAN -->
+        <!-- 4. CATATAN & FEEDBACK -->
         <div class="ap-card mb-2">
             <div class="ap-card-head">
-                <h5 class="ap-card-title">4. Catatan</h5>
+                <h5 class="ap-card-title">IV. Catatan</h5>
             </div>
-            <div class="ap-card-body p-4">
-                <div class="form-group mb-3">
-                    <label class="font-weight-bold text-dark small mb-2 d-block">
-                        1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
-                    </label>
-                    <div class="p-3 rounded bg-light border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($evaluator_comment) ? esc(trim($evaluator_comment)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
-                </div>
-                <div class="form-group mb-0">
-                    <label class="font-weight-bold text-dark small mb-2 d-block">
-                        2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
-                    </label>
-                    <div class="p-3 rounded bg-light border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($development_plan) ? esc(trim($development_plan)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+            <div class="ap-card-body p-0">
+                <div class="ap-feedback-section">
+                    <div class="ap-feedback-card">
+                        <div class="ap-feedback-item">
+                            <div class="ap-feedback-q">
+                                1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
+                            </div>
+                            <div class="ap-feedback-block"><?= !empty($evaluator_comment) ? esc(trim($evaluator_comment)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+                        </div>
+
+                        <div class="ap-feedback-item">
+                            <div class="ap-feedback-q">
+                                2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
+                            </div>
+                            <div class="ap-feedback-block"><?= !empty($development_plan) ? esc(trim($development_plan)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($appraisal->employee_comment)): ?>
+                    <div class="ap-feedback-card">
+                        <div class="ap-feedback-header">
+                            <i class="fas fa-signature text-success mr-1"></i>
+                            <span>Tanggapan / Catatan Konfirmasi Karyawan (<?= mb_strtoupper($empName, 'UTF-8') ?>)</span>
+                        </div>
+                        <div class="ap-feedback-item">
+                            <div class="ap-feedback-block"><?= esc(trim($appraisal->employee_comment)) ?></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -321,11 +338,11 @@
     </div>
 
     <!-- MODAL FOOTER -->
-    <div class="modal-footer d-flex justify-content-end" style="border-top: 1px solid var(--ap-line); padding: 12px 24px; background: var(--ap-surface);">
-        <button type="button" class="btn btn-secondary btn-round btn-sm" data-dismiss="modal">
-            <i class="fas fa-times mr-1"></i> Tutup
+    <!-- <div class="modal-footer d-flex justify-content-end" style="border-top: 2px solid #94a3b8; padding: 12px 24px; background: #e2eaf4;">
+        <button type="button" class="btn btn-sm btn-close-preview" data-dismiss="modal">
+            <i class="fas fa-times mr-1"></i> Tutup (Esc)
         </button>
-    </div>
+    </div> -->
 </div>
 
 <style>
@@ -333,21 +350,21 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
-    font-weight: 700;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    font-weight: 800;
     font-size: 14px;
 }
 .operator-comparison-chip.is-checked {
     background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #2563eb;
+    border: 2px solid #3b82f6;
+    color: #1e40af;
 }
 .operator-comparison-chip.is-checked-gm {
     background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #16a34a;
+    border: 2px solid #22c55e;
+    color: #166534;
 }
 .operator-comparison-chip.is-empty {
     color: #94a3b8;

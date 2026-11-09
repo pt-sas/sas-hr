@@ -148,30 +148,30 @@ $itemsKompetensiTambahan = [];
     </tr>
     <tr>
         <td class="lbl-cell">Nama Karyawan</td>
-        <td><b><?= esc($employee['name'] ?? '-') ?></b></td>
+        <td><b><?= esc(mb_strtoupper($employee['name'] ?? '-', 'UTF-8')) ?></b></td>
         <td class="lbl-cell">Periode Evaluasi</td>
         <td><?= esc($periodeText) ?></td>
     </tr>
     <tr>
         <td class="lbl-cell">Divisi / Posisi</td>
         <td><?= esc($employee['division_name'] ?? '-') ?> / <?= esc($employee['position_name'] ?? '-') ?></td>
-        <td class="lbl-cell">Penilai (Evaluator)</td>
-        <td><b><?= esc($evaluator['name'] ?? '-') ?></b></td>
+        <td class="lbl-cell">Penilai</td>
+        <td><b><?= esc(mb_strtoupper($evaluator['name'] ?? '-', 'UTF-8')) ?></b></td>
     </tr>
     <tr>
         <td class="lbl-cell">Lokasi / Cabang</td>
         <td><?= esc($employee['branch_name'] ?? '-') ?></td>
-        <td class="lbl-cell">Peninjau (Reviewer)</td>
-        <td><b><?= esc($reviewer['name'] ?? (!empty($appraisal->snapshot_gm_id) ? '-' : 'Tidak Diperlukan')) ?></b></td>
+        <td class="lbl-cell">Peninjau</td>
+        <td><b><?= esc(mb_strtoupper($reviewer['name'] ?? (!empty($appraisal->snapshot_gm_id) ? '-' : 'Tidak Diperlukan'), 'UTF-8')) ?></b></td>
     </tr>
 </table>
 <br><br>
 
-<!-- II. HASIL PENILAIAN KINERJA (SKALA 1.00 - 4.00) -->
+<!-- II. PERFORMA -->
 <table width="100%" cellpadding="3.5" cellspacing="0" border="0.5">
     <thead>
         <tr style="background-color: #e2e8f0;">
-            <th colspan="5" class="sec-title">II. HASIL PENILAIAN KINERJA (SKALA 1.00 - 4.00)</th>
+            <th colspan="5" class="sec-title">II. PERFORMA</th>
         </tr>
         <tr style="background-color: #f1f5f9;">
             <th colspan="5" align="left" style="font-size: 8.5pt; font-weight: bold; color: #0f172a;">
@@ -394,11 +394,11 @@ $itemsKompetensiTambahan = [];
 </table>
 <br><br>
 
-<!-- IV. DETAIL KINERJA & PENCAPAIAN KOMPETENSI -->
+<!-- IV. REKAP PENILAIAN -->
 <table width="100%" cellpadding="4.5" cellspacing="0" border="0.5">
     <thead>
         <tr style="background-color: #e2e8f0;">
-            <th colspan="2" class="sec-title">IV. DETAIL KINERJA &amp; PENCAPAIAN KOMPETENSI</th>
+            <th colspan="2" class="sec-title">IV. REKAP PENILAIAN</th>
         </tr>
     </thead>
     <tbody>
@@ -463,11 +463,11 @@ $itemsKompetensiTambahan = [];
 </table>
 <br><br>
 
-<!-- V. CATATAN EVALUASI & FEEDBACK -->
+<!-- V. CATATAN PENILAIAN -->
 <table width="100%" cellpadding="4.5" cellspacing="0" border="0.5">
     <thead>
         <tr style="background-color: #e2e8f0;">
-            <th colspan="2" class="sec-title">V. CATATAN EVALUASI &amp; FEEDBACK</th>
+            <th colspan="2" class="sec-title">V. CATATAN PENILAIAN</th>
         </tr>
     </thead>
     <tbody>
@@ -509,14 +509,14 @@ $itemsKompetensiTambahan = [];
 </table>
 <br><br>
 
-<!-- VI. HASIL AKHIR & PREDIKAT EVALUASI RESMI -->
+<!-- VI. HASIL AKHIR & PREDIKAT PENILAIAN -->
 <table nobr="true" width="100%" cellpadding="6" cellspacing="0" border="0.5">
     <tr>
-        <td colspan="2" class="sec-title">VI. HASIL AKHIR &amp; PREDIKAT EVALUASI RESMI</td>
+        <td colspan="2" class="sec-title">VI. HASIL AKHIR &amp; PREDIKAT PENILAIAN</td>
     </tr>
     <tr align="center" style="background-color: #f8fafc; font-size: 7.5pt; font-weight: bold; color: #475569;">
-        <td width="50%">SKOR EVALUASI AKHIR</td>
-        <td width="50%">PREDIKAT EVALUASI RESMI</td>
+        <td width="50%">SKOR AKHIR PENILAIAN</td>
+        <td width="50%">PREDIKAT PENILAIAN</td>
     </tr>
     <tr align="center" style="background-color: #ffffff;">
         <td width="50%" style="font-size: 14pt; font-weight: bold; color: #0f172a; line-height: 1.6;">
@@ -536,30 +536,23 @@ $itemsKompetensiTambahan = [];
     </tr>
     <tr nobr="true" align="center" style="background-color: #f8fafc; font-weight: bold;">
         <td width="33.33%">Karyawan yang Dinilai</td>
-        <td width="33.34%">Penilai (Evaluator)</td>
-        <td width="33.33%">Peninjau (Reviewer)</td>
+        <td width="33.34%">Penilai</td>
+        <td width="33.33%">Peninjau</td>
     </tr>
     <tr nobr="true" align="center">
-        <!-- Karyawan Stamp -->
-        <td height="54" style="vertical-align: middle;">
-        </td>
-        <!-- Evaluator Stamp -->
-        <td height="54" style="vertical-align: middle;">
-        </td>
-        <!-- GM Stamp -->
-        <td height="54" style="vertical-align: middle;">
-        </td>
+        <!-- Stamp row: &nbsp; guarantees the 54pt height never collapses in TCPDF -->
+        <td width="33.33%" height="54" align="center" style="text-align: center; vertical-align: middle;">&nbsp;</td>
+        <td width="33.34%" height="54" align="center" style="text-align: center; vertical-align: middle;">&nbsp;</td>
+        <td width="33.33%" height="54" align="center" style="text-align: center; vertical-align: middle;">&nbsp;</td>
     </tr>
     <tr nobr="true" align="center">
-        <td>
-            <b><?= esc($employee['name'] ?? '-') ?></b><br>
-            <?= !empty($dutaAckNote) ? $dutaAckNote . '<br>' : '' ?>
-        </td>
-        <td>
-            <b><?= esc($evaluator['name'] ?? '-') ?></b><br>
-        </td>
-        <td>
-            <b><?= !empty($reviewer['name']) ? esc($reviewer['name']) : '................................' ?></b><br>
-        </td>
+        <!-- Col 1: Employee -->
+        <td width="33.33%" align="center" style="text-align: center; vertical-align: middle; line-height: 1.4; padding: 6px 0;"><b><?= esc(mb_strtoupper($employee['name'] ?? '-', 'UTF-8')) ?></b></td>
+
+        <!-- Col 2: Evaluator -->
+        <td width="33.34%" align="center" style="text-align: center; vertical-align: middle; line-height: 1.4; padding: 6px 0;"><b><?= esc(mb_strtoupper($evaluator['name'] ?? '-', 'UTF-8')) ?></b></td>
+
+        <!-- Col 3: Reviewer -->
+        <td width="33.33%" align="center" style="text-align: center; vertical-align: middle; line-height: 1.4; padding: 6px 0;"><b><?= !empty($reviewer['name']) ? esc(mb_strtoupper($reviewer['name'], 'UTF-8')) : '................................' ?></b></td>
     </tr>
 </table>

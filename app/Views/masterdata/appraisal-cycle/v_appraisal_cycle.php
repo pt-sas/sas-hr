@@ -20,11 +20,11 @@
                     <th style="width: 45px;" class="text-center">No</th>
                     <th>Nama Siklus Penilaian</th>
                     <th style="width: 90px;" class="text-center">Semester</th>
-                    <th style="width: 170px;">Periode Pengisian</th>
-                    <th style="width: 105px;" class="text-center">Due Filling</th>
-                    <th style="width: 105px;" class="text-center">Due Review</th>
-                    <th style="width: 105px;" class="text-center">Due Reading</th>
-                    <th style="width: 105px;" class="text-center">Due Override</th>
+                    <th style="width: 170px;">Periode</th>
+                    <th style="width: 105px;" class="text-center">Pengisian</th>
+                    <th style="width: 105px;" class="text-center">Peninjauan</th>
+                    <th style="width: 105px;" class="text-center">Pembacaan</th>
+                    <th style="width: 105px;" class="text-center">Intervensi HR</th>
                     <th style="width: 90px;" class="text-center">Status</th>
                     <th style="width: 130px;" class="text-center">Aksi</th>
                 </tr>

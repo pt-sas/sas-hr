@@ -15,61 +15,38 @@
 .new_form {
     display: none !important;
 }
-.ap-report-header {
-    background: #ffffff;
-    border: 1px solid var(--ap-line);
-    border-radius: var(--ap-radius);
-    padding: 14px 20px;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-.ap-report-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--ap-ink);
-    letter-spacing: 0.04em;
-    margin: 0;
-    text-transform: uppercase;
-}
-.ap-feedback-block {
-    background: var(--ap-surface-2);
-    border: 1px solid var(--ap-line);
-    border-radius: 8px;
-    padding: 14px 16px;
-    min-height: 60px;
-    font-size: 13.5px;
-    color: var(--ap-ink-2);
-    line-height: 1.5;
-    white-space: pre-wrap;
-}
-.ap-feedback-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ap-muted);
-    margin-bottom: 6px;
-}
-.operator-check-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
-    font-weight: 700;
-    font-size: 14px;
-}
-.operator-check-badge.is-yes {
-    background: #eff6ff;
-    border: 1.5px solid #3b82f6;
-    color: #2563eb;
-}
-.operator-check-badge.is-no {
-    color: #94a3b8;
+
+@media print {
+    .main-header, .sidebar, .breadcrumbs, .page-header, .action-top-bar, .modal, .btn, .badge-action, .ap-report-header button, .ap-report-header a {
+        display: none !important;
+    }
+    .main-panel {
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .card-body, .card-main, .ap-wrap {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+    .ap-card {
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 16px !important;
+    }
+    .ap-card-head {
+        background-color: #f1f5f9 !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .ap-table thead th {
+        background: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }
 </style>
 
@@ -80,7 +57,7 @@
 
     $periodeText = '-';
     if (!empty($startDate) && !empty($endDate)) {
-        $periodeText = date('d M Y', strtotime($startDate)) . ' s/d ' . date('d M Y', strtotime($endDate));
+        $periodeText = strtr(date('d M Y', strtotime($startDate)), ['May'=>'Mei','Aug'=>'Agu','Oct'=>'Okt','Dec'=>'Des']) . ' s/d ' . strtr(date('d M Y', strtotime($endDate)), ['May'=>'Mei','Aug'=>'Agu','Oct'=>'Okt','Dec'=>'Des']);
     } elseif (!empty($cycleTitle)) {
         $periodeText = $cycleTitle;
     }
@@ -126,6 +103,16 @@
         $backUrl = base_url('sas/monitoring-penilaian');
     }
 
+    // Helper to clean action text from leading numbering/lettering (e.g., 'a. ', '1. ')
+    $cleanActionText = function (string $text): string {
+        return preg_replace('/^[a-z0-9][\.\)]\s*/i', '', trim($text));
+    };
+
+    // Track indicators for Detail Kinerja & Pencapaian Kompetensi
+    $itemsNilai3             = [];
+    $itemsNilai1             = [];
+    $itemsKompetensiTambahan = [];
+
     // Totals for Rekap
     $totBobot = 0.0;
     $totSkor  = 0.0;
@@ -135,22 +122,22 @@
 <div class="card-body card-main ap-wrap pb-5">
 
     <!-- TOP HEADER / ACTION BAR -->
-    <div class="ap-report-header action-top-bar">
+    <div class="ap-report-header action-top-bar" style="background: #e2eaf4; border: 2px solid #94a3b8; border-radius: 4px; padding: 12px 20px;">
         <div>
-            <a href="<?= $backUrl ?>" class="btn btn-sm btn-outline-secondary">
+            <a href="<?= $backUrl ?>" class="btn btn-sm btn-close-preview">
                 <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas
             </a>
         </div>
         <div class="text-center flex-grow-1 mx-3">
-            <h5 class="ap-report-title">
-                </i>Laporan Akhir Penilaian Kinerja (Operator / Pelaksana)
+            <h5 class="ap-report-title" style="font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: 0.3px;">
+                <i class="far fa-file-alt mr-2 text-primary"></i>Laporan Akhir Penilaian Kinerja (Operator / Pelaksana)
             </h5>
         </div>
         <div class="d-flex align-items-center" style="gap: 8px;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showScoreComparisonModal('<?= (int) $appraisal_id ?>')">
+            <button type="button" class="btn btn-sm btn-close-preview" onclick="showScoreComparisonModal('<?= (int) $appraisal_id ?>')">
                 <i class="fas fa-history mr-1"></i> Riwayat Komparasi Skor
             </button>
-            <a href="<?= base_url('sas/penilaian/exportPDF/' . (int) $appraisal_id) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
+            <a href="<?= base_url('sas/penilaian/exportPDF/' . (int) $appraisal_id) ?>" target="_blank" class="btn btn-sm ap-btn-primary" style="height: 34px; padding: 4px 14px; border-radius: 4px; font-size: 13px; font-weight: 700;">
                 <i class="fas fa-file-pdf mr-1"></i> Unduh PDF
             </a>
         </div>
@@ -158,14 +145,19 @@
 
     <!-- 1. INFORMASI KARYAWAN & SIKLUS EVALUASI -->
     <div class="ap-card mb-4">
-        <div class="ap-card-head">
-            <h5 class="ap-card-title">Informasi Karyawan &amp; Siklus Evaluasi</h5>
+        <div class="ap-card-head d-flex justify-content-between align-items-center">
+            <div class="ap-card-title-group d-flex align-items-center">
+                <h5 class="ap-card-title d-inline-block mb-0 mr-2">
+                    <i class="far fa-file-alt text-primary mr-2" aria-hidden="true"></i>I. Informasi Karyawan &amp; Siklus Evaluasi PA
+                </h5>
+                <span class="ap-mode is-emp">STATUS: FINALIZED</span>
+            </div>
         </div>
         <div class="ap-card-body">
             <div class="ap-info-grid">
                 <div class="ap-info-item">
                     <div class="ap-info-label">NIK / Nama</div>
-                    <div class="ap-info-value"><?= esc($employee['nik'] ?? '-') ?> &middot; <?= esc($employee['name'] ?? '-') ?></div>
+                    <div class="ap-info-value highlight"><?= esc($employee['nik'] ?? '-') ?> &middot; <?= esc(mb_strtoupper($employee['name'] ?? '-', 'UTF-8')) ?></div>
                 </div>
                 <div class="ap-info-item">
                     <div class="ap-info-label">Siklus Penilaian</div>
@@ -176,29 +168,29 @@
                     <div class="ap-info-value"><?= esc($employee['division_name'] ?? '-') ?> / <?= esc($employee['position_name'] ?? '-') ?></div>
                 </div>
                 <div class="ap-info-item">
-                    <div class="ap-info-label">Periode Evaluasi</div>
+                    <div class="ap-info-label"><i class="far fa-calendar-alt mr-1"></i> Periode Evaluasi</div>
                     <div class="ap-info-value"><?= esc($periodeText) ?></div>
                 </div>
                 <div class="ap-info-item">
-                    <div class="ap-info-label">Cabang / Lokasi</div>
+                    <div class="ap-info-label">Cabang</div>
                     <div class="ap-info-value"><?= esc($employee['branch_name'] ?? '-') ?></div>
                 </div>
                 <div class="ap-info-item">
-                    <div class="ap-info-label">Penilai (Evaluator)</div>
-                    <div class="ap-info-value"><?= esc($evaluator['name'] ?? '-') ?></div>
+                    <div class="ap-info-label">Penilai</div>
+                    <div class="ap-info-value"><?= esc(mb_strtoupper($evaluator['name'] ?? '-', 'UTF-8')) ?></div>
                 </div>
                 <div class="ap-info-item">
-                    <div class="ap-info-label">Peninjau (Reviewer)</div>
-                    <div class="ap-info-value"><?= esc($gm['name'] ?? '-') ?></div>
+                    <div class="ap-info-label">Peninjau</div>
+                    <div class="ap-info-value"><?= esc(mb_strtoupper($gm['name'] ?? '-', 'UTF-8')) ?></div>
                 </div>
                 <div class="ap-info-item">
                     <div class="ap-info-label">Status Penilaian</div>
-                    <div class="ap-info-value font-weight-bold text-dark">
+                    <div class="ap-info-value font-weight-bold">
                         <?php
                             $curSt = $appraisal->status ?? 'FINALIZED';
                             $statusLabel = \App\Models\M_Appraisal::getStatusLabel($curSt);
                         ?>
-                        <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i><?= esc($statusLabel) ?></span>
+                        <?= esc($statusLabel) ?>
                     </div>
                 </div>
             </div>
@@ -208,10 +200,13 @@
     <!-- 2. REKAP PENILAIAN KINERJA -->
     <div class="ap-card mb-4">
         <div class="ap-card-head d-flex justify-content-between align-items-center">
-            <h5 class="ap-card-title mb-0">Rekap Penilaian Kinerja</h5>
-            <span class="badge badge-light border text-dark font-weight-bold" style="font-size: 11px;">Skala 1 - 3</span>
+            <div class="d-flex align-items-center" style="gap: 12px;">
+                <h5 class="ap-card-title mb-0">II. Penilaian Kinerja</h5>
+                <span class="ap-category-badge">Sangat Baik / Baik / Kurang</span>
+            </div>
+            <span class="text-muted font-weight-bold" style="font-size: 13px;">*Beri tanda centang pada kolom yang ingin diisi</span>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive ap-table-wrapper">
             <table class="ap-table mb-0">
                 <thead>
                     <tr>
@@ -259,6 +254,13 @@
                                 if ($effectiveScore !== null) {
                                     $totSkor  += $effectiveScore;
                                     $totNilai += $nilai;
+
+                                    $cleaned = $cleanActionText($title);
+                                    if ($effectiveScore >= 3.0) {
+                                        $itemsNilai3[] = $cleaned;
+                                    } elseif ($effectiveScore <= 1.0) {
+                                        $itemsNilai1[] = $cleaned;
+                                    }
                                 }
                             ?>
                             <tr>
@@ -313,10 +315,13 @@
     <!-- 3. KRITERIA TAMBAHAN -->
     <div class="ap-card mb-4">
         <div class="ap-card-head d-flex justify-content-between align-items-center">
-            <h5 class="ap-card-title mb-0">Kriteria Tambahan</h5>
-            <small class="text-muted">Kriteria inisiatif dan kontribusi kerja tambahan</small>
+            <div class="d-flex align-items-center" style="gap: 12px;">
+                <h5 class="ap-card-title mb-0">III. Penilaian Tambahan</h5>
+                <span class="ap-category-badge">Ya / Tidak</span>
+            </div>
+            <span class="text-muted font-weight-bold" style="font-size: 13px;">*Beri tanda centang pada perilaku yang ditunjukkan</span>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive ap-table-wrapper">
             <table class="ap-table mb-0">
                 <thead>
                     <tr>
@@ -355,6 +360,10 @@
                                     }
                                 }
 
+                                if ($isChecked) {
+                                    $itemsKompetensiTambahan[] = $cleanActionText($title);
+                                }
+
                                 $isOtherRow = (stripos(trim($title), 'lainnya') === 0 || stripos(trim($title), 'lain-lain') === 0);
                             ?>
                             <tr>
@@ -390,23 +399,128 @@
         </div>
     </div>
 
-    <!-- 4. CATATAN & FEEDBACK -->
+    <!-- IV. REKAP PENILAIAN -->
+    <div class="ap-card mb-4">
+        <div class="ap-card-head d-flex justify-content-between align-items-center">
+            <h5 class="ap-card-title mb-0">IV. Rekap Penilaian</h5>
+        </div>
+        <div class="table-responsive ap-table-wrapper">
+            <table class="ap-table mb-0">
+                <tbody>
+                    <tr>
+                        <td style="width: 25%; font-weight: 700; background: var(--ap-surface); vertical-align: top; border-bottom: 1px solid var(--ap-line);">
+                            Sangat Baik
+                        </td>
+                        <td style="width: 75%; vertical-align: top; border-bottom: 1px solid var(--ap-line); line-height: 1.6;">
+                            <?php if (!empty($itemsNilai3)): ?>
+                                <ul class="mb-0 pl-3">
+                                    <?php foreach ($itemsNilai3 as $idx => $n3Text): ?>
+                                        <li class="mb-1 text-dark"><?= esc($n3Text) ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                <span class="text-muted font-italic">Tidak ada indikator dengan nilai 3</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 700; background: var(--ap-surface); vertical-align: top; border-bottom: 1px solid var(--ap-line);">
+                            Kurang
+                        </td>
+                        <td style="vertical-align: top; border-bottom: 1px solid var(--ap-line); line-height: 1.6;">
+                            <?php if (!empty($itemsNilai1)): ?>
+                                <ul class="mb-0 pl-3">
+                                    <?php foreach ($itemsNilai1 as $idx => $n1Text): ?>
+                                        <li class="mb-1 text-dark"><?= esc($n1Text) ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                <span class="text-muted font-italic">Tidak ada indikator dengan nilai 1</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 700; background: var(--ap-surface); vertical-align: top;">
+                            KOMPETENSI TAMBAHAN
+                        </td>
+                        <td style="vertical-align: top; line-height: 1.6;">
+                            <?php if (!empty($itemsKompetensiTambahan)): ?>
+                                <ul class="mb-0 pl-3">
+                                    <?php foreach ($itemsKompetensiTambahan as $idx => $ktText): ?>
+                                        <li class="mb-1 text-dark"><?= esc($ktText) ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                <span class="text-muted font-italic">Tidak ada kompetensi tambahan yang terpilih</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- V. CATATAN & FEEDBACK -->
     <div class="ap-card mb-4">
         <div class="ap-card-head">
-            <h5 class="ap-card-title">4. Catatan</h5>
+            <h5 class="ap-card-title">V. Catatan</h5>
         </div>
-        <div class="ap-card-body p-4">
-            <div class="form-group mb-3">
-                <label class="font-weight-bold text-dark small mb-2 d-block">
-                    1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
-                </label>
-                <div class="p-3 rounded bg-light border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($appraisal->evaluator_comment) ? esc(trim($appraisal->evaluator_comment)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+        <div class="ap-card-body p-0">
+            <div class="ap-feedback-section">
+                <!-- Catatan Evaluator -->
+                <div class="ap-feedback-card">
+                    <div class="ap-feedback-item">
+                        <div class="ap-feedback-q">
+                            1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
+                        </div>
+                        <div class="ap-feedback-block"><?= !empty($appraisal->evaluator_comment) ? esc(trim($appraisal->evaluator_comment)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+                    </div>
+
+                    <div class="ap-feedback-item">
+                        <div class="ap-feedback-q">
+                            2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
+                        </div>
+                        <div class="ap-feedback-block"><?= !empty($appraisal->development_plan) ? esc(trim($appraisal->development_plan)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+                    </div>
+                </div>
+
+                <?php if (!empty($appraisal->employee_comment)): ?>
+                <!-- Catatan Karyawan / Duta -->
+                <div class="ap-feedback-card">
+                    <div class="ap-feedback-header">
+                        <i class="fas fa-signature text-success mr-1"></i>
+                        <span>Tanggapan / Catatan Konfirmasi Karyawan (<?= esc(mb_strtoupper($employee['name'] ?? 'Karyawan', 'UTF-8')) ?>)</span>
+                    </div>
+                    <div class="ap-feedback-item">
+                        <div class="ap-feedback-block"><?= esc(trim($appraisal->employee_comment)) ?></div>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
-            <div class="form-group mb-0">
-                <label class="font-weight-bold text-dark small mb-2 d-block">
-                    2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?
-                </label>
-                <div class="p-3 rounded bg-light border text-dark" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; min-height: 50px;"><?= !empty($appraisal->development_plan) ? esc(trim($appraisal->development_plan)) : '<span class="text-muted font-italic">(Tidak ada catatan)</span>' ?></div>
+        </div>
+    </div>
+
+    <!-- VI. RINGKASAN SKOR AKHIR -->
+    <div class="ap-card mb-4">
+        <div class="ap-card-head">
+            <h5 class="ap-card-title">VI. Ringkasan Skor Akhir</h5>
+        </div>
+        <div class="ap-card-body p-0">
+            <div class="ap-score-summary-grid">
+                <div class="ap-score-col">
+                    <div class="ap-summary-label">Skor Akhir Performa</div>
+                    <div class="ap-summary-score">
+                        <?= number_format((float) ($totNilai), 0) ?>
+                    </div>
+                </div>
+                <div class="ap-score-col">
+                    <div class="ap-summary-label">Predikat Penilaian</div>
+                    <div>
+                        <span class="ap-rating ap-summary-rating r-good">
+                            <?= esc($appraisal->rating ?? '-') ?>
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

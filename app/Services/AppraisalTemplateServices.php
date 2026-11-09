@@ -192,18 +192,39 @@ class AppraisalTemplateServices
             }
             $keptSections[] = $sectionId;
 
+            // If scored items have 0 total weight, distribute section weight evenly
+            $scoredItemIndices = [];
+            $sumItemWeights    = 0.0;
+            foreach ($sec['items'] as $iIdx => $item) {
+                $type = $item['input_type'] ?? ($sec['section_type'] ?? 'SCORE');
+                if ($type === 'SCORE' || $type === 'WEIGHTED_CHECKLIST') {
+                    $scoredItemIndices[] = $iIdx;
+                    $sumItemWeights     += (float) ($item['weight'] ?? 0);
+                }
+            }
+            $autoWeightPerItem = null;
+            if (!empty($scoredItemIndices) && $sumItemWeights <= 0) {
+                $secWeight         = (float) ($sec['weight'] ?? 0);
+                $autoWeightPerItem = $secWeight > 0 ? round($secWeight / count($scoredItemIndices), 2) : 1.0;
+            }
+
             foreach ($sec['items'] as $iIdx => $item) {
                 $type     = $item['input_type'] ?? ($sec['section_type'] ?? 'SCORE');
                 $rawConfig  = $item['config'] ?? [];
                 $itemConfig = is_string($rawConfig) ? json_decode($rawConfig, true) : (array) $rawConfig;
                 $configVal  = !empty($itemConfig) ? $itemConfig : new \stdClass();
 
+                $rawItemWeight = (float) ($item['weight'] ?? 0);
+                if (($type === 'SCORE' || $type === 'WEIGHTED_CHECKLIST') && $rawItemWeight <= 0 && $autoWeightPerItem !== null) {
+                    $rawItemWeight = $autoWeightPerItem;
+                }
+
                 $lineData = [
                     'md_appraisal_section_id' => $sectionId,
                     'input_type'              => $type,
                     'title'                   => trim((string) ($item['title'] ?? '')),
                     'description'             => $item['description'] ?? null,
-                    'weight'                  => $type === 'BOOLEAN' ? 0 : (float) ($item['weight'] ?? 0),
+                    'weight'                  => ($type === 'BOOLEAN' || $type === 'SINGLE_CHECKLIST') ? 0 : $rawItemWeight,
                     'sequence_order'          => (int) ($item['sequence_order'] ?? ($iIdx + 1)),
                     'is_required'             => (($item['is_required'] ?? 'Y') === 'N') ? 'N' : 'Y',
                     'config'                  => json_encode($configVal, JSON_UNESCAPED_UNICODE),
@@ -461,6 +482,35 @@ class AppraisalTemplateServices
 
         $template->status     = M_AppraisalTemplate::STATUS_ARCHIVED;
         $template->updated_by = $userId;
+        $template->updated_at = date('Y-m-d H:i:s');
+
+        return $this->templateModel->save($template);
+    }
+
+    /**
+     * Activate / Reactivate an archived template back to PUBLISHED.
+     *
+     * @param int $templateId
+     * @param int $userId
+     * @return bool
+     * @throws Exception
+     */
+    public function activateTemplate(int $templateId, int $userId): bool
+    {
+        $template = $this->templateModel->find($templateId);
+
+        if (! $template) {
+            throw new Exception('Template appraisal tidak ditemukan.');
+        }
+
+        if ($template->status === M_AppraisalTemplate::STATUS_PUBLISHED) {
+            throw new Exception('Template sudah berstatus PUBLISHED (aktif).');
+        }
+
+        $template->status     = M_AppraisalTemplate::STATUS_PUBLISHED;
+        $template->isactive   = 'Y';
+        $template->updated_by = $userId;
+        $template->updated_at = date('Y-m-d H:i:s');
 
         return $this->templateModel->save($template);
     }

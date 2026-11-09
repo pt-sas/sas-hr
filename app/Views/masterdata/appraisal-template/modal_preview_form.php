@@ -1,9 +1,9 @@
 <div class="modal fade" id="modal_preview_form" modal-type="not-main" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document" style="max-width: 70vw;">
-        <div class="modal-content border-0 shadow-lg position-relative" style="border-radius: 12px; overflow: hidden; background: #ffffff;">
+    <div class="modal-dialog modal-xl ap-modal-uniform-dialog" role="document">
+        <div class="modal-content shadow-lg position-relative ap-modal-uniform-content">
 
             <!-- Pure Body Canvas -->
-            <div class="modal-body p-3 p-md-4" style="min-height: 400px;">
+            <div class="modal-body p-3 p-md-4 ap-modal-uniform-body">
                 
                 <!-- Loading State -->
                 <div id="preview_form_loader" class="text-center py-5 my-4">

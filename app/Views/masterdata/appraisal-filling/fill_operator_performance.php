@@ -33,21 +33,28 @@
         }
     }
 
-    $canEditScores = in_array($user_mode, ['EVALUATOR', 'GM'], true) || !empty($is_preview);
+    $canEditScores = in_array($user_mode, ['EVALUATOR', 'GM', 'HR'], true) || !empty($is_preview);
+    $initialOverallScore = $appraisal->final_score !== null ? (float) $appraisal->final_score : 3.00;
 ?>
 
 <div class="ap-card mb-4">
     <div class="ap-card-head d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="ap-card-title mb-0">Penilaian Kinerja</h5>
-            <small class="text-muted d-block mt-1 font-italic">*Beri tanda [v] pada kolom yang ingin diisi</small>
+        <div class="d-flex align-items-center" style="gap: 12px;">
+            <h5 class="ap-card-title mb-0">II. Penilaian Kinerja</h5>
+            <span class="ap-category-badge">Sangat Baik / Baik / Kurang</span>
         </div>
-        <span class="badge badge-primary px-3 py-1 font-weight-bold" style="font-size: 11.5px; border-radius: 999px;">
-            Operator / Pelaksana
+        <span class="text-muted font-weight-bold" style="font-size: 13px;">*Beri tanda centang pada kolom yang ingin diisi</span>
+    </div>
+
+    <div class="ap-score-bar" role="status" aria-live="polite">
+        <span class="ap-score-label">Skor Akhir (Pratinjau)</span>
+        <span class="ap-score-group">
+            <span class="ap-score-num" id="badge_total_overall_score"><?= number_format($initialOverallScore, 2) ?></span>
+            <span class="ap-rating r-good" id="badge_overall_rating">-</span>
         </span>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-responsive ap-table-wrapper">
         <table class="ap-table mb-0" id="table_operator_performance">
             <thead>
                 <tr>
@@ -97,61 +104,64 @@
                             </td>
 
                             <!-- Sangat Baik (Score 3) -->
-                            <td class="text-center align-middle py-3 operator-col-option">
+                            <td class="text-center align-middle py-3 ap-check-cell">
                                 <?php if ($canEditScores): ?>
-                                    <label class="operator-radio-label mb-0 cursor-pointer p-2 w-100">
+                                    <div class="custom-control custom-radio d-inline-flex justify-content-center align-items-center">
                                         <input type="radio" 
+                                               id="op_score_<?= $itemId ?>_3"
                                                name="operator_score[<?= $itemId ?>]" 
                                                value="3" 
-                                               class="operator-score-radio"
+                                               class="custom-control-input operator-score-radio"
                                                data-item-id="<?= $itemId ?>"
                                                data-weight="<?= $weight ?>"
                                                <?= ($savedScore !== null && round($savedScore) == 3) ? 'checked' : '' ?>>
-                                        <span class="operator-check-indicator font-weight-bold">v</span>
-                                    </label>
+                                        <label class="custom-control-label" for="op_score_<?= $itemId ?>_3"></label>
+                                    </div>
                                 <?php else: ?>
-                                    <span class="operator-readonly-indicator font-weight-bold <?= ($savedScore !== null && round($savedScore) == 3) ? 'text-primary' : 'text-muted-light' ?>">
-                                        <?= ($savedScore !== null && round($savedScore) == 3) ? 'v' : '-' ?>
+                                    <span class="operator-readonly-indicator font-weight-bold <?= ($savedScore !== null && round($savedScore) == 3) ? 'text-success' : 'text-muted-light' ?>">
+                                        <?= ($savedScore !== null && round($savedScore) == 3) ? '<i class="fas fa-check text-success"></i>' : '-' ?>
                                     </span>
                                 <?php endif; ?>
                             </td>
 
                             <!-- Baik (Score 2) -->
-                            <td class="text-center align-middle py-3 operator-col-option">
+                            <td class="text-center align-middle py-3 ap-check-cell">
                                 <?php if ($canEditScores): ?>
-                                    <label class="operator-radio-label mb-0 cursor-pointer p-2 w-100">
+                                    <div class="custom-control custom-radio d-inline-flex justify-content-center align-items-center">
                                         <input type="radio" 
+                                               id="op_score_<?= $itemId ?>_2"
                                                name="operator_score[<?= $itemId ?>]" 
                                                value="2" 
-                                               class="operator-score-radio"
+                                               class="custom-control-input operator-score-radio"
                                                data-item-id="<?= $itemId ?>"
                                                data-weight="<?= $weight ?>"
                                                <?= ($savedScore !== null && round($savedScore) == 2) ? 'checked' : '' ?>>
-                                        <span class="operator-check-indicator font-weight-bold">v</span>
-                                    </label>
+                                        <label class="custom-control-label" for="op_score_<?= $itemId ?>_2"></label>
+                                    </div>
                                 <?php else: ?>
-                                    <span class="operator-readonly-indicator font-weight-bold <?= ($savedScore !== null && round($savedScore) == 2) ? 'text-primary' : 'text-muted-light' ?>">
-                                        <?= ($savedScore !== null && round($savedScore) == 2) ? 'v' : '-' ?>
+                                    <span class="operator-readonly-indicator font-weight-bold <?= ($savedScore !== null && round($savedScore) == 2) ? 'text-success' : 'text-muted-light' ?>">
+                                        <?= ($savedScore !== null && round($savedScore) == 2) ? '<i class="fas fa-check text-success"></i>' : '-' ?>
                                     </span>
                                 <?php endif; ?>
                             </td>
 
                             <!-- Kurang (Score 1) -->
-                            <td class="text-center align-middle py-3 operator-col-option">
+                            <td class="text-center align-middle py-3 ap-check-cell">
                                 <?php if ($canEditScores): ?>
-                                    <label class="operator-radio-label mb-0 cursor-pointer p-2 w-100">
+                                    <div class="custom-control custom-radio d-inline-flex justify-content-center align-items-center">
                                         <input type="radio" 
+                                               id="op_score_<?= $itemId ?>_1"
                                                name="operator_score[<?= $itemId ?>]" 
                                                value="1" 
-                                               class="operator-score-radio"
+                                               class="custom-control-input operator-score-radio"
                                                data-item-id="<?= $itemId ?>"
                                                data-weight="<?= $weight ?>"
                                                <?= ($savedScore !== null && round($savedScore) == 1) ? 'checked' : '' ?>>
-                                        <span class="operator-check-indicator font-weight-bold">v</span>
-                                    </label>
+                                        <label class="custom-control-label" for="op_score_<?= $itemId ?>_1"></label>
+                                    </div>
                                 <?php else: ?>
-                                    <span class="operator-readonly-indicator font-weight-bold <?= ($savedScore !== null && round($savedScore) == 1) ? 'text-primary' : 'text-muted-light' ?>">
-                                        <?= ($savedScore !== null && round($savedScore) == 1) ? 'v' : '-' ?>
+                                    <span class="operator-readonly-indicator font-weight-bold <?= ($savedScore !== null && round($savedScore) == 1) ? 'text-success' : 'text-muted-light' ?>">
+                                        <?= ($savedScore !== null && round($savedScore) == 1) ? '<i class="fas fa-check text-success"></i>' : '-' ?>
                                     </span>
                                 <?php endif; ?>
                             </td>
@@ -196,25 +206,25 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: 1.5px solid #cbd5e1;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 2px solid #475569;
     background: #ffffff;
     color: transparent;
-    font-size: 15px;
+    font-size: 13px;
     line-height: 1;
     transition: all 0.15s ease;
     user-select: none;
 }
 .operator-score-radio:checked + .operator-check-indicator {
-    background: #3b82f6;
-    border-color: #2563eb;
+    background: #16a34a;
+    border-color: #15803d;
     color: #ffffff;
-    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);
 }
 .operator-radio-label:focus-within .operator-check-indicator {
-    outline: 2px solid #93c5fd;
+    outline: 2px solid #86efac;
 }
 .operator-readonly-indicator {
     display: inline-flex;

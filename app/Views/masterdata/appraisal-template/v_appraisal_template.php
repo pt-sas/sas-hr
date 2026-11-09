@@ -362,6 +362,104 @@
                 }
             });
         };
+
+        // -------------------------------------------------------------
+        // ARCHIVE / DEACTIVATE ACTION HANDLER (POST template-penilaian/archive)
+        // -------------------------------------------------------------
+        window.tplArchive = function (id) {
+            if (!id || id <= 0) return;
+            Swal.fire({
+                title: 'Nonaktifkan Template?',
+                text: 'Template yang dinonaktifkan (diarsipkan) tidak akan dapat dipilih pada siklus penilaian baru, namun riwayat penilaian yang sudah ada tetap tersimpan.',
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#6c757d',
+                cancelButtonColor: '#d33',
+                confirmButtonText: '<i class="fas fa-power-off mr-1"></i> Ya, Nonaktifkan',
+                cancelButtonText: 'Batal'
+            }).then(function (result) {
+                if (result.value) {
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Menonaktifkan template appraisal.',
+                        allowOutsideClick: false,
+                        onBeforeOpen: function () {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: ADMIN_URL + 'template-penilaian/archive/' + id,
+                        type: 'POST',
+                        dataType: 'JSON',
+                        success: function (res) {
+                            Swal.close();
+                            if (res && ((res[0] && res[0].success) || res.status)) {
+                                Toast.fire({
+                                    type: 'success',
+                                    title: (res[0] && res[0].message) || res.message || 'Template berhasil dinonaktifkan'
+                                });
+                                if (typeof reloadTable === 'function') reloadTable();
+                            } else {
+                                Swal.fire('Gagal', (res && res[0] && res[0].message) || res.message || 'Gagal menonaktifkan template.', 'error');
+                            }
+                        },
+                        error: function (xhr, err, msg) {
+                            Swal.fire('Error', 'Terjadi kesalahan sistem (' + msg + ').', 'error');
+                        }
+                    });
+                }
+            });
+        };
+
+        // -------------------------------------------------------------
+        // ACTIVATE / REACTIVATE ACTION HANDLER (POST template-penilaian/activate)
+        // -------------------------------------------------------------
+        window.tplActivate = function (id) {
+            if (!id || id <= 0) return;
+            Swal.fire({
+                title: 'Aktifkan Kembali Template?',
+                text: 'Template akan diubah kembali ke status PUBLISHED (aktif) dan dapat dipilih pada siklus penilaian kerja.',
+                type: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check-circle mr-1"></i> Ya, Aktifkan',
+                cancelButtonText: 'Batal'
+            }).then(function (result) {
+                if (result.value) {
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Mengaktifkan template appraisal.',
+                        allowOutsideClick: false,
+                        onBeforeOpen: function () {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: ADMIN_URL + 'template-penilaian/activate/' + id,
+                        type: 'POST',
+                        dataType: 'JSON',
+                        success: function (res) {
+                            Swal.close();
+                            if (res && ((res[0] && res[0].success) || res.status)) {
+                                Toast.fire({
+                                    type: 'success',
+                                    title: (res[0] && res[0].message) || res.message || 'Template berhasil diaktifkan kembali'
+                                });
+                                if (typeof reloadTable === 'function') reloadTable();
+                            } else {
+                                Swal.fire('Gagal', (res && res[0] && res[0].message) || res.message || 'Gagal mengaktifkan template.', 'error');
+                            }
+                        },
+                        error: function (xhr, err, msg) {
+                            Swal.fire('Error', 'Terjadi kesalahan sistem (' + msg + ').', 'error');
+                        }
+                    });
+                }
+            });
+        };
     }
 
     if (document.readyState === 'loading') {

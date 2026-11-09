@@ -64,7 +64,7 @@
                         </span>
                         <span class="flex-grow-1">
                             <strong class="d-block font-weight-bold mb-1 tpl-type-title text-dark" style="font-size: 13.5px; letter-spacing: -0.2px;">
-                                Staff &amp; Spv
+                                Karyawan Tetap
                             </strong>
                             <small class="d-block tpl-type-desc text-muted" style="font-size: 11.5px; line-height: 1.35;">
                                 Grouped Checklist &amp; Grouped Kompetensi
@@ -1282,6 +1282,15 @@
                     });
 
                     if (items.length === 0) return;
+
+                    if (cfg.sectionType === 'SCORE' && sectionWeight === 0 && items.length > 0) {
+                        var equalW = parseFloat((100.0 / items.length).toFixed(2));
+                        items.forEach(function (it) {
+                            it.weight = equalW;
+                        });
+                        totalScoreWeight = 100.0;
+                        sectionWeight = 100.0;
+                    }
 
                     var finalSecWeight = (cfg.sectionType === 'BOOLEAN')
                         ? 0.00

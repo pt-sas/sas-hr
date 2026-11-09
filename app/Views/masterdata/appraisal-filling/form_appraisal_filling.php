@@ -47,6 +47,9 @@
 
                 <!-- 4. CATATAN & FEEDBACK EVALUATOR -->
                 <?= $this->include('Views/masterdata/appraisal-filling/fill_feedback'); ?>
+
+                <!-- 5. KONFIRMASI & PENGAJUAN -->
+                <?= $this->include('Views/masterdata/appraisal-filling/fill_confirmation'); ?>
             </div>
         </div>
 
@@ -188,12 +191,35 @@
         updateRatingBadge(overallScore);
     }
 
+    function updateSliderVisual(slider, val) {
+        if (!slider) return;
+        var pct = Math.max(0, Math.min(100, (val / 4.0) * 100));
+        slider.style.setProperty('--fill', pct.toFixed(1) + '%');
+
+        var col = slider.closest('.ap-slider-col');
+        if (col) {
+            var roundVal = Math.round(val);
+            col.querySelectorAll('.ap-ticks span').forEach(function (tick) {
+                if (tick.dataset && tick.dataset.val) {
+                    if (parseInt(tick.dataset.val, 10) === roundVal) {
+                        tick.classList.add('is-active');
+                    } else {
+                        tick.classList.remove('is-active');
+                    }
+                }
+            });
+        }
+    }
+
     document.querySelectorAll('.action-slider').forEach(function (el) {
+        updateSliderVisual(el, parseFloat(el.value) || 3.0);
         el.addEventListener('input', function () {
             var val = parseFloat(this.value);
+            updateSliderVisual(this, val);
             var numInput = document.getElementById('badge_val_' + this.dataset.itemId + '_' + this.dataset.actionIdx);
             if (numInput && 'value' in numInput) {
                 numInput.value = val.toFixed(2);
+                numInput.classList.add('has-score');
             }
             var hidden = document.getElementById('action_score_hidden_' + this.dataset.itemId + '_' + this.dataset.actionIdx);
             if (hidden) {
@@ -202,6 +228,33 @@
             recalcTotals();
         });
         el.addEventListener('change', recalcTotals);
+    });
+
+    // Clickable tick numbers (1, 2, 3, 4)
+    document.querySelectorAll('.ap-ticks span').forEach(function (tick) {
+        tick.addEventListener('click', function () {
+            var targetVal = parseFloat(this.dataset.val);
+            if (isNaN(targetVal)) return;
+
+            var col = this.closest('.ap-slider-col');
+            if (!col) return;
+            var slider = col.querySelector('.action-slider');
+            if (slider && !slider.disabled) {
+                slider.value = targetVal;
+                updateSliderVisual(slider, targetVal);
+
+                var numInput = document.getElementById('badge_val_' + slider.dataset.itemId + '_' + slider.dataset.actionIdx);
+                if (numInput && 'value' in numInput) {
+                    numInput.value = targetVal.toFixed(2);
+                    numInput.classList.add('has-score');
+                }
+                var hidden = document.getElementById('action_score_hidden_' + slider.dataset.itemId + '_' + slider.dataset.actionIdx);
+                if (hidden) {
+                    hidden.value = targetVal.toFixed(2);
+                }
+                recalcTotals();
+            }
+        });
     });
 
     // Bidirectional sync: live typing into score number inputs
@@ -213,7 +266,9 @@
                 var slider = document.querySelector('.action-slider[data-item-id="' + input.dataset.itemId + '"][data-action-idx="' + input.dataset.actionIdx + '"]');
                 if (slider) {
                     slider.value = val;
+                    updateSliderVisual(slider, val);
                 }
+                input.classList.add('has-score');
                 var hidden = document.getElementById('action_score_hidden_' + input.dataset.itemId + '_' + input.dataset.actionIdx);
                 if (hidden) {
                     hidden.value = val.toFixed(2);
@@ -231,12 +286,14 @@
             if (isNaN(val)) {
                 val = 3.00;
             }
-            val = Math.max(1.00, Math.min(4.00, Math.round(val / 0.05) * 0.05));
+            val = Math.max(0.00, Math.min(4.00, Math.round(val / 0.05) * 0.05));
             input.value = val.toFixed(2);
+            input.classList.add('has-score');
 
             var slider = document.querySelector('.action-slider[data-item-id="' + input.dataset.itemId + '"][data-action-idx="' + input.dataset.actionIdx + '"]');
             if (slider) {
                 slider.value = val;
+                updateSliderVisual(slider, val);
             }
             var hidden = document.getElementById('action_score_hidden_' + input.dataset.itemId + '_' + input.dataset.actionIdx);
             if (hidden) {
@@ -244,6 +301,12 @@
             }
             recalcTotals();
         }
+    });
+
+    document.querySelectorAll('.ka-item-checkbox, .boolean-item-checkbox').forEach(function (el) {
+        el.addEventListener('change', function () {
+            recalcTotals();
+        });
     });
 
     recalcTotals();

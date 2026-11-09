@@ -56,24 +56,27 @@
         }
     }
 
-    $canEditScores = in_array($user_mode, ['EVALUATOR', 'GM'], true);
+    $canEditScores = in_array($user_mode, ['EVALUATOR', 'GM', 'HR'], true);
 ?>
 
-<!-- 3. KOMPETENSI TAMBAHAN -->
+<!-- III. KOMPETENSI TAMBAHAN -->
 <div class="ap-card" id="card_section_tambahan">
-    <div class="ap-card-head">
-        <h5 class="ap-card-title">3. Kompetensi tambahan</h5>
-        <span class="text-muted small">Centang jika terbukti</span>
+    <div class="ap-card-head d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center" style="gap: 12px;">
+            <h5 class="ap-card-title mb-0">III. Kompetensi Tambahan</h5>
+            <span class="ap-category-badge">Ya / Tidak</span>
+        </div>
+        <span class="text-muted font-weight-bold" style="font-size: 13px;">*Beri tanda centang pada perilaku yang ditunjukkan</span>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-responsive ap-table-wrapper">
         <table class="ap-table">
             <thead>
                 <tr>
                     <th style="width: 24%;">Kompetensi</th>
-                    <th style="width: 32%;">Definisi</th>
-                    <th style="width: 32%;">Key actions (indikator perilaku)</th>
-                    <th class="text-center" style="width: 12%;">Terbukti / Ya</th>
+                    <th style="width: 30%;">Definisi</th>
+                    <th style="width: 32%;">Key Actions (Indikator Perilaku)</th>
+                    <th class="text-center" style="width: 14%;">Ya / Tidak</th>
                 </tr>
             </thead>
             <?php if (!empty($allBooleanItems)): ?>

@@ -60,34 +60,37 @@
     }
 
     $isEvaluatorEditable = ($user_mode === 'EVALUATOR');
-    $isGmEditable        = ($user_mode === 'GM');
+    $isGmEditable        = in_array($user_mode, ['GM', 'HR'], true);
     $canEditScores       = ($isEvaluatorEditable || $isGmEditable);
     $initialOverallScore = $appraisal->final_score !== null ? (float) $appraisal->final_score : 3.00;
 ?>
 
-<!-- 2. PERFORMA -->
+<!-- II. PERFORMA -->
 <div class="ap-card">
-    <div class="ap-card-head">
-        <h5 class="ap-card-title">2. Performa</h5>
-        <span class="text-muted small">Skala 1.00 – 4.00</span>
+    <div class="ap-card-head d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center" style="gap: 12px;">
+            <h5 class="ap-card-title mb-0">II. Performa</h5>
+            <span class="ap-category-badge">Skala 0.00 – 4.00</span>
+        </div>
+        <span class="text-muted font-weight-bold" style="font-size: 13px;">*Geser slider atau sesuaikan nilai target</span>
     </div>
 
     <div class="ap-score-bar" role="status" aria-live="polite">
-        <span class="ap-score-label">Skor akhir (pratinjau)</span>
+        <span class="ap-score-label">Skor Akhir (Pratinjau)</span>
         <span class="ap-score-group">
             <span class="ap-score-num" id="badge_total_overall_score"><?= number_format($initialOverallScore, 2) ?></span>
             <span class="ap-rating r-good" id="badge_overall_rating">-</span>
         </span>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-responsive ap-table-wrapper">
         <table class="ap-table">
             <thead>
                 <tr>
                     <th style="width: 20%;">Kompetensi</th>
                     <th style="width: 25%;">Definisi</th>
-                    <th style="width: 30%;">Key actions (indikator perilaku)</th>
-                    <th style="width: 25%;">Skor</th>
+                    <th style="width: 30%;">Key Actions (Indikator Perilaku)</th>
+                    <th style="width: 25%;">Skor Penilaian</th>
                 </tr>
             </thead>
 
@@ -148,7 +151,7 @@
                                     $hasLetterPrefix = preg_match('/^[a-z0-9][\.\)]\s*/i', $actionText);
                                     $isLastAction = ($aIdx === $totalActions - 1);
                                 ?>
-                                <tr class="<?= $isLastAction ? '' : '' ?>">
+                                <tr>
                                     <?php if ($aIdx === 0): ?>
                                         <td rowspan="<?= $totalActions ?>" class="ap-comp-cell">
                                             <div class="ap-comp-name">
@@ -172,12 +175,17 @@
                                     <td>
                                         <div class="ap-slider-wrap">
                                             <div class="ap-slider-col">
+                                                <?php
+                                                    $pct = round(($actionScore / 4.0) * 100, 1);
+                                                    $roundedScore = round($actionScore);
+                                                ?>
                                                 <input type="range"
                                                     class="ap-range action-slider"
-                                                    min="1.0" max="4.0" step="0.25"
+                                                    min="0.0" max="4.0" step="0.25"
                                                     value="<?= number_format($actionScore, 2, '.', '') ?>"
                                                     data-item-id="<?= $itemId ?>"
                                                     data-action-idx="<?= $aIdx ?>"
+                                                    style="--fill: <?= $pct ?>%;"
                                                     aria-label="Skor <?= esc($actionText) ?>"
                                                     <?= !$canEditScores ? 'disabled' : '' ?>>
                                                 <input type="hidden"
@@ -186,18 +194,21 @@
                                                     id="action_score_hidden_<?= $itemId ?>_<?= $aIdx ?>"
                                                     value="<?= number_format($actionScore, 2, '.', '') ?>">
                                                 <div class="ap-ticks" aria-hidden="true">
-                                                    <span>1</span><span>2</span><span>3</span><span>4</span>
+                                                    <span data-val="0" class="<?= $roundedScore == 0 ? 'is-active' : '' ?>">0</span>
+                                                    <span data-val="1" class="<?= $roundedScore == 1 ? 'is-active' : '' ?>">1</span>
+                                                    <span data-val="2" class="<?= $roundedScore == 2 ? 'is-active' : '' ?>">2</span>
+                                                    <span data-val="3" class="<?= $roundedScore == 3 ? 'is-active' : '' ?>">3</span>
+                                                    <span data-val="4" class="<?= $roundedScore == 4 ? 'is-active' : '' ?>">4</span>
                                                 </div>
                                             </div>
                                             <div class="ap-val-box ml-2">
                                                 <input type="number"
-                                                    class="form-control form-control-sm action-score-input"
+                                                    class="form-control form-control-sm action-score-input has-score"
                                                     id="badge_val_<?= $itemId ?>_<?= $aIdx ?>"
-                                                    min="1.00" max="4.00" step="0.25"
+                                                    min="0.00" max="4.00" step="0.25"
                                                     value="<?= number_format($actionScore, 2, '.', '') ?>"
                                                     data-item-id="<?= $itemId ?>"
                                                     data-action-idx="<?= $aIdx ?>"
-                                                    style="width: 74px; text-align: center; font-weight: 700; font-size: 13.5px; border-radius: 6px;"
                                                     <?= !$canEditScores ? 'readonly disabled' : '' ?>>
                                             </div>
                                         </div>
@@ -226,12 +237,17 @@
                                 <td>
                                     <div class="ap-slider-wrap">
                                         <div class="ap-slider-col">
+                                            <?php
+                                                $pct0 = round(($actionScore / 4.0) * 100, 1);
+                                                $roundedScore0 = round($actionScore);
+                                            ?>
                                             <input type="range"
                                                 class="ap-range action-slider"
-                                                min="1.0" max="4.0" step="0.25"
+                                                min="0.0" max="4.0" step="0.25"
                                                 value="<?= number_format($actionScore, 2, '.', '') ?>"
                                                 data-item-id="<?= $itemId ?>"
                                                 data-action-idx="0"
+                                                style="--fill: <?= $pct0 ?>%;"
                                                 aria-label="Skor <?= esc($compTitle) ?>"
                                                 <?= !$canEditScores ? 'disabled' : '' ?>>
                                             <input type="hidden"
@@ -240,18 +256,21 @@
                                                 id="action_score_hidden_<?= $itemId ?>_0"
                                                 value="<?= number_format($actionScore, 2, '.', '') ?>">
                                             <div class="ap-ticks" aria-hidden="true">
-                                                <span>1</span><span>2</span><span>3</span><span>4</span>
+                                                <span data-val="0" class="<?= $roundedScore0 == 0 ? 'is-active' : '' ?>">0</span>
+                                                <span data-val="1" class="<?= $roundedScore0 == 1 ? 'is-active' : '' ?>">1</span>
+                                                <span data-val="2" class="<?= $roundedScore0 == 2 ? 'is-active' : '' ?>">2</span>
+                                                <span data-val="3" class="<?= $roundedScore0 == 3 ? 'is-active' : '' ?>">3</span>
+                                                <span data-val="4" class="<?= $roundedScore0 == 4 ? 'is-active' : '' ?>">4</span>
                                             </div>
                                         </div>
                                         <div class="ap-val-box ml-2">
                                             <input type="number"
-                                                class="form-control form-control-sm action-score-input"
+                                                class="form-control form-control-sm action-score-input has-score"
                                                 id="badge_val_<?= $itemId ?>_0"
-                                                min="1.00" max="4.00" step="0.25"
+                                                min="0.00" max="4.00" step="0.25"
                                                 value="<?= number_format($actionScore, 2, '.', '') ?>"
                                                 data-item-id="<?= $itemId ?>"
                                                 data-action-idx="0"
-                                                style="width: 74px; text-align: center; font-weight: 700; font-size: 13.5px; border-radius: 6px;"
                                                 <?= !$canEditScores ? 'readonly disabled' : '' ?>>
                                         </div>
                                     </div>
@@ -268,9 +287,9 @@
 
                         <tr class="ap-subtotal">
                             <td colspan="3" class="ap-subtotal-label">Rata-rata <?= esc($compTitle) ?></td>
-                            <td class="text-center">
+                            <td>
                                 <span class="ap-avg-chip">
-                                    Avg
+                                    Rata-rata
                                     <span class="ap-avg-num" id="avg_display_<?= $itemId ?>"><?= number_format($compAvg, 2) ?></span>
                                 </span>
                                 <input type="hidden" id="item_score_<?= $itemId ?>" value="<?= number_format($compAvg, 2) ?>">

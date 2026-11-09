@@ -47,12 +47,12 @@
         $stages = method_exists($active_cycle, 'getStageDeadlines') ? $active_cycle->getStageDeadlines() : (method_exists($active_cycle, 'getStagedDeadlines') ? $active_cycle->getStagedDeadlines() : $active_cycle->getStagedDeadline());
     } else {
         $stages = [
-            1 => ['name' => 'Assignment',         'sub' => 'HR memulai',                   'date' => null, 'date_fmt' => '-'],
-            2 => ['name' => 'Form filling',       'sub' => 'Penilai mengisi',              'date' => null, 'date_fmt' => '-'],
-            3 => ['name' => 'Review superior',     'sub' => 'Atasan meninjau',              'date' => null, 'date_fmt' => '-'],
-            4 => ['name' => 'Pembacaan karyawan', 'sub' => 'Karyawan menyetujui',          'date' => null, 'date_fmt' => '-'],
-            5 => ['name' => 'Masa Tenggang HR',   'sub' => 'Intervensi & Override HR',    'date' => null, 'date_fmt' => '-'],
-            6 => ['name' => 'Finalisasi',         'sub' => 'Finalisasi penilaian',        'date' => null, 'date_fmt' => '-'],
+            1 => ['name' => 'Penugasan & Perencanaan', 'sub' => 'HR memulai siklus',           'date' => null, 'date_fmt' => '-'],
+            2 => ['name' => 'Pengisian Evaluasi',      'sub' => 'Penilai mengisi form',         'date' => null, 'date_fmt' => '-'],
+            3 => ['name' => 'Pemeriksaan Atasan',      'sub' => 'Atasan meninjau & menilai',    'date' => null, 'date_fmt' => '-'],
+            4 => ['name' => 'Persetujuan Karyawan',    'sub' => 'Karyawan membaca & menyetujui','date' => null, 'date_fmt' => '-'],
+            5 => ['name' => 'Masa Tenggang HR',        'sub' => 'Intervensi & override HR',     'date' => null, 'date_fmt' => '-'],
+            6 => ['name' => 'Finalisasi',              'sub' => 'Penetapan hasil akhir',        'date' => null, 'date_fmt' => '-'],
         ];
     }
 
@@ -102,18 +102,24 @@
     .atl-pill--muted   { background:#eef0f4; color:#374151; border-color:#d9dde5; }
 
     /* Stepper */
-    .atl-stepper { list-style:none; margin:0; padding:18px 24px; display:flex; gap:0; }
-    .atl-step { flex:1; position:relative; text-align:center; padding:0 6px; }
-    .atl-step::before { content:""; position:absolute; top:15px; left:-50%; width:100%; height:2px; background:var(--atl-line); z-index:0; }
-    .atl-step:first-child::before { display:none; }
-    .atl-step.is-done::before, .atl-step.is-current::before { background:var(--atl-primary); }
-    .atl-dot { position:relative; z-index:1; width:32px; height:32px; margin:0 auto 8px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-               font-size:13px; font-weight:800; background:#fff; border:2px solid var(--atl-line); color:var(--atl-sub); }
-    .atl-step.is-done .atl-dot { background:var(--atl-success); border-color:var(--atl-success); color:#fff; }
-    .atl-step.is-current .atl-dot { background:var(--atl-primary); border-color:var(--atl-primary); color:#fff; box-shadow:0 0 0 4px rgba(21,114,232,.15); }
-    .atl-step-name { font-size:14px; font-weight:700; color:var(--atl-ink); margin:0; }
-    .atl-step-sub { font-size:12px; color:var(--atl-sub); margin:0; }
-    .atl-step:not(.is-done):not(.is-current) .atl-step-name { color:var(--atl-sub); }
+    .atl-stepper { list-style:none; margin:0; padding:20px 24px; display:flex; gap:0; position:relative; }
+    .atl-step { flex:1; position:relative; text-align:center; padding:0 8px; }
+    .atl-step-connector { position:absolute; top:16px; left:-50%; width:100%; height:2px; background:var(--atl-line); z-index:0; }
+    .atl-step:first-child .atl-step-connector { display:none; }
+    .atl-step-connector.is-done { background:var(--atl-success); }
+    .atl-step-connector.is-active-leading { background:linear-gradient(90deg, var(--atl-success) 0%, var(--atl-primary) 100%); }
+    .atl-dot { position:relative; z-index:1; width:34px; height:34px; margin:0 auto 10px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+               font-size:13px; font-weight:800; background:#fff; border:2px solid var(--atl-line); color:var(--atl-sub); transition:all .2s ease; }
+    .atl-step.is-done .atl-dot { background:var(--atl-success); border-color:var(--atl-success); color:#fff; box-shadow:0 2px 6px rgba(49,206,54,.25); }
+    .atl-step.is-current .atl-dot { background:var(--atl-primary); border-color:var(--atl-primary); color:#fff; box-shadow:0 0 0 4px rgba(21,114,232,.18), 0 2px 8px rgba(21,114,232,.25); }
+    .atl-step-content { display:flex; flex-direction:column; align-items:center; }
+    .atl-step-name { font-size:13.5px; font-weight:700; color:var(--atl-ink); margin:0 0 2px; line-height:1.3; }
+    .atl-step-sub { font-size:11.5px; color:var(--atl-sub); margin:0 0 4px; line-height:1.3; }
+    .atl-step:not(.is-done):not(.is-current) .atl-step-name { color:var(--atl-sub); font-weight:600; }
+    .atl-step-date { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--atl-sub); padding:2px 8px; border-radius:999px; background:var(--atl-soft); border:1px solid var(--atl-line); }
+    .atl-step-date--done { color:#1a7f1f; background:#e8f8e9; border-color:#bfe9c1; }
+    .atl-step-date--active { color:#0b5c9e; background:#e6f3fe; border-color:#b8dcfa; font-weight:700; box-shadow:0 1px 3px rgba(21,114,232,.1); }
+    .atl-step-date--active i { color:var(--atl-primary); }
     .atl-step-clickable { cursor: pointer; transition: transform .15s ease; }
     .atl-step-clickable:hover { transform: translateY(-2px); }
     .atl-step-clickable:hover .atl-dot { border-color: var(--atl-primary); color: var(--atl-primary); box-shadow: 0 0 0 3px rgba(21,114,232,.15); }
@@ -142,7 +148,23 @@
     .atl-page :focus-visible { outline:3px solid rgba(21,114,232,.55); outline-offset:2px; border-radius:6px; }
 
     /* Table */
-    .atl-table-wrap { padding:0 24px 20px; }
+    .atl-table-wrap { padding:0 24px 20px; min-height: 480px; position: relative; }
+    .atl-table-wrap .dataTables_wrapper { min-height: 420px; }
+    .atl-table-wrap .dataTables_scrollBody { min-height: 280px; }
+    .atl-table-wrap div.dataTables_wrapper div.dataTables_processing {
+        position: absolute;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid var(--atl-line);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-weight: 700;
+        color: var(--atl-primary);
+    }
     #table_task_list thead th { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--atl-sub); background:var(--atl-soft); border-bottom:1px solid var(--atl-line) !important; border-top:0; padding:12px; }
     #table_task_list tbody td { padding:14px 12px; border-top:1px solid var(--atl-line); vertical-align:middle; }
     #table_task_list tbody tr:hover { background:#f9fbff; }
@@ -159,6 +181,16 @@
     .atl-empty i, .atl-error i { font-size:34px; margin-bottom:10px; display:block; }
     .atl-error { color:#a5262e; }
     .atl-processing { font-size:13px; color:var(--atl-sub); }
+    .atl-notice-box {
+        margin: 16px 24px 12px;
+        padding: 14px 18px;
+        border-radius: 10px;
+        border: 1px solid #b8dcfa;
+        background: #e6f3fe;
+        color: #0b5c9e;
+        display: none;
+    }
+    .atl-notice-box.is-visible { display: block; }
     .atl-alert { margin:0 24px 16px; border-radius:10px; border:1px solid #f7b9bd; background:#fdecee; color:#a5262e; padding:12px 16px; display:none; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .atl-alert.is-visible { display:flex; }
     .atl-vh { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
@@ -181,10 +213,14 @@
     @media (max-width: 767.98px) {
         .atl-hero, .atl-stepper, .atl-panel-head, .atl-toolbar, .atl-table-wrap { padding-left:16px; padding-right:16px; }
         .atl-tabs { padding:0 8px; }
-        .atl-stepper { flex-direction:column; gap:14px; }
-        .atl-step { display:flex; align-items:center; gap:12px; text-align:left; padding:0; }
-        .atl-step::before { display:none; }
-        .atl-dot { margin:0; flex:0 0 32px; }
+        .atl-stepper { flex-direction:column; gap:0; padding:16px 18px; }
+        .atl-step { display:flex; align-items:flex-start; gap:14px; text-align:left; padding:0 0 18px 0; }
+        .atl-step-connector { top:34px; left:16px; width:2px; height:calc(100% - 18px); transform:none; }
+        .atl-step-connector.is-active-leading { background:linear-gradient(180deg, var(--atl-success) 0%, var(--atl-primary) 100%); }
+        .atl-dot { margin:0; flex:0 0 34px; }
+        .atl-step-content { align-items:flex-start; text-align:left; }
+        .atl-step-name { font-size:14px; margin-top:2px; }
+        .atl-step-sub { font-size:12px; margin-bottom:6px; }
         #table_task_list thead { display:none; }
         #table_task_list, #table_task_list tbody, #table_task_list tr, #table_task_list td { display:block; width:100% !important; }
         #table_task_list tbody tr { border:1px solid var(--atl-line); border-radius:10px; margin-bottom:12px; padding:6px 4px; }
@@ -258,20 +294,59 @@
     <!-- =================================================================== -->
     <!-- 2. TAHAPAN WORKFLOW (STEPPER)                                       -->
     <!-- =================================================================== -->
-    <nav class="atl-card" aria-label="Tahapan workflow">
+    <nav class="atl-card" aria-label="Tahapan alur penilaian kinerja">
         <ol class="atl-stepper">
             <?php foreach ($stages as $n => $st):
-                $cls = $n < $currentStage ? 'is-done' : ($n === $currentStage ? 'is-current' : '');
+                $isDone    = $n < $currentStage;
+                $isCurrent = $n === $currentStage;
+                $statusCls = $isDone ? 'is-done' : ($isCurrent ? 'is-current' : 'is-upcoming');
+                
+                // Connector logic leading into this node (from node n-1)
+                $connectorCls = '';
+                if ($n > 1) {
+                    if ($n <= $currentStage) {
+                        $connectorCls = 'is-done';
+                    } elseif ($n === $currentStage + 1) {
+                        $connectorCls = 'is-active-leading';
+                    }
+                }
             ?>
-            <li class="atl-step <?= $cls ?>" <?= $n === $currentStage ? 'aria-current="step"' : '' ?>>
-                <div class="atl-dot"><?= $n ?></div>
-                <p class="atl-step-name"><?= esc($st['name']) ?></p>
-                <p class="atl-step-sub"><?= esc($st['sub']) ?></p>
-                <?php if (!empty($st['date_fmt']) && $st['date_fmt'] !== '-'): ?>
-                    <small class="text-muted d-block mt-1" style="font-size: 11.5px; font-weight: 600;">
-                        </i><?= esc($st['date_fmt']) ?>
-                    </small>
+            <li class="atl-step <?= $statusCls ?>" <?= $isCurrent ? 'aria-current="step"' : '' ?>>
+                <?php if ($n > 1): ?>
+                    <span class="atl-step-connector <?= $connectorCls ?>" aria-hidden="true"></span>
                 <?php endif; ?>
+
+                <div class="atl-dot">
+                    <?php if ($isDone): ?>
+                        <i class="fas fa-check" aria-hidden="true"></i>
+                    <?php else: ?>
+                        <?= $n ?>
+                    <?php endif; ?>
+                </div>
+
+                <div class="atl-step-content">
+                    <p class="atl-step-name"><?= esc($st['name']) ?></p>
+                    <p class="atl-step-sub"><?= esc($st['sub']) ?></p>
+                    
+                    <?php if (!empty($st['date_fmt']) && $st['date_fmt'] !== '-'): ?>
+                        <?php if ($isDone): ?>
+                            <span class="atl-step-date atl-step-date--done" title="Selesai pada <?= esc($st['date_fmt']) ?>">
+                                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                                <span>Selesai: <?= esc($st['date_fmt']) ?></span>
+                            </span>
+                        <?php elseif ($isCurrent): ?>
+                            <span class="atl-step-date atl-step-date--active" title="Tenggat waktu: <?= esc($st['date_fmt']) ?>">
+                                <i class="fas fa-hourglass-half" aria-hidden="true"></i>
+                                <span>Tenggat: <?= esc($st['date_fmt']) ?></span>
+                            </span>
+                        <?php else: ?>
+                            <span class="atl-step-date" title="Tenggat waktu: <?= esc($st['date_fmt']) ?>">
+                                <i class="far fa-calendar-alt" aria-hidden="true"></i>
+                                <span>Tenggat: <?= esc($st['date_fmt']) ?></span>
+                            </span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </li>
             <?php endforeach; ?>
         </ol>
@@ -296,7 +371,7 @@
             <?php if (!empty($can_evaluator)): ?>
             <li role="presentation">
                 <button type="button" class="atl-tab" id="tab_evaluator" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'EVALUATOR' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'EVALUATOR' ? '0' : '-1' ?>" data-role="EVALUATOR">
-                    <i class="fas fa-edit" aria-hidden="true"></i> Penilai (Evaluator)
+                    <i class="fas fa-edit" aria-hidden="true"></i> Penilai
                     <span class="atl-count ml-1"><?= (int) ($count_evaluator ?? 0) ?></span>
                 </button>
             </li>
@@ -304,7 +379,7 @@
             <?php if (!empty($can_gm)): ?>
             <li role="presentation">
                 <button type="button" class="atl-tab" id="tab_gm" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'GM' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'GM' ? '0' : '-1' ?>" data-role="GM">
-                    <i class="fas fa-user-tie" aria-hidden="true"></i> Peninjau (Reviewer)
+                    <i class="fas fa-user-tie" aria-hidden="true"></i> Peninjau
                     <span class="atl-count ml-1"><?= (int) ($count_gm ?? 0) ?></span>
                 </button>
             </li>
@@ -328,7 +403,7 @@
         </ul>
 
         <!-- Informational banner when employee is in Stages 1-3 (Reading phase not reached) -->
-        <div id="notice_reading_not_started" class="alert alert-info border-info mx-3 mt-3 mb-2" style="<?= (($default_tab ?? 'EVALUATOR') === 'EMPLOYEE' && ($currentStage < 4)) ? '' : 'display: none;' ?>">
+        <div id="notice_reading_not_started" class="atl-notice-box <?= (($default_tab ?? 'EVALUATOR') === 'EMPLOYEE' && ($currentStage < 4)) ? 'is-visible' : '' ?>">
             <div class="d-flex align-items-center">
                 <i class="fas fa-info-circle fa-2x text-info mr-3"></i>
                 <div>
@@ -351,7 +426,7 @@
                             <th>Karyawan</th>
                             <th>Divisi & Posisi</th>
                             <th>Penilai</th>
-                            <th>Reviewer</th>
+                            <th>Peninjau</th>
                             <th class="text-center">Siklus Penilaian</th>
                             <th class="text-center" style="width: 150px;">Tahapan</th>
                             <th class="text-center" style="width: 90px;">Aksi</th>
@@ -434,16 +509,20 @@
         // Role Tab Switch (ARIA tabs update filter and query showAll via .btn_requery)
         function selectTab($tab) {
             $('#appraisal_role_tabs .atl-tab').attr({ 'aria-selected': 'false', tabindex: '-1' });
-            $tab.attr({ 'aria-selected': 'true', tabindex: '0' }).trigger('focus');
+            $tab.attr({ 'aria-selected': 'true', tabindex: '0' });
             activeRole = $tab.data('role') || 'EVALUATOR';
             updateHeroDeadline(activeRole);
             $('#filter_role_tab').val(activeRole);
             if (activeRole === 'EMPLOYEE' && currentStage < 4) {
-                $('#notice_reading_not_started').slideDown(150);
+                $('#notice_reading_not_started').addClass('is-visible');
             } else {
-                $('#notice_reading_not_started').slideUp(150);
+                $('#notice_reading_not_started').removeClass('is-visible');
             }
-            $('.btn_requery').click();
+            if ($('.btn_requery').length) {
+                $('.btn_requery').trigger('click');
+            } else if (typeof reloadTable === 'function') {
+                reloadTable();
+            }
         }
 
         function updateHeroDeadline(role) {
@@ -523,9 +602,9 @@
         // Initialize hero deadline based on active role
         updateHeroDeadline(activeRole);
         if (activeRole === 'EMPLOYEE' && currentStage < 4) {
-            $('#notice_reading_not_started').show();
+            $('#notice_reading_not_started').addClass('is-visible');
         } else {
-            $('#notice_reading_not_started').hide();
+            $('#notice_reading_not_started').removeClass('is-visible');
         }
 
         $('#appraisal_role_tabs').on('click', '.atl-tab', function () { selectTab($(this)); });

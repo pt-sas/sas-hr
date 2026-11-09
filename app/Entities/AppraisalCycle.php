@@ -166,12 +166,12 @@ class AppraisalCycle extends Entity
         $override = $this->getDeadlineOverride();
 
         $stages = [
-            1 => ['name' => 'Assignment',         'sub' => 'HR memulai',                   'key' => 'start_date',        'date' => $start],
-            2 => ['name' => 'Form filling',       'sub' => 'Penilai mengisi',              'key' => 'deadline_filling',  'date' => $fill],
-            3 => ['name' => 'Review superior',     'sub' => 'Atasan meninjau',              'key' => 'deadline_review',   'date' => $review],
-            4 => ['name' => 'Pembacaan karyawan', 'sub' => 'Karyawan menyetujui',          'key' => 'deadline_reading',  'date' => $reading],
-            5 => ['name' => 'Masa Tenggang HR',   'sub' => 'Intervensi & Override HR',    'key' => 'deadline_override', 'date' => $override],
-            6 => ['name' => 'Finalisasi',         'sub' => 'Finalisasi penilaian',        'key' => 'end_date',          'date' => $end],
+            1 => ['name' => 'Penugasan & Perencanaan', 'sub' => 'HR memulai siklus',           'key' => 'start_date',        'date' => $start],
+            2 => ['name' => 'Pengisian Evaluasi',      'sub' => 'Penilai mengisi form',         'key' => 'deadline_filling',  'date' => $fill],
+            3 => ['name' => 'Pemeriksaan Atasan',      'sub' => 'Atasan meninjau & menilai',    'key' => 'deadline_review',   'date' => $review],
+            4 => ['name' => 'Persetujuan Karyawan',    'sub' => 'Karyawan membaca & menyetujui','key' => 'deadline_reading',  'date' => $reading],
+            5 => ['name' => 'Masa Tenggang HR',        'sub' => 'Intervensi & override HR',     'key' => 'deadline_override', 'date' => $override],
+            6 => ['name' => 'Finalisasi',              'sub' => 'Penetapan hasil akhir',        'key' => 'end_date',          'date' => $end],
         ];
 
         $result = [];

@@ -339,7 +339,7 @@ class AppraisalEvaluationController extends BaseController
                               ev.nik as evaluator_nik, ev.fullname as evaluator_name,
                               gm.nik as gm_nik, gm.fullname as gm_name,
                               d.name as division_name, p.name as position_name, l.name as level_name,
-                              c.title as cycle_title, c.deadline_filling, c.deadline_review, c.deadline_reading, c.evaluator_due_date, c.gm_due_date')
+                              c.title as cycle_title, c.deadline_filling, c.deadline_review, c.deadline_reading, c.deadline_override, c.start_date, c.end_date, c.evaluator_due_date, c.gm_due_date')
                     ->join('md_employee e', 'e.md_employee_id = a.md_employee_id', 'left')
                     ->join('md_employee ev', 'ev.md_employee_id = a.snapshot_evaluator_id', 'left')
                     ->join('md_employee gm', 'gm.md_employee_id = a.snapshot_gm_id', 'left')
@@ -464,22 +464,22 @@ class AppraisalEvaluationController extends BaseController
                     // Status Badge
                     $statusBadge = $this->renderStatusBadge($status);
 
-                    // Workflow Stage progress dots
-                    $stageProgress = $this->renderStageProgress($status);
+                    // Workflow Stage progress dots / Stage label
+                    $stageProgress = $this->renderStageProgress($status, $value);
 
                     // Contextual Action Buttons based on Role & Status
                     $actionBtn = $this->renderActionButton($value, $roleTab, $empId);
 
                     // Avatar Initials
-                    $empName  = esc($value['employee_name'] ?? '-');
+                    $empName  = esc(mb_strtoupper($value['employee_name'] ?? '-', 'UTF-8'));
                     $nik      = esc($value['nik'] ?? '-');
                     $level    = esc($value['level_name'] ?? '');
                     $divName  = esc($value['division_name'] ?? '-');
                     $posName  = esc($value['position_name'] ?? '-');
                     $cycTitle = esc($value['cycle_title'] ?? '-');
-                    $evalName = esc($value['evaluator_name'] ?? '-');
+                    $evalName = esc(mb_strtoupper($value['evaluator_name'] ?? '-', 'UTF-8'));
                     $evalNik  = esc($value['evaluator_nik'] ?? '');
-                    $gmName   = esc($value['gm_name'] ?? '-');
+                    $gmName   = esc(mb_strtoupper($value['gm_name'] ?? '-', 'UTF-8'));
                     $gmNik    = esc($value['gm_nik'] ?? '');
 
                     $isDelegatedRow = (! empty($delegatedIds) && in_array((int) $value['md_employee_id'], $delegatedIds, true) && (int) $value['md_employee_id'] !== $empId);
@@ -597,16 +597,28 @@ class AppraisalEvaluationController extends BaseController
 
         // 4. Determine user viewing mode
         $mode = 'VIEW';
-        if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
-            $mode = 'EVALUATOR';
-        } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-            $mode = 'GM';
-        } elseif (($empId === (int) $appraisal->md_employee_id || $isDuta || $isAdmin) && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
-            $mode = 'EMPLOYEE';
-        } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-            $mode = 'GM';
-        } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
-            $mode = 'EVALUATOR';
+        $cycleStage = $this->resolveCycleStage($cycle);
+
+        if ($cycleStage < 6) {
+            if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+                $mode = 'EVALUATOR';
+            } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+                $mode = 'GM';
+            } elseif ($isAdmin) {
+                // If HR is acting as the direct reviewed employee or has selected EMPLOYEE mode
+                if ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                    $mode = 'EMPLOYEE';
+                } elseif ($appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+                    $mode = 'EVALUATOR';
+                } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+                    $mode = 'GM';
+                } elseif ($appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                    // Intervensi HR is after pembacaan (Stage 5)
+                    $mode = ($cycleStage === 5) ? 'HR' : 'EMPLOYEE';
+                }
+            } elseif (($empId === (int) $appraisal->md_employee_id || $isDuta) && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                $mode = 'EMPLOYEE';
+            }
         }
 
         $dutaName = null;
@@ -697,12 +709,19 @@ class AppraisalEvaluationController extends BaseController
                     $mode = 'EVALUATOR';
                 } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
                     $mode = 'GM';
-                } elseif (($empId === (int) $appraisal->md_employee_id || $isDuta || $isAdmin) && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                } elseif ($isAdmin) {
+                    if ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                        $mode = 'EMPLOYEE';
+                    } elseif ($appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+                        $mode = 'EVALUATOR';
+                    } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+                        $mode = 'GM';
+                    } elseif ($appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                        // Intervensi HR is after pembacaan (Stage 5)
+                        $mode = ($cycleStage === 5) ? 'HR' : 'EMPLOYEE';
+                    }
+                } elseif (($empId === (int) $appraisal->md_employee_id || $isDuta) && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
                     $mode = 'EMPLOYEE';
-                } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-                    $mode = 'GM';
-                } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
-                    $mode = 'EVALUATOR';
                 }
             }
         } else {
@@ -1157,12 +1176,11 @@ class AppraisalEvaluationController extends BaseController
                     $evalAvg = round($evalAvg, 2);
                     $gmAvg   = round($gmAvg, 2);
 
-                    if ($weight > 0) {
-                        $evalTotalWeightedScore += ($evalAvg * $weight);
-                        $evalTotalWeight        += $weight;
-                        $gmTotalWeightedScore   += ($gmAvg * $weight);
-                        $gmTotalWeight          += $weight;
-                    }
+                    $effectiveWeight = $weight > 0 ? $weight : 1.0;
+                    $evalTotalWeightedScore += ($evalAvg * $effectiveWeight);
+                    $evalTotalWeight        += $effectiveWeight;
+                    $gmTotalWeightedScore   += ($gmAvg * $effectiveWeight);
+                    $gmTotalWeight          += $effectiveWeight;
 
                     $processedItems[] = [
                         'item_id'       => $itemId,
@@ -1253,14 +1271,14 @@ class AppraisalEvaluationController extends BaseController
         }
 
         $evalFinalOverall = $evalTotalWeight > 0 ? ($evalTotalWeightedScore / $evalTotalWeight) : 3.00;
-        $evalFinalOverall = max(1.00, min(4.00, round($evalFinalOverall, 2)));
+        $evalFinalOverall = max(0.00, min(4.00, round($evalFinalOverall, 2)));
 
         if ($isGmReviewed) {
             $gmFinalOverall = $gmTotalWeight > 0 ? ($gmTotalWeightedScore / $gmTotalWeight) : 3.00;
-            if ($appraisal->final_score !== null && !empty($appraisal->gm_reviewed_at)) {
+            if ($appraisal->final_score !== null && !empty($appraisal->gm_reviewed_at) && (float) $appraisal->final_score > 0) {
                 $gmFinalOverall = (float) $appraisal->final_score;
             }
-            $gmFinalOverall = max(1.00, min(4.00, round($gmFinalOverall, 2)));
+            $gmFinalOverall = max(0.00, min(4.00, round($gmFinalOverall, 2)));
             $delta          = round($gmFinalOverall - $evalFinalOverall, 2);
         } else {
             $gmFinalOverall = null;
@@ -1420,21 +1438,6 @@ class AppraisalEvaluationController extends BaseController
         $evalDateStr = !empty($appraisal->evaluator_submitted_at) ? date('d M Y', strtotime($appraisal->evaluator_submitted_at)) : (!empty($appraisal->created_at) ? date('d M Y', strtotime($appraisal->created_at)) : '-');
         $reviewerDateStr = !empty($appraisal->gm_reviewed_at) ? date('d M Y', strtotime($appraisal->gm_reviewed_at)) : (!empty($appraisal->snapshot_gm_id) ? '-' : 'N/A');
 
-        // Check if employee acknowledgment was performed by Duta
-        $ackLog = $this->db->table('md_appraisal_audit_log l')
-            ->select('l.*, u.name as actor_name')
-            ->join('sys_user u', 'u.sys_user_id = l.actor_id', 'left')
-            ->where('l.md_appraisal_id', $appraisal->md_appraisal_id)
-            ->where('l.action', 'ACKNOWLEDGE_EMPLOYEE')
-            ->orderBy('l.created_at', 'DESC')
-            ->get()
-            ->getRow();
-
-        $dutaAckNote = '';
-        if ($ackLog && strpos($ackLog->notes ?? '', 'Duta') !== false) {
-            $dutaAckNote = '<span style="font-size: 6.5pt; color: #475569;">(Dikonfirmasi oleh Duta: ' . esc($ackLog->actor_name ?? 'Duta') . ')</span>';
-        }
-
         $pdf = new AppraisalPdfReport('P', PDF_UNIT, 'A4', true, 'UTF-8', false);
         $pdf->docNo        = (string) $docNo;
         $pdf->employeeName = (string) ($employee['name'] ?? '-');
@@ -1464,7 +1467,6 @@ class AppraisalEvaluationController extends BaseController
             'empDateStr'           => $empDateStr,
             'evalDateStr'          => $evalDateStr,
             'reviewerDateStr'      => $reviewerDateStr,
-            'dutaAckNote'          => $dutaAckNote,
         ];
 
         if ($isOperator) {
@@ -1565,16 +1567,28 @@ class AppraisalEvaluationController extends BaseController
 
         // Determine userMode strictly
         $userMode = 'VIEW';
-        if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
-            $userMode = 'EVALUATOR';
-        } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-            $userMode = 'GM';
-        } elseif (($empId === (int) $appraisal->md_employee_id || $isDuta || $isAdmin) && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
-            $userMode = 'EMPLOYEE';
-        } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-            $userMode = 'GM';
-        } elseif ($isAdmin && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
-            $userMode = 'EVALUATOR';
+        $cycle = $this->cycleModel->find($appraisal->md_appraisal_cycle_id);
+        $cycleStage = $this->resolveCycleStage($cycle);
+
+        if ($cycleStage < 6) {
+            if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+                $userMode = 'EVALUATOR';
+            } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+                $userMode = 'GM';
+            } elseif ($isAdmin) {
+                if ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK && ($post['user_mode'] ?? '') === 'EMPLOYEE') {
+                    $userMode = 'EMPLOYEE';
+                } elseif ($appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
+                    $userMode = 'EVALUATOR';
+                } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
+                    $userMode = 'GM';
+                } elseif ($appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                    // Intervensi HR is after pembacaan (Stage 5)
+                    $userMode = ($cycleStage === 5) ? 'HR' : 'EMPLOYEE';
+                }
+            } elseif (($empId === (int) $appraisal->md_employee_id || $isDuta) && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
+                $userMode = 'EMPLOYEE';
+            }
         }
 
         // Guard against unauthorized saves
@@ -1662,6 +1676,32 @@ class AppraisalEvaluationController extends BaseController
                     }
                     $appraisal->updated_by = $userId;
                     $this->model->save($appraisal);
+                }
+            } elseif ($userMode === 'HR') {
+                // Intervensi HR mode: HR can edit responses, evaluator comment, development plan, or finalize
+                $evaluatorComment = isset($post['evaluator_comment']) ? trim($post['evaluator_comment']) : $appraisal->evaluator_comment;
+                $developmentPlan  = isset($post['development_plan']) ? trim($post['development_plan']) : $appraisal->development_plan;
+                $gmComment        = isset($post['gm_comment']) ? trim($post['gm_comment']) : $appraisal->gm_comment;
+                $employeeComment  = isset($post['employee_comment']) ? trim($post['employee_comment']) : $appraisal->employee_comment;
+
+                $appraisal->evaluator_comment = $evaluatorComment;
+                $appraisal->development_plan  = $developmentPlan;
+                $appraisal->gm_comment        = $gmComment;
+                if ($employeeComment !== null) {
+                    $appraisal->employee_comment = $employeeComment;
+                }
+                $appraisal->updated_by = $userId;
+                $this->model->save($appraisal);
+
+                if (! empty($responseList)) {
+                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'GM');
+                } else {
+                    $this->scoringService->calculateAndUpdateScores($appraisalId, $userId);
+                }
+
+                if ($actionType === 'submit') {
+                    // HR finalizes / acknowledges on behalf of reading completion
+                    $this->workflowService->acknowledgeByEmployee($appraisalId, $userId, $employeeComment);
                 }
             }
 
@@ -1796,7 +1836,7 @@ class AppraisalEvaluationController extends BaseController
             }
 
             // Save item responses first
-            $rawList = ! empty($post['responses']) ? $post['responses'] : (! empty($post['table']) ? $post['table'] : null);
+            $rawList = ! empty($post['responses_json']) ? $post['responses_json'] : (! empty($post['responses']) ? $post['responses'] : (! empty($post['table']) ? $post['table'] : null));
             $responseList = $this->normalizeResponseList($rawList);
 
             if (is_array($responseList) && ! empty($responseList)) {
@@ -1821,21 +1861,44 @@ class AppraisalEvaluationController extends BaseController
         }
     }
 
-    protected function renderStageProgress(string $status): string
+    protected function renderStageProgress(string $status, array $row = []): string
     {
+        // Resolve cycle stage if row provides cycle info
+        $cycleStage = null;
+        if (! empty($row['start_date']) || ! empty($row['deadline_filling'])) {
+            $today = ! empty($this->session->get('appraisal_debug_date')) ? strtotime($this->session->get('appraisal_debug_date')) : time();
+            $fill  = ! empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
+            $rev   = ! empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
+            $read  = ! empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
+            $over  = ! empty($row['deadline_override']) ? strtotime($row['deadline_override']) : null;
+            $end   = ! empty($row['end_date']) ? strtotime($row['end_date']) : null;
+
+            if ($fill && $today <= $fill) {
+                $cycleStage = 2;
+            } elseif ($rev && $today <= $rev) {
+                $cycleStage = 3;
+            } elseif ($read && $today <= $read) {
+                $cycleStage = 4;
+            } elseif ($over && $today <= $over) {
+                $cycleStage = 5;
+            } elseif ($end && $today > $end) {
+                $cycleStage = 6;
+            }
+        }
+
         switch ($status) {
             case M_Appraisal::STATUS_DRAFT_EVALUATOR:
-                $label = 'Form Filling';
+                $label = 'Pengisian';
                 break;
             case M_Appraisal::STATUS_SUBMITTED_EVALUATOR:
             case M_Appraisal::STATUS_REVIEW_GM:
-                $label = 'Review Superior';
+                $label = 'Peninjauan';
                 break;
             case M_Appraisal::STATUS_PENDING_ACK:
-                $label = 'Pembacaan Karyawan';
+                $label = ($cycleStage === 5) ? 'Intervensi HR' : 'Pembacaan';
                 break;
             case M_Appraisal::STATUS_FINALIZED:
-                $label = 'Completed';
+                $label = 'Final';
                 break;
             default:
                 $label = $status;
@@ -1861,18 +1924,44 @@ class AppraisalEvaluationController extends BaseController
         $userId  = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
         $isDuta  = (! empty($userId) && $this->isDutaForEmployeeWithoutUser($userId, (int) ($row['md_employee_id'] ?? 0)));
 
+        $cycleStage = null;
+        if (! empty($row['start_date']) || ! empty($row['deadline_filling'])) {
+            $today = ! empty($this->session->get('appraisal_debug_date')) ? strtotime($this->session->get('appraisal_debug_date')) : time();
+            $fill  = ! empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
+            $rev   = ! empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
+            $read  = ! empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
+            $over  = ! empty($row['deadline_override']) ? strtotime($row['deadline_override']) : null;
+            $end   = ! empty($row['end_date']) ? strtotime($row['end_date']) : null;
+
+            if ($fill && $today <= $fill) {
+                $cycleStage = 2;
+            } elseif ($rev && $today <= $rev) {
+                $cycleStage = 3;
+            } elseif ($read && $today <= $read) {
+                $cycleStage = 4;
+            } elseif ($over && $today <= $over) {
+                $cycleStage = 5;
+            } elseif ($end && $today > $end) {
+                $cycleStage = 6;
+            }
+        }
+
         if ($status === M_Appraisal::STATUS_DRAFT_EVALUATOR && ($roleTab === 'EVALUATOR' || (int) ($row['snapshot_evaluator_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
             $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Isi Penilaian"><i class="fas fa-edit text-primary"></i></a>';
         } elseif ($status === M_Appraisal::STATUS_REVIEW_GM && ($roleTab === 'GM' || (int) ($row['snapshot_gm_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
             $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Review GM"><i class="fas fa-user-check text-info"></i></a>';
         } elseif ($status === M_Appraisal::STATUS_PENDING_ACK && ((int) $row['md_employee_id'] === $empId || $isDuta || $isAdmin)) {
-            $ttdTitle = 'Konfirmasi TTD';
-            if ($isDuta && (int) $row['md_employee_id'] !== $empId) {
-                $ttdTitle .= ' (Duta)';
-            } elseif ($isAdmin && (int) $row['md_employee_id'] !== $empId) {
-                $ttdTitle .= ' (HR/Admin)';
+            $isDirectEmployee = ((int) $row['md_employee_id'] === $empId);
+            // Intervensi HR is strictly AFTER pembacaan (Stage 5)
+            if ($isAdmin && ! $isDirectEmployee && ! $isDuta && $cycleStage === 5) {
+                $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Edit Penilaian"><i class="fas fa-edit text-primary"></i></a>';
+            } else {
+                $ttdTitle = 'Konfirmasi TTD';
+                if ($isDuta && ! $isDirectEmployee) {
+                    $ttdTitle .= ' (Duta)';
+                }
+                $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="' . $ttdTitle . '"><i class="fas fa-signature text-warning"></i></a>';
             }
-            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="' . $ttdTitle . '"><i class="fas fa-signature text-warning"></i></a>';
         } elseif ($status === M_Appraisal::STATUS_FINALIZED) {
             $actions .= '<a class="btn btn-sm" href="' . base_url('sas/penilaian/complete/' . $id) . '" title="Rapor Kinerja"><i class="fas fa-file-alt text-success"></i></a>';
         } else {
@@ -2013,7 +2102,7 @@ class AppraisalEvaluationController extends BaseController
                                         ->first();
 
         // If jump to specific stage requested
-        if ($stage >= 1 && $stage <= 5 && $activeCycle && method_exists($activeCycle, 'getStageTargetDate')) {
+        if ($stage >= 1 && $stage <= 6 && $activeCycle && method_exists($activeCycle, 'getStageTargetDate')) {
             $date = $activeCycle->getStageTargetDate($stage);
         }
 

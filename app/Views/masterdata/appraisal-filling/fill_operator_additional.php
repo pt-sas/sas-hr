@@ -33,18 +33,19 @@
         }
     }
 
-    $canEditScores = in_array($user_mode, ['EVALUATOR', 'GM'], true) || !empty($is_preview);
+    $canEditScores = in_array($user_mode, ['EVALUATOR', 'GM', 'HR'], true) || !empty($is_preview);
 ?>
 
 <div class="ap-card mb-4">
     <div class="ap-card-head d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="ap-card-title mb-0">Kriteria Tambahan</h5>
-            <small class="text-muted d-block mt-1">Daftar kriteria inisiatif dan kontribusi kerja tambahan</small>
+        <div class="d-flex align-items-center" style="gap: 12px;">
+            <h5 class="ap-card-title mb-0">III. Penilaian Tambahan</h5>
+            <span class="ap-category-badge">Ya / Tidak</span>
         </div>
+        <span class="text-muted font-weight-bold" style="font-size: 13px;">*Beri tanda centang pada perilaku yang ditunjukkan</span>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-responsive ap-table-wrapper">
         <table class="ap-table mb-0" id="table_operator_additional">
             <thead>
                 <tr>
@@ -94,7 +95,7 @@
                             <td class="align-middle">
                                 <?php if ($isOtherRow): ?>
                                     <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
-                                        <span class="font-weight-600 text-dark" style="font-size: 13.5px;">Lainnya :</span>
+                                        <label for="op_check_<?= $itemId ?>" class="font-weight-600 text-dark mb-0 cursor-pointer" style="font-size: 13.5px;">Lainnya :</label>
                                         <?php if ($canEditScores): ?>
                                             <input type="text" 
                                                    name="operator_other_text[<?= $itemId ?>]" 
@@ -108,24 +109,25 @@
                                         <?php endif; ?>
                                     </div>
                                 <?php else: ?>
-                                    <span class="font-weight-600 text-dark" style="font-size: 13.5px;"><?= esc($title) ?></span>
+                                    <label for="op_check_<?= $itemId ?>" class="font-weight-600 text-dark mb-0 cursor-pointer d-block" style="font-size: 13.5px;"><?= esc($title) ?></label>
                                 <?php endif; ?>
                             </td>
 
-                            <td class="text-center align-middle py-3">
+                            <td class="text-center align-middle py-3 ap-check-cell">
                                 <?php if ($canEditScores): ?>
-                                    <label class="operator-checkbox-label mb-0 cursor-pointer p-2">
+                                    <div class="custom-control custom-checkbox d-inline-flex justify-content-center align-items-center">
                                         <input type="checkbox" 
+                                               id="op_check_<?= $itemId ?>"
                                                name="operator_kriteria[<?= $itemId ?>]" 
                                                value="Y" 
-                                               class="operator-kriteria-checkbox"
+                                               class="custom-control-input operator-kriteria-checkbox"
                                                data-item-id="<?= $itemId ?>"
                                                <?= $isChecked ? 'checked' : '' ?>>
-                                        <span class="operator-check-indicator font-weight-bold">v</span>
-                                    </label>
+                                        <label class="custom-control-label" for="op_check_<?= $itemId ?>"></label>
+                                    </div>
                                 <?php else: ?>
-                                    <span class="operator-readonly-indicator font-weight-bold <?= $isChecked ? 'text-primary' : 'text-muted-light' ?>">
-                                        <?= $isChecked ? 'v' : '-' ?>
+                                    <span class="operator-readonly-indicator font-weight-bold <?= $isChecked ? 'text-success' : 'text-muted-light' ?>">
+                                        <?= $isChecked ? '<i class="fas fa-check text-success"></i>' : '-' ?>
                                     </span>
                                 <?php endif; ?>
                             </td>
@@ -144,29 +146,10 @@
 </div>
 
 <style>
-.operator-checkbox-label {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: background 0.15s ease;
+.cursor-pointer {
+    cursor: pointer;
 }
-.operator-checkbox-label:hover {
-    background: #f1f5f9;
-}
-.operator-kriteria-checkbox {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-.operator-kriteria-checkbox:checked + .operator-check-indicator {
-    background: #3b82f6;
-    border-color: #2563eb;
-    color: #ffffff;
-    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
-}
-.operator-checkbox-label:focus-within .operator-check-indicator {
-    outline: 2px solid #93c5fd;
+.operator-kriteria-row td {
+    transition: all 0.15s ease;
 }
 </style>

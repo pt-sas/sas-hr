@@ -168,14 +168,18 @@ class AppraisalTemplateController extends BaseController
                             $actionBtns .= '<a class="btn btn-sm" onclick="window.tplUnpublish(\'' . $ID . '\')" title="Batalkan Publish (Kembalikan ke Draft)"><i class="fas fa-undo text-warning"></i></a>';
                             $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $ID . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
                         } else {
-                            // In-Use Published: Strictly view-only, require new version for updates
+                            // In-Use Published (Locked): Strictly view-only, allow deactivate/archive and clone
                             $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\', \'CO\')" id="' . $ID . '" data-status="CO" title="Lihat Detail (Terkunci: ' . $usageCount . ' Penilaian)"><i class="fas fa-eye text-info"></i></a>';
                             $actionBtns .= '<a class="btn btn-sm" onclick="window.tplClone(\'' . $ID . '\')" title="Buat Versi Baru (Draft)"><i class="fas fa-code-branch text-warning"></i></a>';
+                            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplArchive(\'' . $ID . '\')" title="Nonaktifkan / Arsipkan Template (Terkunci)"><i class="fas fa-power-off text-secondary"></i></a>';
                         }
                     } else {
                         // ARCHIVED or others
                         $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\', \'VO\')" id="' . $ID . '" data-status="VO" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
-                        if (! $inUse) {
+                        if ($inUse) {
+                            // In-Use Archived: Allow reactivation back to published
+                            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplActivate(\'' . $ID . '\')" title="Aktifkan Kembali Template (Published)"><i class="fas fa-check-circle text-success"></i></a>';
+                        } else {
                             $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $ID . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
                         }
                     }
@@ -425,7 +429,7 @@ class AppraisalTemplateController extends BaseController
     }
 
     /**
-     * Archive Template ('CO' -> 'VO')
+     * Archive Template ('CO' -> 'VO') / Deactivate
      */
     public function archive($id = null)
     {
@@ -438,7 +442,30 @@ class AppraisalTemplateController extends BaseController
                 $userId = (int) ($this->access->getSessionUser() ?? 0);
                 $this->templateService->archiveTemplate($templateId, $userId);
 
-                $response = message('success', true, 'Template appraisal berhasil diarsipkan.');
+                $response = message('success', true, 'Template appraisal berhasil dinonaktifkan (diarsipkan).');
+            } catch (\Exception $e) {
+                $response = message('error', false, $e->getMessage());
+            }
+
+            return $this->response->setJSON($response);
+        }
+    }
+
+    /**
+     * Activate / Reactivate Template ('VO' -> 'CO')
+     */
+    public function activate($id = null)
+    {
+        if ($this->request->isAJAX()) {
+            try {
+                $templateId = (int) ($id ?? $this->request->getVar('id') ?? 0);
+                if ($templateId <= 0) {
+                    return $this->response->setJSON(message('error', false, 'ID template tidak valid.'));
+                }
+                $userId = (int) ($this->access->getSessionUser() ?? 0);
+                $this->templateService->activateTemplate($templateId, $userId);
+
+                $response = message('success', true, 'Template appraisal berhasil diaktifkan kembali.');
             } catch (\Exception $e) {
                 $response = message('error', false, $e->getMessage());
             }
@@ -712,8 +739,8 @@ class AppraisalTemplateController extends BaseController
                     'gm_comment'        => '',
                 ],
                 'employee'             => [
-                    'nik'           => 'SIMULASI-001',
-                    'name'          => 'Karyawan Simulasi (Contoh)',
+                    'nik'           => '123456',
+                    'name'          => 'Karyawan Simulasi',
                     'division_name' => $sampleDivision,
                     'position_name' => $samplePosition,
                     'branch_name'   => $sampleBranch,
@@ -724,10 +751,10 @@ class AppraisalTemplateController extends BaseController
                     'end_date'   => date('Y-m-d', strtotime('+30 days')),
                 ],
                 'evaluator'            => [
-                    'name' => 'Penilai (Evaluator)',
+                    'name' => 'Penilai',
                 ],
                 'gm'                   => [
-                    'name' => 'Peninjau (Reviewer)',
+                    'name' => 'Peninjau',
                 ],
             ];
 
