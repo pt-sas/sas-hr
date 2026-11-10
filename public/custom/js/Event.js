@@ -3920,10 +3920,17 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       if (ev.type === 'holiday') {
+        var holType = ext.holiday_type || 'Libur Nasional';
+        var holName = ext.holiday_name || ev.title;
+        var badgeClass = (holType === 'Cuti Bersama') ? 'bg-warning text-dark' : 'bg-danger text-white';
+
         return '<div class="k-card-box t-holiday" style="border-left-color: #dc2626;">' +
           '<div class="k-card-head">' +
-            '<div class="k-card-head-title"><span class="k-time-tag" style="color:#dc2626;"><i class="fas fa-calendar-alt me-1"></i> [Hari Libur]</span> <b>' + esc(ev.title) + '</b></div>' +
-            '<span class="badge bg-danger text-white" style="font-size:0.65rem; padding: 3px 6px;">Libur Nasional</span>' +
+            '<div class="k-card-head-title"><span class="k-time-tag" style="color:#dc2626;"><i class="fas fa-calendar-alt me-1"></i> ' + esc(holType) + '</span></div>' +
+            '<span class="badge ' + badgeClass + '" style="font-size:0.65rem; padding: 3px 6px;">' + esc(holType) + '</span>' +
+          '</div>' +
+          '<div class="k-card-body-content">' +
+            '<div class="k-card-row" style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 0;">' + esc(holName) + '</div>' +
           '</div>' +
         '</div>';
       }

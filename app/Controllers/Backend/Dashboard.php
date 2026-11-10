@@ -1774,12 +1774,16 @@ class Dashboard extends BaseController
                         if ((!$startDate || $currDate >= $startDate) && (!$endDate || $currDate <= $endDate)) {
                             $events[] = [
                                 'id'              => 'holiday_' . $index . '_' . $currDate,
-                                'title'           => "Libur - {$h['name']}",
+                                'title'           => $h['name'],
                                 'start'           => $currDate,
                                 'allDay'          => true,
                                 'className'       => 't-holiday',
                                 'backgroundColor' => $colorMap['holiday'],
-                                'type'            => 'holiday'
+                                'type'            => 'holiday',
+                                'extendedProps'   => [
+                                    'holiday_type' => 'Libur Nasional',
+                                    'holiday_name' => $h['name']
+                                ]
                             ];
                             $processedHolidayDates[$currDate] = true;
                         }
@@ -1814,12 +1818,16 @@ class Dashboard extends BaseController
                             if (!isset($processedHolidayDates[$currDate])) {
                                 $events[] = [
                                     'id'              => 'massleave_' . $index . '_' . $currDate,
-                                    'title'           => "Cuti Bersama - {$m['name']}",
+                                    'title'           => $m['name'],
                                     'start'           => $currDate,
                                     'allDay'          => true,
                                     'className'       => 't-holiday',
                                     'backgroundColor' => $colorMap['holiday'],
-                                    'type'            => 'holiday'
+                                    'type'            => 'holiday',
+                                    'extendedProps'   => [
+                                        'holiday_type' => 'Cuti Bersama',
+                                        'holiday_name' => $m['name']
+                                    ]
                                 ];
                             }
                         }
