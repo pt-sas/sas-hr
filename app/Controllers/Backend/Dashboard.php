@@ -1747,19 +1747,84 @@ class Dashboard extends BaseController
             }
 
             if (in_array('holiday', $categories, true)) {
-                $year     = $startDate ? date('Y', strtotime($startDate)) : date('Y');
-                $holidays = cache("google_id_holidays_{$year}") ?? [];
+                $processedHolidayDates = [];
 
-                foreach ($holidays as $index => $h) {
-                    $events[] = [
-                        'id'              => 'holiday_' . $index,
-                        'title'           => "Libur - {$h['title']}",
-                        'start'           => $h['date'],
-                        'allDay'          => true,
-                        'className'       => 't-holiday',
-                        'backgroundColor' => $colorMap['holiday'],
-                        'type'            => 'holiday'
-                    ];
+                // 1. Libur Nasional (md_holiday) - Highest priority
+                $holidayBuilder = $this->db->table('md_holiday')
+                    ->select('name, DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE "0000%" OR CAST(enddate AS CHAR) = "" THEN startdate ELSE enddate END) AS end_date')
+                    ->where('isactive', 'Y');
+
+                if ($startDate && $endDate) {
+                    $holidayBuilder->where('startdate <=', $endDate . ' 23:59:59')
+                        ->groupStart()
+                            ->where('enddate >=', $startDate . ' 00:00:00')
+                            ->orWhere('enddate IS NULL')
+                            ->orWhere("CAST(enddate AS CHAR) LIKE '0000%'")
+                            ->orWhere("CAST(enddate AS CHAR) = ''")
+                        ->groupEnd();
+                }
+
+                $dbHolidays = $holidayBuilder->get()->getResultArray();
+                foreach ($dbHolidays as $index => $h) {
+                    $sDate = $h['start_date'];
+                    $eDate = (!empty($h['end_date']) && $h['end_date'] >= $sDate) ? $h['end_date'] : $sDate;
+
+                    $currDate = $sDate;
+                    while ($currDate <= $eDate) {
+                        if ((!$startDate || $currDate >= $startDate) && (!$endDate || $currDate <= $endDate)) {
+                            $events[] = [
+                                'id'              => 'holiday_' . $index . '_' . $currDate,
+                                'title'           => "Libur - {$h['name']}",
+                                'start'           => $currDate,
+                                'allDay'          => true,
+                                'className'       => 't-holiday',
+                                'backgroundColor' => $colorMap['holiday'],
+                                'type'            => 'holiday'
+                            ];
+                            $processedHolidayDates[$currDate] = true;
+                        }
+                        $currDate = date('Y-m-d', strtotime($currDate . ' +1 day'));
+                    }
+                }
+
+                // 2. Cuti Bersama (md_massleave) - Secondary priority
+                $massBuilder = $this->db->table('md_massleave')
+                    ->select('name, DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE "0000%" OR CAST(enddate AS CHAR) = "" THEN startdate ELSE enddate END) AS end_date')
+                    ->where('isactive', 'Y');
+
+                if ($startDate && $endDate) {
+                    $massBuilder->where('startdate <=', $endDate . ' 23:59:59')
+                        ->groupStart()
+                            ->where('enddate >=', $startDate . ' 00:00:00')
+                            ->orWhere('enddate IS NULL')
+                            ->orWhere("CAST(enddate AS CHAR) LIKE '0000%'")
+                            ->orWhere("CAST(enddate AS CHAR) = ''")
+                        ->groupEnd();
+                }
+
+                $dbMassLeaves = $massBuilder->get()->getResultArray();
+                foreach ($dbMassLeaves as $index => $m) {
+                    $sDate = $m['start_date'];
+                    $eDate = (!empty($m['end_date']) && $m['end_date'] >= $sDate) ? $m['end_date'] : $sDate;
+
+                    $currDate = $sDate;
+                    while ($currDate <= $eDate) {
+                        if ((!$startDate || $currDate >= $startDate) && (!$endDate || $currDate <= $endDate)) {
+                            // If not already covered by a national holiday, add as mass leave
+                            if (!isset($processedHolidayDates[$currDate])) {
+                                $events[] = [
+                                    'id'              => 'massleave_' . $index . '_' . $currDate,
+                                    'title'           => "Cuti Bersama - {$m['name']}",
+                                    'start'           => $currDate,
+                                    'allDay'          => true,
+                                    'className'       => 't-holiday',
+                                    'backgroundColor' => $colorMap['holiday'],
+                                    'type'            => 'holiday'
+                                ];
+                            }
+                        }
+                        $currDate = date('Y-m-d', strtotime($currDate . ' +1 day'));
+                    }
                 }
             }
 
