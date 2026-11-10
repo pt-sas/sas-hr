@@ -458,10 +458,16 @@ tr:has(input[type="radio"]:checked) .font-weight-600 {
     text-transform: uppercase;
 }
 
-.ap-rating.r-great  { background: #f0fdf4; color: #166534; border-color: #22c55e; }
-.ap-rating.r-good   { background: #eff6ff; color: #1e40af; border-color: #3b82f6; }
-.ap-rating.r-fair   { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
-.ap-rating.r-low    { background: #fef2f2; color: #991b1b; border-color: #ef4444; }
+.ap-rating.r-great  { background: #f0fdf4 !important; color: #166534 !important; border-color: #22c55e !important; }
+.ap-rating.r-good   { background: #eff6ff !important; color: #1e40af !important; border-color: #3b82f6 !important; }
+.ap-rating.r-fair,
+.ap-rating.badge-warning,
+.badge-warning.ap-rating {
+    background: #fffbeb !important;
+    color: #b45309 !important; /* Rich amber/yellow */
+    border-color: #f59e0b !important;
+}
+.ap-rating.r-low    { background: #fef2f2 !important; color: #991b1b !important; border-color: #ef4444 !important; }
 
 /* Subtotal row */
 .ap-subtotal td {

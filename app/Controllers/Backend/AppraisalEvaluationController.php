@@ -1287,10 +1287,10 @@ class AppraisalEvaluationController extends BaseController
 
         $getRating = function ($score): array {
             if ($score === null) return ['label' => 'Belum Dinilai', 'class' => 'r-muted'];
-            if ($score >= 3.50) return ['label' => 'Sangat Baik', 'class' => 'r-great badge-success'];
-            if ($score >= 2.75) return ['label' => 'Baik', 'class' => 'r-good badge-primary'];
-            if ($score >= 2.00) return ['label' => 'Cukup', 'class' => 'r-fair badge-warning'];
-            return ['label' => 'Kurang', 'class' => 'r-low badge-danger'];
+            if ($score >= 3.50) return ['label' => 'Sangat Baik', 'class' => 'r-great'];
+            if ($score >= 2.75) return ['label' => 'Baik', 'class' => 'r-good'];
+            if ($score >= 2.00) return ['label' => 'Cukup', 'class' => 'r-fair'];
+            return ['label' => 'Kurang', 'class' => 'r-low'];
         };
 
         $evalRating = $getRating($evalFinalOverall);

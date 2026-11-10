@@ -305,22 +305,28 @@
     border-collapse: collapse;
 }
 .apd-table th {
-    font-size: 11.5px !important;
+    font-size: 11px !important;
     font-weight: 700 !important;
     color: #575962 !important;
     background: #f8f9fa !important;
     border-top: 0 !important;
     border-bottom: 1px solid #ebedf2 !important;
-    padding: 0.6rem 0.9rem !important;
+    padding: 0.5rem 0.45rem !important;
     vertical-align: middle !important;
     white-space: nowrap;
 }
 .apd-table td {
-    font-size: 12.5px;
+    font-size: 11.5px;
     color: #2a2f5b;
-    padding: 0.65rem 0.9rem !important;
+    padding: 0.45rem 0.45rem !important;
     vertical-align: middle !important;
     border-top: 1px solid #f1f3f7 !important;
+}
+.apd-table tfoot td {
+    font-size: 11.5px;
+    color: #2a2f5b;
+    padding: 0.5rem 0.45rem !important;
+    vertical-align: middle !important;
 }
 .apd-table tbody tr:hover {
     background-color: #fbfcfd;
@@ -529,40 +535,45 @@
             </div>
         </div>
 
-    <!-- Right Column: Division Performance Breakdown -->
-    <div class="col-lg-7 d-flex">
-        <div class="apd-panel w-100 d-flex flex-column" style="min-width: 0;">
-            <div class="apd-panel-head py-2">
-                <h2 class="apd-panel-title" style="font-size: 13px;">Progres per Divisi</h2>
-                <span class="small text-muted font-weight-bold" style="font-size: 11px;">Live Status</span>
-            </div>
+        <!-- Right Column: Division Performance Breakdown -->
+        <div class="col-lg-7 d-flex">
+            <div class="apd-panel w-100 d-flex flex-column" style="min-width: 0;">
+                <div class="apd-panel-head py-2">
+                    <div class="d-flex align-items-center">
+                        <h2 class="apd-panel-title">Progres per Divisi</h2>
+                        <span class="badge badge-light border text-muted ml-2 font-weight-bold" id="txt_div_count">0 Divisi</span>
+                    </div>
+                    <span class="small text-muted font-weight-bold"><i class="fas fa-circle text-success mr-1" style="font-size: 8px;"></i>Live Status</span>
+                </div>
 
-            <!-- Table Container with Ultra-Compact Fit -->
-            <div class="table-responsive flex-grow-1" style="overflow-y: auto; overflow-x: auto; max-height: 380px;">
-                <table class="table apd-table mb-0" style="min-width: 390px; font-size: 10px;">
-                    <thead style="position: sticky; top: 0; z-index: 2;">
-                        <tr>
-                            <th rowspan="2" class="align-middle px-1 py-1 text-truncate" style="width: 75px; max-width: 75px;">Div.</th>
-                            <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 32px;">Tot</th>
-                            <th colspan="3" class="text-center py-1 border-bottom-0" style="background: #f1f3f7 !important; font-size: 9.5px;">Berjalan</th>
-                            <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 38px;">Done</th>
-                            <th rowspan="2" class="align-middle px-1 py-1" style="width: 65px;">Progres</th>
-                            <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 42px;">Rata2</th>
-                        </tr>
-                        <tr>
-                            <th class="text-center p-0 text-muted" style="width: 30px; font-size: 9px !important; background: #f8f9fa !important;" title="Draft Atasan">Ev</th>
-                            <th class="text-center p-0 text-muted" style="width: 30px; font-size: 9px !important; background: #f8f9fa !important;" title="Review GM">Re</th>
-                            <th class="text-center p-0 text-muted" style="width: 30px; font-size: 9px !important; background: #f8f9fa !important;" title="Menunggu TTD Karyawan">Bc</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody_division_progress">
-                        <tr>
-                            <td colspan="8" class="text-center py-3 text-muted" style="font-size: 11px;">
-                                <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data divisi...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive flex-grow-1" style="overflow-y: auto; overflow-x: auto; max-height: 380px;">
+                    <table class="table apd-table mb-0 table-hover">
+                        <thead style="position: sticky; top: 0; z-index: 2;">
+                            <tr>
+                                <th rowspan="2" class="align-middle px-2 py-1">Divisi</th>
+                                <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 38px;">Total</th>
+                                <th colspan="3" class="text-center py-1 border-bottom-0" style="background: #f1f3f7 !important;">Berjalan</th>
+                                <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 44px;">Final</th>
+                                <th rowspan="2" class="align-middle px-2 py-1" style="min-width: 100px; width: 110px;">Progres</th>
+                                <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 55px;">Rata-Rata</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center p-1 text-muted" style="width: 58px; background: #f8f9fa !important;" title="Tahap Penilaian">Penilaian</th>
+                                <th class="text-center p-1 text-muted" style="width: 50px; background: #f8f9fa !important;" title="Tahap Review">Review</th>
+                                <th class="text-center p-1 text-muted" style="width: 76px; background: #f8f9fa !important;" title="Tahap Submit Review">Submit Review</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody_division_progress">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted" style="font-size: 11.5px;">
+                                    <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data divisi...
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot id="tfoot_division_progress" style="background: #fbfcfd; border-top: 2px solid #ebedf2;">
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -855,39 +866,92 @@ function initAppraisalDashboard() {
                 // 2.5 Division Progress Breakdown Table
                 $('#txt_div_count').text(divs.length + ' Divisi');
                 var $tbody = $('#tbody_division_progress');
+                var $tfoot = $('#tfoot_division_progress');
                 $tbody.empty();
+                $tfoot.empty();
 
                 if (divs.length === 0) {
                     $tbody.html('<tr><td colspan="8" class="text-center py-4 text-muted">Belum ada data evaluasi divisi pada siklus ini.</td></tr>');
                 } else {
+                    var sumTotal = 0;
+                    var sumDraft = 0;
+                    var sumReviewGm = 0;
+                    var sumPendingAck = 0;
+                    var sumFinalized = 0;
+                    var sumScoreTotal = 0.0;
+                    var sumScoreCount = 0;
+
                     $.each(divs, function (i, d) {
+                        var totalVal      = parseInt(d.total, 10) || 0;
+                        var draftVal      = parseInt(d.draft, 10) || 0;
+                        var reviewGmVal   = parseInt(d.review_gm, 10) || 0;
+                        var pendingAckVal = parseInt(d.pending_ack, 10) || 0;
+                        var finalVal      = parseInt(d.finalized, 10) || 0;
+                        var scoreSumVal   = parseFloat(d.score_sum || 0.0);
+                        var scoreCountVal = parseInt(d.score_count, 10) || 0;
+
+                        sumTotal      += totalVal;
+                        sumDraft      += draftVal;
+                        sumReviewGm   += reviewGmVal;
+                        sumPendingAck += pendingAckVal;
+                        sumFinalized  += finalVal;
+                        sumScoreTotal += scoreSumVal;
+                        sumScoreCount += scoreCountVal;
+
                         var pVal = parseFloat(d.percent || 0.0);
                         var avgDivScore = d.avg_score !== null && d.avg_score !== undefined ? Number(d.avg_score).toFixed(2) : '-';
                         var avgColor = avgDivScore !== '-' ? 'apd-tone-pri font-weight-bold' : 'text-muted';
 
                         var rowHtml = '<tr>' +
-                            '<td class="font-weight-bold">' + esc(d.division_name) + '</td>' +
-                            '<td class="text-center text-muted">' + (d.total || 0) + '</td>' +
-                            '<td class="text-center ' + ((parseInt(d.draft, 10) || 0) > 0 ? 'text-warning font-weight-bold' : 'text-muted') + '">' + (parseInt(d.draft, 10) || 0) + '</td>' +
-                            '<td class="text-center ' + ((parseInt(d.review_gm, 10) || 0) > 0 ? 'text-info font-weight-bold' : 'text-muted') + '">' + (parseInt(d.review_gm, 10) || 0) + '</td>' +
-                            '<td class="text-center ' + ((parseInt(d.pending_ack, 10) || 0) > 0 ? 'text-primary font-weight-bold' : 'text-muted') + '">' + (parseInt(d.pending_ack, 10) || 0) + '</td>' +
-                            '<td class="text-center apd-tone-ok font-weight-bold">' + (d.finalized || 0) + '</td>' +
-                            '<td>' +
-                                '<div class="d-flex align-items-center" style="gap: 8px;">' +
-                                    '<div class="apd-prog-track flex-grow-1" style="height: 6px;">' +
+                            '<td class="font-weight-bold text-dark px-2 py-1 text-truncate" style="max-width: 130px;" title="' + esc(d.division_name) + '">' + esc(d.division_name) + '</td>' +
+                            '<td class="text-center text-dark font-weight-bold px-1 py-1">' + totalVal + '</td>' +
+                            '<td class="text-center px-1 py-1 ' + (draftVal > 0 ? 'text-warning font-weight-bold' : 'text-muted') + '">' + draftVal + '</td>' +
+                            '<td class="text-center px-1 py-1 ' + (reviewGmVal > 0 ? 'text-info font-weight-bold' : 'text-muted') + '">' + reviewGmVal + '</td>' +
+                            '<td class="text-center px-1 py-1 ' + (pendingAckVal > 0 ? 'text-primary font-weight-bold' : 'text-muted') + '">' + pendingAckVal + '</td>' +
+                            '<td class="text-center apd-tone-ok font-weight-bold px-1 py-1">' + finalVal + '</td>' +
+                            '<td class="px-2 py-1">' +
+                                '<div class="d-flex align-items-center" style="gap: 6px;">' +
+                                    '<div class="apd-prog-track flex-grow-1" style="height: 6px; min-width: 32px;">' +
                                         '<div class="apd-prog-fill-ok" style="width:' + pVal + '%;"></div>' +
                                     '</div>' +
-                                    '<span class="font-weight-bold text-muted" style="font-size:11px; width: 34px; text-align: right;">' + pVal.toFixed(0) + '%</span>' +
+                                    '<span class="font-weight-bold text-dark" style="font-size: 11px; width: 28px; text-align: right; white-space: nowrap;">' + pVal.toFixed(0) + '%</span>' +
                                 '</div>' +
                             '</td>' +
-                            '<td class="text-center ' + avgColor + '">' + avgDivScore + '</td>' +
+                            '<td class="text-center px-1 py-1 ' + avgColor + '">' + avgDivScore + '</td>' +
                         '</tr>';
                         $tbody.append(rowHtml);
                     });
+
+                    // Summary Aggregate Row in TFOOT
+                    var overallPct = sumTotal > 0 ? ((sumFinalized / sumTotal) * 100) : 0.0;
+                    var overallAvg = metrics.avg_final_score !== null && metrics.avg_final_score !== undefined
+                        ? Number(metrics.avg_final_score).toFixed(2)
+                        : (sumScoreCount > 0 ? (sumScoreTotal / sumScoreCount).toFixed(2) : '-');
+                    var overallAvgColor = overallAvg !== '-' ? 'apd-tone-pri font-weight-bold' : 'text-muted';
+
+                    var tfootHtml = '<tr>' +
+                        '<td class="font-weight-bold text-dark text-uppercase px-2 py-1">Total</td>' +
+                        '<td class="text-center font-weight-bold text-dark px-1 py-1">' + sumTotal + '</td>' +
+                        '<td class="text-center font-weight-bold px-1 py-1 ' + (sumDraft > 0 ? 'text-warning' : 'text-muted') + '">' + sumDraft + '</td>' +
+                        '<td class="text-center font-weight-bold px-1 py-1 ' + (sumReviewGm > 0 ? 'text-info' : 'text-muted') + '">' + sumReviewGm + '</td>' +
+                        '<td class="text-center font-weight-bold px-1 py-1 ' + (sumPendingAck > 0 ? 'text-primary' : 'text-muted') + '">' + sumPendingAck + '</td>' +
+                        '<td class="text-center apd-tone-ok font-weight-bold px-1 py-1">' + sumFinalized + '</td>' +
+                        '<td class="px-2 py-1">' +
+                            '<div class="d-flex align-items-center" style="gap: 6px;">' +
+                                '<div class="apd-prog-track flex-grow-1" style="height: 6px; min-width: 32px;">' +
+                                    '<div class="apd-prog-fill-ok" style="width: ' + overallPct + '%;"></div>' +
+                                '</div>' +
+                                '<span class="font-weight-bold text-dark" style="font-size: 11px; width: 28px; text-align: right; white-space: nowrap;">' + overallPct.toFixed(0) + '%</span>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td class="text-center font-weight-bold px-1 py-1 ' + overallAvgColor + '">' + overallAvg + '</td>' +
+                    '</tr>';
+                    $tfoot.html(tfootHtml);
                 }
             },
             error: function () {
                 $('#tbody_division_progress').html('<tr><td colspan="8" class="text-center py-3 text-danger"><i class="fas fa-exclamation-triangle mr-1"></i> Gagal memuat ringkasan divisi.</td></tr>');
+                $('#tfoot_division_progress').empty();
             }
         });
     }
