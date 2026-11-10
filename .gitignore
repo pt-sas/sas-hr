@@ -139,3 +139,7 @@ public/uploads
 # Local caches & tools
 *graphify-out/
 .playwright-mcp/
+
+.agent
+.agents
+.antigravity

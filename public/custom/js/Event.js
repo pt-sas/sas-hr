@@ -3329,7 +3329,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     setDashboardLoading(false);
                 }
             });
-        }, 300);
+        }, 120);
     });
 
     function updateDashboardDOM(data) {
@@ -3962,7 +3962,27 @@ document.addEventListener('DOMContentLoaded', function() {
       $cal.find('.fc-bg td.fc-day[data-date="' + sel + '"]').addClass('is-selected');
     }
 
-    function pick(d){ sel = d; markSelected(); renderDetail(); }
+    function pick(d, syncGlobal){
+      sel = d;
+      markSelected();
+      renderDetail();
+
+      if (syncGlobal && window.DP && DP.picker && typeof DP.picker.emitChange === 'function') {
+        var st = DP.picker.getState();
+        var currentIso = st && st.sel ? DP.iso(st.sel) : '';
+        var targetDate = DP.parse(d);
+
+        // When in month mode, check if the clicked date belongs to a different month (prev/next month days)
+        if (st && st.mode === 'month') {
+          var isDifferentMonth = !currentIso || (d.slice(0, 7) !== currentIso.slice(0, 7));
+          if (isDifferentMonth) {
+            DP.picker.emitChange(targetDate, st.mode, st.level);
+          }
+        } else if (currentIso !== d) {
+          DP.picker.emitChange(targetDate, st ? st.mode : 'day', st ? st.level : 'me');
+        }
+      }
+    }
 
     function paintDots(){
       var view = $cal.fullCalendar('getView');
@@ -4076,8 +4096,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       },
 
-      dayClick:   function (date) { pick(date.format('YYYY-MM-DD')); },
-      eventClick: function (ev)   { pick(first(ev)); return false; },
+      dayClick:   function (date) { pick(date.format('YYYY-MM-DD'), true); },
+      eventClick: function (ev)   { pick(first(ev), true); return false; },
 
       loading: function(isLoading) {
         $cal.toggleClass('cal-loading', isLoading);
@@ -4102,7 +4122,7 @@ document.addEventListener('DOMContentLoaded', function() {
       clearTimeout(calDebounceTimer);
       calDebounceTimer = setTimeout(function () {
         $cal.fullCalendar('refetchEvents');
-      }, 300);
+      }, 120);
     });
   }
 })();

@@ -66,7 +66,7 @@ $csrfHash = function_exists('csrf_hash')  ? csrf_hash()  : '';
 #kalender {
   --c-company: #1d4ed8; --bg-company: #eff6ff; --txt-company: #0f172a;
   --c-leave:   #d97706; --bg-leave:   #fffbeb; --txt-leave:   #78350f;
-  --c-team:    #059669; --bg-team:    #ecfdf5; --txt-team:    #064e3b;
+  --c-team:    #0284c7; --bg-team:    #f0f9ff; --txt-team:    #075985;
   --c-bday:    #7c3aed; --bg-bday:    #f3e8ff; --txt-bday:    #4c1d95;
   
   --line:  #cbd5e1;
@@ -216,6 +216,13 @@ $csrfHash = function_exists('csrf_hash')  ? csrf_hash()  : '';
 }
 #kalender .fc-bg td.is-selected {
   box-shadow: inset 0 0 0 3px var(--c-company);
+}
+
+#kalender .fc-day,
+#kalender .fc-day-top,
+#kalender .fc-day-grid-event,
+#kalender .k-row {
+  cursor: pointer;
 }
 
 /* ==========================================================================

@@ -10,7 +10,7 @@ $categories = [
     'leave'   => ['label' => 'Cuti',          'color' => '#d97706'],
     'holiday' => ['label' => 'Hari Libur',    'color' => '#dc2626'],
     'bday'    => ['label' => 'Ulang Tahun',   'color' => '#7c3aed'],
-    'team'    => ['label' => 'Aktivitas Tim', 'color' => '#059669'],
+    'team'    => ['label' => 'Aktivitas Tim', 'color' => '#0284c7'],
 ];
 ?>
 

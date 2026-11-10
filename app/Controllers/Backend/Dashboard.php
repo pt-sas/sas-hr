@@ -14,7 +14,7 @@ class Dashboard extends BaseController
     public array $rangeQueryStats = [];
 
     // Configurable engine thresholds
-    private int $lateToleranceMinutes = 5;  // 5-minute late grace period
+    private int $lateToleranceMinutes = 0;  // 5-minute late grace period
     private int $tapDeduplicationSec  = 60; // Ignore rapid biometric taps within 60 seconds
 
     // Super user role IDs (System Admins, HR Super Users, Management Executives)
@@ -398,31 +398,78 @@ class Dashboard extends BaseController
     }
 
     /**
+     * Resolves cache TTL in seconds based on date range tier.
+     * Past (< today): 6 hours (21600s)
+     * Future (> today): 12 hours (43200s)
+     * Active/Current period:
+     *   - 'day' mode (today): 0s (no cache, strictly real-time)
+     *   - 'week' / 'month' mode: 180s (3 minutes)
+     */
+    private function resolveCacheTtl(string $mode, string $rangeStart, string $rangeEnd): int
+    {
+        $todayStr = date('Y-m-d');
+        if ($rangeEnd < $todayStr) {
+            return 21600; // 6 hours for past / historical data
+        }
+        if ($rangeStart > $todayStr) {
+            return 43200; // 12 hours for planned future period
+        }
+        // Current / Active period
+        return ($mode === 'day') ? 0 : 180;
+    }
+
+    /**
      * Fetches active national holidays within the specified range.
+     * Cached globally per calendar year for 24 hours.
      */
     private function fetchHolidayRows(string $rangeEnd): array
     {
-        return $this->db->table('md_holiday')
+        $year     = substr($rangeEnd, 0, 4);
+        $cacheKey = "dash_holidays_{$year}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $rows = $this->db->table('md_holiday')
             ->select('name, DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE "0000%" OR CAST(enddate AS CHAR) = "" THEN startdate ELSE enddate END) AS end_date')
             ->where('isactive', 'Y')
             ->where('startdate <=', $rangeEnd . ' 23:59:59')
             ->get()->getResultArray();
+
+        cache()->save($cacheKey, $rows, 86400); // 24 hours
+        return $rows;
     }
 
     /**
      * Fetches active mass leaves within the specified range.
+     * Cached globally per calendar year for 24 hours.
      */
     private function fetchMassLeaveRows(string $rangeEnd): array
     {
-        return $this->db->table('md_massleave')
+        $year     = substr($rangeEnd, 0, 4);
+        $cacheKey = "dash_massleave_{$year}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $rows = $this->db->table('md_massleave')
             ->select('name, DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE "0000%" OR CAST(enddate AS CHAR) = "" THEN startdate ELSE enddate END) AS end_date')
             ->where('isactive', 'Y')
             ->where('startdate <=', $rangeEnd . ' 23:59:59')
             ->get()->getResultArray();
+
+        cache()->save($cacheKey, $rows, 86400); // 24 hours
+        return $rows;
     }
 
     /**
      * Calculates personal attendance summary, schedule, and KPI metrics.
+     * Historical ranges (< today) are cached up to 6 hours.
+     * Today's range is kept strictly real-time (no cache).
      */
     private function calculatePersonalAttendance(
         int $employeeId,
@@ -433,7 +480,15 @@ class Dashboard extends BaseController
         array $holidayRows,
         array $massLeaveRows
     ): array {
-        $todayStr     = date('Y-m-d');
+        $todayStr  = date('Y-m-d');
+        $isBypass  = !empty($this->request->getGet('refresh'));
+        $cacheTtl  = ($rangeEnd < $todayStr) ? 21600 : (($rangeStart > $todayStr) ? 43200 : 0);
+        $cacheKey  = "dash_att_p_{$employeeId}_{$rangeStart}_{$rangeEnd}_{$today}";
+
+        if (!$isBypass && $cacheTtl > 0 && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
         $processUntil = ($rangeEnd > $todayStr) ? $todayStr : $rangeEnd;
 
         $rowsByDate = [];
@@ -530,8 +585,10 @@ class Dashboard extends BaseController
             'MANUAL_HRD_OVERRIDE'       => ['text' => 'Koreksi HRD',             'tone' => 'info',      'punctual' => 'Disesuaikan HRD'],
             'OFF_DAY'                   => ['text' => 'Hari Libur Kerja',        'tone' => 'secondary', 'punctual' => 'Libur Kerja'],
             'PUBLIC_HOLIDAY'            => ['text' => 'Libur Nasional',          'tone' => 'secondary', 'punctual' => 'Libur Nasional'],
+            'MASS_LEAVE'                => ['text' => 'Cuti Bersama',            'tone' => 'secondary', 'punctual' => 'Cuti Bersama'],
             'OVERTIME_OFF_DAY'          => ['text' => 'Lembur Hari Libur',       'tone' => 'info',      'punctual' => 'Kerja Hari Libur'],
             'HOLIDAY_WORKED'            => ['text' => 'Lembur Libur Nasional',   'tone' => 'info',      'punctual' => 'Kerja Libur Nasional'],
+            'MASS_LEAVE_WORKED'         => ['text' => 'Lembur Cuti Bersama',     'tone' => 'info',      'punctual' => 'Kerja Cuti Bersama'],
         ];
 
         $meta               = $statusMap[$attendanceStatus] ?? ['text' => $attendanceStatus, 'tone' => 'secondary', 'punctual' => 'Catatan Khusus'];
@@ -690,6 +747,12 @@ class Dashboard extends BaseController
             'overtime_count'      => $overtimeCount,
             'ontime_count'        => $ontimeCount,
         ];
+
+        if ($cacheTtl > 0) {
+            cache()->save($cacheKey, $result, $cacheTtl);
+        }
+
+        return $result;
     }
 
     /**
@@ -710,6 +773,40 @@ class Dashboard extends BaseController
 
         $canViewTeamCard = in_array($roleId, $this->superRoleIds, true) 
             || in_array($levellingId, $this->managerialLevellings, true);
+
+        if (!$canViewTeamCard) {
+            return [
+                'can_view_team_card' => false,
+                'subordinate_ids'    => [],
+                'team_total'         => 0,
+                'team_present'       => 0,
+                'team_on_leave'      => 0,
+                'team_rate'          => null,
+                'team_trend'         => [],
+                'team_is_future'     => false,
+                'team_leave_names'   => [],
+                'team_absent_names'  => [],
+            ];
+        }
+
+        $wKey     = $wStart ? $wStart->format('Ymd') : 'now';
+        $cacheKey = "dash_team_{$employeeId}_{$roleId}_{$mode}_{$today}_{$currentYear}{$currentMonth}_{$wKey}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        // Cache TTL determination:
+        // Day mode past: 6 hours, Day mode today: 90 seconds (short-term buffer)
+        // Week/Month past: 6 hours, Week/Month current: 180 seconds (3 mins)
+        $todayStr = date('Y-m-d');
+        if ($mode === 'day') {
+            $cacheTtl = ($today < $todayStr) ? 21600 : (($today > $todayStr) ? 43200 : 90);
+        } else {
+            $isPastMonth = ($currentYear . '-' . $currentMonth < date('Y-m'));
+            $cacheTtl    = $isPastMonth ? 21600 : 180;
+        }
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
 
         $candidateIds = [];
         $isSuperAdminView = false;
@@ -1051,7 +1148,7 @@ class Dashboard extends BaseController
             }
         }
 
-        return [
+        $result = [
             'can_view_team_card' => $canViewTeamCard,
             'subordinate_ids'    => $subordinateIds,
             'team_total'         => $teamTotal,
@@ -1063,13 +1160,27 @@ class Dashboard extends BaseController
             'team_leave_names'   => $teamLeaveNames ?? [],
             'team_absent_names'  => $teamAbsentNames ?? [],
         ];
+
+        if ($cacheTtl > 0) {
+            cache()->save($cacheKey, $result, $cacheTtl);
+        }
+
+        return $result;
     }
 
     /**
      * Calculates leave remaining balance and carried over amounts.
+     * Cached per employee for 15 minutes.
      */
     private function getLeaveBalanceData(int $employeeId, string $today, string $currentYear): array
     {
+        $cacheKey = "dash_leave_{$employeeId}_{$currentYear}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
         $mLeaveBalance  = new M_LeaveBalance($this->request);
         $leaveBalance   = $mLeaveBalance->getTotalBalance($employeeId, $currentYear);
         $carryOverValid = (!empty($leaveBalance) && !empty($leaveBalance->carry_over_expiry_date) && $today <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
@@ -1081,20 +1192,31 @@ class Dashboard extends BaseController
         $availableLeave = $carryOverValid ? ($carriedOver + $balance) : $balance;
         $availableLeave = max(0, $availableLeave - $reserved);
 
-        return [
+        $result = [
             'balance'         => $balance,
             'available_leave' => $availableLeave,
         ];
+
+        cache()->save($cacheKey, $result, 900); // 15 minutes
+        return $result;
     }
 
     /**
      * Aggregates pending submissions and formats summary breakdown.
+     * Cached for 120 seconds.
      */
     private function getPendingApprovalsData(int $employeeId, string $rangeEnd): array
     {
         $roleId   = (int) (session()->get('sys_role_id') ?? 0);
         $roleName = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
         $isSuper  = in_array($roleId, $this->superRoleIds, true) || (strpos($roleName, 'HRD') !== false);
+
+        $cacheKey = "dash_pending_{$employeeId}_{$roleId}_{$rangeEnd}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
 
         $builder = $this->db->table('v_all_submission')
             ->select('doctype, COUNT(DISTINCT documentno) as total')
@@ -1124,12 +1246,15 @@ class Dashboard extends BaseController
 
         $pendingSummary = !empty($summaryParts) ? implode(', ', $summaryParts) : 'Tidak ada yang tertunda';
 
-        return [
+        $result = [
             'pending_approvals' => $pendingApprovals,
             'pending_summary'   => $pendingSummary,
             'pending_full'      => $pendingSummary,
             'pending_breakdown' => $pendingBreakdown,
         ];
+
+        cache()->save($cacheKey, $result, 120); // 2 minutes
+        return $result;
     }
 
     /**
@@ -1179,11 +1304,13 @@ class Dashboard extends BaseController
             ->whereIn('md_employee_id', $subordinateIds)
             ->where('birthday IS NOT NULL')
             ->where('birthday >', '1900-01-01')
+            ->where("CAST(birthday AS CHAR) NOT LIKE '0000%'")
             ->get()->getResult();
 
         foreach ($birthdays as $bday) {
+            if (empty($bday->birthday) || strpos((string) $bday->birthday, '0000') === 0) continue;
             $timestamp = strtotime($bday->birthday);
-            if (!empty($bday->birthday) && $timestamp > 0) {
+            if ($timestamp && $timestamp > 0) {
                 $bdayName = !empty($bday->fullname) ? ucwords(strtolower(trim($bday->fullname))) : 'Karyawan';
                 $calendarEvents[] = [
                     'start' => $currentYear . '-' . date('m-d', $timestamp),
@@ -1199,10 +1326,18 @@ class Dashboard extends BaseController
 
     /**
      * Fetches unread announcements for the employee.
+     * Cached per employee for 10 minutes.
      */
     private function getUnreadAnnouncements(int $employeeId, int $limit = 25): array
     {
-        return $this->db->table('trx_message')
+        $cacheKey = "dash_unread_msg_{$employeeId}_{$limit}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $rows = $this->db->table('trx_message')
             ->select('trx_message.trx_message_id, trx_message.subject, trx_message.body, trx_message.messagedate, trx_message.isread, sys_user.name as author')
             ->join('sys_user', 'sys_user.sys_user_id = trx_message.author_id', 'left')
             ->where('trx_message.recipient_id', $employeeId)
@@ -1210,13 +1345,24 @@ class Dashboard extends BaseController
             ->orderBy('trx_message.messagedate', 'DESC')
             ->limit($limit)
             ->get()->getResultArray();
+
+        cache()->save($cacheKey, $rows, 600); // 10 minutes
+        return $rows;
     }
 
     /**
      * Fetches employee greeting, tenure, birthday, and avatar info.
+     * Cached per employee for 30 minutes.
      */
     private function getEmployeeGreetingData(int $employeeId): array
     {
+        $cacheKey = "dash_greeting_{$employeeId}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
         $positionTable = 'md_position';
         $positionLabel = 'name';
         $photoDir      = 'uploads/employee/';
@@ -1288,7 +1434,7 @@ class Dashboard extends BaseController
             $supervisorName   = !empty($rawSupervisorName) ? ucwords(strtolower(trim($rawSupervisorName))) : null;
         }
 
-        return [
+        $result = [
             'greeting_row'      => $greetingRow,
             'employee_photo'    => $employeePhoto,
             'employee_nickname' => $employeeNickname,
@@ -1299,6 +1445,9 @@ class Dashboard extends BaseController
             'tenure_text'       => $tenureText,
             'supervisor_name'   => $supervisorName,
         ];
+
+        cache()->save($cacheKey, $result, 1800); // 30 minutes
+        return $result;
     }
 
     /**
@@ -1359,6 +1508,15 @@ class Dashboard extends BaseController
             $roleId      = (int) (session()->get('sys_role_id') ?? 0);
             $roleName    = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
             $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
+
+            // Calendar cache layer: 15 minutes for active periods, 6 hours for past
+            $catHash  = md5(implode(',', $categories));
+            $cacheKey = "dash_calev_{$employeeId}_{$scope}_{$branchId}_{$divisionId}_{$startDate}_{$endDate}_{$catHash}";
+            $isBypass = !empty($this->request->getGet('refresh'));
+
+            if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+                return $this->response->setJSON($cached);
+            }
 
             $isHrd          = (strpos($roleName, 'HRD') !== false);
             $hasSuperAccess = in_array($roleId, $this->superRoleIds, true) || $levellingId === 100001 || $isHrd;
@@ -1439,7 +1597,7 @@ class Dashboard extends BaseController
                 'leave'   => '#f59e0b',
                 'holiday' => '#dc2626',
                 'bday'    => '#8b5cf6',
-                'team'    => '#10b981',
+                'team'    => '#0284c7',
             ];
 
             $subCats = array_intersect($categories, ['leave', 'team']);
@@ -1537,6 +1695,8 @@ class Dashboard extends BaseController
                     ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
                     ->where('e.isactive', 'Y')
                     ->where('e.birthday IS NOT NULL')
+                    ->where('e.birthday >', '1900-01-01')
+                    ->where("CAST(e.birthday AS CHAR) NOT LIKE '0000%'")
                     ->groupStart()
                         ->where('e.resigndate IS NULL')
                         ->orWhere("CAST(e.resigndate AS CHAR) = '0000-00-00'")
@@ -1557,8 +1717,11 @@ class Dashboard extends BaseController
                 $endYear   = (int) date('Y', strtotime($endDate));
 
                 foreach ($bdayEmps as $emp) {
-                    if (empty($emp->birthday)) continue;
-                    $dobMonthDay = date('m-d', strtotime($emp->birthday));
+                    if (empty($emp->birthday) || strpos((string) $emp->birthday, '0000') === 0) continue;
+                    $bdayTimestamp = strtotime($emp->birthday);
+                    if (!$bdayTimestamp || $bdayTimestamp <= 0) continue;
+
+                    $dobMonthDay = date('m-d', $bdayTimestamp);
                     $cleanBdayEmpName = !empty($emp->employee_name) ? ucwords(strtolower(trim($emp->employee_name))) : 'Karyawan';
 
                     for ($yr = $startYear; $yr <= $endYear; $yr++) {
@@ -1599,6 +1762,11 @@ class Dashboard extends BaseController
                     ];
                 }
             }
+
+            // Save calendar events to cache (15 mins active, 6 hours past)
+            $todayStr = date('Y-m-d');
+            $calTtl   = (!empty($endDate) && $endDate < $todayStr) ? 21600 : 900;
+            cache()->save($cacheKey, $events, $calTtl);
 
             return $this->response->setJSON($events);
 
@@ -2048,8 +2216,10 @@ class Dashboard extends BaseController
                 $status = (in_array($subType, ['100012', 'DATANG_TERLAMBAT'], true) || !empty($subType)) ? 'LATE_EXCUSED' : 'LATE_ARRIVAL';
                 $tkh    = (in_array($subType, ['100012', 'DATANG_TERLAMBAT'], true) || !empty($subType)) ? 1.0 : 0.5;
             } elseif ($isEarlyOut) {
-                $status = (in_array($subType, ['100013', 'PULANG_CEPAT', 'TUGAS_HALF_AFTERNOON'], true) || !empty($subType)) ? 'EARLY_LEAVE_EXCUSED' : 'UNEXCUSED_EARLY_DEPARTURE';
-                $tkh    = (in_array($subType, ['100013', 'PULANG_CEPAT', 'TUGAS_HALF_AFTERNOON'], true) || !empty($subType)) ? 1.0 : 0.5;
+                // Pulang Cepat (100013) and Sakit (100001, 100026) excuse early departure; other reasons still require full hours
+                $isEarlyExcused = in_array((string)$subType, ['100013', 'PULANG_CEPAT', '100001', '100026', 'SAKIT', 'TUGAS_HALF_AFTERNOON'], true);
+                $status = $isEarlyExcused ? 'EARLY_LEAVE_EXCUSED' : 'UNEXCUSED_EARLY_DEPARTURE';
+                $tkh    = $isEarlyExcused ? 1.0 : 0.5;
             }
         }
 
