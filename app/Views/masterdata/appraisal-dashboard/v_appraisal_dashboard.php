@@ -332,19 +332,6 @@
     background-color: #fbfcfd;
 }
 
-/* 5. Explorer DataTables Wrapper Spacing */
-.apd-dt-body {
-    padding: 1rem 1.25rem;
-}
-.apd-dt-body .dataTables_wrapper {
-    padding: 0;
-}
-.apd-dt-body table.dataTable {
-    border-collapse: collapse !important;
-    margin-top: 0.75rem !important;
-    margin-bottom: 0.75rem !important;
-}
-
 /* 6. Audit Trail Timeline */
 .apd-timeline {
     position: relative;
@@ -586,17 +573,18 @@
             <table class="table table-striped table-hover tb_display" style="width: 100%;">
                 <thead>
                     <tr>
-                        <th>No</th>
-                        <th>Nama</th>
-                        <!-- TODO : Delete this remnants of code -->
-                        <!-- <th>User</th> -->
+                        <th>ID</th>
+                        <th class="text-center" style="width: 40px;">No</th>
                         <th>Karyawan</th>
-                        <th>Divisi/Cabang</th>
-                        <th>Nama/Status Siklus</th>
-                        <th>Evaluator/Reviewer</th>
-                        <th>Nilai</th>
-                        <th>Status</th>
-                        <th>Aksi</th>
+                        <th>Jabatan</th>
+                        <th>Level</th>
+                        <th>Divisi</th>
+                        <th>Siklus Penilaian</th>
+                        <th>Penilai</th>
+                        <th>Peninjau</th>
+                        <th class="text-center">Nilai</th>
+                        <th class="text-center" style="width: 140px;">Status</th>
+                        <th class="text-center" style="width: 110px;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -646,7 +634,6 @@ function initAppraisalDashboard() {
         return;
     }
     var $ = window.jQuery;
-    var dtExplorer = null;
 
     function esc(s) {
         return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -655,60 +642,7 @@ function initAppraisalDashboard() {
     }
 
     // =========================================================================
-    // 1. INITIALIZE SERVER-SIDE DATATABLE
-    // =========================================================================
-    function initExplorerTable() {
-        if ($('#table_appraisal_explorer').length) {
-            dtExplorer = $('#table_appraisal_explorer').DataTable({
-                processing: true,
-                serverSide: true,
-                responsive: true,
-                ajax: {
-                    url: '<?= base_url('monitoring-penilaian/showAll') ?>',
-                    type: 'POST',
-                    data: function (d) {
-                        d.cycle_id    = $('#filter_cycle').val();
-                        d.division_id = $('#filter_division').val();
-                        d.status      = $('#filter_status').val();
-                        d.<?= csrf_token() ?> = '<?= csrf_hash() ?>';
-                        return d;
-                    }
-                },
-                columns: [
-                    { data: 0, visible: false },
-                    { data: 1, className: 'text-center align-middle text-muted', orderable: false },
-                    { data: 2, className: 'align-middle font-weight-bold text-dark' },
-                    { data: 3, className: 'align-middle' },
-                    { data: 4, className: 'align-middle' },
-                    { data: 5, className: 'align-middle' },
-                    { data: 6, className: 'align-middle' },
-                    { data: 7, className: 'align-middle text-center' },
-                    { data: 8, className: 'align-middle text-center' },
-                    { data: 9, className: 'align-middle text-center', orderable: false }
-                ],
-                order: [[0, 'desc']],
-                language: {
-                    emptyTable: 'Tidak ada form penilaian yang ditemukan untuk kriteria filter ini.',
-                    zeroRecords: 'Tidak ada data yang cocok dengan pencarian.',
-                    processing: '<div class="py-3 text-center text-muted"><i class="fas fa-spinner fa-spin mr-1 text-primary"></i> Memuat data form...</div>',
-                    search: '_INPUT_',
-                    searchPlaceholder: 'Cari NIK, nama, atau penilai...',
-                    lengthMenu: 'Tampilkan _MENU_ baris',
-                    info: 'Menampilkan _START_–_END_ dari _TOTAL_ form',
-                    infoEmpty: '0 form penilaian',
-                    paginate: {
-                        first: '<i class="fas fa-angle-double-left"></i>',
-                        last: '<i class="fas fa-angle-double-right"></i>',
-                        previous: '<i class="fas fa-angle-left"></i>',
-                        next: '<i class="fas fa-angle-right"></i>'
-                    }
-                }
-            });
-        }
-    }
-
-    // =========================================================================
-    // 2. FETCH SUMMARY METRICS & DIVISION PROGRESS
+    // 1. FETCH SUMMARY METRICS & DIVISION PROGRESS
     // =========================================================================
     function loadSummaryMetrics() {
         var $filterForm = $('.filter_page form, .card-filter form, #filter_appraisal_dashboard, #filter_appraisal_cycle');
@@ -957,14 +891,15 @@ function initAppraisalDashboard() {
     }
 
     // =========================================================================
-    // 3. EVENT HANDLERS & FILTERS
+    // 2. EVENT HANDLERS & FILTERS
     // =========================================================================
-    initExplorerTable();
     loadSummaryMetrics();
 
     $('#filter_cycle, #filter_division, #filter_status, #filter_year').on('change', function () {
-        if (dtExplorer) {
-            dtExplorer.ajax.reload();
+        if (typeof reloadTable === 'function') {
+            reloadTable();
+        } else if (typeof _table !== 'undefined' && _table) {
+            _table.ajax.reload();
         }
         loadSummaryMetrics();
     });
@@ -986,8 +921,10 @@ function initAppraisalDashboard() {
     $('#btn_refresh_all').on('click', function () {
         var $icon = $(this).find('i');
         $icon.addClass('fa-spin');
-        if (dtExplorer) {
-            dtExplorer.ajax.reload(null, false);
+        if (typeof reloadTable === 'function') {
+            reloadTable();
+        } else if (typeof _table !== 'undefined' && _table) {
+            _table.ajax.reload(null, false);
         }
         loadSummaryMetrics();
         setTimeout(function () {
@@ -1000,8 +937,10 @@ function initAppraisalDashboard() {
         $('#filter_cycle').val('<?= (int) $default_cycle_id ?>').trigger('change.select2');
         $('#filter_division').val('0').trigger('change.select2');
         $('#filter_status').val('ALL').trigger('change');
-        if (dtExplorer) {
-            dtExplorer.ajax.reload();
+        if (typeof reloadTable === 'function') {
+            reloadTable();
+        } else if (typeof _table !== 'undefined' && _table) {
+            _table.ajax.reload();
         }
         loadSummaryMetrics();
     });
@@ -1078,7 +1017,7 @@ function initAppraisalDashboard() {
     window.nudgeAppraisal = function (appraisalId, empName) {
         if (!appraisalId) return;
 
-        var targetTitle = empName ? 'evaluasi <b>' + esc(empName) + '</b>' : 'form evaluasi ini';
+        var targetTitle = empName ? 'evaluasi <b>' + esc(String(empName).toUpperCase()) + '</b>' : 'form evaluasi ini';
 
         Swal.fire({
             title: 'Kirim Pengingat?',

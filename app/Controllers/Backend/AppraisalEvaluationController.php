@@ -212,7 +212,11 @@ class AppraisalEvaluationController extends BaseController
 
         // Count personal history (Finalized past appraisals)
         $countHistory = 0;
-        if (! empty($empIdsForAck)) {
+        if ($isAdmin) {
+            $countHistory = $this->model->where('isactive', 'Y')
+                                        ->where('status', M_Appraisal::STATUS_FINALIZED)
+                                        ->countAllResults();
+        } elseif (! empty($empIdsForAck)) {
             $countHistory = $this->model->whereIn('md_employee_id', $empIdsForAck)
                                         ->where('isactive', 'Y')
                                         ->where('status', M_Appraisal::STATUS_FINALIZED)
@@ -352,7 +356,22 @@ class AppraisalEvaluationController extends BaseController
                 // Role Tab Scope (If Admin/System $empId <= 0 or roleTab is ALL, don't filter to single user)
                 $isAdmin = $this->isAppraisalAdmin($empId);
 
-                if ($empId > 0 && (! $isAdmin || $roleTab !== 'ALL')) {
+                if ($roleTab === 'HISTORY') {
+                    if (! $isAdmin) {
+                        $userId       = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
+                        $delegatedIds = $this->getDelegatedEmployeesWithoutUser($userId);
+                        $ackEmpIds    = array_values(array_unique(array_filter(array_merge([$empId], $delegatedIds))));
+
+                        if (! empty($ackEmpIds)) {
+                            $builder->whereIn('a.md_employee_id', $ackEmpIds);
+                        } elseif ($empId > 0) {
+                            $builder->where('a.md_employee_id', $empId);
+                        } else {
+                            $builder->where('1 = 0');
+                        }
+                    }
+                    $builder->where('a.status', M_Appraisal::STATUS_FINALIZED);
+                } elseif ($empId > 0 && (! $isAdmin || $roleTab !== 'ALL')) {
                     if (! $isAdmin) {
                         $empRow = $this->db->table('md_employee e')
                             ->select('l.name as level_name')
@@ -380,17 +399,6 @@ class AppraisalEvaluationController extends BaseController
 
                     if ($roleTab === 'GM') {
                         $builder->where('a.snapshot_gm_id', $empId);
-                    } elseif ($roleTab === 'HISTORY') {
-                        $userId       = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
-                        $delegatedIds = $this->getDelegatedEmployeesWithoutUser($userId);
-                        $ackEmpIds    = array_values(array_unique(array_filter(array_merge([$empId], $delegatedIds))));
-
-                        if (! empty($ackEmpIds)) {
-                            $builder->whereIn('a.md_employee_id', $ackEmpIds);
-                        } else {
-                            $builder->where('a.md_employee_id', $empId);
-                        }
-                        $builder->where('a.status', M_Appraisal::STATUS_FINALIZED);
                     } elseif ($roleTab === 'EMPLOYEE') {
                         $userId       = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
                         $delegatedIds = $this->getDelegatedEmployeesWithoutUser($userId);
@@ -483,29 +491,27 @@ class AppraisalEvaluationController extends BaseController
                     $gmNik    = esc($value['gm_nik'] ?? '');
 
                     $isDelegatedRow = (! empty($delegatedIds) && in_array((int) $value['md_employee_id'], $delegatedIds, true) && (int) $value['md_employee_id'] !== $empId);
-                    $delegatedBadge = $isDelegatedRow ? ' <span class="badge badge-info" style="font-size: 10px; font-weight: normal;"><i class="fas fa-user-friends mr-1"></i>Delegasi Duta</span>' : '';
+                    $delegatedBadge = $isDelegatedRow ? ' <span class="badge badge-info ml-1" style="font-size: 10px; font-weight: normal;" title="Delegasi Duta"><i class="fas fa-user-friends mr-1"></i>Duta</span>' : '';
 
-                    $karyawanCol = '<div>' .
-                        '<p class="mb-0 font-weight-bold">' . $empName . $delegatedBadge . '</p>' .
-                        '<small class="text-muted">' . $nik . ($level ? ' &middot; ' . $level : '') . '</small>' .
-                    '</div>';
-
-                    $divisiCol = '<div><p class="mb-0 font-weight-bold">' . $divName . '</p><small class="text-muted">' . $posName . '</small></div>';
-
-                    $evaluatorCol = '<div><p class="mb-0 font-weight-bold">' . $evalName . '</p>' . ($evalNik ? '<small class="text-muted">' . $evalNik . '</small>' : '') . '</div>';
-
-                    $reviewerCol  = '<div><p class="mb-0 font-weight-bold">' . $gmName . '</p>' . ($gmNik ? '<small class="text-muted">' . $gmNik . '</small>' : '') . '</div>';
+                    $karyawanCol = '<span class="font-weight-bold text-dark" title="' . $nik . '">' . $empName . '</span>' . $delegatedBadge;
+                    $posisiCol   = '<span class="text-dark">' . $posName . '</span>';
+                    $levelCol    = '<span class="text-dark">' . ($level ?: '-') . '</span>';
+                    $divisiCol   = '<span class="text-dark">' . $divName . '</span>';
+                    $evaluatorCol = '<span class="text-dark font-weight-500" title="' . $evalNik . '">' . $evalName . '</span>';
+                    $reviewerCol  = '<span class="text-dark font-weight-500" title="' . $gmNik . '">' . $gmName . '</span>';
 
                     $row = [];
                     $row[] = $id;                                    // [0] ID (hidden)
                     $row[] = $number;                                // [1] No
                     $row[] = $karyawanCol;                           // [2] Karyawan
-                    $row[] = $divisiCol;                             // [3] Divisi & Posisi
-                    $row[] = $evaluatorCol;                          // [4] Penilai (Evaluator)
-                    $row[] = $reviewerCol;                           // [5] Reviewer (GM / Atasan)
-                    $row[] = '<strong>' . $cycTitle . '</strong>';   // [6] Siklus Penilaian
-                    $row[] = $stageProgress;                         // [7] Tahapan (Plain Text)
-                    $row[] = $actionBtn;                             // [8] Aksi Buttons
+                    $row[] = $posisiCol;                             // [3] Jabatan
+                    $row[] = $levelCol;                              // [4] Level
+                    $row[] = $divisiCol;                             // [5] Divisi
+                    $row[] = $evaluatorCol;                          // [6] Penilai (Evaluator)
+                    $row[] = $reviewerCol;                           // [7] Peninjau (Reviewer)
+                    $row[] = '<strong>' . $cycTitle . '</strong>';   // [8] Siklus Penilaian
+                    $row[] = $stageProgress;                         // [9] Tahapan (Plain Text)
+                    $row[] = $actionBtn;                             // [10] Aksi Buttons
 
                     $data[] = $row;
                 }

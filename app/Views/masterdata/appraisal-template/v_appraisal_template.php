@@ -117,12 +117,12 @@
                             rowsHtml += '<tr>' +
                                 '<td class="text-center text-muted">' + (emp.no || '-') + '</td>' +
                                 '<td class="font-weight-bold text-primary">' + (emp.nik || '-') + '</td>' +
-                                '<td><div class="font-weight-600">' + (emp.employee_name || '-') + '</div></td>' +
+                                '<td><div class="font-weight-600">' + (emp.employee_name ? String(emp.employee_name).toUpperCase() : '-') + '</div></td>' +
                                 '<td>' + (emp.branch_name || '-') + '</td>' +
                                 '<td>' + (emp.division_name || '-') + '</td>' +
                                 '<td><span class="badge badge-light border">' + (emp.level_name || emp.position_name || '-') + '</span></td>' +
-                                '<td><small class="text-muted d-block font-weight-600">' + (emp.evaluator_name || '-') + '</small></td>' +
-                                '<td><small class="text-muted d-block">' + (emp.reviewer_name || '-') + '</small></td>' +
+                                '<td><small class="text-muted d-block font-weight-600">' + (emp.evaluator_name ? String(emp.evaluator_name).toUpperCase() : '-') + '</small></td>' +
+                                '<td><small class="text-muted d-block">' + (emp.reviewer_name ? String(emp.reviewer_name).toUpperCase() : '-') + '</small></td>' +
                             '</tr>';
                         });
                         $tbody.html(rowsHtml);

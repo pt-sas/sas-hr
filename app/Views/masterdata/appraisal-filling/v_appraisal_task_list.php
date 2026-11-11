@@ -147,40 +147,7 @@
     @keyframes atl-spin { to { transform:rotate(360deg); } }
     .atl-page :focus-visible { outline:3px solid rgba(21,114,232,.55); outline-offset:2px; border-radius:6px; }
 
-    /* Table */
-    .atl-table-wrap { padding:0 24px 20px; min-height: 480px; position: relative; }
-    .atl-table-wrap .dataTables_wrapper { min-height: 420px; }
-    .atl-table-wrap .dataTables_scrollBody { min-height: 280px; }
-    .atl-table-wrap div.dataTables_wrapper div.dataTables_processing {
-        position: absolute;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 10;
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid var(--atl-line);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border-radius: 8px;
-        padding: 12px 24px;
-        font-weight: 700;
-        color: var(--atl-primary);
-    }
-    #table_task_list thead th { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--atl-sub); background:var(--atl-soft); border-bottom:1px solid var(--atl-line) !important; border-top:0; padding:12px; }
-    #table_task_list tbody td { padding:14px 12px; border-top:1px solid var(--atl-line); vertical-align:middle; }
-    #table_task_list tbody tr:hover { background:#f9fbff; }
-    .atl-emp { display:flex; align-items:center; gap:12px; text-align:left; }
-    .atl-avatar { flex:0 0 40px; width:40px; height:40px; border-radius:50%; background:#e7f0fd; color:#0d4fb3; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; }
-    .atl-emp-name { font-weight:700; color:var(--atl-ink); margin:0; line-height:1.25; }
-    .atl-emp-meta { font-size:12.5px; color:var(--atl-sub); margin:2px 0 0; }
-    .atl-steps-mini { display:inline-flex; gap:4px; vertical-align:middle; margin-right:8px; }
-    .atl-steps-mini i { width:18px; height:6px; border-radius:3px; background:var(--atl-line); display:block; }
-    .atl-steps-mini i.on { background:var(--atl-primary); }
-    .atl-steps-mini.is-final i.on { background:var(--atl-success); }
-    .atl-stage-label { font-size:13px; font-weight:700; color:var(--atl-ink); }
-    .atl-empty, .atl-error { text-align:center; padding:36px 12px; color:var(--atl-sub); }
-    .atl-empty i, .atl-error i { font-size:34px; margin-bottom:10px; display:block; }
-    .atl-error { color:#a5262e; }
-    .atl-processing { font-size:13px; color:var(--atl-sub); }
+    /* Informational Notice Box */
     .atl-notice-box {
         margin: 16px 24px 12px;
         padding: 14px 18px;
@@ -209,9 +176,9 @@
     .atl-tl-line { font-size:13px; color:var(--atl-sub); margin:2px 0; }
     .atl-tl-note { font-size:13px; color:var(--atl-ink); background:var(--atl-soft); border:1px solid var(--atl-line); border-radius:8px; padding:8px 10px; margin-top:6px; }
 
-    /* Mobile: stepper vertical, table rows become cards */
+    /* Mobile: stepper vertical */
     @media (max-width: 767.98px) {
-        .atl-hero, .atl-stepper, .atl-panel-head, .atl-toolbar, .atl-table-wrap { padding-left:16px; padding-right:16px; }
+        .atl-hero, .atl-stepper, .atl-panel-head, .atl-toolbar { padding-left:16px; padding-right:16px; }
         .atl-tabs { padding:0 8px; }
         .atl-stepper { flex-direction:column; gap:0; padding:16px 18px; }
         .atl-step { display:flex; align-items:flex-start; gap:14px; text-align:left; padding:0 0 18px 0; }
@@ -221,13 +188,6 @@
         .atl-step-content { align-items:flex-start; text-align:left; }
         .atl-step-name { font-size:14px; margin-top:2px; }
         .atl-step-sub { font-size:12px; margin-bottom:6px; }
-        #table_task_list thead { display:none; }
-        #table_task_list, #table_task_list tbody, #table_task_list tr, #table_task_list td { display:block; width:100% !important; }
-        #table_task_list tbody tr { border:1px solid var(--atl-line); border-radius:10px; margin-bottom:12px; padding:6px 4px; }
-        #table_task_list tbody td { border:0; display:flex; justify-content:space-between; align-items:center; gap:12px; text-align:right !important; padding:8px 12px; }
-        #table_task_list tbody td::before { content:attr(data-label); font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--atl-sub); font-weight:700; text-align:left; flex:0 0 auto; }
-        #table_task_list tbody td.atl-td-emp { display:block; text-align:left !important; }
-        #table_task_list tbody td.atl-td-emp::before { display:none; }
     }
     @media (prefers-reduced-motion: reduce) {
         .atl-reload.is-spinning i, .fa-spin { animation:none !important; }
@@ -332,17 +292,17 @@
                         <?php if ($isDone): ?>
                             <span class="atl-step-date atl-step-date--done" title="Selesai pada <?= esc($st['date_fmt']) ?>">
                                 <i class="fas fa-check-circle" aria-hidden="true"></i>
-                                <span>Selesai: <?= esc($st['date_fmt']) ?></span>
+                                <span><?= esc($st['date_fmt']) ?></span>
                             </span>
                         <?php elseif ($isCurrent): ?>
                             <span class="atl-step-date atl-step-date--active" title="Tenggat waktu: <?= esc($st['date_fmt']) ?>">
                                 <i class="fas fa-hourglass-half" aria-hidden="true"></i>
-                                <span>Tenggat: <?= esc($st['date_fmt']) ?></span>
+                                <span><?= esc($st['date_fmt']) ?></span>
                             </span>
                         <?php else: ?>
                             <span class="atl-step-date" title="Tenggat waktu: <?= esc($st['date_fmt']) ?>">
                                 <i class="far fa-calendar-alt" aria-hidden="true"></i>
-                                <span>Tenggat: <?= esc($st['date_fmt']) ?></span>
+                                <span><?= esc($st['date_fmt']) ?></span>
                             </span>
                         <?php endif; ?>
                     <?php endif; ?>
@@ -416,28 +376,26 @@
         </div>
 
         <!-- Main Datatables Overview Section -->
-        <div class="atl-table-wrap">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover tb_display" style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th class="text-center" style="width: 40px;">No</th>
-                            <th>Karyawan</th>
-                            <th>Divisi & Posisi</th>
-                            <th>Penilai</th>
-                            <th>Peninjau</th>
-                            <th class="text-center">Siklus Penilaian</th>
-                            <th class="text-center" style="width: 150px;">Tahapan</th>
-                            <th class="text-center" style="width: 90px;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Populated via Server-Side DataTables -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <table class="table table-striped table-hover tb_display" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th class="text-center" style="width: 40px;">No</th>
+                    <th>Karyawan</th>
+                    <th>Jabatan</th>
+                    <th>Level</th>
+                    <th>Divisi</th>
+                    <th>Penilai</th>
+                    <th>Peninjau</th>
+                    <th class="text-center">Siklus Penilaian</th>
+                    <th class="text-center" style="width: 150px;">Tahapan</th>
+                    <th class="text-center" style="width: 90px;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated via Server-Side DataTables -->
+            </tbody>
+        </table>
     </section>
 
     <?php endif; ?>

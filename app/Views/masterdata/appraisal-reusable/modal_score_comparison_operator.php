@@ -10,7 +10,7 @@
         $periodeText = $cycleTitle;
     }
 
-    $empName    = esc($employee['name'] ?? '-');
+    $empName    = esc(mb_strtoupper($employee['name'] ?? '-', 'UTF-8'));
     $empNik     = esc($employee['nik'] ?? '-');
     $statusText = esc($appraisal->status ?? 'DRAFT_EVALUATOR');
 

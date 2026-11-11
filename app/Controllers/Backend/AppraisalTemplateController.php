@@ -566,13 +566,13 @@ class AppraisalTemplateController extends BaseController
                 $data[] = [
                     'no'             => $no++,
                     'nik'            => $row['nik'] ?? '-',
-                    'employee_name'  => $row['fullname'] ?? '-',
+                    'employee_name'  => !empty($row['fullname']) ? mb_strtoupper($row['fullname'], 'UTF-8') : '-',
                     'branch_name'    => $row['branch_name'] ?? 'Pusat / Semua Cabang',
                     'division_name'  => $row['division_name'] ?? 'Semua Divisi',
                     'position_name'  => $row['position_name'] ?? '-',
                     'level_name'     => $row['level_name'] ?? '-',
-                    'evaluator_name' => $row['evaluator_name'] ?? '(Belum ditentukan)',
-                    'reviewer_name'  => $row['reviewer_name'] ?? '-',
+                    'evaluator_name' => !empty($row['evaluator_name']) ? mb_strtoupper($row['evaluator_name'], 'UTF-8') : '(Belum ditentukan)',
+                    'reviewer_name'  => !empty($row['reviewer_name']) ? mb_strtoupper($row['reviewer_name'], 'UTF-8') : '-',
                 ];
             }
 

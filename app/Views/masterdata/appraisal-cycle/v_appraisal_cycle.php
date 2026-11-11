@@ -261,7 +261,7 @@
                                 className: 'align-middle font-weight-bold text-primary',
                                 render: function (d, t, r) {
                                     var pos = r.position ? '<br><small class="text-muted">' + esc(r.position) + '</small>' : '';
-                                    return esc(d) + pos;
+                                    return esc(d ? String(d).toUpperCase() : '') + pos;
                                 }
                             },
                             {
@@ -299,7 +299,7 @@
                                 className: 'align-middle',
                                 render: function (d, t, r) {
                                     if (r.evaluator_id > 0) {
-                                        return '<span class="text-dark">' + esc(d) + '</span>';
+                                        return '<span class="text-dark font-weight-500">' + esc(d ? String(d).toUpperCase() : '') + '</span>';
                                     }
                                     return '<span class="text-danger font-weight-bold" style="font-size:11.5px;">Belum Terdata</span>';
                                 }
@@ -308,7 +308,7 @@
                                 data: 'reviewer_name',
                                 className: 'align-middle',
                                 render: function (d, t, r) {
-                                    return r.reviewer_id > 0 ? '<span class="text-muted">' + esc(d) + '</span>' : '<span class="text-muted">-</span>';
+                                    return r.reviewer_id > 0 ? '<span class="text-muted font-weight-500">' + esc(d ? String(d).toUpperCase() : '') + '</span>' : '<span class="text-muted">-</span>';
                                 }
                             },
                             {

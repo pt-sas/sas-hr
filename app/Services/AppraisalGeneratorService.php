@@ -275,7 +275,7 @@ class AppraisalGeneratorService
                 $rows[] = [
                     'md_employee_id'   => (int) $app['md_employee_id'],
                     'nik'              => $app['nik'] ?? '-',
-                    'name'             => $app['fullname'] ?? '-',
+                    'name'             => !empty($app['fullname']) ? mb_strtoupper($app['fullname'], 'UTF-8') : '-',
                     'branch'           => $app['branch_name'] ?? 'Pusat',
                     'division'         => $app['division_name'] ?? 'Semua Divisi',
                     'level'            => $app['level_name'] ?? 'Staff',
@@ -284,9 +284,9 @@ class AppraisalGeneratorService
                     'template_name'    => $tplName,
                     'template_status'  => $app['template_status'] ?? 'PUBLISHED',
                     'evaluator_id'     => (int) ($app['evaluator_id'] ?? 0),
-                    'evaluator_name'   => !empty($app['evaluator_name']) ? $app['evaluator_name'] : '-',
+                    'evaluator_name'   => !empty($app['evaluator_name']) ? mb_strtoupper($app['evaluator_name'], 'UTF-8') : '-',
                     'reviewer_id'      => (int) ($app['reviewer_id'] ?? 0),
-                    'reviewer_name'    => !empty($app['reviewer_name']) ? $app['reviewer_name'] : '-',
+                    'reviewer_name'    => !empty($app['reviewer_name']) ? mb_strtoupper($app['reviewer_name'], 'UTF-8') : '-',
                     'readiness_status' => 'ALREADY_GENERATED',
                     'status_note'      => 'Form aktif (' . ($app['appraisal_status'] ?? M_Appraisal::STATUS_PENILAIAN) . ')',
                 ];
@@ -463,7 +463,7 @@ class AppraisalGeneratorService
             $rows[] = [
                 'md_employee_id'   => $empId,
                 'nik'              => $emp['nik'] ?? '-',
-                'name'             => $emp['fullname'] ?? '-',
+                'name'             => !empty($emp['fullname']) ? mb_strtoupper($emp['fullname'], 'UTF-8') : '-',
                 'branch'           => $emp['branch_name'] ?? 'Pusat',
                 'division'         => $emp['division_name'] ?? 'Semua Divisi',
                 'level'            => $emp['level_name'] ?? 'Staff',
@@ -472,9 +472,9 @@ class AppraisalGeneratorService
                 'template_name'    => $resolvedTplName,
                 'template_status'  => $resolvedTplStatus,
                 'evaluator_id'     => $evaluatorId,
-                'evaluator_name'   => $evaluatorName,
+                'evaluator_name'   => !empty($evaluatorName) && $evaluatorName !== '-' ? mb_strtoupper($evaluatorName, 'UTF-8') : $evaluatorName,
                 'reviewer_id'      => $reviewerId,
-                'reviewer_name'    => $reviewerName,
+                'reviewer_name'    => !empty($reviewerName) && $reviewerName !== '-' ? mb_strtoupper($reviewerName, 'UTF-8') : $reviewerName,
                 'readiness_status' => $readiness,
                 'status_note'      => $statusNote,
             ];

@@ -356,15 +356,18 @@ class PerformanceAppraisal extends BaseController
             $orderDir    = $this->request->getPost('order')[0]['dir'] ?? 'desc';
             
             $columnMap = [
-                0 => 'a.md_appraisal_id',
-                1 => 'a.md_appraisal_id',
-                2 => 'e.value',
-                3 => 'e.fullname',
-                4 => 'd.name',
-                5 => 'c.title',
-                6 => 'eval.fullname',
-                7 => 'a.final_score',
-                8 => 'a.status',
+                0  => 'a.md_appraisal_id',
+                1  => 'a.md_appraisal_id',
+                2  => 'e.fullname',
+                3  => 'p.name',
+                4  => 'l.name',
+                5  => 'd.name',
+                6  => 'c.title',
+                7  => 'eval.fullname',
+                8  => 'gm.fullname',
+                9  => 'a.final_score',
+                10 => 'a.status',
+                11 => 'a.md_appraisal_id',
             ];
 
             if (isset($columnMap[$orderColIdx])) {
@@ -392,20 +395,27 @@ class PerformanceAppraisal extends BaseController
                 $rating       = $val['rating'] ?? '-';
                 $cycleTitle   = $val['cycle_title'] ?? '-';
                 $cycleStatus  = $val['cycle_status'] ?? 'OPEN';
-                $evalName     = $val['evaluator_name'] ?: '-';
-                $gmName       = $val['gm_name'] ?: '-';
+                $evalName     = !empty($val['evaluator_name']) ? mb_strtoupper($val['evaluator_name'], 'UTF-8') : '-';
+                $gmName       = !empty($val['gm_name']) ? mb_strtoupper($val['gm_name'], 'UTF-8') : '-';
+                $empName      = !empty($val['employee_name']) ? mb_strtoupper($val['employee_name'], 'UTF-8') : '-';
+                $posName      = $val['position_name'] ?? '-';
+                $levelName    = $val['level_name'] ?? '-';
+                $divName      = $val['division_name'] ?? '-';
+                $branchName   = $val['branch_name'] ?? '';
+                $nik          = $val['nik'] ?? '-';
 
-                // Cycle Badge
-                $cycleCol = '<strong>' . esc($cycleTitle) . '</strong><br>' . esc($cycleStatus) . '';
+                // Cycle Column
+                $cycleCol = '<span class="font-weight-500 text-dark">' . esc($cycleTitle) . '</span>';
 
-                // Score & Grade Badge
+                // Score & Grade Badge (Single Line with hyphen)
                 $scoreCol = '<div class="text-center">';
                 if ($score !== '-') {
                     $numScore = (float) $val['final_score'];
                     $scoreColor = ($numScore >= 3.50) ? 'text-success' : (($numScore >= 2.75) ? 'text-primary' : (($numScore >= 2.00) ? 'text-warning' : 'text-danger'));
-                    $scoreCol .= '<span class="font-weight-bold ' . $scoreColor . '" style="font-size:14px;">' . $score . '</span>';
+                    $scoreCol .= '<span class="font-weight-bold ' . $scoreColor . '">' . $score . '</span>';
                     if (!empty($rating) && $rating !== '-') {
-                        $scoreCol .= '<br><small class="text-muted" style="font-size:11px;" title="' . esc($rating) . '">' . esc(explode('(', $rating)[0]) . '</small>';
+                        $shortRating = esc(explode('(', $rating)[0]);
+                        $scoreCol .= ' <span class="text-muted font-weight-normal">&ndash; ' . trim($shortRating) . '</span>';
                     }
                 } else {
                     $scoreCol .= '<span class="text-muted">-</span>';
@@ -430,18 +440,26 @@ class PerformanceAppraisal extends BaseController
                 $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat &amp; Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
                 $actions .= '</div>';
 
+                $karyawanCol = '<span class="font-weight-bold text-dark" title="' . esc($nik) . '">' . esc($empName) . '</span>';
+                $posisiCol   = '<span class="text-dark">' . esc($posName) . '</span>';
+                $levelCol    = '<span class="text-dark">' . esc($levelName) . '</span>';
+                $divisiCol   = '<span class="text-dark" title="' . esc($branchName ? 'Cabang: ' . $branchName : '') . '">' . esc($divName) . '</span>';
+                $evalCol     = '<span class="text-dark font-weight-500">' . esc($evalName) . '</span>';
+                $gmCol       = '<span class="text-dark font-weight-500">' . esc($gmName) . '</span>';
+
                 $row = [];
-                $row[] = $id;
-                $row[] = $number;
-                // TODO : Delete this remnants of code
-                // $row[] = esc($val['nik'] ?? '-');
-                $row[] = '<strong>' . esc($val['employee_name'] ?? '-') . '</strong><br><small class="text-muted">' . esc($val['position_name'] ?? '') . ' &middot; ' . esc($val['level_name'] ?? '') . '</small>';
-                $row[] = esc($val['division_name'] ?? '-') . '<br><small class="text-muted">' . esc($val['branch_name'] ?? 'Pusat') . '</small>';
-                $row[] = $cycleCol;
-                $row[] = '<small class="text-dark"><strong>Atasan:</strong> ' . esc($evalName) . '<br><strong>GM:</strong> ' . esc($gmName) . '</small>';
-                $row[] = $scoreCol;
-                $row[] = $statusBadge;
-                $row[] = $actions;
+                $row[] = $id;          // [0] ID (hidden)
+                $row[] = $number;      // [1] No
+                $row[] = $karyawanCol; // [2] Karyawan
+                $row[] = $posisiCol;   // [3] Jabatan
+                $row[] = $levelCol;    // [4] Level
+                $row[] = $divisiCol;   // [5] Divisi
+                $row[] = $cycleCol;    // [6] Siklus Penilaian
+                $row[] = $evalCol;     // [7] Penilai (Evaluator)
+                $row[] = $gmCol;       // [8] Peninjau (Reviewer)
+                $row[] = $scoreCol;    // [9] Nilai
+                $row[] = $statusBadge; // [10] Status
+                $row[] = $actions;     // [11] Aksi
 
                 $data[] = $row;
             }
