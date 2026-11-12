@@ -3329,7 +3329,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     setDashboardLoading(false);
                 }
             });
-        }, 300);
+        }, 120);
     });
 
     function updateDashboardDOM(data) {
@@ -3920,10 +3920,17 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       if (ev.type === 'holiday') {
+        var holType = ext.holiday_type || 'Libur Nasional';
+        var holName = ext.holiday_name || ev.title;
+        var badgeClass = (holType === 'Cuti Bersama') ? 'bg-warning text-dark' : 'bg-danger text-white';
+
         return '<div class="k-card-box t-holiday" style="border-left-color: #dc2626;">' +
           '<div class="k-card-head">' +
-            '<div class="k-card-head-title"><span class="k-time-tag" style="color:#dc2626;"><i class="fas fa-calendar-alt me-1"></i> [Hari Libur]</span> <b>' + esc(ev.title) + '</b></div>' +
-            '<span class="badge bg-danger text-white" style="font-size:0.65rem; padding: 3px 6px;">Libur Nasional</span>' +
+            '<div class="k-card-head-title"><span class="k-time-tag" style="color:#dc2626;"><i class="fas fa-calendar-alt me-1"></i> ' + esc(holType) + '</span></div>' +
+            '<span class="badge ' + badgeClass + '" style="font-size:0.65rem; padding: 3px 6px;">' + esc(holType) + '</span>' +
+          '</div>' +
+          '<div class="k-card-body-content">' +
+            '<div class="k-card-row" style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 0;">' + esc(holName) + '</div>' +
           '</div>' +
         '</div>';
       }
@@ -3962,7 +3969,27 @@ document.addEventListener('DOMContentLoaded', function() {
       $cal.find('.fc-bg td.fc-day[data-date="' + sel + '"]').addClass('is-selected');
     }
 
-    function pick(d){ sel = d; markSelected(); renderDetail(); }
+    function pick(d, syncGlobal){
+      sel = d;
+      markSelected();
+      renderDetail();
+
+      if (syncGlobal && window.DP && DP.picker && typeof DP.picker.emitChange === 'function') {
+        var st = DP.picker.getState();
+        var currentIso = st && st.sel ? DP.iso(st.sel) : '';
+        var targetDate = DP.parse(d);
+
+        // When in month mode, check if the clicked date belongs to a different month (prev/next month days)
+        if (st && st.mode === 'month') {
+          var isDifferentMonth = !currentIso || (d.slice(0, 7) !== currentIso.slice(0, 7));
+          if (isDifferentMonth) {
+            DP.picker.emitChange(targetDate, st.mode, st.level);
+          }
+        } else if (currentIso !== d) {
+          DP.picker.emitChange(targetDate, st ? st.mode : 'day', st ? st.level : 'me');
+        }
+      }
+    }
 
     function paintDots(){
       var view = $cal.fullCalendar('getView');
@@ -4076,8 +4103,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       },
 
-      dayClick:   function (date) { pick(date.format('YYYY-MM-DD')); },
-      eventClick: function (ev)   { pick(first(ev)); return false; },
+      dayClick:   function (date) { pick(date.format('YYYY-MM-DD'), true); },
+      eventClick: function (ev)   { pick(first(ev), true); return false; },
 
       loading: function(isLoading) {
         $cal.toggleClass('cal-loading', isLoading);
@@ -4102,7 +4129,7 @@ document.addEventListener('DOMContentLoaded', function() {
       clearTimeout(calDebounceTimer);
       calDebounceTimer = setTimeout(function () {
         $cal.fullCalendar('refetchEvents');
-      }, 300);
+      }, 120);
     });
   }
 })();
