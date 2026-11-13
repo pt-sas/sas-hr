@@ -19,8 +19,6 @@ class M_AppraisalCycle extends Model
         'deadline_review',
         'deadline_reading',
         'deadline_override',
-        'evaluator_due_date',
-        'gm_due_date',
         'status',
         'isactive',
         'created_by',

@@ -99,15 +99,23 @@
     </div>
 </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="form-group">
-                    <label for="md_levelling_id">Jenjang / Level Target</label>
+                    <label for="md_levelling_id">Level Target</label>
                     <select class="form-control multiple-select-levelling access" id="md_levelling_id" name="md_levelling_id" multiple="multiple">
                     </select>
                 </div>
             </div>
+            
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="md_position_id">Jabatan Target</label>
+                    <select class="form-control multiple-select-position access" id="md_position_id" name="md_position_id" multiple="multiple">
+                    </select>
+                </div>
+            </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_division_id">Divisi Target</label>
                     <select class="form-control multiple-select-division access" id="md_division_id" name="md_division_id" multiple="multiple">
@@ -115,7 +123,7 @@
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="form-group">
                     <label for="md_branch_id">Cabang Target</label>
                     <select class="form-control multiple-select-branch access" id="md_branch_id" name="md_branch_id" multiple="multiple">
@@ -174,9 +182,9 @@
                     <i class="fas fa-layer-group fa-2x text-muted"></i>
                 </span>
             </div>
-            <h5 class="font-weight-bold text-dark mb-1">Pilih Tipe Template Penilaian Terlebih Dahulu</h5>
+            <h5 class="font-weight-bold text-dark mb-1">Pilih Tipe Template Penilaian</h5>
             <p class="text-muted small mb-0" style="max-width: 520px; margin: 0 auto; line-height: 1.5;">
-                Silakan pilih salah satu opsi di atas &mdash; <strong>Standard / Staff &amp; Leadership</strong> untuk penilaian kompetensi berskala, atau <strong>Operator Lapangan</strong> untuk checklist verifikasi operasional &mdash; untuk mulai menyusun butir penilaian.
+                Silakan pilih salah satu opsi di atas untuk mulai menyusun template penilaian.
             </p>
         </div>
 
@@ -194,7 +202,6 @@
                         <a class="nav-link" id="tab-slider" data-toggle="pill" href="#slider_pane" data-target="#slider_pane" role="tab" aria-controls="slider_pane" aria-selected="false">
                             Grouped Kompetensi
                             <span class="badge badge-primary tpl-count" data-tpl-count="SCORE">0</span>
-                            <i class="fas fa-exclamation-triangle text-warning tpl-flag" id="tpl_weight_flag" hidden title="Total bobot belum 100%"></i>
                         </a>
                     </li>
                     <!-- TAB 3: CHECKLIST TUNGGAL -->
@@ -230,8 +237,8 @@
                 <div class="tab-pane fade show active" id="checklist_pane" role="tabpanel" aria-labelledby="tab-checklist">
                     <div class="tpl-pane-head">
                         <div>
-                            <h6 class="mb-0 font-weight-bold">Kriteria Kepatuhan (Pass / Fail)</h6>
-                            <small class="text-muted">Evaluasi biner Ya / Tidak tanpa bobot persentase.</small>
+                            <h6 class="mb-0 font-weight-bold">Kriteria Kepatuhan (Ya / Tidak)</h6>
+                            <small class="text-muted">Evaluasi biner Ya / Tidak tanpa bobot persentase</small>
                         </div>
                     </div>
 
@@ -256,18 +263,8 @@
                     <div class="tpl-pane-head">
                         <div>
                             <h6 class="mb-0 font-weight-bold">Kompetensi &amp; Performa Kerja (Skor 0&ndash;4)</h6>
-                            <small class="text-muted">Total bobot seluruh kelompok harus tepat 100%.</small>
+                            <small class="text-muted">Evaluasi performa kerja dengan skala skor 0.00 &ndash; 4.00 per butir indikator.</small>
                         </div>
-                    </div>
-
-                    <!-- Weight Meter Bar -->
-                    <div class="tpl-weight" id="tpl_weight" data-state="low" hidden>
-                        <div class="tpl-weight-top">
-                            <span>Total Bobot</span>
-                            <b id="tpl_weight_total">0%</b>
-                            <span id="tpl_weight_msg" class="tpl-weight-msg">Kurang 100%</span>
-                        </div>
-                        <div class="tpl-weight-bar"><span id="tpl_weight_fill"></span></div>
                     </div>
 
                     <div id="tpl_container_slider"></div>
@@ -420,18 +417,6 @@
 .tpl-pane-head h6 { color: #2a2f5b; }
 
 /* Weight meter */
-.tpl-weight { margin-bottom: 1rem; padding: .75rem 1rem; border: 1px solid #ebedf2; border-radius: 4px; background: #fff; }
-.tpl-weight-top { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; font-size: 12px; color: #6b6d7e; }
-.tpl-weight-top b { font-size: 1rem; color: #2a2f5b; }
-.tpl-weight-msg { margin-left: auto; font-weight: 600; }
-.tpl-weight-bar { height: 6px; margin-top: .5rem; border-radius: 3px; background: #ebedf2; overflow: hidden; }
-.tpl-weight-bar span { display: block; height: 100%; width: 0; background: #ffad46; transition: width .25s ease; }
-.tpl-weight[data-state="ok"] .tpl-weight-bar span { background: #31ce36; }
-.tpl-weight[data-state="ok"] .tpl-weight-msg { color: #31ce36; }
-.tpl-weight[data-state="low"] .tpl-weight-msg { color: #ffad46; }
-.tpl-weight[data-state="high"] .tpl-weight-bar span { background: #f25961; }
-.tpl-weight[data-state="high"] .tpl-weight-msg { color: #f25961; }
-
 /* Empty state & bottom add */
 .tpl-empty { padding: 2rem 1rem; border: 1px dashed #ebedf2; border-radius: 4px; text-align: center; color: #8d9498; }
 .tpl-empty i { color: #c9ced6; }
@@ -452,7 +437,6 @@
 .tpl-titles { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; min-width: 0; }
 .tpl-title-text { color: #2a2f5b; font-size: 14px; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tpl-sub { color: #8d9498; font-size: 12px; }
-.tpl-weight-chip { flex: none; padding: 1px 8px; border-radius: 3px; background: rgba(21,114,232,.1); color: #1572e8; font-size: 12px; font-weight: 600; }
 .tpl-del { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; color: #8d9498; cursor: pointer; }
 .tpl-del:hover { background: rgba(242,89,97,.1); color: #f25961; text-decoration: none; }
 .tpl-card-body { padding: 1rem; min-width: 0; }
@@ -536,7 +520,7 @@
             var $tabSingle    = $('#tab-single').closest('li');
             var $tabWeighted  = $('#tab-weighted').closest('li');
 
-            var $lvlSelect = $('#md_levelling_id, #md_position_id').first();
+            var $lvlSelect = $('#md_levelling_id');
 
             if (type === 'OPERATOR') {
                 // Hide Staff tabs
@@ -610,7 +594,6 @@
                 $('#tpl_container_checklist, #tpl_container_slider').find('.tpl-card').each(function () {
                     var card = $(this);
                     if ($.trim(card.find('input[name="competency[]"]').val()) !== '' ||
-                        $.trim(card.find('input[name="category[]"]').val()) !== '' ||
                         filledActions(card).length > 0) {
                         filledStaff = true;
                         return false;
@@ -729,14 +712,9 @@
             return '<div class="tpl-card-body">' +
                 '<input type="hidden" name="md_appraisal_template_item_id[]" class="line" value="' + esc(data.md_appraisal_template_item_id) + '">' +
                 '<input type="hidden" name="input_type[]" class="line" value="' + esc(type) + '">' +
-                '<input type="hidden" name="weight[]" class="line" value="0">' +
                 '<div class="row">' +
-                    '<div class="col-md-4">' + fieldHtml('Kategori',
-                        inputHtml('category[]', data.category, isChecklist ? 'Contoh: COMPLIANCE' : 'Contoh: PERFORMA'), true) + '</div>' +
-                    '<div class="col-md-8">' + fieldHtml('Nama Kompetensi',
-                        inputHtml('competency[]', data.competency, isChecklist ? 'Contoh: Security Audit' : 'Contoh: Job Knowledge'), true) + '</div>' +
-                    '<div class="col-12">' + fieldHtml('Definisi Kompetensi',
-                        '<textarea name="definition[]" class="form-control form-control-sm line" rows="2" placeholder="Jelaskan secara singkat deskripsi atau ekspektasi dari kompetensi ini...">' + esc(data.definition) + '</textarea>') + '</div>' +
+                    '<div class="col-12">' + fieldHtml('Nama Kompetensi',
+                        inputHtml('competency[]', data.competency, isChecklist ? 'Contoh: Kepatuhan Regulasi & Standar Operasional' : 'Contoh: Job Knowledge / Problem Solving'), true) + '</div>' +
                 '</div>' +
                 '<div class="tpl-actions">' +
                     '<div class="tpl-actions-head">' +
@@ -772,12 +750,11 @@
                 $cards.each(function (i) {
                     var $c   = $(this);
                     var comp = $.trim($c.find('input[name="competency[]"]').val());
-                    var cat  = $.trim($c.find('input[name="category[]"]').val());
                     var n    = filledActions($c).length;
 
                     $c.find('.tpl-num').first().text(i + 1);
                     $c.find('.tpl-title-text').text(comp || 'Kelompok Kompetensi Baru');
-                    $c.find('.tpl-sub').text((cat ? '[' + cat + '] \u00B7 ' : '') + n + ' indikator');
+                    $c.find('.tpl-sub').text(n + ' indikator');
                     $c.find('.tpl-count-actions').text(n);
                     $c.find('.tpl-action-row').each(function (j) {
                         $(this).find('.tpl-row-no').text(j + 1);
@@ -832,8 +809,7 @@
 
         window.tplRemoveCard = function (elem) {
             var $card = $(elem).closest('.tpl-card');
-            var filled = $.trim($card.find('input[name="competency[]"], input[name="category[]"], textarea[name="definition[]"]').map(function () { return $(this).val(); }).get().join('')) !== '' ||
-                         (parseFloat($card.find('input[name="weight[]"]').val()) || 0) > 0 ||
+            var filled = $.trim($card.find('input[name="competency[]"], textarea[name="definition[]"]').map(function () { return $(this).val(); }).get().join('')) !== '' ||
                          filledActions($card).length > 0;
 
             if (!filled) { removeCard($card); return; }
@@ -889,7 +865,7 @@
                 $card.one('animationend', function () { $card.removeClass('is-new'); });
                 requestAnimationFrame(function () {
                     if ($card[0].scrollIntoView) { $card[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
-                    $card.find('input[name="category[]"]').focus();
+                    $card.find('input[name="competency[]"]').focus();
                 });
             }
             return $card;
@@ -1122,8 +1098,7 @@
                             }
                             var cardData = {
                                 md_appraisal_template_item_id: it.md_appraisal_template_item_id || '',
-                                category: it.title || it.category || '',
-                                competency: cfg.competency || it.competency || '',
+                                competency: cfg.competency || it.title || it.competency || '',
                                 definition: it.description || it.definition || '',
                                 key_actions: cfg.key_actions || it.key_actions || [],
                                 weight: it.weight || 0
@@ -1154,9 +1129,10 @@
         window.tplRenderScoping = function (scoping) {
             scoping = scoping || {};
             var pairs = [
-                ['#md_levelling_id, #md_position_id', 'levelling_ids', 'position_ids'],
-                ['#md_division_id', 'division_ids', null],
-                ['#md_branch_id',   'branch_ids', null]
+                ['#md_levelling_id', 'levelling_ids', null],
+                ['#md_position_id',  'position_ids',  null],
+                ['#md_division_id',  'division_ids',  null],
+                ['#md_branch_id',    'branch_ids',    null]
             ];
             pairs.forEach(function (pair) {
                 var $el = $form.find(pair[0]).first();
@@ -1190,18 +1166,17 @@
                     .filter(function (v) { return !isNaN(v) && v > 0; });
             };
 
-            var $lvlSelect = form.find('#md_levelling_id, #md_position_id').first();
             var scoping = {
                 branch_ids:    toIntArray(form.find('#md_branch_id').val() || []),
                 division_ids:  toIntArray(form.find('#md_division_id').val() || []),
-                levelling_ids: toIntArray($lvlSelect.val() || []),
-                position_ids:  toIntArray($lvlSelect.val() || [])
+                levelling_ids: toIntArray(form.find('#md_levelling_id').val() || []),
+                position_ids:  toIntArray(form.find('#md_position_id').val() || [])
             };
 
             var sectionsConfig = [
                 {
                     containerId: '#tpl_container_checklist',
-                    defaultName: 'Kriteria Kepatuhan',
+                    defaultName: 'KOMPETENSI TAMBAHAN',
                     sectionType: 'BOOLEAN',
                     defaultWeight: 0.00,
                     sequenceOrder: 1,
@@ -1209,11 +1184,11 @@
                 },
                 {
                     containerId: '#tpl_container_slider',
-                    defaultName: 'Kompetensi & Performa Kerja',
+                    defaultName: 'PERFORMA',
                     sectionType: 'SCORE',
                     defaultWeight: 100.00,
                     sequenceOrder: 2,
-                    description: 'Total bobot seluruh kelompok harus tepat 100%'
+                    description: 'Penilaian dengan skala (0 - 4)'
                 }
             ];
 
@@ -1239,9 +1214,8 @@
                         };
 
                         var cardTitleText = card.find('.tpl-title-text').text().trim();
-                        var rawCat        = $.trim(getVal('category'));
-                        var title         = rawCat || (cardTitleText && cardTitleText !== 'Kelompok Kompetensi Baru' ? cardTitleText : '') || ('Item ' + itemOrder);
                         var competency    = $.trim(getVal('competency'));
+                        var title         = competency || (cardTitleText && cardTitleText !== 'Kelompok Kompetensi Baru' ? cardTitleText : '') || ('Item ' + itemOrder);
                         var definition    = $.trim(getVal('definition'));
                         var rawKeyActions = getVal('key_actions') || '[]';
 
@@ -1285,8 +1259,14 @@
 
                     if (cfg.sectionType === 'SCORE' && sectionWeight === 0 && items.length > 0) {
                         var equalW = parseFloat((100.0 / items.length).toFixed(2));
-                        items.forEach(function (it) {
-                            it.weight = equalW;
+                        var sumW = 0.0;
+                        items.forEach(function (it, idx) {
+                            if (idx === items.length - 1) {
+                                it.weight = parseFloat((100.0 - sumW).toFixed(2));
+                            } else {
+                                it.weight = equalW;
+                                sumW += equalW;
+                            }
                         });
                         totalScoreWeight = 100.0;
                         sectionWeight = 100.0;
@@ -1332,7 +1312,7 @@
                 if (singleItems.length > 0) {
                     sections.push({
                         md_appraisal_section_id: $('#table_single_wrap').data('sectionId') || null,
-                        name: 'Checklist Tunggal',
+                        name: 'PENILAIAN TAMBAHAN',
                         section_type: 'SINGLE_CHECKLIST',
                         weight: 0.00,
                         sequence_order: 3,
@@ -1366,7 +1346,7 @@
                 if (weightedItems.length > 0) {
                     sections.push({
                         md_appraisal_section_id: $('#table_weighted_wrap').data('sectionId') || null,
-                        name: 'Checklist Berbobot',
+                        name: 'PENILAIAN KINERJA',
                         section_type: 'WEIGHTED_CHECKLIST',
                         weight: parseFloat(sumWeightedPoints.toFixed(2)),
                         sequence_order: 4,
@@ -1376,7 +1356,7 @@
                 }
             }
 
-            var rawTemplateId = parseInt($('#md_appraisal_template_id').val(), 10) || (typeof ID !== 'undefined' && parseInt(ID, 10) > 0 ? parseInt(ID, 10) : null);
+            var rawTemplateId = parseInt($('#md_appraisal_template_id').val(), 10) || null;
 
             return {
                 md_appraisal_template_id: rawTemplateId,
@@ -1410,9 +1390,6 @@
             form.find('.tpl-card').each(function () {
                 var card = $(this);
                 var $f;
-                if (($f = card.find('input[name="category[]"]')).length && !$.trim($f.val())) {
-                    bad = fail('Kategori wajib diisi.', $f); return false;
-                }
                 if (($f = card.find('input[name="competency[]"]')).length && !$.trim($f.val())) {
                     bad = fail('Nama kompetensi wajib diisi.', $f); return false;
                 }
@@ -1454,11 +1431,6 @@
             });
             if (bad) return bad;
 
-            var hasScore = data.sections.some(function (sec) { return sec.section_type === 'SCORE'; });
-            if (hasScore && data.total_score_weight > 0 && !data.is_weight_valid) {
-                return fail('Total bobot kelompok kompetensi harus tepat 100%. Saat ini: ' + data.total_score_weight + '%');
-            }
-
             return { ok: true };
         };
 
@@ -1477,6 +1449,13 @@
         window.tplResetForm = function () {
             var $f = $('#form_appraisal_template');
             window.tplCleanupAfterSave();
+
+            // Clear template IDs to prevent edit check on a newly created template
+            $f.find('#md_appraisal_template_id').val('');
+            $f.find('input[name="id"]').val('');
+            if (typeof ID !== 'undefined') {
+                ID = 0;
+            }
 
             // Set template type to unchosen (hiding questionnaire)
             window.tplSetTemplateType(null, false);
@@ -1547,16 +1526,19 @@
          * 5. Live Target Summary Indicator
          */
         window.tplUpdateTargetSummary = function () {
-            var rawPositions = $('#md_position_id, #md_levelling_id').first().val() || [];
-            var rawDivisions = $('#md_division_id').val() || [];
-            var rawBranches  = $('#md_branch_id').val() || [];
+            var rawLevels     = $('#md_levelling_id').val() || [];
+            var rawPositions  = $('#md_position_id').val() || [];
+            var rawDivisions  = $('#md_division_id').val() || [];
+            var rawBranches   = $('#md_branch_id').val() || [];
 
+            var lvlCount = (Array.isArray(rawLevels) ? rawLevels : [rawLevels]).filter(Boolean).length;
             var posCount = (Array.isArray(rawPositions) ? rawPositions : [rawPositions]).filter(Boolean).length;
             var divCount = (Array.isArray(rawDivisions) ? rawDivisions : [rawDivisions]).filter(Boolean).length;
             var brCount  = (Array.isArray(rawBranches) ? rawBranches : [rawBranches]).filter(Boolean).length;
 
             var parts = [];
-            if (posCount) parts.push(posCount + ' Level');
+            if (lvlCount) parts.push(lvlCount + ' Level');
+            if (posCount) parts.push(posCount + ' Jabatan');
             if (divCount) parts.push(divCount + ' Divisi');
             if (brCount)  parts.push(brCount + ' Cabang');
 
@@ -1609,6 +1591,11 @@
                     if (data.md_appraisal_template_id) {
                         options.data.set('md_appraisal_template_id', String(data.md_appraisal_template_id));
                         options.data.set('id', String(data.md_appraisal_template_id));
+                    } else {
+                        if (typeof options.data.delete === 'function') {
+                            options.data.delete('id');
+                            options.data.delete('md_appraisal_template_id');
+                        }
                     }
                     // Strip raw card array keys and checklist line keys if any leaked into FormData
                     ['category[]', 'competency[]', 'weight[]', 'definition[]', 'key_actions[]', 'input_type[]', 'md_appraisal_template_item_id[]',
@@ -1693,8 +1680,8 @@
             });
 
             $(document)
-                .off('input change', '.tpl-card input[name="competency[]"], .tpl-card input[name="category[]"], .tpl-card input[name="weight[]"], .tpl-action-input')
-                .on('input change', '.tpl-card input[name="competency[]"], .tpl-card input[name="category[]"], .tpl-card input[name="weight[]"], .tpl-action-input', function () {
+                .off('input change', '.tpl-card input[name="competency[]"], .tpl-card input[name="weight[]"], .tpl-action-input')
+                .on('input change', '.tpl-card input[name="competency[]"], .tpl-card input[name="weight[]"], .tpl-action-input', function () {
                     window.tplSyncActions($(this).closest('.tpl-card'));
                     window.tplRefresh();
                 });
@@ -1720,7 +1707,7 @@
                     var status = '';
                     if (header && Array.isArray(header)) {
                         header.forEach(function (h) {
-                            if (h.field === 'status') status = h.value;
+                            if (h.field === 'status') status = h.label || h.value;
                         });
                     }
                     var isPub = (status === 'CO' || status === 'PUBLISHED');

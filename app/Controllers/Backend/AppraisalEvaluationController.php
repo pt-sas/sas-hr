@@ -10,6 +10,7 @@ use App\Models\M_AppraisalResponse;
 use App\Models\M_Employee;
 use App\Services\AppraisalCycleService;
 use App\Services\AppraisalScoringService;
+use App\Services\AppraisalTemplateServices;
 use App\Services\AppraisalWorkflowService;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -337,17 +338,18 @@ class AppraisalEvaluationController extends BaseController
                 $roleTab = $formValues['role_tab'] ?? $this->request->getPost('role_tab') ?? 'EVALUATOR';
 
                 $builder = $this->db->table('md_appraisal a')
-                    ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_cycle_id, a.status, a.performance_score, a.final_score, a.rating, a.evaluator_submitted_at, a.gm_reviewed_at, a.finalized_at,
+                    ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_cycle_id, a.status, a.final_score, a.rating, a.evaluator_submitted_at, a.gm_reviewed_at, a.finalized_at,
                               a.snapshot_evaluator_id, a.snapshot_gm_id,
                               e.nik as nik, e.fullname as employee_name,
                               ev.nik as evaluator_nik, ev.fullname as evaluator_name,
                               gm.nik as gm_nik, gm.fullname as gm_name,
-                              d.name as division_name, p.name as position_name, l.name as level_name,
-                              c.title as cycle_title, c.deadline_filling, c.deadline_review, c.deadline_reading, c.deadline_override, c.start_date, c.end_date, c.evaluator_due_date, c.gm_due_date')
+                              d.name as division_name, p.name as position_name, l.name as level_name, b.name as branch_name,
+                              c.title as cycle_title, c.deadline_filling, c.deadline_review, c.deadline_reading, c.deadline_override, c.start_date, c.end_date')
                     ->join('md_employee e', 'e.md_employee_id = a.md_employee_id', 'left')
                     ->join('md_employee ev', 'ev.md_employee_id = a.snapshot_evaluator_id', 'left')
                     ->join('md_employee gm', 'gm.md_employee_id = a.snapshot_gm_id', 'left')
                     ->join('md_division d', 'd.md_division_id = a.snapshot_division_id', 'left')
+                    ->join('md_branch b', 'b.md_branch_id = a.snapshot_branch_id', 'left')
                     ->join('md_position p', 'p.md_position_id = a.snapshot_position_id', 'left')
                     ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
                     ->join('md_appraisal_cycle c', 'c.md_appraisal_cycle_id = a.md_appraisal_cycle_id', 'left')
@@ -432,6 +434,9 @@ class AppraisalEvaluationController extends BaseController
                         ->like('e.fullname', trim($search))
                         ->orLike('e.value', trim($search))
                         ->orLike('ev.fullname', trim($search))
+                        ->orLike('b.name', trim($search))
+                        ->orLike('d.name', trim($search))
+                        ->orLike('p.name', trim($search))
                         ->orLike('c.title', trim($search))
                         ->groupEnd();
                 }
@@ -496,6 +501,7 @@ class AppraisalEvaluationController extends BaseController
                     $karyawanCol = '<span class="font-weight-bold text-dark" title="' . $nik . '">' . $empName . '</span>' . $delegatedBadge;
                     $posisiCol   = '<span class="text-dark">' . $posName . '</span>';
                     $levelCol    = '<span class="text-dark">' . ($level ?: '-') . '</span>';
+                    $cabangCol   = '<span class="text-dark">' . esc($value['branch_name'] ?: '-') . '</span>';
                     $divisiCol   = '<span class="text-dark">' . $divName . '</span>';
                     $evaluatorCol = '<span class="text-dark font-weight-500" title="' . $evalNik . '">' . $evalName . '</span>';
                     $reviewerCol  = '<span class="text-dark font-weight-500" title="' . $gmNik . '">' . $gmName . '</span>';
@@ -506,12 +512,13 @@ class AppraisalEvaluationController extends BaseController
                     $row[] = $karyawanCol;                           // [2] Karyawan
                     $row[] = $posisiCol;                             // [3] Jabatan
                     $row[] = $levelCol;                              // [4] Level
-                    $row[] = $divisiCol;                             // [5] Divisi
-                    $row[] = $evaluatorCol;                          // [6] Penilai (Evaluator)
-                    $row[] = $reviewerCol;                           // [7] Peninjau (Reviewer)
-                    $row[] = '<strong>' . $cycTitle . '</strong>';   // [8] Siklus Penilaian
-                    $row[] = $stageProgress;                         // [9] Tahapan (Plain Text)
-                    $row[] = $actionBtn;                             // [10] Aksi Buttons
+                    $row[] = $cabangCol;                             // [5] Cabang
+                    $row[] = $divisiCol;                             // [6] Divisi
+                    $row[] = $evaluatorCol;                          // [7] Penilai (Evaluator)
+                    $row[] = $reviewerCol;                           // [8] Peninjau (Reviewer)
+                    $row[] = '<strong>' . $cycTitle . '</strong>';   // [9] Siklus Penilaian
+                    $row[] = $stageProgress;                         // [10] Tahapan (Plain Text)
+                    $row[] = $actionBtn;                             // [11] Aksi Buttons
 
                     $data[] = $row;
                 }
@@ -590,6 +597,7 @@ class AppraisalEvaluationController extends BaseController
         $snapshot = is_string($appraisal->template_snapshot)
             ? json_decode($appraisal->template_snapshot, true)
             : ($appraisal->template_snapshot ?: []);
+        $snapshot = AppraisalTemplateServices::expandSchema(is_array($snapshot) ? $snapshot : []);
 
         // 3. Load pre-seeded or existing responses
         $responses = $this->modelDetail->where('md_appraisal_id', (int) $id)
@@ -694,6 +702,7 @@ class AppraisalEvaluationController extends BaseController
         $snapshot = is_string($appraisal->template_snapshot)
             ? json_decode($appraisal->template_snapshot, true)
             : ($appraisal->template_snapshot ?: []);
+        $snapshot = AppraisalTemplateServices::expandSchema(is_array($snapshot) ? $snapshot : []);
 
         $responses = $this->modelDetail->where('md_appraisal_id', (int) $id)
                                        ->where('isactive', 'Y')
@@ -815,6 +824,7 @@ class AppraisalEvaluationController extends BaseController
         $snapshot = is_string($appraisal->template_snapshot)
             ? json_decode($appraisal->template_snapshot, true)
             : ($appraisal->template_snapshot ?: []);
+        $snapshot = AppraisalTemplateServices::expandSchema(is_array($snapshot) ? $snapshot : []);
 
         $responses = $this->modelDetail->where('md_appraisal_id', (int) $id)
                                        ->where('isactive', 'Y')
@@ -851,28 +861,9 @@ class AppraisalEvaluationController extends BaseController
             'duta_ack_name'        => $dutaAckName,
         ];
 
-        // Detect if template is Operator mode (WEIGHTED_CHECKLIST / SINGLE_CHECKLIST)
-        $isOperator = false;
-        foreach ($snapshot['sections'] ?? [] as $s) {
-            $st = strtoupper($s['section_type'] ?? '');
-            if ($st === 'WEIGHTED_CHECKLIST' || $st === 'SINGLE_CHECKLIST') {
-                $isOperator = true;
-                break;
-            }
-        }
-        if (! $isOperator) {
-            foreach ($snapshot['items'] ?? [] as $it) {
-                $itType = strtoupper($it['input_type'] ?? '');
-                if ($itType === 'WEIGHTED_CHECKLIST' || $itType === 'SINGLE_CHECKLIST') {
-                    $isOperator = true;
-                    break;
-                }
-            }
-        }
-
-        if ($isOperator) {
-            return $this->template->render('masterdata/appraisal-filling/v_appraisal_complete_operator', $data);
-        }
+        helper('appraisal_view');
+        $isOperator = appraisal_is_operator($snapshot);
+        $data['is_operator'] = $isOperator;
 
         return $this->template->render('masterdata/appraisal-filling/v_appraisal_complete', $data);
     }
@@ -899,35 +890,7 @@ class AppraisalEvaluationController extends BaseController
         $snapshot          = $formData['template_snapshot'];
         $responsesByItemId = $formData['responses_by_item_id'];
 
-        $parseActions = function ($raw): array {
-            if (empty($raw)) return [];
-            if (is_array($raw)) return array_values(array_filter(array_map('trim', $raw)));
-            if (is_string($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) {
-                    return array_values(array_filter(array_map('trim', $decoded)));
-                }
-                $lines = explode("\n", $raw);
-                return array_values(array_filter(array_map('trim', $lines)));
-            }
-            return [];
-        };
-
-        $parseChecked = function (int $idx, array $checkedList): bool {
-            if (empty($checkedList)) return false;
-            $hasYorN = false;
-            foreach ($checkedList as $v) {
-                if (in_array(strtoupper((string) $v), ['Y', 'N'], true)) {
-                    $hasYorN = true;
-                    break;
-                }
-            }
-            if ($hasYorN) {
-                $val = $checkedList[$idx] ?? $checkedList[(string) $idx] ?? null;
-                return in_array(strtoupper((string) $val), ['Y', '1', 'TRUE'], true);
-            }
-            return in_array((string) $idx, array_map('strval', $checkedList), true);
-        };
+        helper('appraisal_view');
 
         $sections = $snapshot['sections'] ?? [];
         $items    = $snapshot['items'] ?? [];
@@ -946,24 +909,7 @@ class AppraisalEvaluationController extends BaseController
             }
         }
 
-        // Detect if template is Operator mode (WEIGHTED_CHECKLIST / SINGLE_CHECKLIST)
-        $isOperator = false;
-        foreach ($sections as $s) {
-            $st = strtoupper($s['section_type'] ?? '');
-            if ($st === 'WEIGHTED_CHECKLIST' || $st === 'SINGLE_CHECKLIST') {
-                $isOperator = true;
-                break;
-            }
-        }
-        if (! $isOperator) {
-            foreach ($items as $it) {
-                $itType = strtoupper($it['input_type'] ?? '');
-                if ($itType === 'WEIGHTED_CHECKLIST' || $itType === 'SINGLE_CHECKLIST') {
-                    $isOperator = true;
-                    break;
-                }
-            }
-        }
+        $isOperator = appraisal_is_operator($snapshot);
 
         if ($isOperator) {
             $weightedItems = [];
@@ -1048,6 +994,8 @@ class AppraisalEvaluationController extends BaseController
             }
 
             $opViewData = [
+                'display_mode'      => 'compare',
+                'is_operator'       => true,
                 'appraisal_id'      => $id,
                 'appraisal'         => $appraisal,
                 'employee'          => $employee,
@@ -1062,7 +1010,7 @@ class AppraisalEvaluationController extends BaseController
                 'gm_comment'        => $appraisal->gm_comment ?? '',
             ];
 
-            return view('masterdata/appraisal-reusable/modal_score_comparison_operator', $opViewData);
+            return view('masterdata/appraisal-reusable/modal_score_comparison_content', $opViewData);
         }
 
         $comparisonSections     = [];
@@ -1088,7 +1036,7 @@ class AppraisalEvaluationController extends BaseController
 
                 $compTitle  = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($itIdx + 1)));
                 $definition = !empty($item['description']) ? $item['description'] : (!empty($cfg['definition']) ? $cfg['definition'] : '-');
-                $actions    = $parseActions($cfg['key_actions'] ?? null);
+                $actions    = appraisal_parse_actions($cfg['key_actions'] ?? null);
 
                 $resp = $responsesByItemId[$itemId] ?? null;
 
@@ -1204,14 +1152,14 @@ class AppraisalEvaluationController extends BaseController
                     $actionRows = [];
                     if (!empty($actions)) {
                         foreach ($actions as $aIdx => $actionText) {
-                            $evalChecked = $parseChecked($aIdx, $evalCheckedActions);
+                            $evalChecked = is_array($evalCheckedActions) && appraisal_parse_checked((int) $aIdx, $evalCheckedActions);
 
                             $gmChecked    = null;
                             $isOverridden = false;
 
                             if ($isGmReviewed) {
                                 if (isset($gmPayload['checked_actions'])) {
-                                    $gmChecked = $parseChecked($aIdx, $gmCheckedActions);
+                                    $gmChecked = is_array($gmCheckedActions) && appraisal_parse_checked((int) $aIdx, $gmCheckedActions);
                                     if ($gmChecked !== $evalChecked) {
                                         $isOverridden = true;
                                         $hasOverride  = true;
@@ -1302,7 +1250,19 @@ class AppraisalEvaluationController extends BaseController
         $evalRating = $getRating($evalFinalOverall);
         $gmRating   = $getRating($gmFinalOverall);
 
+        $scoreSections   = [];
+        $booleanSections = [];
+        foreach ($comparisonSections as $cs) {
+            if (($cs['section_type'] ?? '') === 'BOOLEAN') {
+                $booleanSections[] = $cs;
+            } else {
+                $scoreSections[] = $cs;
+            }
+        }
+
         $viewData = [
+            'display_mode'         => 'compare',
+            'is_operator'          => false,
             'appraisal_id'         => $id,
             'appraisal'            => $appraisal,
             'employee'             => $employee,
@@ -1310,6 +1270,8 @@ class AppraisalEvaluationController extends BaseController
             'gm'                   => $gm,
             'cycle'                => $cycle,
             'sections'             => $comparisonSections,
+            'scoreSections'        => $scoreSections,
+            'booleanSections'      => $booleanSections,
             'eval_overall_score'   => $evalFinalOverall,
             'eval_rating'          => $evalRating,
             'gm_overall_score'     => $gmFinalOverall,
@@ -1384,6 +1346,7 @@ class AppraisalEvaluationController extends BaseController
         $snapshot = is_string($appraisal->template_snapshot)
             ? json_decode($appraisal->template_snapshot, true)
             : ($appraisal->template_snapshot ?: []);
+        $snapshot = AppraisalTemplateServices::expandSchema(is_array($snapshot) ? $snapshot : []);
 
         $responses = $this->modelDetail->where('md_appraisal_id', $id)
             ->where('isactive', 'Y')
@@ -2066,12 +2029,31 @@ class AppraisalEvaluationController extends BaseController
             $isBooleanItem = isset($row['checked_actions']) || isset($row['boolean_value']);
             if ($isBooleanItem) {
                 unset($row['score']);
+                if (isset($row['checked_actions']) && is_array($row['checked_actions'])) {
+                    $hasYorN = false;
+                    foreach ($row['checked_actions'] as $v) {
+                        if (in_array(strtoupper((string) $v), ['Y', 'N'], true)) {
+                            $hasYorN = true;
+                            break;
+                        }
+                    }
+                    if ($hasYorN) {
+                        $indices = [];
+                        foreach ($row['checked_actions'] as $k => $v) {
+                            if (in_array(strtoupper((string) $v), ['Y', '1', 'TRUE'], true)) {
+                                $indices[] = (int) $k;
+                            }
+                        }
+                        $row['checked_actions'] = array_values($indices);
+                    } else {
+                        $row['checked_actions'] = array_values(array_map('intval', array_filter($row['checked_actions'], 'is_numeric')));
+                    }
+                }
             } elseif (! empty($row['action_scores']) && is_array($row['action_scores'])) {
-                $numericScores = array_values(array_map(function ($s) {
+                $row['action_scores'] = array_values(array_map(function ($s) {
                     return round((float) $s, 2);
                 }, $row['action_scores']));
-                $row['action_scores'] = $numericScores;
-                $row['score']         = count($numericScores) > 0 ? round(array_sum($numericScores) / count($numericScores), 2) : 3.00;
+                unset($row['score']);
             } elseif (isset($row['score']) && $row['score'] !== '') {
                 $row['score'] = round((float) $row['score'], 2);
             }

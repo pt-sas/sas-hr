@@ -94,7 +94,7 @@ class QuestionEvaluationProbation extends Seeder
             'created_by'    => 1,
             'updated_by'    => 1,
             'value'         => 'QG00008',
-            'name'          => 'Sikap & Prilaku',
+            'name'          => 'Sikap & Perilaku',
             'sequence'      => 3,
             'menu_url'      => 'evaluasi-percobaan',
             'description'   => 'Form Evaluasi Lembur'

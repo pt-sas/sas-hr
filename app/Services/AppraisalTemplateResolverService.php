@@ -18,9 +18,10 @@ class AppraisalTemplateResolverService
     }
 
     /**
-     * Resolve the appropriate template ID for a given branch, division, and levelling.
+     * Resolve the appropriate template ID for a given branch, division, levelling, and position.
      *
      * Specificity Hierarchy:
+     * - Position:  8 points
      * - Levelling: 4 points
      * - Division:  2 points
      * - Branch:    1 point
@@ -29,10 +30,11 @@ class AppraisalTemplateResolverService
      * @param int|array $branchId
      * @param int|array $divisionId
      * @param int       $levellingId
+     * @param int       $positionId
      * @param bool      $includeDraft Whether to consider DRAFT templates (e.g. for simulations)
      * @return int
      */
-    public function resolveTemplateId($branchId, $divisionId, int $levellingId, bool $includeDraft = false): int
+    public function resolveTemplateId($branchId, $divisionId, int $levellingId, int $positionId = 0, bool $includeDraft = false): int
     {
         $branchIds = is_array($branchId) ? array_filter(array_map('intval', $branchId)) : ($branchId > 0 ? [(int) $branchId] : []);
         $divisionIds = is_array($divisionId) ? array_filter(array_map('intval', $divisionId)) : ($divisionId > 0 ? [(int) $divisionId] : []);
@@ -59,48 +61,37 @@ class AppraisalTemplateResolverService
             throw new Exception("Tidak ada template appraisal {$statusLabel} di sistem.");
         }
 
+        // 2. Load all active scopes for candidate templates in ONE query
+        $candidateIds = array_column($candidates, 'md_appraisal_template_id');
+        $scopeRows = $this->db->table('md_template_scope')
+            ->select('md_appraisal_template_id, scope_type, scope_id')
+            ->whereIn('md_appraisal_template_id', $candidateIds)
+            ->where('isactive', 'Y')
+            ->get()
+            ->getResultArray();
+
+        $scopesByTpl = [];
+        foreach ($scopeRows as $row) {
+            $tId = (int) $row['md_appraisal_template_id'];
+            $sType = $row['scope_type'];
+            $scopesByTpl[$tId][$sType][] = (int) $row['scope_id'];
+        }
+
         $bestMatch = null;
         $bestScore = -1;
 
         foreach ($candidates as $tpl) {
-            $tplId = (int) $tpl['md_appraisal_template_id'];
-
-            // Load scoping mappings for this candidate
-            $tplBranches = array_column(
-                $this->db->table('md_template_branch')
-                    ->select('md_branch_id')
-                    ->where('md_appraisal_template_id', $tplId)
-                    ->where('isactive', 'Y')
-                    ->get()
-                    ->getResultArray(),
-                'md_branch_id'
-            );
-
-            $tplDivisions = array_column(
-                $this->db->table('md_template_division')
-                    ->select('md_division_id')
-                    ->where('md_appraisal_template_id', $tplId)
-                    ->where('isactive', 'Y')
-                    ->get()
-                    ->getResultArray(),
-                'md_division_id'
-            );
-
-            $tplLevellings = array_column(
-                $this->db->table('md_template_levelling')
-                    ->select('md_levelling_id')
-                    ->where('md_appraisal_template_id', $tplId)
-                    ->where('isactive', 'Y')
-                    ->get()
-                    ->getResultArray(),
-                'md_levelling_id'
-            );
-
-            $tplBranches   = array_map('intval', $tplBranches);
-            $tplDivisions  = array_map('intval', $tplDivisions);
-            $tplLevellings = array_map('intval', $tplLevellings);
+            $tplId         = (int) $tpl['md_appraisal_template_id'];
+            $tplScopes     = $scopesByTpl[$tplId] ?? [];
+            $tplBranches   = $tplScopes['BRANCH'] ?? [];
+            $tplDivisions  = $tplScopes['DIVISION'] ?? [];
+            $tplLevellings = $tplScopes['LEVELLING'] ?? [];
+            $tplPositions  = $tplScopes['POSITION'] ?? [];
 
             // Filtering: If template has specific scoping in a dimension, the employee must match
+            if (! empty($tplPositions) && ($positionId <= 0 || ! in_array($positionId, $tplPositions, true))) {
+                continue;
+            }
             if (! empty($tplLevellings) && ($levellingId <= 0 || ! in_array($levellingId, $tplLevellings, true))) {
                 continue;
             }
@@ -115,8 +106,9 @@ class AppraisalTemplateResolverService
                 }
             }
 
-            // Specificity score: Levelling (4) > Division (2) > Branch (1) > Global (0)
-            $score = (! empty($tplLevellings) ? 4 : 0)
+            // Specificity score: Position (8) > Levelling (4) > Division (2) > Branch (1) > Global (0)
+            $score = (! empty($tplPositions) ? 8 : 0)
+                + (! empty($tplLevellings) ? 4 : 0)
                 + (! empty($tplDivisions) ? 2 : 0)
                 + (! empty($tplBranches) ? 1 : 0);
 
@@ -129,7 +121,7 @@ class AppraisalTemplateResolverService
         if (! $bestMatch) {
             $branchStr = implode(',', $branchIds);
             $divisionStr = implode(',', $divisionIds);
-            throw new Exception("No published appraisal template found matching Branch: [{$branchStr}], Division: [{$divisionStr}], Levelling: {$levellingId}.");
+            throw new Exception("No published appraisal template found matching Branch: [{$branchStr}], Division: [{$divisionStr}], Levelling: {$levellingId}, Position: {$positionId}.");
         }
 
         return (int) $bestMatch['md_appraisal_template_id'];

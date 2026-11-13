@@ -59,10 +59,10 @@
     // Active stage resolution based on active date
     $currentStage = isset($current_stage) 
         ? (int) $current_stage 
-        : (($activeCycle && method_exists($activeCycle, 'getCurrentStage')) ? $activeCycle->getCurrentStage($activeDate) : 2);
+        : (($active_cycle && method_exists($active_cycle, 'getCurrentStage')) ? $active_cycle->getCurrentStage($activeDate) : 2);
 ?>
 
-<link rel="stylesheet" href="/form_appraisal_filling_style.css">
+<link rel="stylesheet" href="<?= base_url('form_appraisal_filling_style.css') ?>">
 
 <style>
     /* Hide template Add New button for Task List since appraisals are cycle-generated */
@@ -384,6 +384,7 @@
                     <th>Karyawan</th>
                     <th>Jabatan</th>
                     <th>Level</th>
+                    <th>Cabang</th>
                     <th>Divisi</th>
                     <th>Penilai</th>
                     <th>Peninjau</th>
@@ -572,39 +573,6 @@
             if (e.key === 'ArrowLeft')  { e.preventDefault(); selectTab($tabs.eq((i - 1 + $tabs.length) % $tabs.length)); }
         });
 
-        // View Score Comparison Modal Handler
-        window.showScoreComparisonModal = function (appraisalId) {
-            if (!appraisalId) return;
-
-            $('#modal_score_comparison').modal('show');
-            $('#score_comparison_container').html(`
-                <div class="text-center py-5 text-muted">
-                    <i class="fas fa-spinner fa-spin fa-2x text-primary" aria-hidden="true"></i>
-                    <p class="mt-2 mb-0 small font-weight-bold">Memuat riwayat &amp; komparasi skor penilaian...</p>
-                </div>
-            `);
-
-            $.ajax({
-                url: '<?= base_url('sas/penilaian/scoreComparison') ?>/' + appraisalId,
-                type: 'GET',
-                success: function (html) {
-                    $('#score_comparison_container').html(html);
-                },
-                error: function (xhr, status, err) {
-                    $('#score_comparison_container').html(`
-                        <div class="text-center py-5 text-danger">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-2" aria-hidden="true"></i>
-                            <p class="mb-0 font-weight-bold">Gagal memuat data komparasi skor penilaian.</p>
-                            <small class="text-muted">ID Penilaian: #${appraisalId} (${err || status})</small>
-                            <div class="mt-3">
-                                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
-                            </div>
-                        </div>
-                    `);
-                }
-            });
-        };
-
         // View Audit Logs Modal Handler
         window.showAuditLogModal = function (appraisalId) {
             if (!appraisalId) return;
@@ -672,8 +640,30 @@
                         }
 
                         if (log.md_appraisal_template_item_id) {
-                            var prevScore = (prevVal && prevVal.score !== null && prevVal.score !== undefined) ? Number(prevVal.score).toFixed(2) : '-';
-                            var newScore  = (newVal && newVal.score !== null && newVal.score !== undefined) ? Number(newVal.score).toFixed(2) : '-';
+                            var extractLogScore = function (val) {
+                                if (!val) return '-';
+                                var src = (val.payload && typeof val.payload === 'object') ? val.payload : val;
+                                if (src.score !== null && src.score !== undefined && src.score !== '') {
+                                    return Number(src.score).toFixed(2);
+                                }
+                                if (val.score !== null && val.score !== undefined && val.score !== '') {
+                                    return Number(val.score).toFixed(2);
+                                }
+                                if (Array.isArray(src.action_scores) && src.action_scores.length > 0) {
+                                    var sum = 0, cnt = 0;
+                                    for (var idx = 0; idx < src.action_scores.length; idx++) {
+                                        var num = Number(src.action_scores[idx]);
+                                        if (!isNaN(num)) {
+                                            sum += num;
+                                            cnt++;
+                                        }
+                                    }
+                                    if (cnt > 0) return (sum / cnt).toFixed(2);
+                                }
+                                return '-';
+                            };
+                            var prevScore = extractLogScore(prevVal);
+                            var newScore  = extractLogScore(newVal);
                             detailsHtml += `
                                 <div class="atl-tl-line">
                                     <strong>Butir Item ID:</strong> #${esc(log.md_appraisal_template_item_id)} |

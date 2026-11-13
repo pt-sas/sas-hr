@@ -20,7 +20,6 @@ class M_Appraisal extends Model
         'snapshot_evaluator_id',
         'snapshot_gm_id',
         'template_snapshot',
-        'performance_score',
         'final_score',
         'rating',
         'evaluator_comment',

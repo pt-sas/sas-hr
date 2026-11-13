@@ -75,9 +75,10 @@
                 return;
             }
 
-            var branchTexts = $('#md_branch_id option:selected').map(function () { return $(this).text(); }).get();
-            var divTexts    = $('#md_division_id option:selected').map(function () { return $(this).text(); }).get();
-            var lvlTexts    = $('#md_levelling_id option:selected').map(function () { return $(this).text(); }).get();
+            var branchTexts   = $('#md_branch_id option:selected').map(function () { return $(this).text(); }).get();
+            var divTexts      = $('#md_division_id option:selected').map(function () { return $(this).text(); }).get();
+            var lvlTexts      = $('#md_levelling_id option:selected').map(function () { return $(this).text(); }).get();
+            var positionTexts = $('#md_position_id option:selected').map(function () { return $(this).text(); }).get();
 
             $('#preview_scope_branch').text(branchTexts.length ? branchTexts.join(', ') : 'Semua Cabang');
             $('#preview_scope_division').text(divTexts.length ? divTexts.join(', ') : 'Semua Divisi');
@@ -87,7 +88,8 @@
             var scoping = payload && payload.scoping ? payload.scoping : {
                 branch_ids:    $('#md_branch_id').val() || [],
                 division_ids:  $('#md_division_id').val() || [],
-                levelling_ids: $('#md_levelling_id').val() || []
+                levelling_ids: $('#md_levelling_id').val() || [],
+                position_ids:  $('#md_position_id').val() || []
             };
 
             var $tbody = $('#tb_preview_participants_body');

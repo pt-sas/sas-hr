@@ -16,7 +16,7 @@ class AppraisalTemplate extends Entity
     protected $casts = [
         'md_appraisal_template_id' => 'integer',
         'version'                  => 'integer',
-        'config'                   => 'json-array',
+        'schema_json'              => 'json-array',
         'created_by'               => '?integer',
         'updated_by'               => '?integer',
     ];

@@ -3,24 +3,17 @@
 namespace App\Services;
 
 use App\Entities\AppraisalTemplate;
-use App\Entities\AppraisalTemplateItem;
-use App\Models\M_AppraisalSection;
 use App\Models\M_AppraisalTemplate;
-use App\Models\M_AppraisalTemplateItem;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use Exception;
 
 class AppraisalTemplateServices
 {
     protected M_AppraisalTemplate $templateModel;
-    protected M_AppraisalTemplateItem $itemModel;
-    protected M_AppraisalSection $sectionModel;
 
     public function __construct()
     {
         $this->templateModel = new M_AppraisalTemplate();
-        $this->itemModel     = new M_AppraisalTemplateItem();
-        $this->sectionModel   = new M_AppraisalSection();
     }
 
     /**
@@ -90,11 +83,13 @@ class AppraisalTemplateServices
         $db = \Config\Database::connect();
         $db->transStart();
 
-        // 1. Header persistence
-        $code = trim((string) ($payload['template_code'] ?? ''));
-        $title = trim((string) ($payload['title'] ?? ''));
+        // 1. Header persistence (with target_group & compact schema_json)
+        $code        = trim((string) ($payload['template_code'] ?? ''));
+        $title       = trim((string) ($payload['title'] ?? ''));
         $description = trim((string) ($payload['description'] ?? ''));
-        $isactive = (($payload['isactive'] ?? 'N') === 'Y') ? 'Y' : 'N';
+        $isactive    = (($payload['isactive'] ?? 'N') === 'Y') ? 'Y' : 'N';
+        $targetGroup = $hasOperator ? 'OPERATOR' : 'STAFF_SPV';
+        $schemaJson  = self::compactSchema($sections, $targetGroup);
 
         if (!empty($templateId)) {
             $existing = $this->templateModel->find($templateId);
@@ -109,6 +104,8 @@ class AppraisalTemplateServices
                 'template_code' => $code,
                 'title'         => $title,
                 'description'   => $description,
+                'target_group'  => $targetGroup,
+                'schema_json'   => json_encode($schemaJson, JSON_UNESCAPED_UNICODE),
                 'isactive'      => $isactive,
                 'updated_by'    => $userId,
                 'updated_at'    => date('Y-m-d H:i:s'),
@@ -127,6 +124,8 @@ class AppraisalTemplateServices
                 'version'       => $version,
                 'title'         => $title,
                 'description'   => $description,
+                'target_group'  => $targetGroup,
+                'schema_json'   => json_encode($schemaJson, JSON_UNESCAPED_UNICODE),
                 'status'        => M_AppraisalTemplate::STATUS_DRAFT,
                 'isactive'      => $isactive,
                 'created_by'    => $userId,
@@ -139,136 +138,31 @@ class AppraisalTemplateServices
             }
         }
 
-        // 2. Scoping sync (replace-all)
-        $maps = [
-            'md_template_branch'    => ['md_branch_id',    'branch_ids'],
-            'md_template_division'  => ['md_division_id',  'division_ids'],
-            'md_template_levelling' => ['md_levelling_id', 'levelling_ids'],
+        // 2. Unified scoping sync (md_template_scope)
+        $db->table('md_template_scope')->where('md_appraisal_template_id', $templateId)->delete();
+        $scopeMap = [
+            'BRANCH'    => 'branch_ids',
+            'DIVISION'  => 'division_ids',
+            'LEVELLING' => 'levelling_ids',
+            'POSITION'  => 'position_ids',
         ];
-        foreach ($maps as $table => [$col, $key]) {
-            $db->table($table)->where('md_appraisal_template_id', $templateId)->delete();
+        foreach ($scopeMap as $scopeType => $key) {
             $rawIds = $scoping[$key] ?? [];
             if ($key === 'levelling_ids' && empty($rawIds)) {
-                $rawIds = $scoping['leveling_ids'] ?? $scoping['position_ids'] ?? [];
+                $rawIds = $scoping['leveling_ids'] ?? [];
             }
             $ids = array_unique(array_filter(array_map('intval', (array) $rawIds)));
             foreach ($ids as $scopeId) {
-                $db->table($table)->insert([
+                $db->table('md_template_scope')->insert([
                     'md_appraisal_template_id' => $templateId,
-                    $col                       => $scopeId,
+                    'scope_type'               => $scopeType,
+                    'scope_id'                 => $scopeId,
+                    'isactive'                 => 'Y',
                     'created_by'               => $userId,
                     'updated_by'               => $userId,
                 ]);
             }
         }
-
-        // 3. Sections & items sync
-        $keptSections = [];
-        $keptItems    = [];
-
-        foreach ($sections as $sIdx => $sec) {
-            $sectionData = [
-                'md_appraisal_template_id' => $templateId,
-                'name'                     => trim((string) ($sec['name'] ?? 'Section')),
-                'section_type'             => $sec['section_type'] ?? 'SCORE',
-                'weight'                   => (float) ($sec['weight'] ?? 0),
-                'sequence_order'           => (int) ($sec['sequence_order'] ?? ($sIdx + 1)),
-                'description'              => $sec['description'] ?? null,
-                'isactive'                 => 'Y',
-                'updated_by'               => $userId,
-            ];
-
-            $sectionId = (int) ($sec['md_appraisal_section_id'] ?? 0);
-            $owned     = $sectionId > 0 && $this->sectionModel->where('md_appraisal_template_id', $templateId)->find($sectionId);
-            if ($owned) {
-                $this->sectionModel->update($sectionId, $sectionData);
-            } else {
-                $sectionData['created_by'] = $userId;
-                $sectionId = (int) $this->sectionModel->insert($sectionData, true);
-            }
-            if (!$sectionId) {
-                $db->transRollback();
-                throw new Exception('Gagal menyimpan section template.');
-            }
-            $keptSections[] = $sectionId;
-
-            // If scored items have 0 total weight, distribute section weight evenly
-            $scoredItemIndices = [];
-            $sumItemWeights    = 0.0;
-            foreach ($sec['items'] as $iIdx => $item) {
-                $type = $item['input_type'] ?? ($sec['section_type'] ?? 'SCORE');
-                if ($type === 'SCORE' || $type === 'WEIGHTED_CHECKLIST') {
-                    $scoredItemIndices[] = $iIdx;
-                    $sumItemWeights     += (float) ($item['weight'] ?? 0);
-                }
-            }
-            $autoWeightPerItem = null;
-            if (!empty($scoredItemIndices) && $sumItemWeights <= 0) {
-                $secWeight         = (float) ($sec['weight'] ?? 0);
-                $autoWeightPerItem = $secWeight > 0 ? round($secWeight / count($scoredItemIndices), 2) : 1.0;
-            }
-
-            foreach ($sec['items'] as $iIdx => $item) {
-                $type     = $item['input_type'] ?? ($sec['section_type'] ?? 'SCORE');
-                $rawConfig  = $item['config'] ?? [];
-                $itemConfig = is_string($rawConfig) ? json_decode($rawConfig, true) : (array) $rawConfig;
-                $configVal  = !empty($itemConfig) ? $itemConfig : new \stdClass();
-
-                $rawItemWeight = (float) ($item['weight'] ?? 0);
-                if (($type === 'SCORE' || $type === 'WEIGHTED_CHECKLIST') && $rawItemWeight <= 0 && $autoWeightPerItem !== null) {
-                    $rawItemWeight = $autoWeightPerItem;
-                }
-
-                $lineData = [
-                    'md_appraisal_section_id' => $sectionId,
-                    'input_type'              => $type,
-                    'title'                   => trim((string) ($item['title'] ?? '')),
-                    'description'             => $item['description'] ?? null,
-                    'weight'                  => ($type === 'BOOLEAN' || $type === 'SINGLE_CHECKLIST') ? 0 : $rawItemWeight,
-                    'sequence_order'          => (int) ($item['sequence_order'] ?? ($iIdx + 1)),
-                    'is_required'             => (($item['is_required'] ?? 'Y') === 'N') ? 'N' : 'Y',
-                    'config'                  => json_encode($configVal, JSON_UNESCAPED_UNICODE),
-                    'isactive'                => 'Y',
-                    'updated_by'              => $userId,
-                ];
-
-                $itemId = (int) ($item['md_appraisal_template_item_id'] ?? 0);
-                $ok     = $itemId > 0 && $db->table('md_appraisal_template_item')
-                    ->where('md_appraisal_template_item_id', $itemId)
-                    ->whereIn('md_appraisal_section_id', $keptSections)
-                    ->countAllResults() > 0;
-
-                if ($ok) {
-                    $this->itemModel->update($itemId, $lineData);
-                } else {
-                    $lineData['created_by'] = $userId;
-                    $itemId = (int) $this->itemModel->insert($lineData, true);
-                }
-                if (!$itemId) {
-                    $db->transRollback();
-                    throw new Exception('Gagal menyimpan item penilaian template.');
-                }
-                $keptItems[] = $itemId;
-            }
-        }
-
-        // 4. Prune removed items & sections
-        $sectionIds = array_column(
-            $db->table('md_appraisal_section')->select('md_appraisal_section_id')->where('md_appraisal_template_id', $templateId)->get()->getResultArray(),
-            'md_appraisal_section_id'
-        );
-        if (!empty($sectionIds)) {
-            $b = $db->table('md_appraisal_template_item')->whereIn('md_appraisal_section_id', $sectionIds);
-            if (!empty($keptItems)) {
-                $b->whereNotIn('md_appraisal_template_item_id', $keptItems);
-            }
-            $b->delete();
-        }
-        $b = $db->table('md_appraisal_section')->where('md_appraisal_template_id', $templateId);
-        if (!empty($keptSections)) {
-            $b->whereNotIn('md_appraisal_section_id', $keptSections);
-        }
-        $b->delete();
 
         $db->transComplete();
 
@@ -294,14 +188,14 @@ class AppraisalTemplateServices
             throw new Exception('Only DRAFT templates can be published.');
         }
 
-        // Verify template has at least one active item (items belong to sections)
-        $itemCount = \Config\Database::connect()
-            ->table('md_appraisal_template_item i')
-            ->join('md_appraisal_section s', 's.md_appraisal_section_id = i.md_appraisal_section_id')
-            ->where('s.md_appraisal_template_id', $templateId)
-            ->where('i.isactive', 'Y')
-            ->where('s.isactive', 'Y')
-            ->countAllResults();
+        // Verify template has at least one active item in schema_json
+        $itemCount = 0;
+        $schema    = is_string($template->schema_json)
+            ? json_decode($template->schema_json, true)
+            : (array) ($template->schema_json ?? []);
+        foreach ($schema['sections'] ?? [] as $sec) {
+            $itemCount += count($sec['items'] ?? []);
+        }
 
         if ($itemCount === 0) {
             throw new Exception('Cannot publish an appraisal template without evaluation items.');
@@ -391,13 +285,14 @@ class AppraisalTemplateServices
 
         $nextVersion = ($maxVersionRow->version ?? $sourceTemplate->version) + 1;
 
-        // 1. Duplicate Template Header (including org structure links)
+        // 1. Duplicate Template Header (including target_group & compact schema_json)
         $newTemplate = new AppraisalTemplate();
         $newTemplate->template_code   = $sourceTemplate->template_code;
         $newTemplate->version         = $nextVersion;
         $newTemplate->title           = $sourceTemplate->title;
         $newTemplate->description     = $sourceTemplate->description;
-        $newTemplate->config          = $sourceTemplate->config;
+        $newTemplate->target_group    = $sourceTemplate->target_group ?? 'STAFF_SPV';
+        $newTemplate->schema_json     = $sourceTemplate->schema_json;
         $newTemplate->status          = M_AppraisalTemplate::STATUS_DRAFT;
         $newTemplate->isactive        = 'Y';
         $newTemplate->created_by      = $userId;
@@ -405,50 +300,22 @@ class AppraisalTemplateServices
 
         $newTemplateId = $this->templateModel->insert($newTemplate, true);
 
-        // 2. Duplicate scoping mappings
-        foreach ([
-            'md_template_branch'    => 'md_branch_id',
-            'md_template_division'  => 'md_division_id',
-            'md_template_levelling' => 'md_levelling_id',
-        ] as $table => $col) {
-            $rows = $db->table($table)->where('md_appraisal_template_id', $templateId)->where('isactive', 'Y')->get()->getResultArray();
-            foreach ($rows as $row) {
-                $db->table($table)->insert([
-                    'md_appraisal_template_id' => $newTemplateId,
-                    $col                       => $row[$col],
-                    'created_by'               => $userId,
-                    'updated_by'               => $userId,
-                ]);
-            }
-        }
-
-        // 3. Duplicate sections and their active items
-        $sections = $db->table('md_appraisal_section')
+        // 2. Duplicate unified scoping mappings (md_template_scope)
+        $scopeRows = $db->table('md_template_scope')
             ->where('md_appraisal_template_id', $templateId)
             ->where('isactive', 'Y')
-            ->get()->getResultArray();
+            ->get()
+            ->getResultArray();
 
-        foreach ($sections as $section) {
-            $oldSectionId = $section['md_appraisal_section_id'];
-            unset($section['md_appraisal_section_id'], $section['created_at'], $section['updated_at']);
-            $section['md_appraisal_template_id'] = $newTemplateId;
-            $section['created_by']               = $userId;
-            $section['updated_by']               = $userId;
-            $db->table('md_appraisal_section')->insert($section);
-            $newSectionId = $db->insertID();
-
-            $items = $db->table('md_appraisal_template_item')
-                ->where('md_appraisal_section_id', $oldSectionId)
-                ->where('isactive', 'Y')
-                ->get()->getResultArray();
-
-            foreach ($items as $item) {
-                unset($item['md_appraisal_template_item_id'], $item['created_at'], $item['updated_at']);
-                $item['md_appraisal_section_id'] = $newSectionId;
-                $item['created_by']              = $userId;
-                $item['updated_by']              = $userId;
-                $db->table('md_appraisal_template_item')->insert($item);
-            }
+        foreach ($scopeRows as $row) {
+            $db->table('md_template_scope')->insert([
+                'md_appraisal_template_id' => $newTemplateId,
+                'scope_type'               => $row['scope_type'],
+                'scope_id'                 => $row['scope_id'],
+                'isactive'                 => 'Y',
+                'created_by'               => $userId,
+                'updated_by'               => $userId,
+            ]);
         }
 
         $db->transComplete();
@@ -594,31 +461,254 @@ class AppraisalTemplateServices
         $db = \Config\Database::connect();
         $db->transStart();
 
-        // 1. Delete scoping mappings
-        $db->table('md_template_branch')->where('md_appraisal_template_id', $templateId)->delete();
-        $db->table('md_template_division')->where('md_appraisal_template_id', $templateId)->delete();
-        $db->table('md_template_levelling')->where('md_appraisal_template_id', $templateId)->delete();
+        // 1. Delete unified scoping mappings
+        $db->table('md_template_scope')->where('md_appraisal_template_id', $templateId)->delete();
 
-        // 2. Delete items under sections
-        $sections = $db->table('md_appraisal_section')
-            ->select('md_appraisal_section_id')
-            ->where('md_appraisal_template_id', $templateId)
-            ->get()
-            ->getResultArray();
-
-        $sectionIds = array_column($sections, 'md_appraisal_section_id');
-        if (! empty($sectionIds)) {
-            $db->table('md_appraisal_template_item')->whereIn('md_appraisal_section_id', $sectionIds)->delete();
-        }
-
-        // 3. Delete sections
-        $db->table('md_appraisal_section')->where('md_appraisal_template_id', $templateId)->delete();
-
-        // 4. Delete header
+        // 2. Delete header
         $this->templateModel->delete($templateId, true); // true for permanent delete
 
         $db->transComplete();
 
         return $db->transStatus() !== false;
+    }
+
+    /**
+     * Compact sections & items into the zero-surplus schema_json contract
+     * aligned with pdf_staff.php and pdf_operator.php.
+     */
+    public static function compactSchema(array $sections, string $targetGroup = 'STAFF_SPV'): array
+    {
+        $compactSections = [];
+        $nextSecId       = 1;
+        $nextItemId      = 101;
+
+        foreach ($sections as $sec) {
+            $secType = strtoupper((string) ($sec['section_type'] ?? 'SCORE'));
+            $secId   = (int) ($sec['md_appraisal_section_id'] ?? $sec['id'] ?? 0);
+            if ($secId <= 0) {
+                $secId = $nextSecId++;
+            }
+
+            // Auto-distribute weights if scored items sum to 0
+            $rawItems = (array) ($sec['items'] ?? []);
+            $scoredIndices = [];
+            $sumWeights    = 0.0;
+            foreach ($rawItems as $iIdx => $it) {
+                $t = strtoupper((string) ($it['input_type'] ?? $secType));
+                if ($t === 'SCORE' || $t === 'WEIGHTED_CHECKLIST') {
+                    $scoredIndices[] = $iIdx;
+                    $sumWeights     += (float) ($it['weight'] ?? $it['bobot'] ?? 0);
+                }
+            }
+            $autoWeight = null;
+            if (!empty($scoredIndices) && $sumWeights <= 0) {
+                $secWeight  = (float) ($sec['weight'] ?? 0);
+                $autoWeight = $secWeight > 0 ? round($secWeight / count($scoredIndices), 2) : 1.0;
+            }
+
+            $compactItems = [];
+            $minScore     = null;
+            $maxScore     = null;
+
+            foreach ($rawItems as $iIdx => $it) {
+                $cfg = $it['config'] ?? [];
+                if (is_string($cfg)) {
+                    $cfg = json_decode($cfg, true) ?: [];
+                }
+                $cfg = (array) $cfg;
+
+                if ($minScore === null && isset($cfg['min_score'])) {
+                    $minScore = (int) $cfg['min_score'];
+                }
+                if ($maxScore === null && isset($cfg['max_score'])) {
+                    $maxScore = (int) $cfg['max_score'];
+                }
+
+                $itemId = (int) ($it['md_appraisal_template_item_id'] ?? $it['id'] ?? 0);
+                if ($itemId <= 0) {
+                    $itemId = $nextItemId++;
+                }
+
+                $w = (float) ($it['weight'] ?? $it['bobot'] ?? 0);
+                if (($secType === 'SCORE' || $secType === 'WEIGHTED_CHECKLIST') && $w <= 0 && $autoWeight !== null) {
+                    $w = $autoWeight;
+                }
+                $bobotVal = ($w == (int) $w) ? (int) $w : $w;
+
+                $actions = $it['indikator'] ?? $cfg['key_actions'] ?? [];
+                if (is_string($actions)) {
+                    $actions = json_decode($actions, true) ?: array_values(array_filter(array_map('trim', explode("\n", $actions))));
+                }
+                $actions = is_array($actions) ? array_values(array_filter(array_map('trim', $actions))) : [];
+
+                if ($secType === 'SCORE') {
+                    $entry = [
+                        'id'         => $itemId,
+                        'kompetensi' => trim((string) ($it['kompetensi'] ?? ($cfg['competency'] ?? ($it['title'] ?? '')))),
+                        'bobot'      => $bobotVal,
+                    ];
+                    if (!empty($actions)) {
+                        $entry['indikator'] = $actions;
+                    }
+                    $compactItems[] = $entry;
+                } elseif ($secType === 'BOOLEAN') {
+                    $entry = [
+                        'id'         => $itemId,
+                        'kompetensi' => trim((string) ($it['kompetensi'] ?? ($cfg['competency'] ?? ($it['title'] ?? '')))),
+                    ];
+                    if (!empty($actions)) {
+                        $entry['indikator'] = $actions;
+                    }
+                    $compactItems[] = $entry;
+                } elseif ($secType === 'WEIGHTED_CHECKLIST') {
+                    $entry = [
+                        'id'    => $itemId,
+                        'aspek' => trim((string) ($it['aspek'] ?? ($it['title'] ?? ($cfg['aspect'] ?? '')))),
+                        'bobot' => $bobotVal,
+                    ];
+                    $desc = trim((string) ($it['desc'] ?? $it['description'] ?? $cfg['description'] ?? ''));
+                    if ($desc !== '') {
+                        $entry['desc'] = $desc;
+                    }
+                    $compactItems[] = $entry;
+                } else {
+                    // SINGLE_CHECKLIST
+                    $entry = [
+                        'id'        => $itemId,
+                        'parameter' => trim((string) ($it['parameter'] ?? ($it['title'] ?? ($cfg['competency'] ?? '')))),
+                    ];
+                    if (!empty($actions)) {
+                        $entry['indikator'] = $actions;
+                    }
+                    $compactItems[] = $entry;
+                }
+            }
+
+            $secNameMap = [
+                'SCORE'              => 'PERFORMA',
+                'BOOLEAN'            => 'KOMPETENSI TAMBAHAN',
+                'WEIGHTED_CHECKLIST' => 'PENILAIAN KINERJA',
+                'SINGLE_CHECKLIST'   => 'PENILAIAN TAMBAHAN',
+            ];
+            $secName = $secNameMap[$secType] ?? trim((string) ($sec['name'] ?? 'Section'));
+
+            $secObj = [
+                'id'   => $secId,
+                'name' => $secName,
+                'type' => $secType,
+            ];
+            if ($secType === 'SCORE') {
+                $secObj['scale'] = [$minScore ?? 0, $maxScore ?? 4];
+            } elseif ($secType === 'WEIGHTED_CHECKLIST') {
+                $secObj['scale'] = [$minScore ?? 1, $maxScore ?? 3];
+            }
+            $secObj['items'] = $compactItems;
+
+            $compactSections[] = $secObj;
+        }
+
+        return ['sections' => $compactSections];
+    }
+
+    /**
+     * Expand compact schema_json into the legacy {template, sections, items} shape
+     * consumed by AppraisalScoringService, AppraisalEvaluationController, and PDF/filling views.
+     * Returns legacy snapshots unchanged for full backward compatibility.
+     */
+    public static function expandSchema(array $data, ?AppraisalTemplate $template = null): array
+    {
+        // Already in legacy flat format
+        if (isset($data['items']) && is_array($data['items']) && isset($data['sections']) && !isset($data['sections'][0]['items'])) {
+            return $data;
+        }
+
+        $sections = [];
+        $items    = [];
+        $tplId    = $template ? (int) $template->md_appraisal_template_id : (int) ($data['template']['md_appraisal_template_id'] ?? 0);
+
+        foreach ($data['sections'] ?? [] as $sIdx => $sec) {
+            $secId   = (int) ($sec['id'] ?? ($sIdx + 1));
+            $secType = strtoupper((string) ($sec['type'] ?? 'SCORE'));
+            $scale   = $sec['scale'] ?? ($secType === 'SCORE' ? [0, 4] : ($secType === 'WEIGHTED_CHECKLIST' ? [1, 3] : [0, 1]));
+            $minS    = (int) ($scale[0] ?? 0);
+            $maxS    = (int) ($scale[1] ?? ($secType === 'SCORE' ? 4 : ($secType === 'WEIGHTED_CHECKLIST' ? 3 : 1)));
+
+            $secWeight = 0.0;
+            $secItems  = (array) ($sec['items'] ?? []);
+
+            foreach ($secItems as $iIdx => $it) {
+                $itemId = (int) ($it['id'] ?? (($sIdx + 1) * 100 + $iIdx + 1));
+                $bobot  = (float) ($it['bobot'] ?? 0);
+                $secWeight += $bobot;
+
+                $title = (string) ($it['kompetensi'] ?? $it['aspek'] ?? $it['parameter'] ?? '');
+                $desc  = (string) ($it['desc'] ?? '');
+                $actions = (array) ($it['indikator'] ?? []);
+
+                $cfg = [
+                    'min_score' => $minS,
+                    'max_score' => $maxS,
+                ];
+                if ($secType === 'SCORE' || $secType === 'BOOLEAN') {
+                    $cfg['competency'] = $title;
+                    if (!empty($actions)) {
+                        $cfg['key_actions'] = $actions;
+                    }
+                } elseif ($secType === 'WEIGHTED_CHECKLIST') {
+                    $cfg['aspect'] = $title;
+                    $cfg['bobot']  = $bobot;
+                    if ($desc !== '') {
+                        $cfg['description'] = $desc;
+                    }
+                } elseif ($secType === 'SINGLE_CHECKLIST' && !empty($actions)) {
+                    $cfg['key_actions'] = $actions;
+                }
+
+                $items[] = [
+                    'md_appraisal_template_item_id' => $itemId,
+                    'md_appraisal_section_id'       => $secId,
+                    'input_type'                    => $secType,
+                    'title'                         => $title,
+                    'description'                   => $desc,
+                    'weight'                        => $bobot,
+                    'sequence_order'                => $iIdx + 1,
+                    'is_required'                   => 'Y',
+                    'config'                        => $cfg,
+                ];
+            }
+
+            $sections[] = [
+                'md_appraisal_section_id'  => $secId,
+                'md_appraisal_template_id' => $tplId,
+                'name'                     => (string) ($sec['name'] ?? ''),
+                'section_type'             => $secType,
+                'weight'                   => $secWeight,
+                'sequence_order'           => $sIdx + 1,
+                'description'              => '',
+            ];
+        }
+
+        $tplArr = $data['template'] ?? [];
+        if ($template) {
+            $tplArr = [
+                'md_appraisal_template_id' => (int) $template->md_appraisal_template_id,
+                'template_code'            => $template->template_code,
+                'title'                    => $template->title,
+                'version'                  => (int) $template->version,
+                'status'                   => $template->status,
+                'target_group'             => $template->target_group ?? 'STAFF_SPV',
+            ];
+        }
+
+        $result = [
+            'template' => $tplArr,
+            'sections' => $sections,
+            'items'    => $items,
+        ];
+        if (isset($data['config'])) {
+            $result['config'] = $data['config'];
+        }
+
+        return $result;
     }
 }

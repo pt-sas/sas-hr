@@ -6,7 +6,6 @@ use App\Entities\Appraisal;
 use App\Models\M_Appraisal;
 use App\Models\M_AppraisalCycle;
 use App\Models\M_AppraisalTemplate;
-use App\Models\M_AppraisalTemplateItem;
 use App\Models\M_AppraisalResponse;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use Exception;
@@ -16,20 +15,18 @@ class AppraisalGeneratorService
     protected M_AppraisalCycle $cycleModel;
     protected M_Appraisal $appraisalModel;
     protected M_AppraisalTemplate $templateModel;
-    protected M_AppraisalTemplateItem $templateItemModel;
     protected M_AppraisalResponse $responseModel;
     protected AppraisalTemplateResolverService $resolverService;
     protected \App\Models\M_Employee $employeeModel;
 
     public function __construct()
     {
-        $this->cycleModel        = new M_AppraisalCycle();
-        $this->appraisalModel    = new M_Appraisal();
-        $this->templateModel     = new M_AppraisalTemplate();
-        $this->templateItemModel = new M_AppraisalTemplateItem();
-        $this->responseModel     = new M_AppraisalResponse();
-        $this->resolverService   = new AppraisalTemplateResolverService();
-        $this->employeeModel     = new \App\Models\M_Employee();
+        $this->cycleModel      = new M_AppraisalCycle();
+        $this->appraisalModel  = new M_Appraisal();
+        $this->templateModel   = new M_AppraisalTemplate();
+        $this->responseModel   = new M_AppraisalResponse();
+        $this->resolverService = new AppraisalTemplateResolverService();
+        $this->employeeModel   = new \App\Models\M_Employee();
     }
 
     /**
@@ -100,55 +97,36 @@ class AppraisalGeneratorService
                 $branchId    = !empty($branchIds) ? (int) $branchIds[0] : 0;
                 $divisionId  = !empty($divisionIds) ? (int) $divisionIds[0] : 0;
 
-                // 2. Resolve target published template ID based on Branch, Division, Levelling
-                $templateId = $this->resolverService->resolveTemplateId($branchIds, $divisionIds, $levellingId);
+                // 2. Resolve target published template ID based on Branch, Division, Levelling, Position
+                $templateId = $this->resolverService->resolveTemplateId($branchIds, $divisionIds, $levellingId, $positionId);
 
                 // 3. Load or build template JSON snapshot
                 if (! isset($templateCache[$templateId])) {
                     $template = $this->templateModel->find($templateId);
-                    $sections = $db->table('md_appraisal_section')
-                        ->where('md_appraisal_template_id', $templateId)
-                        ->where('isactive', 'Y')
-                        ->orderBy('sequence_order', 'ASC')
-                        ->get()
-                        ->getResultArray();
 
-                    $allItems = [];
-                    foreach ($sections as $sec) {
-                        $items = $this->templateItemModel
-                            ->where('md_appraisal_section_id', $sec['md_appraisal_section_id'])
-                            ->where('isactive', 'Y')
-                            ->orderBy('sequence_order', 'ASC')
-                            ->findAll();
-                        foreach ($items as $item) {
-                            $itemData = $item->toRawArray();
-                            if (isset($itemData['config']) && is_string($itemData['config'])) {
-                                $decodedConfig = json_decode($itemData['config'], true);
-                                $itemData['config'] = is_array($decodedConfig) ? $decodedConfig : [];
-                            }
-                            $allItems[] = $itemData;
-                        }
+                    $schema = [];
+                    if ($template && ! empty($template->schema_json)) {
+                        $schema = is_string($template->schema_json)
+                            ? (json_decode($template->schema_json, true) ?: [])
+                            : (array) $template->schema_json;
                     }
 
-                    $defaultRatingScale = [
-                        ['min' => 3.50, 'max' => 4.00, 'label' => 'Sangat Baik'],
-                        ['min' => 2.75, 'max' => 3.49, 'label' => 'Baik'],
-                        ['min' => 2.00, 'max' => 2.74, 'label' => 'Cukup'],
-                        ['min' => 0.00, 'max' => 1.99, 'label' => 'Kurang'],
-                    ];
-                    $tplConfig = [];
-                    if ($template && ! empty($template->config)) {
-                        $tplConfig = is_string($template->config) ? json_decode($template->config, true) : (array) $template->config;
+                    if (empty($schema['sections'])) {
+                        throw new Exception("Template ID {$templateId} tidak memiliki struktur schema_json yang valid.");
                     }
-                    if (empty($tplConfig['rating_scale'])) {
-                        $tplConfig['rating_scale'] = $defaultRatingScale;
+
+                    $expanded = AppraisalTemplateServices::expandSchema($schema, $template);
+                    $tplMeta  = $expanded['template'];
+                    if (empty($tplMeta['target_group'])) {
+                        $tplMeta['target_group'] = strtoupper((string) ($template->target_group ?? 'STAFF_SPV'));
                     }
 
                     $templateCache[$templateId] = [
-                        'template' => $template ? $template->toRawArray() : [],
-                        'config'   => $tplConfig,
-                        'sections' => $sections,
-                        'items'    => $allItems,
+                        'snapshot' => [
+                            'template' => $tplMeta,
+                            'sections' => $schema['sections'],
+                        ],
+                        'items' => $expanded['items'],
                     ];
                 }
 
@@ -176,7 +154,7 @@ class AppraisalGeneratorService
                 $appraisal->snapshot_gm_id        = $gmId > 0 ? $gmId : null;
 
                 // Freeze template JSON structure
-                $appraisal->template_snapshot     = $cachedData;
+                $appraisal->template_snapshot     = $cachedData['snapshot'];
                 $appraisal->status                = M_Appraisal::STATUS_DRAFT_EVALUATOR;
                 $appraisal->created_by            = $userId;
                 $appraisal->updated_by            = $userId;
@@ -388,6 +366,7 @@ class AppraisalGeneratorService
             $branchIds   = !empty($emp['branch_ids']) ? explode(',', $emp['branch_ids']) : [];
             $divisionIds = !empty($emp['division_ids']) ? explode(',', $emp['division_ids']) : [];
             $levellingId = (int) ($emp['md_levelling_id'] ?? 0);
+            $positionId  = (int) ($emp['md_position_id'] ?? 0);
 
             $existingApp = $existingGenerated[$empId] ?? null;
 
@@ -417,7 +396,7 @@ class AppraisalGeneratorService
                 $resolvedTplName   = '-';
                 $resolvedTplStatus = 'NONE';
                 try {
-                    $resolvedTplId     = $this->resolverService->resolveTemplateId($branchIds, $divisionIds, $levellingId, true);
+                    $resolvedTplId     = $this->resolverService->resolveTemplateId($branchIds, $divisionIds, $levellingId, $positionId, true);
                     $resolvedTplName   = $templateCache[$resolvedTplId] ?? "Template #{$resolvedTplId}";
                     $resolvedTplStatus = $templateStatusCache[$resolvedTplId] ?? 'PUBLISHED';
                 } catch (\Throwable $te) {
@@ -464,9 +443,9 @@ class AppraisalGeneratorService
                 'md_employee_id'   => $empId,
                 'nik'              => $emp['nik'] ?? '-',
                 'name'             => !empty($emp['fullname']) ? mb_strtoupper($emp['fullname'], 'UTF-8') : '-',
-                'branch'           => $emp['branch_name'] ?? 'Pusat',
-                'division'         => $emp['division_name'] ?? 'Semua Divisi',
-                'level'            => $emp['level_name'] ?? 'Staff',
+                'division'         => $emp['division_name'] ?? '-',
+                'branch'           => $emp['branch_name'] ?? '-',
+                'level'            => $emp['level_name'] ?? '-',
                 'position'         => $emp['position_name'] ?? '-',
                 'template_id'      => $resolvedTplId,
                 'template_name'    => $resolvedTplName,

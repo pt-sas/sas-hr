@@ -65,7 +65,6 @@ class AppraisalCycle extends Entity
     public function setDeadlineFilling($date)
     {
         $this->attributes['deadline_filling'] = $date;
-        $this->attributes['evaluator_due_date'] = $date; // backwards compatibility mirror
         return $this;
     }
 
@@ -77,7 +76,6 @@ class AppraisalCycle extends Entity
     public function setDeadlineReview($date)
     {
         $this->attributes['deadline_review'] = $date;
-        $this->attributes['gm_due_date'] = $date; // backwards compatibility mirror
         return $this;
     }
 

@@ -4,6 +4,8 @@
  * Rendered and converted via TCPDF, adhering uniformly to standard staff appraisal layout
  */
 
+helper('appraisal_view');
+
 $cycleTitle = is_object($cycle) ? ($cycle->title ?? '-') : ($cycle['title'] ?? '-');
 $rawSem     = is_object($cycle) ? ($cycle->semester ?? '1') : ($cycle['semester'] ?? '1');
 $cycleTitle = $cycleTitle . (!empty($rawSem) ? ' - Semester ' . $rawSem : '');
@@ -33,21 +35,6 @@ foreach ($items as $it) {
         $weightedItems[] = $it;
     }
 }
-
-// Helper to parse key actions or indicators
-$parseActions = function ($raw): array {
-    if (empty($raw)) return [];
-    if (is_array($raw)) return array_values(array_filter(array_map('trim', $raw)));
-    if (is_string($raw)) {
-        $decoded = json_decode($raw, true);
-        if (is_array($decoded)) {
-            return array_values(array_filter(array_map('trim', $decoded)));
-        }
-        $lines = explode("\n", $raw);
-        return array_values(array_filter(array_map('trim', $lines)));
-    }
-    return [];
-};
 
 // Helper to clean action text from leading numbering/lettering (e.g., 'a. ', '1. ')
 $cleanActionText = function (string $text): string {
@@ -200,7 +187,7 @@ if (!empty($singleItems)) {
     foreach ($singleItems as $sIdx => $sItem) {
         $sItemId = (int) ($sItem['md_appraisal_template_item_id'] ?? $sItem['template_item_id'] ?? ($sIdx + 1));
         $sCfg    = (array) ($sItem['config'] ?? []);
-        $sActions = $parseActions($sCfg['key_actions'] ?? null);
+        $sActions = appraisal_parse_actions($sCfg['key_actions'] ?? null);
 
         $sResp       = $responses_by_item_id[$sItemId] ?? null;
         $evalPayload = ($sResp && !empty($sResp->evaluator_response))
@@ -217,7 +204,7 @@ if (!empty($singleItems)) {
 
         if (!empty($sActions)) {
             foreach ($sActions as $kIdx => $ka) {
-                if (in_array((string)$kIdx, array_map('strval', $checkedActions), true) || in_array($ka, $checkedActions, true)) {
+                if (is_array($checkedActions) && appraisal_parse_checked((int) $kIdx, $checkedActions, (string) $ka)) {
                     $checkedCount++;
                     $itemsKompetensiTambahan[] = $cleanActionText($ka);
                 }
@@ -319,7 +306,7 @@ if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
             $sCfg    = (array) ($sItem['config'] ?? []);
             $sTitle  = !empty($sItem['title']) ? $sItem['title'] : ($sCfg['competency'] ?? ('Item Checklist ' . ($sIdx + 1)));
             $sDesc   = !empty($sItem['description']) ? $sItem['description'] : ($sCfg['description'] ?? 'Pemeriksaan standar operasional');
-            $sActions = $parseActions($sCfg['key_actions'] ?? null);
+            $sActions = appraisal_parse_actions($sCfg['key_actions'] ?? null);
 
             $sResp        = $responses_by_item_id[$sItemId] ?? null;
             $evalPayload  = ($sResp && !empty($sResp->evaluator_response))
@@ -337,8 +324,7 @@ if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
         <?php if (!empty($sActions)): ?>
             <?php foreach ($sActions as $kIdx => $ka): ?>
                 <?php
-                    $isActionChecked = in_array((string)$kIdx, array_map('strval', $checkedActions), true)
-                        || in_array($ka, $checkedActions, true);
+                    $isActionChecked = is_array($checkedActions) && appraisal_parse_checked((int) $kIdx, $checkedActions, (string) $ka);
                 ?>
                 <tr nobr="true">
                     <?php if ($kIdx === 0): ?>

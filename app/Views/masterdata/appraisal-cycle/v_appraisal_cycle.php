@@ -226,6 +226,122 @@
                 var $modal = $('#modal_preview_blast');
                 $modal.appendTo('body').modal('show');
 
+                // Populate dynamic options for Branch, Division, Level (single index, split combinations like "Glodok, Kalimalang")
+                var branches  = {};
+                var divisions = {};
+                var levels    = {};
+
+                rows.forEach(function (r) {
+                    if (r.branch) {
+                        r.branch.split(',').forEach(function (b) {
+                            var trimmed = b.trim();
+                            if (trimmed && trimmed !== '-') branches[trimmed] = true;
+                        });
+                    }
+                    if (r.division) {
+                        r.division.split(',').forEach(function (d) {
+                            var trimmed = d.trim();
+                            if (trimmed && trimmed !== '-') divisions[trimmed] = true;
+                        });
+                    }
+                    if (r.level) {
+                        r.level.split(',').forEach(function (l) {
+                            var trimmed = l.trim();
+                            if (trimmed && trimmed !== '-') levels[trimmed] = true;
+                        });
+                    }
+                });
+
+                var populateSelect = function ($sel, items, defaultLabel) {
+                    var currentVal = $sel.val();
+                    $sel.empty().append('<option value="">' + defaultLabel + '</option>');
+                    Object.keys(items).sort().forEach(function (item) {
+                        $sel.append('<option value="' + esc(item) + '">' + esc(item) + '</option>');
+                    });
+                    if (currentVal && items[currentVal]) {
+                        $sel.val(currentVal);
+                    }
+                };
+
+                populateSelect($('#blast_filter_branch'), branches, 'Semua Cabang');
+                populateSelect($('#blast_filter_division'), divisions, 'Semua Divisi');
+                populateSelect($('#blast_filter_level'), levels, 'Semua Level');
+
+                // Initialize Select2 on blast filters if plugin is present
+                if ($.fn.select2) {
+                    $('.select2-blast').select2({
+                        theme: 'bootstrap',
+                        dropdownParent: $modal
+                    });
+                }
+
+                // Register custom DataTables search filter for blast table
+                if (!window._dtBlastFilterRegistered) {
+                    $.fn.dataTable.ext.search.push(function (settings, searchData, index, rowData, counter) {
+                        if (settings.nTable.id !== 'tb_preview_blast') {
+                            return true;
+                        }
+
+                        var fReadiness = $('#blast_filter_readiness').val();
+                        var fBranch    = $('#blast_filter_branch').val();
+                        var fDivision  = $('#blast_filter_division').val();
+                        var fLevel     = $('#blast_filter_level').val();
+                        var fTemplate  = $('#blast_filter_template_status').val();
+
+                        if (fReadiness && rowData.readiness_status !== fReadiness) {
+                            return false;
+                        }
+                        if (fBranch) {
+                            var rowBranches = (rowData.branch || '').split(',').map(function (s) { return s.trim(); });
+                            if (rowBranches.indexOf(fBranch) === -1) {
+                                return false;
+                            }
+                        }
+                        if (fDivision) {
+                            var rowDivisions = (rowData.division || '').split(',').map(function (s) { return s.trim(); });
+                            if (rowDivisions.indexOf(fDivision) === -1) {
+                                return false;
+                            }
+                        }
+                        if (fLevel) {
+                            var rowLevels = (rowData.level || '').split(',').map(function (s) { return s.trim(); });
+                            if (rowLevels.indexOf(fLevel) === -1) {
+                                return false;
+                            }
+                        }
+                        if (fTemplate && rowData.template_status !== fTemplate) {
+                            return false;
+                        }
+
+                        return true;
+                    });
+                    window._dtBlastFilterRegistered = true;
+                }
+
+                // Bind Filter and Reset Button Actions
+                $('.btn_filter_blast').off('click').on('click', function () {
+                    if (dtBlast) {
+                        dtBlast.draw();
+                    }
+                });
+
+                $('#btn_reset_filter_blast, .btn_reset_blast').off('click').on('click', function () {
+                    $('#filter_preview_blast')[0].reset();
+                    $('.select2-blast').val('').trigger('change');
+                    if (dtBlast) {
+                        dtBlast.draw();
+                    }
+                });
+
+                // Clicking KPI ribbon cards acts as instant quick-filter
+                $('.kpi-card-clickable').off('click').on('click', function () {
+                    var status = $(this).attr('data-kpi-filter') || '';
+                    $('#blast_filter_readiness').val(status).trigger('change');
+                    if (dtBlast) {
+                        dtBlast.draw();
+                    }
+                });
+
                 $modal.off('shown.bs.modal').on('shown.bs.modal', function () {
                     var $table = $('#tb_preview_blast');
 
@@ -239,6 +355,9 @@
                         searching: true,
                         lengthChange: true,
                         pageLength: 10,
+                        scrollY: '58vh',
+                        scrollCollapse: true,
+                        autoWidth: false,
                         data: rows,
                         columns: [
                             {
@@ -258,10 +377,16 @@
                             },
                             {
                                 data: 'name',
-                                className: 'align-middle font-weight-bold text-primary',
-                                render: function (d, t, r) {
-                                    var pos = r.position ? '<br><small class="text-muted">' + esc(r.position) + '</small>' : '';
-                                    return esc(d ? String(d).toUpperCase() : '') + pos;
+                                className: 'align-middle font-weight-bold text-dark',
+                                render: function (d) {
+                                    return esc(d ? String(d).toUpperCase() : '');
+                                }
+                            },
+                            {
+                                data: 'position',
+                                className: 'align-middle',
+                                render: function (d) {
+                                    return esc(d || '-');
                                 }
                             },
                             {
@@ -285,13 +410,13 @@
                                 data: 'template_name',
                                 className: 'align-middle',
                                 render: function (d, t, r) {
-                                    if (r.template_id > 0) {
-                                        if (r.template_status === 'DRAFT') {
-                                            return '<span class="text-warning font-weight-bold" style="font-size:11.5px;">' + esc(d) + '</span>';
-                                        }
-                                        return '<span class="text-dark font-weight-bold" style="font-size:11.5px;">' + esc(d) + '</span>';
+                                    if (!d || d === 'Belum ditugaskan' || d === '-' || !r.template_id || r.template_id <= 0) {
+                                        return '<span class="text-danger font-weight-bold">Belum ditugaskan</span>';
                                     }
-                                    return '<span class="text-danger font-weight-bold" style="font-size:11.5px;">' + esc(d) + '</span>';
+                                    // Extract template code e.g. from "[TPL-CODE] Title" -> "TPL-CODE"
+                                    var match = String(d).match(/^\[([^\]]+)\]/);
+                                    var code = match ? match[1] : d;
+                                    return '<span class="font-weight-600 text-dark">' + esc(code) + '</span>';
                                 }
                             },
                             {
@@ -315,14 +440,15 @@
                                 data: 'readiness_status',
                                 className: 'text-center align-middle',
                                 render: function (d, t, r) {
+                                    var note = r.status_note ? ' data-toggle="tooltip" data-placement="left" title="' + esc(r.status_note) + '"' : '';
                                     if (d === 'READY') {
-                                        return '<span class="text-success font-weight-bold">Siap</span>';
+                                        return '<span class="badge badge-success px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-check-circle mr-1"></i>Siap Rilis</span>';
                                     } else if (d === 'ALREADY_GENERATED') {
-                                        return '<span class="text-info font-weight-bold">Digenerate</span>';
+                                        return '<span class="badge badge-info px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-file-alt mr-1"></i>Form Aktif</span>';
                                     } else if (d === 'MISSING_TEMPLATE') {
-                                        return '<span class="text-warning font-weight-bold" data-toggle="tooltip" title="' + esc(r.status_note) + '">No Template</span>';
+                                        return '<span class="badge badge-warning px-2 py-1 font-weight-bold text-dark"' + note + '><i class="fas fa-exclamation-triangle mr-1"></i>Tanpa Template</span>';
                                     } else {
-                                        return '<span class="text-danger font-weight-bold" data-toggle="tooltip" title="' + esc(r.status_note) + '">No Atasan</span>';
+                                        return '<span class="badge badge-danger px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-user-slash mr-1"></i>Tanpa Atasan</span>';
                                     }
                                 }
                             }
@@ -387,8 +513,8 @@
                 // Header Details
                 $('#prog_cycle_title').text(cycle.title || '-');
                 var deadlineText = 'Periode: ' + (cycle.start_date || '-') + ' s/d ' + (cycle.end_date || '-');
-                var dlFill = cycle.deadline_filling || cycle.evaluator_due_date;
-                var dlRev  = cycle.deadline_review || cycle.gm_due_date;
+                var dlFill = cycle.deadline_filling;
+                var dlRev  = cycle.deadline_review;
                 var dlRead = cycle.deadline_reading;
                 var dlOver = cycle.deadline_override;
                 if (dlFill && dlFill !== '-') {

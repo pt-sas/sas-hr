@@ -39,7 +39,7 @@ class PerformanceAppraisal extends BaseController
     {
         // Fetch all cycles sorted by start date desc
         $cycles = $this->db->table('md_appraisal_cycle')
-            ->select('md_appraisal_cycle_id, title, start_date, end_date, deadline_filling, deadline_review, deadline_reading, evaluator_due_date, gm_due_date, status')
+            ->select('md_appraisal_cycle_id, title, start_date, end_date, deadline_filling, deadline_review, deadline_reading, status')
             ->where('isactive', 'Y')
             ->orderBy('start_date', 'DESC')
             ->get()
@@ -217,21 +217,19 @@ class PerformanceAppraisal extends BaseController
                     ->get()
                     ->getRowArray();
                 if ($cRow) {
-                    $dlFilling = !empty($cRow['deadline_filling']) ? $cRow['deadline_filling'] : (!empty($cRow['evaluator_due_date']) ? $cRow['evaluator_due_date'] : null);
-                    $dlReview  = !empty($cRow['deadline_review']) ? $cRow['deadline_review'] : (!empty($cRow['gm_due_date']) ? $cRow['gm_due_date'] : null);
+                    $dlFilling = !empty($cRow['deadline_filling']) ? $cRow['deadline_filling'] : null;
+                    $dlReview  = !empty($cRow['deadline_review']) ? $cRow['deadline_review'] : null;
                     $dlReading = !empty($cRow['deadline_reading']) ? $cRow['deadline_reading'] : null;
 
                     $cycleInfo = [
-                        'id'                 => $cRow['md_appraisal_cycle_id'],
-                        'title'              => $cRow['title'],
-                        'start_date'         => !empty($cRow['start_date']) ? date('d/m/Y', strtotime($cRow['start_date'])) : '-',
-                        'end_date'           => !empty($cRow['end_date']) ? date('d/m/Y', strtotime($cRow['end_date'])) : '-',
-                        'deadline_filling'   => !empty($dlFilling) ? date('d/m/Y', strtotime($dlFilling)) : '-',
-                        'deadline_review'    => !empty($dlReview) ? date('d/m/Y', strtotime($dlReview)) : '-',
-                        'deadline_reading'   => !empty($dlReading) ? date('d/m/Y', strtotime($dlReading)) : '-',
-                        'evaluator_due_date' => !empty($dlFilling) ? date('d/m/Y', strtotime($dlFilling)) : '-',
-                        'gm_due_date'        => !empty($dlReview) ? date('d/m/Y', strtotime($dlReview)) : '-',
-                        'status'             => $cRow['status'],
+                        'id'               => $cRow['md_appraisal_cycle_id'],
+                        'title'            => $cRow['title'],
+                        'start_date'       => !empty($cRow['start_date']) ? date('d/m/Y', strtotime($cRow['start_date'])) : '-',
+                        'end_date'         => !empty($cRow['end_date']) ? date('d/m/Y', strtotime($cRow['end_date'])) : '-',
+                        'deadline_filling' => !empty($dlFilling) ? date('d/m/Y', strtotime($dlFilling)) : '-',
+                        'deadline_review'  => !empty($dlReview) ? date('d/m/Y', strtotime($dlReview)) : '-',
+                        'deadline_reading' => !empty($dlReading) ? date('d/m/Y', strtotime($dlReading)) : '-',
+                        'status'           => $cRow['status'],
                     ];
                 }
             }
@@ -270,7 +268,7 @@ class PerformanceAppraisal extends BaseController
 
         try {
             $builder = $this->db->table('md_appraisal a')
-                ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_cycle_id, a.status, a.performance_score, a.final_score, a.rating, a.finalized_at,
+                ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_cycle_id, a.status, a.final_score, a.rating, a.finalized_at,
                           e.nik as nik, e.fullname as employee_name,
                           d.name as division_name, p.name as position_name, l.name as level_name, b.name as branch_name,
                           c.title as cycle_title, c.status as cycle_status,
@@ -342,6 +340,7 @@ class PerformanceAppraisal extends BaseController
                     ->like('e.fullname', $s)
                     ->orLike('e.value', $s)
                     ->orLike('c.title', $s)
+                    ->orLike('b.name', $s)
                     ->orLike('d.name', $s)
                     ->orLike('p.name', $s)
                     ->orLike('eval.fullname', $s)
@@ -361,13 +360,14 @@ class PerformanceAppraisal extends BaseController
                 2  => 'e.fullname',
                 3  => 'p.name',
                 4  => 'l.name',
-                5  => 'd.name',
-                6  => 'c.title',
-                7  => 'eval.fullname',
-                8  => 'gm.fullname',
-                9  => 'a.final_score',
-                10 => 'a.status',
-                11 => 'a.md_appraisal_id',
+                5  => 'b.name',
+                6  => 'd.name',
+                7  => 'c.title',
+                8  => 'eval.fullname',
+                9  => 'gm.fullname',
+                10 => 'a.final_score',
+                11 => 'a.status',
+                12 => 'a.md_appraisal_id',
             ];
 
             if (isset($columnMap[$orderColIdx])) {
@@ -443,7 +443,8 @@ class PerformanceAppraisal extends BaseController
                 $karyawanCol = '<span class="font-weight-bold text-dark" title="' . esc($nik) . '">' . esc($empName) . '</span>';
                 $posisiCol   = '<span class="text-dark">' . esc($posName) . '</span>';
                 $levelCol    = '<span class="text-dark">' . esc($levelName) . '</span>';
-                $divisiCol   = '<span class="text-dark" title="' . esc($branchName ? 'Cabang: ' . $branchName : '') . '">' . esc($divName) . '</span>';
+                $cabangCol   = '<span class="text-dark">' . esc($branchName ?: '-') . '</span>';
+                $divisiCol   = '<span class="text-dark">' . esc($divName) . '</span>';
                 $evalCol     = '<span class="text-dark font-weight-500">' . esc($evalName) . '</span>';
                 $gmCol       = '<span class="text-dark font-weight-500">' . esc($gmName) . '</span>';
 
@@ -453,13 +454,14 @@ class PerformanceAppraisal extends BaseController
                 $row[] = $karyawanCol; // [2] Karyawan
                 $row[] = $posisiCol;   // [3] Jabatan
                 $row[] = $levelCol;    // [4] Level
-                $row[] = $divisiCol;   // [5] Divisi
-                $row[] = $cycleCol;    // [6] Siklus Penilaian
-                $row[] = $evalCol;     // [7] Penilai (Evaluator)
-                $row[] = $gmCol;       // [8] Peninjau (Reviewer)
-                $row[] = $scoreCol;    // [9] Nilai
-                $row[] = $statusBadge; // [10] Status
-                $row[] = $actions;     // [11] Aksi
+                $row[] = $cabangCol;   // [5] Cabang
+                $row[] = $divisiCol;   // [6] Divisi
+                $row[] = $cycleCol;    // [7] Siklus Penilaian
+                $row[] = $evalCol;     // [8] Penilai (Evaluator)
+                $row[] = $gmCol;       // [9] Peninjau (Reviewer)
+                $row[] = $scoreCol;    // [10] Nilai
+                $row[] = $statusBadge; // [11] Status
+                $row[] = $actions;     // [12] Aksi
 
                 $data[] = $row;
             }

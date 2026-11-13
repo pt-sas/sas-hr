@@ -743,6 +743,36 @@ $(document).ready(function () {
     },
   });
 
+  $(".multiple-select-position").select2({
+    placeholder: "Pilih opsi jabatan",
+    width: "100%",
+    theme: "bootstrap",
+    multiple: true,
+    ajax: {
+      dataType: "JSON",
+      url: ADMIN_URL + "position/getList",
+      delay: 250,
+      data: function (params) {
+        let extraData = {};
+
+        if ($(".multiple-select-position").hasClass("access")) {
+          extraData.name = "Access";
+        }
+
+        return {
+          search: params.term,
+          ...extraData,
+        };
+      },
+      processResults: function (data, page) {
+        return {
+          results: data,
+        };
+      },
+      cache: true,
+    },
+  });
+
   $("#form_employee input[name=nik]").autocomplete({
     serviceUrl: ADMIN_URL + "karyawan/get-nik",
     dataType: "JSON",

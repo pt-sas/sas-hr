@@ -4,6 +4,8 @@
  * Rendered and converted via TCPDF, adhering uniformly to standard corporate styling
  */
 
+helper('appraisal_view');
+
 $cycleTitle = is_object($cycle) ? ($cycle->title ?? '-') : ($cycle['title'] ?? '-');
 $rawSem     = is_object($cycle) ? ($cycle->semester ?? '1') : ($cycle['semester'] ?? '1');
 $cycleTitle = $cycleTitle . (!empty($rawSem) ? ' - Semester ' . $rawSem : '');
@@ -16,21 +18,6 @@ if (!empty($startDate) && !empty($endDate)) {
 } elseif (!empty($cycleTitle)) {
     $periodeText = $cycleTitle;
 }
-
-// Helper to parse key actions or indicators
-$parseActions = function ($raw): array {
-    if (empty($raw)) return [];
-    if (is_array($raw)) return array_values(array_filter(array_map('trim', $raw)));
-    if (is_string($raw)) {
-        $decoded = json_decode($raw, true);
-        if (is_array($decoded)) {
-            return array_values(array_filter(array_map('trim', $decoded)));
-        }
-        $lines = explode("\n", $raw);
-        return array_values(array_filter(array_map('trim', $lines)));
-    }
-    return [];
-};
 
 // Helper to clean action text from leading numbering/lettering (e.g., 'a. ', '1. ')
 $cleanActionText = function (string $text): string {
@@ -194,7 +181,7 @@ $itemsKompetensiTambahan = [];
                 $itemId      = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id']);
                 $cfg         = (array) ($item['config'] ?? []);
                 $compTitle   = !empty($cfg['competency']) ? $cfg['competency'] : (!empty($item['title']) ? $item['title'] : ('Kompetensi ' . ($cIdx + 1)));
-                $actions     = $parseActions($cfg['key_actions'] ?? null);
+                $actions     = appraisal_parse_actions($cfg['key_actions'] ?? null);
 
                 $resp          = $responses_by_item_id[$itemId] ?? null;
                 $activePayload = [];
@@ -318,7 +305,7 @@ $itemsKompetensiTambahan = [];
                 $bItemId      = (int) ($bItem['md_appraisal_template_item_id'] ?? $bItem['template_item_id']);
                 $bCfg         = (array) ($bItem['config'] ?? []);
                 $bTitle       = !empty($bCfg['competency']) ? $bCfg['competency'] : (!empty($bItem['title']) ? $bItem['title'] : ('Kompetensi ' . ($bIdx + 1)));
-                $bKeyActions  = $parseActions($bCfg['key_actions'] ?? null);
+                $bKeyActions  = appraisal_parse_actions($bCfg['key_actions'] ?? null);
 
                 $bResp       = $responses_by_item_id[$bItemId] ?? null;
                 $evalPayload = ($bResp && !empty($bResp->evaluator_response))
@@ -339,23 +326,7 @@ $itemsKompetensiTambahan = [];
             <?php if (!empty($bKeyActions)): ?>
                 <?php foreach ($bKeyActions as $kIdx => $ka): ?>
                     <?php
-                        $isActionChecked = false;
-                        if (!empty($checkedActions) && is_array($checkedActions)) {
-                            $hasYorN = false;
-                            foreach ($checkedActions as $v) {
-                                if (in_array(strtoupper((string) $v), ['Y', 'N'], true)) {
-                                    $hasYorN = true;
-                                    break;
-                                }
-                            }
-                            if ($hasYorN) {
-                                $val = $checkedActions[$kIdx] ?? $checkedActions[(string) $kIdx] ?? null;
-                                $isActionChecked = in_array(strtoupper((string) $val), ['Y', '1', 'TRUE'], true);
-                            } else {
-                                $isActionChecked = in_array((string) $kIdx, array_map('strval', $checkedActions), true)
-                                    || in_array($ka, $checkedActions, true);
-                            }
-                        }
+                        $isActionChecked = is_array($checkedActions) && appraisal_parse_checked((int) $kIdx, $checkedActions, (string) $ka);
 
                         if ($isActionChecked) {
                             $itemsKompetensiTambahan[] = $cleanActionText($ka);

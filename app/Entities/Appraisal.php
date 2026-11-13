@@ -27,7 +27,6 @@ class Appraisal extends Entity
         'snapshot_evaluator_id'    => 'integer',
         'snapshot_gm_id'           => '?integer',
         'template_snapshot'        => 'json-array', // Automatically cast JSON snapshot to array
-        'performance_score'        => '?float',
         'final_score'              => '?float',
         'created_by'               => 'integer',
         'updated_by'               => 'integer',

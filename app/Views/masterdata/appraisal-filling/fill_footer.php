@@ -28,8 +28,8 @@
             </button>
         <?php endif; ?>
 
-        <button type="button" class="ap-btn ap-btn-ghost ap-btn-icon" onclick="showAuditLogModal(<?= (int) $appraisal_id ?>)" title="Riwayat aktivitas (audit log)">
-            <i class="fas fa-history"></i>
+        <button type="button" class="ap-btn ap-btn-ghost ap-btn-icon" onclick="showAuditLogModal(<?= (int) $appraisal_id ?>)" title="Riwayat aktivitas (audit log)" aria-label="Riwayat aktivitas (audit log)">
+            <i class="fas fa-history" aria-hidden="true"></i>
         </button>
     </div>
 </div>

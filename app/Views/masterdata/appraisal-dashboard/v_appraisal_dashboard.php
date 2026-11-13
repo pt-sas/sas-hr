@@ -578,6 +578,7 @@
                         <th>Karyawan</th>
                         <th>Jabatan</th>
                         <th>Level</th>
+                        <th>Cabang</th>
                         <th>Divisi</th>
                         <th>Siklus Penilaian</th>
                         <th>Penilai</th>
@@ -685,8 +686,8 @@ function initAppraisalDashboard() {
                 var $banner = $('#cycle_banner_info');
                 if (cycle && cycle.title) {
                     $('#banner_period').text((cycle.start_date || '-') + ' s/d ' + (cycle.end_date || '-'));
-                    $('#banner_eval_due').text(cycle.deadline_filling || cycle.evaluator_due_date || '-');
-                    $('#banner_gm_due').text(cycle.deadline_review || cycle.gm_due_date || '-');
+                    $('#banner_eval_due').text(cycle.deadline_filling || '-');
+                    $('#banner_gm_due').text(cycle.deadline_review || '-');
                     $('#banner_reading_due').text(cycle.deadline_reading || '-');
 
                     var isOpen = cycle.status === 'OPEN';

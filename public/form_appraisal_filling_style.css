@@ -1178,3 +1178,76 @@ tr:has(input[type="radio"]:checked) .font-weight-600 {
     color: #14532d;
 }
 
+.ap-rating.r-muted {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+/* Modal header & page shell utilities */
+.ap-modal-header {
+    border-bottom: 2px solid #94a3b8;
+    padding: 14px 20px;
+    background: #e2eaf4;
+}
+
+.ap-modal-title {
+    font-size: 16px;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ap-hide-page-toolbar .card-header .float-right,
+.ap-hide-page-toolbar .card-header .new_form,
+.ap-hide-page-toolbar .card-header .btn_requery {
+    display: none !important;
+}
+
+.main-panel.is-loading:after {
+    display: none !important;
+}
+
+@media print {
+    .main-header, .sidebar, .breadcrumbs, .page-header, .action-top-bar, .modal, .btn, .badge-action, .ap-report-header button, .ap-report-header a {
+        display: none !important;
+    }
+    .main-panel {
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .card-body, .card-main, .ap-wrap {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+    .ap-card {
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 16px !important;
+    }
+    .ap-card-head {
+        background-color: #f1f5f9 !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .ap-table thead th {
+        background: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .ap-subtotal td {
+        background-color: #f8fafc !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .ap-avg-chip, .badge, .ap-summary-rating {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+

@@ -5,7 +5,6 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Entities\AppraisalTemplate;
 use App\Models\M_AppraisalTemplate;
-use App\Models\M_AppraisalTemplateItem;
 use App\Services\AppraisalTemplateServices;
 use App\Models\M_Employee;
 use Config\Services;
@@ -20,7 +19,6 @@ class AppraisalTemplateController extends BaseController
     {
         $this->request         = Services::request();
         $this->model           = new M_AppraisalTemplate();
-        $this->modelDetail     = new M_AppraisalTemplateItem();
         $this->entity          = new AppraisalTemplate();
         $this->mEmployee       = new M_Employee($this->request);
         $this->templateService = new AppraisalTemplateServices();
@@ -66,14 +64,15 @@ class AppraisalTemplateController extends BaseController
                     }
 
                     $scopeMap = [
-                        'md_branch_id'    => 'md_template_branch',
-                        'md_division_id'  => 'md_template_division',
-                        'md_levelling_id' => 'md_template_levelling',
+                        'md_branch_id'    => 'BRANCH',
+                        'md_division_id'  => 'DIVISION',
+                        'md_levelling_id' => 'LEVELLING',
+                        'md_position_id'  => 'POSITION',
                     ];
                     if (isset($scopeMap[$name])) {
-                        $tbl = $scopeMap[$name];
-                        $val = (int) $value;
-                        $where[] = "EXISTS (SELECT 1 FROM {$tbl} f WHERE f.md_appraisal_template_id = md_appraisal_template.md_appraisal_template_id AND f.{$name} = {$val} AND f.isactive = 'Y')";
+                        $sType = $scopeMap[$name];
+                        $val   = (int) $value;
+                        $where[] = "EXISTS (SELECT 1 FROM md_template_scope f WHERE f.md_appraisal_template_id = md_appraisal_template.md_appraisal_template_id AND f.scope_type = '{$sType}' AND f.scope_id = {$val} AND f.isactive = 'Y')";
                     }
                     if ($name === 'status') {
                         $statusMap = [
@@ -219,9 +218,21 @@ class AppraisalTemplateController extends BaseController
         if ($this->request->getMethod(true) === 'POST') {
             try {
                 $post = (array) $this->request->getVar();
-                $id   = $this->getID();
 
-                // 1. Immutability Check (Zero-Usage Immunity)
+                // 1. Decode unified payload from form submission
+                $payload = json_decode((string) ($post['payload'] ?? ''), true);
+                if (!is_array($payload)) {
+                    return $this->response->setJSON(message('error', false, 'Payload template tidak valid.'));
+                }
+
+                // Determine whether this is an edit or new record:
+                // The unified payload explicitly contains md_appraisal_template_id when updating an existing record.
+                // If empty or <= 0, it is strictly a new record creation.
+                $id = !empty($payload['md_appraisal_template_id']) && (int) $payload['md_appraisal_template_id'] > 0
+                    ? (int) $payload['md_appraisal_template_id']
+                    : null;
+
+                // 2. Immutability Check (Zero-Usage Immunity)
                 if (!empty($id)) {
                     $existing = $this->model->find($id);
                     if ($existing && ! $existing->isDraft()) {
@@ -230,12 +241,6 @@ class AppraisalTemplateController extends BaseController
                             return $this->response->setJSON(message('error', false, 'Template ini sudah digunakan oleh data penilaian karyawan aktif sehingga tidak dapat diubah secara langsung. Silakan buat Versi Baru.'));
                         }
                     }
-                }
-
-                // 2. Decode unified payload from form submission
-                $payload = json_decode((string) ($post['payload'] ?? ''), true);
-                if (!is_array($payload)) {
-                    return $this->response->setJSON(message('error', false, 'Payload template tidak valid.'));
                 }
 
                 // 3. Centralized validation via Config\Validation ($appraisal_template)
@@ -282,44 +287,41 @@ class AppraisalTemplateController extends BaseController
                     $fieldHeader->setTable($this->model->table);
                     $fieldHeader->setList($list);
 
-                    // Scoping (id + name, so the frontend can preload Select2 options)
+                    // Scoping from unified md_template_scope (id + name for Select2)
                     $scoping = [];
                     foreach ([
-                        'branch_ids'    => ['md_template_branch',    'md_branch',    'md_branch_id'],
-                        'division_ids'  => ['md_template_division',  'md_division',  'md_division_id'],
-                        'levelling_ids' => ['md_template_levelling', 'md_levelling', 'md_levelling_id'],
-                    ] as $key => [$map, $master, $fk]) {
-                        $scoping[$key] = $this->db->table("{$map} x")
+                        'branch_ids'    => ['BRANCH',    'md_branch',    'md_branch_id'],
+                        'division_ids'  => ['DIVISION',  'md_division',  'md_division_id'],
+                        'levelling_ids' => ['LEVELLING', 'md_levelling', 'md_levelling_id'],
+                        'position_ids'  => ['POSITION',  'md_position',  'md_position_id'],
+                    ] as $key => [$scopeType, $master, $fk]) {
+                        $scoping[$key] = $this->db->table('md_template_scope x')
                             ->select("m.{$fk} AS id, m.name AS text")
-                            ->join("{$master} m", "m.{$fk} = x.{$fk}")
+                            ->join("{$master} m", "m.{$fk} = x.scope_id")
                             ->where('x.md_appraisal_template_id', $id)
+                            ->where('x.scope_type', $scopeType)
                             ->where('x.isactive', 'Y')
                             ->get()->getResultArray();
                     }
-                    // Alias for backwards compatibility with any UI elements still referencing position_ids
-                    $scoping['position_ids'] = $scoping['levelling_ids'];
 
-                    // Sections with nested items (config decoded)
-                    $sections = $this->db->table('md_appraisal_section')
-                        ->where('md_appraisal_template_id', $id)
-                        ->where('isactive', 'Y')
-                        ->orderBy('sequence_order', 'ASC')
-                        ->get()->getResultArray();
+                    // Sections with nested items from schema_json
+                    $schema = is_string($data->schema_json ?? null)
+                        ? (json_decode($data->schema_json, true) ?: [])
+                        : ((array) ($data->schema_json ?? []));
 
-                    foreach ($sections as &$sec) {
-                        $items = $this->db->table('md_appraisal_template_item')
-                            ->where('md_appraisal_section_id', $sec['md_appraisal_section_id'])
-                            ->where('isactive', 'Y')
-                            ->orderBy('sequence_order', 'ASC')
-                            ->get()->getResultArray();
-                        foreach ($items as &$it) {
-                            $cfg          = json_decode((string) ($it['config'] ?? ''), true);
-                            $it['config'] = is_array($cfg) ? $cfg : [];
+                    $sections = [];
+                    if (!empty($schema['sections'])) {
+                        $expanded = AppraisalTemplateServices::expandSchema($schema, $data);
+                        $itemsBySec = [];
+                        foreach ($expanded['items'] as $it) {
+                            $itemsBySec[(int) $it['md_appraisal_section_id']][] = $it;
                         }
-                        unset($it);
-                        $sec['items'] = $items;
+                        $sections = $expanded['sections'];
+                        foreach ($sections as &$sec) {
+                            $sec['items'] = $itemsBySec[(int) $sec['md_appraisal_section_id']] ?? [];
+                        }
+                        unset($sec);
                     }
-                    unset($sec);
 
                     $result = [
                         'header'   => $this->field->store($fieldHeader),
@@ -498,38 +500,25 @@ class AppraisalTemplateController extends BaseController
 
             $branchIds    = $this->normalizeIdArray($scoping['branch_ids'] ?? $scoping['md_branch_id'] ?? []);
             $divisionIds  = $this->normalizeIdArray($scoping['division_ids'] ?? $scoping['md_division_id'] ?? []);
-            $levellingIds = $this->normalizeIdArray($scoping['levelling_ids'] ?? $scoping['md_levelling_id'] ?? $scoping['leveling_ids'] ?? $scoping['position_ids'] ?? []);
+            $levellingIds = $this->normalizeIdArray($scoping['levelling_ids'] ?? $scoping['md_levelling_id'] ?? $scoping['leveling_ids'] ?? []);
+            $positionIds  = $this->normalizeIdArray($scoping['position_ids'] ?? $scoping['md_position_id'] ?? []);
 
-            // If template_id provided and no scoping params, load from junction tables
+            // If template_id provided and no scoping params, load from md_template_scope
             $templateId = (int) ($post['md_appraisal_template_id'] ?? $post['id'] ?? 0);
-            if ($templateId > 0 && empty($branchIds) && empty($divisionIds) && empty($levellingIds)) {
-                $branchIds = array_column(
-                    $this->db->table('md_template_branch')
-                        ->select('md_branch_id')
-                        ->where('md_appraisal_template_id', $templateId)
-                        ->where('isactive', 'Y')
-                        ->get()->getResultArray(),
-                    'md_branch_id'
-                );
-                $divisionIds = array_column(
-                    $this->db->table('md_template_division')
-                        ->select('md_division_id')
-                        ->where('md_appraisal_template_id', $templateId)
-                        ->where('isactive', 'Y')
-                        ->get()->getResultArray(),
-                    'md_division_id'
-                );
-                $levellingIds = array_column(
-                    $this->db->table('md_template_levelling')
-                        ->select('md_levelling_id')
-                        ->where('md_appraisal_template_id', $templateId)
-                        ->where('isactive', 'Y')
-                        ->get()->getResultArray(),
-                    'md_levelling_id'
-                );
-                $branchIds    = $this->normalizeIdArray($branchIds);
-                $divisionIds  = $this->normalizeIdArray($divisionIds);
-                $levellingIds = $this->normalizeIdArray($levellingIds);
+            if ($templateId > 0 && empty($branchIds) && empty($divisionIds) && empty($levellingIds) && empty($positionIds)) {
+                $scopeRows = $this->db->table('md_template_scope')
+                    ->select('scope_type, scope_id')
+                    ->where('md_appraisal_template_id', $templateId)
+                    ->where('isactive', 'Y')
+                    ->get()->getResultArray();
+                $byType = [];
+                foreach ($scopeRows as $sr) {
+                    $byType[$sr['scope_type']][] = (int) $sr['scope_id'];
+                }
+                $branchIds    = $this->normalizeIdArray($byType['BRANCH'] ?? []);
+                $divisionIds  = $this->normalizeIdArray($byType['DIVISION'] ?? []);
+                $levellingIds = $this->normalizeIdArray($byType['LEVELLING'] ?? []);
+                $positionIds  = $this->normalizeIdArray($byType['POSITION'] ?? []);
             }
 
             $builder = $this->db->table('md_employee e')
@@ -556,6 +545,9 @@ class AppraisalTemplateController extends BaseController
             }
             if (!empty($levellingIds)) {
                 $builder->whereIn('e.md_levelling_id', $levellingIds);
+            }
+            if (!empty($positionIds)) {
+                $builder->whereIn('e.md_position_id', $positionIds);
             }
 
             $list = $builder->orderBy('e.fullname', 'ASC')->get()->getResultArray();
@@ -610,6 +602,7 @@ class AppraisalTemplateController extends BaseController
             $templateTitle = 'Preview Evaluasi Kinerja';
             $templateCode  = '-';
             $version       = 1;
+            $targetGroup   = 'STAFF_SPV';
             $sections      = [];
             $items         = [];
 
@@ -619,61 +612,29 @@ class AppraisalTemplateController extends BaseController
             $samplePosition = 'Semua Level / Posisi';
 
             if (!empty($post['payload'])) {
-                // Live form builder preview
+                // Live form builder preview via canonical compact -> expand contract
                 $payload = is_string($post['payload']) ? json_decode($post['payload'], true) : $post['payload'];
                 if (is_array($payload)) {
                     $templateTitle = !empty($payload['title']) ? $payload['title'] : $templateTitle;
                     $templateCode  = !empty($payload['template_code']) ? $payload['template_code'] : $templateCode;
                     $version       = (int) ($payload['version'] ?? 1);
+                    $targetGroup   = strtoupper((string) ($payload['target_group'] ?? 'STAFF_SPV'));
 
-                    $secCounter  = 1;
-                    $itemCounter = 1;
-                    foreach ($payload['sections'] ?? [] as $sec) {
-                        $secId   = (int) ($sec['md_appraisal_section_id'] ?? $secCounter++);
-                        $secType = strtoupper($sec['section_type'] ?? 'SCORE');
-                        $sections[] = [
-                            'md_appraisal_section_id' => $secId,
-                            'name'                    => $sec['name'] ?? ($secType === 'BOOLEAN' ? 'Kriteria Kepatuhan' : 'Kompetensi & Performa Kerja'),
-                            'section_type'            => $secType,
-                            'sequence_order'          => (int) ($sec['sequence_order'] ?? $secCounter),
-                            'weight'                  => (float) ($sec['weight'] ?? 0),
-                        ];
-
-                        foreach ($sec['items'] ?? [] as $it) {
-                            $itemId    = (int) ($it['md_appraisal_template_item_id'] ?? $itemCounter++);
-                            $configVal = $it['config'] ?? [];
-                            if (is_string($configVal)) {
-                                $decoded = json_decode($configVal, true);
-                                if (is_array($decoded)) {
-                                    $configVal = $decoded;
-                                }
+                    $rawSections = (array) ($payload['sections'] ?? []);
+                    if (empty($payload['target_group'])) {
+                        foreach ($rawSections as $rawSec) {
+                            $st = strtoupper((string) ($rawSec['section_type'] ?? $rawSec['type'] ?? ''));
+                            if ($st === 'WEIGHTED_CHECKLIST' || $st === 'SINGLE_CHECKLIST') {
+                                $targetGroup = 'OPERATOR';
+                                break;
                             }
-                            if (!is_array($configVal)) {
-                                $configVal = [];
-                            }
-
-                            // Contract normalization: ensure title, competency, and definition align
-                            $title       = !empty($it['title']) ? $it['title'] : ($configVal['competency'] ?? ('Item ' . $itemCounter));
-                            $description = !empty($it['description']) ? $it['description'] : ($configVal['definition'] ?? '');
-                            if (empty($configVal['competency']) && !empty($title)) {
-                                $configVal['competency'] = $title;
-                            }
-                            if (empty($configVal['definition']) && !empty($description)) {
-                                $configVal['definition'] = $description;
-                            }
-
-                            $items[] = [
-                                'md_appraisal_template_item_id' => $itemId,
-                                'md_appraisal_section_id'       => $secId,
-                                'title'                         => $title,
-                                'description'                   => $description,
-                                'input_type'                    => strtoupper($it['input_type'] ?? $secType),
-                                'sequence_order'                => (int) ($it['sequence_order'] ?? $itemCounter),
-                                'weight'                        => (float) ($it['weight'] ?? 0),
-                                'config'                        => $configVal,
-                            ];
                         }
                     }
+
+                    $schema   = AppraisalTemplateServices::compactSchema($rawSections, $targetGroup);
+                    $expanded = AppraisalTemplateServices::expandSchema($schema);
+                    $sections = $expanded['sections'];
+                    $items    = $expanded['items'];
                 }
             } elseif ($templateId > 0) {
                 // Existing saved template preview
@@ -682,33 +643,18 @@ class AppraisalTemplateController extends BaseController
                     $templateTitle = $tpl->title;
                     $templateCode  = $tpl->template_code;
                     $version       = (int) $tpl->version;
+                    $targetGroup   = strtoupper((string) ($tpl->target_group ?? 'STAFF_SPV'));
                 }
 
-                $rawSections = $this->db->table('md_appraisal_section')
-                    ->where('md_appraisal_template_id', $templateId)
-                    ->where('isactive', 'Y')
-                    ->orderBy('sequence_order', 'ASC')
-                    ->get()->getResultArray();
+                $schema = is_string($tpl->schema_json ?? null)
+                    ? (json_decode($tpl->schema_json, true) ?: [])
+                    : ((array) ($tpl->schema_json ?? []));
 
-                foreach ($rawSections as $sec) {
-                    $secId = (int) $sec['md_appraisal_section_id'];
-                    $sections[] = $sec;
-
-                    $secItems = $this->db->table('md_appraisal_template_item')
-                        ->where('md_appraisal_section_id', $secId)
-                        ->where('isactive', 'Y')
-                        ->orderBy('sequence_order', 'ASC')
-                        ->get()->getResultArray();
-
-                    foreach ($secItems as $si) {
-                        if (isset($si['config']) && is_string($si['config'])) {
-                            $decodedCfg = json_decode($si['config'], true);
-                            if (is_array($decodedCfg)) {
-                                $si['config'] = $decodedCfg;
-                            }
-                        }
-                        $items[] = $si;
-                    }
+                if (!empty($schema['sections'])) {
+                    $expanded    = AppraisalTemplateServices::expandSchema($schema, $tpl);
+                    $sections    = $expanded['sections'];
+                    $items       = $expanded['items'];
+                    $targetGroup = strtoupper((string) ($expanded['template']['target_group'] ?? $targetGroup));
                 }
             }
 
@@ -718,6 +664,7 @@ class AppraisalTemplateController extends BaseController
                     'title'         => $templateTitle,
                     'template_code' => $templateCode,
                     'version'       => $version,
+                    'target_group'  => $targetGroup,
                 ],
                 'sections' => $sections,
                 'items'    => $items,
@@ -947,10 +894,15 @@ class AppraisalTemplateController extends BaseController
     {
         $response = [];
         try {
-            $search  = $this->request->getVar('search') ?? $this->request->getVar('term');
-            $builder = $this->db->table('md_position')
+            $search      = $this->request->getVar('search') ?? $this->request->getVar('term');
+            $levellingId = $this->request->getVar('md_levelling_id');
+            $builder     = $this->db->table('md_position')
                 ->select('md_position_id as id, name as text')
                 ->where('isactive', 'Y');
+
+            if (!empty($levellingId) && $levellingId !== '0') {
+                $builder->whereIn('md_levelling_id', (array) $levellingId);
+            }
 
             if (!empty(trim($search)) && $search !== 'undefined' && $search !== 'null') {
                 $builder->like('name', trim($search));
@@ -974,16 +926,18 @@ class AppraisalTemplateController extends BaseController
 
     public function getOptionsByParent()
     {
-        $positionIds = $this->request->getVar('md_position_id');
-        $divisionIds = $this->request->getVar('md_division_id');
-        $branchIds   = $this->request->getVar('md_branch_id');
-        $search      = $this->request->getVar('search') ?? $this->request->getVar('term');
-        $type        = $this->request->getVar('type');
+        $levellingIds = $this->request->getVar('md_levelling_id');
+        $positionIds  = $this->request->getVar('md_position_id');
+        $divisionIds  = $this->request->getVar('md_division_id');
+        $branchIds    = $this->request->getVar('md_branch_id');
+        $search       = $this->request->getVar('search') ?? $this->request->getVar('term');
+        $type         = $this->request->getVar('type');
 
         // Pastikan input berupa array bersih jika multi-select
-        $positionIds = !empty($positionIds) && $positionIds !== '0' ? (array) $positionIds : [];
-        $divisionIds = !empty($divisionIds) && $divisionIds !== '0' ? (array) $divisionIds : [];
-        $branchIds   = !empty($branchIds) && $branchIds !== '0'     ? (array) $branchIds   : [];
+        $levellingIds = !empty($levellingIds) && $levellingIds !== '0' ? (array) $levellingIds : [];
+        $positionIds  = !empty($positionIds) && $positionIds !== '0'   ? (array) $positionIds  : [];
+        $divisionIds  = !empty($divisionIds) && $divisionIds !== '0'   ? (array) $divisionIds  : [];
+        $branchIds    = !empty($branchIds) && $branchIds !== '0'       ? (array) $branchIds    : [];
 
         $mEmployee = new \App\Models\M_Employee($this->request);
         $data      = [];
@@ -1000,8 +954,17 @@ class AppraisalTemplateController extends BaseController
                 break;
 
             case 'position':
-                // Ambil semua jabatan aktif (bisa difilter search teks)
-                $data = $mEmployee->getPositions($search);
+                // Ambil jabatan aktif yang difilter oleh level jika ada
+                $builder = $this->db->table('md_position')
+                    ->select('md_position_id as id, name as text')
+                    ->where('isactive', 'Y');
+                if (!empty($levellingIds)) {
+                    $builder->whereIn('md_levelling_id', $levellingIds);
+                }
+                if (!empty(trim($search)) && $search !== 'undefined' && $search !== 'null') {
+                    $builder->like('name', trim($search));
+                }
+                $data = $builder->orderBy('name', 'ASC')->get()->getResultArray();
                 break;
 
             case 'division':
