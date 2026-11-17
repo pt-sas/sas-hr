@@ -56,8 +56,7 @@ class AppraisalWorkflow extends BaseController
                 return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
             }
 
-            $debugDate = $this->session->get('appraisal_debug_date');
-            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
+            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id);
 
             $userId = $this->assertWorkflowActor($appraisal, 'EVALUATOR');
 
@@ -106,8 +105,7 @@ class AppraisalWorkflow extends BaseController
                 return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
             }
 
-            $debugDate = $this->session->get('appraisal_debug_date');
-            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
+            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id);
 
             $userId = $this->assertWorkflowActor($appraisal, 'REVIEWER');
 

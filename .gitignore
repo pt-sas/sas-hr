@@ -147,3 +147,5 @@ graphify-out/
 .agent/
 .agents/
 .antigravity/
+
+AGENTS.md

@@ -500,7 +500,7 @@ class Template
 
         $cycleStage = null;
         if (!empty($row['start_date']) || !empty($row['deadline_filling'])) {
-            $today = !empty($this->session->get('appraisal_debug_date')) ? strtotime($this->session->get('appraisal_debug_date')) : time();
+            $today = time();
             $fill  = !empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
             $rev   = !empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
             $read  = !empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
@@ -520,11 +520,14 @@ class Template
             }
         }
 
-        if ($status === M_Appraisal::STATUS_DRAFT_EVALUATOR && ($roleTab === 'EVALUATOR' || (int) ($row['snapshot_evaluator_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
+        $uri       = $this->request->uri->getSegment(2);
+        $canUpdate = $this->access->checkCrud($uri, $this->isUpdate) === 'Y';
+
+        if ($canUpdate && $status === M_Appraisal::STATUS_DRAFT_EVALUATOR && ($roleTab === 'EVALUATOR' || (int) ($row['snapshot_evaluator_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
             $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Isi Penilaian"><i class="fas fa-edit text-primary"></i></a>';
-        } elseif ($status === M_Appraisal::STATUS_REVIEW && ($roleTab === 'REVIEWER' || (int) ($row['snapshot_reviewer_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
+        } elseif ($canUpdate && $status === M_Appraisal::STATUS_REVIEW && ($roleTab === 'REVIEWER' || (int) ($row['snapshot_reviewer_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
             $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Review Peninjau"><i class="fas fa-user-check text-info"></i></a>';
-        } elseif ($status === M_Appraisal::STATUS_PENDING_ACK && ((int) ($row['md_employee_id'] ?? 0) === $empId || $isDuta || $isAdmin)) {
+        } elseif ($canUpdate && $status === M_Appraisal::STATUS_PENDING_ACK && ((int) ($row['md_employee_id'] ?? 0) === $empId || $isDuta || $isAdmin)) {
             $isDirectEmployee = ((int) ($row['md_employee_id'] ?? 0) === $empId);
             // Intervensi HR is strictly AFTER pembacaan (Stage 5)
             if ($isAdmin && !$isDirectEmployee && !$isDuta && $cycleStage === 5) {
@@ -575,18 +578,29 @@ class Template
 
     private function appraisalCycleButton($id, array $options): string
     {
-        $status  = (string) ($options['status'] ?? '');
-        $actions = '';
+        $uri       = $this->request->uri->getSegment(2);
+        $canUpdate = $this->access->checkCrud($uri, $this->isUpdate) === 'Y';
+        $canDelete = $this->access->checkCrud($uri, $this->isDelete) === 'Y';
+        $status    = (string) ($options['status'] ?? '');
+        $actions   = '';
 
         if ($status === M_AppraisalCycle::STATUS_DRAFT) {
-            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit"><i class="fas fa-edit text-info"></i></a>';
-            $actions .= '<a class="btn btn-sm" onclick="window.cycPreviewBlast(\'' . $id . '\')" title="Simulasi Distribusi"><i class="fas fa-paper-plane text-warning"></i></a>';
-            $actions .= '<a class="btn btn-sm" onclick="window.cycOpen(\'' . $id . '\')" title="Buka Siklus"><i class="fas fa-play text-success"></i></a>';
-            $actions .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus"><i class="fas fa-trash-alt text-danger"></i></a>';
+            if ($canUpdate) {
+                $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit"><i class="fas fa-edit text-info"></i></a>';
+                $actions .= '<a class="btn btn-sm" onclick="window.cycPreviewBlast(\'' . $id . '\')" title="Simulasi Distribusi"><i class="fas fa-paper-plane text-warning"></i></a>';
+                $actions .= '<a class="btn btn-sm" onclick="window.cycOpen(\'' . $id . '\')" title="Buka Siklus"><i class="fas fa-play text-success"></i></a>';
+            } else {
+                $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'CLOSED\')" id="' . $id . '" data-status="CLOSED" title="Detail"><i class="fas fa-eye text-info"></i></a>';
+            }
+            if ($canDelete) {
+                $actions .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus"><i class="fas fa-trash-alt text-danger"></i></a>';
+            }
         } elseif ($status === M_AppraisalCycle::STATUS_OPEN) {
             $actions .= '<a class="btn btn-sm" onclick="window.cycProgress(\'' . $id . '\')" title="Monitoring Progres"><i class="fas fa-chart-line text-primary"></i></a>';
             $actions .= '<a class="btn btn-sm" onclick="window.cycPreviewBlast(\'' . $id . '\')" title="Daftar Karyawan"><i class="fas fa-users text-info"></i></a>';
-            $actions .= '<a class="btn btn-sm" onclick="window.cycClose(\'' . $id . '\')" title="Tutup Siklus"><i class="fas fa-lock text-danger"></i></a>';
+            if ($canUpdate) {
+                $actions .= '<a class="btn btn-sm" onclick="window.cycClose(\'' . $id . '\')" title="Tutup Siklus"><i class="fas fa-lock text-danger"></i></a>';
+            }
         } else {
             $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'CLOSED\')" id="' . $id . '" data-status="CLOSED" title="Detail"><i class="fas fa-eye text-info"></i></a>';
             $actions .= '<a class="btn btn-sm" onclick="window.cycProgress(\'' . $id . '\')" title="Laporan Akhir"><i class="fas fa-chart-line text-primary"></i></a>';
@@ -597,37 +611,53 @@ class Template
 
     private function appraisalTemplateButton($id, array $options): string
     {
-        $status     = (string) ($options['status'] ?? M_AppraisalTemplate::STATUS_DRAFT);
-        $usageCount = (int) ($options['usage_count'] ?? 0);
-        $inUse      = ($usageCount > 0);
+        $uri         = $this->request->uri->getSegment(2);
+        $canUpdate   = $this->access->checkCrud($uri, $this->isUpdate) === 'Y';
+        $canDelete   = $this->access->checkCrud($uri, $this->isDelete) === 'Y';
+        $status      = (string) ($options['status'] ?? M_AppraisalTemplate::STATUS_DRAFT);
+        $usageCount  = (int) ($options['usage_count'] ?? 0);
+        $inUse       = ($usageCount > 0);
 
         $isDraft     = ($status === M_AppraisalTemplate::STATUS_DRAFT);
         $isPublished = ($status === M_AppraisalTemplate::STATUS_PUBLISHED);
 
         $actionBtns = '';
         if ($isDraft) {
-            $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit Template"><i class="fas fa-edit text-info"></i></a>';
-            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplPublish(\'' . $id . '\')" title="Publish Template"><i class="fas fa-check-circle text-success"></i></a>';
-            $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus Draft"><i class="fas fa-trash-alt text-danger"></i></a>';
+            if ($canUpdate) {
+                $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit Template"><i class="fas fa-edit text-info"></i></a>';
+                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplPublish(\'' . $id . '\')" title="Publish Template"><i class="fas fa-check-circle text-success"></i></a>';
+            } else {
+                $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'CO\')" id="' . $id . '" data-status="CO" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
+            }
+            if ($canDelete) {
+                $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus Draft"><i class="fas fa-trash-alt text-danger"></i></a>';
+            }
         } elseif ($isPublished) {
             if (!$inUse) {
-                // Unused Published: Allow in-place edit, undo/unpublish, and clean deletion
-                $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit Template (Belum Pernah Digunakan)"><i class="fas fa-edit text-info"></i></a>';
-                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplUnpublish(\'' . $id . '\')" title="Batalkan Publish (Kembalikan ke Draft)"><i class="fas fa-undo text-warning"></i></a>';
-                $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
+                if ($canUpdate) {
+                    $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit Template (Belum Pernah Digunakan)"><i class="fas fa-edit text-info"></i></a>';
+                    $actionBtns .= '<a class="btn btn-sm" onclick="window.tplUnpublish(\'' . $id . '\')" title="Batalkan Publish (Kembalikan ke Draft)"><i class="fas fa-undo text-warning"></i></a>';
+                } else {
+                    $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'CO\')" id="' . $id . '" data-status="CO" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
+                }
+                if ($canDelete) {
+                    $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
+                }
             } else {
-                // In-Use Published (Locked): Strictly view-only, allow deactivate/archive and clone
                 $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'CO\')" id="' . $id . '" data-status="CO" title="Lihat Detail (Terkunci: ' . $usageCount . ' Penilaian)"><i class="fas fa-eye text-info"></i></a>';
-                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplClone(\'' . $id . '\')" title="Buat Versi Baru (Draft)"><i class="fas fa-code-branch text-warning"></i></a>';
-                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplArchive(\'' . $id . '\')" title="Nonaktifkan / Arsipkan Template (Terkunci)"><i class="fas fa-power-off text-secondary"></i></a>';
+                if ($canUpdate) {
+                    $actionBtns .= '<a class="btn btn-sm" onclick="window.tplClone(\'' . $id . '\')" title="Buat Versi Baru (Draft)"><i class="fas fa-code-branch text-warning"></i></a>';
+                    $actionBtns .= '<a class="btn btn-sm" onclick="window.tplArchive(\'' . $id . '\')" title="Nonaktifkan / Arsipkan Template (Terkunci)"><i class="fas fa-power-off text-secondary"></i></a>';
+                }
             }
         } else {
             // ARCHIVED or others
             $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'VO\')" id="' . $id . '" data-status="VO" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
             if ($inUse) {
-                // In-Use Archived: Allow reactivation back to published
-                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplActivate(\'' . $id . '\')" title="Aktifkan Kembali Template (Published)"><i class="fas fa-check-circle text-success"></i></a>';
-            } else {
+                if ($canUpdate) {
+                    $actionBtns .= '<a class="btn btn-sm" onclick="window.tplActivate(\'' . $id . '\')" title="Aktifkan Kembali Template (Published)"><i class="fas fa-check-circle text-success"></i></a>';
+                }
+            } elseif ($canDelete) {
                 $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
             }
         }

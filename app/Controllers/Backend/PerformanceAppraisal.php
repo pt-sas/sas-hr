@@ -53,23 +53,17 @@ class PerformanceAppraisal extends BaseController
     }
 
     /**
-     * Check if the current user has superadmin/whitelist access for appraisals.
+     * Check if the current user has admin/all-data access for appraisals.
      */
     protected function isAppraisalAdmin(int $empId = 0): bool
     {
         $userId = (int) ($this->session->get('sys_user_id') ?? $this->access->getSessionUser() ?? 0);
-        $roleId = (int) ($this->session->get('sys_role_id') ?? 0);
-
-        if ($empId <= 0 && $userId > 0) {
-            return true;
+        if ($userId <= 0) {
+            return false;
         }
 
-        if (in_array($roleId, [1, 90], true)) {
-            return true;
-        }
-
-        return (bool) $this->access->getUserRoleName($userId, 'awn Admin')
-            || (bool) $this->access->getUserRoleName($userId, 'Role_Super_HRD');
+        return (bool) $this->access->getUserRoleName($userId, 'W_Emp_All_Data')
+            || (bool) $this->access->getUserRoleName($userId, 'W_Emp_Admin');
     }
 
     /**

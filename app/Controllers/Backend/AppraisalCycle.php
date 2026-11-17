@@ -394,28 +394,26 @@ class AppraisalCycle extends BaseController
     }
 
     /**
-     * Destroy appraisal cycle (Strict POST)
+     * Destroy appraisal cycle
      */
     public function destroy($id = null)
     {
-        if ($this->request->getMethod(true) !== 'POST') {
-            return $this->response->setStatusCode(405)->setJSON(message('error', false, '[AppraisalCycle::destroy] Metode HTTP tidak diizinkan. Gunakan POST.'));
-        }
+        if ($this->request->isAJAX()) {
+            try {
+                $hasAppraisals = $this->db->table('md_appraisal')
+                    ->where('md_appraisal_cycle_id', (int) $id)
+                    ->where('isactive', 'Y')
+                    ->countAllResults();
 
-        try {
-            $hasAppraisals = $this->db->table('md_appraisal')
-                ->where('md_appraisal_cycle_id', (int) $id)
-                ->where('isactive', 'Y')
-                ->countAllResults();
+                if ($hasAppraisals > 0) {
+                    return $this->response->setJSON(message('error', false, "[AppraisalCycle::destroy] Siklus tidak dapat dihapus karena sudah memiliki {$hasAppraisals} data form penilaian yang terdistribusi."));
+                }
 
-            if ($hasAppraisals > 0) {
-                return $this->response->setJSON(message('error', false, "[AppraisalCycle::destroy] Siklus tidak dapat dihapus karena sudah memiliki {$hasAppraisals} data form penilaian yang terdistribusi."));
+                $result = $this->delete((int) $id);
+                return $this->response->setJSON(message('success', $result, notification('updated')));
+            } catch (Throwable $e) {
+                return $this->response->setJSON(message('error', false, '[AppraisalCycle::destroy] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
             }
-
-            $result = $this->delete((int) $id);
-            return $this->response->setJSON(message('success', $result, notification('updated')));
-        } catch (Throwable $e) {
-            return $this->response->setJSON(message('error', false, '[AppraisalCycle::destroy] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
         }
     }
 
@@ -546,164 +544,5 @@ class AppraisalCycle extends BaseController
         } catch (Throwable $e) {
             return $this->response->setJSON(message('error', false, '[AppraisalCycle::progress] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
         }
-    }
-
-    /**
-     * Select2 Dropdown: Levelling Master
-     */
-    public function getListLevelling()
-    {
-        $response = [];
-        try {
-            $search  = $this->request->getVar('search') ?? $this->request->getVar('term');
-            $builder = $this->db->table('md_levelling')
-                ->select('md_levelling_id as id, name as text')
-                ->where('isactive', 'Y');
-
-            if (!empty(trim($search)) && $search !== 'undefined' && $search !== 'null') {
-                $builder->like('name', trim($search));
-            }
-
-            $list = $builder->orderBy('name', 'ASC')->get()->getResultArray();
-
-            $response[] = ['id' => '0', 'text' => 'Semua Level (Default)'];
-            foreach ($list as $row) {
-                $response[] = [
-                    'id'   => (string) $row['id'],
-                    'text' => $row['text'],
-                ];
-            }
-        } catch (Throwable $e) {
-            $response = [];
-        }
-
-        return $this->response->setJSON($response);
-    }
-
-    /**
-     * Select2 Dropdown: Master Template List
-     */
-    public function getListTemplate()
-    {
-        $response = [];
-        try {
-            $search  = $this->request->getVar('search') ?? $this->request->getVar('term');
-            $builder = $this->db->table('md_appraisal_template')
-                ->select('md_appraisal_template_id as id, title as text, template_code')
-                ->where('isactive', 'Y');
-
-            if (!empty(trim($search)) && $search !== 'undefined' && $search !== 'null') {
-                $builder->like('title', trim($search));
-            }
-
-            $list = $builder->orderBy('title', 'ASC')->get()->getResultArray();
-
-            foreach ($list as $row) {
-                $response[] = [
-                    'id'   => (string) $row['id'],
-                    'text' => '[' . $row['template_code'] . '] ' . $row['text'],
-                ];
-            }
-        } catch (Throwable $e) {
-            $response = [];
-        }
-
-        return $this->response->setJSON($response);
-    }
-
-    /**
-     * Select2 Dropdown: Branch List
-     */
-    public function getListBranch()
-    {
-        $response = [];
-        try {
-            $search  = $this->request->getVar('search') ?? $this->request->getVar('term');
-            $builder = $this->db->table('md_branch')
-                ->select('md_branch_id as id, name as text')
-                ->where('isactive', 'Y');
-
-            if (!empty(trim($search)) && $search !== 'undefined' && $search !== 'null') {
-                $builder->like('name', trim($search));
-            }
-
-            $list = $builder->orderBy('name', 'ASC')->get()->getResultArray();
-
-            $response[] = ['id' => '0', 'text' => 'Semua Cabang (Default)'];
-            foreach ($list as $row) {
-                $response[] = [
-                    'id'   => (string) $row['id'],
-                    'text' => $row['text'],
-                ];
-            }
-        } catch (Throwable $e) {
-            $response = [];
-        }
-
-        return $this->response->setJSON($response);
-    }
-
-    /**
-     * Select2 Dropdown: Division List
-     */
-    public function getListDivision()
-    {
-        $response = [];
-        try {
-            $search  = $this->request->getVar('search') ?? $this->request->getVar('term');
-            $builder = $this->db->table('md_division')
-                ->select('md_division_id as id, name as text')
-                ->where('isactive', 'Y');
-
-            if (!empty(trim($search)) && $search !== 'undefined' && $search !== 'null') {
-                $builder->like('name', trim($search));
-            }
-
-            $list = $builder->orderBy('name', 'ASC')->get()->getResultArray();
-
-            $response[] = ['id' => '0', 'text' => 'Semua Divisi (Default)'];
-            foreach ($list as $row) {
-                $response[] = [
-                    'id'   => (string) $row['id'],
-                    'text' => $row['text'],
-                ];
-            }
-        } catch (Throwable $e) {
-            $response = [];
-        }
-
-        return $this->response->setJSON($response);
-    }
-
-    /**
-     * Select2 Dropdown: Position List
-     */
-    public function getListPosition()
-    {
-        $response = [];
-        try {
-            $search  = $this->request->getVar('search') ?? $this->request->getVar('term');
-            $builder = $this->db->table('md_position')
-                ->select('md_position_id as id, name as text')
-                ->where('isactive', 'Y');
-
-            if (!empty(trim($search)) && $search !== 'undefined' && $search !== 'null') {
-                $builder->like('name', trim($search));
-            }
-
-            $list = $builder->orderBy('name', 'ASC')->get()->getResultArray();
-
-            $response[] = ['id' => '0', 'text' => 'Semua Posisi (Default)'];
-            foreach ($list as $row) {
-                $response[] = [
-                    'id'   => (string) $row['id'],
-                    'text' => $row['text'],
-                ];
-            }
-        } catch (Throwable $e) {
-            $response = [];
-        }
-
-        return $this->response->setJSON($response);
     }
 }

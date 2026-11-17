@@ -117,36 +117,25 @@ class AppraisalEvaluation extends BaseController
     }
 
     /**
-     * Check if the current user has superadmin/whitelist access for appraisals.
-     * Whitelisted:
-     * - Accounts without employee linkage (system/developer)
-     * - 'awn Admin' (sys_role_id = 1)
-     * - 'Role_Super_HRD' (sys_role_id = 90) e.g., Super HRD 1 & Super HRD 2
+     * Check if the current user has admin/all-data access for appraisals.
      */
     protected function isAppraisalAdmin(int $empId = 0): bool
     {
         $userId = (int) ($this->session->get('sys_user_id') ?? $this->access->getSessionUser() ?? 0);
-        $roleId = (int) ($this->session->get('sys_role_id') ?? 0);
-
-        if ($empId <= 0 && $userId > 0) {
-            return true;
+        if ($userId <= 0) {
+            return false;
         }
 
-        if (in_array($roleId, [1, 90], true)) {
-            return true;
-        }
-
-        return (bool) $this->access->getUserRoleName($userId, 'awn Admin')
-            || (bool) $this->access->getUserRoleName($userId, 'Role_Super_HRD');
+        return (bool) $this->access->getUserRoleName($userId, 'W_Emp_All_Data')
+            || (bool) $this->access->getUserRoleName($userId, 'W_Emp_Admin');
     }
 
     /**
-     * Resolve workflow stage (1 to 5) for a given cycle, factoring in session debug date if set.
+     * Resolve workflow stage (1 to 5) for a given cycle.
      */
     protected function resolveCycleStage($cycle = null): int
     {
-        $debugDate   = $this->session->get('appraisal_debug_date');
-        $currentDate = $debugDate ?: date('Y-m-d');
+        $currentDate = date('Y-m-d');
 
         if (! $cycle) {
             $cycle = $this->cycleService->getActiveCycle($currentDate);
@@ -165,9 +154,8 @@ class AppraisalEvaluation extends BaseController
     {
         $empId = $this->getCurrentEmployeeId();
 
-        // Resolve simulated debug date & active workflow stage early
-        $debugDate    = $this->session->get('appraisal_debug_date');
-        $currentDate  = $debugDate ?: date('Y-m-d');
+        // Resolve active workflow stage
+        $currentDate  = date('Y-m-d');
 
         // 1. Fetch active OPEN cycle (lazily auto-closes if expired)
         $activeCycle = $this->cycleService->getActiveCycle($currentDate);
@@ -356,8 +344,7 @@ class AppraisalEvaluation extends BaseController
                 // Role Tab Scope (If Admin/System $empId <= 0 or roleTab is ALL, don't filter to single user)
                 $isAdmin = $this->isAppraisalAdmin($empId);
 
-                $debugDate   = $this->session->get('appraisal_debug_date');
-                $currentDate = $debugDate ?: date('Y-m-d');
+                $currentDate = date('Y-m-d');
                 $activeCycle = $this->cycleService->getActiveCycle($currentDate);
 
                 if ($roleTab !== 'HISTORY' && $roleTab !== 'EMPLOYEE') {
@@ -1574,8 +1561,7 @@ class AppraisalEvaluation extends BaseController
         }
 
         try {
-            $debugDate = $this->session->get('appraisal_debug_date');
-            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
+            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id);
         } catch (Exception $ce) {
             return $this->response->setJSON(message('error', false, $ce->getMessage()));
         }
@@ -1777,8 +1763,7 @@ class AppraisalEvaluation extends BaseController
         }
 
         try {
-            $debugDate = $this->session->get('appraisal_debug_date');
-            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
+            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id);
 
             $userId = (int) ($this->access->getSessionUser() ?? 1);
             $empId  = $this->getCurrentEmployeeId();
@@ -1845,8 +1830,7 @@ class AppraisalEvaluation extends BaseController
         }
 
         try {
-            $debugDate = $this->session->get('appraisal_debug_date');
-            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
+            $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id);
 
             $userId = (int) ($this->access->getSessionUser() ?? 1);
             $empId  = $this->getCurrentEmployeeId();
@@ -1887,7 +1871,7 @@ class AppraisalEvaluation extends BaseController
         // Resolve cycle stage if row provides cycle info
         $cycleStage = null;
         if (! empty($row['start_date']) || ! empty($row['deadline_filling'])) {
-            $today = ! empty($this->session->get('appraisal_debug_date')) ? strtotime($this->session->get('appraisal_debug_date')) : time();
+            $today = time();
             $fill  = ! empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
             $rev   = ! empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
             $read  = ! empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
@@ -2070,54 +2054,5 @@ class AppraisalEvaluation extends BaseController
         }
 
         return $normalized;
-    }
-
-    /**
-     * POST/GET /penilaian/setDebugDate
-     * Set, jump stage, or reset simulated debug date in session
-     */
-    public function setDebugDate()
-    {
-        $post   = $this->request->getVar();
-        $action = $post['action'] ?? $this->request->getGet('action') ?? null;
-        $date   = trim((string) ($post['debug_date'] ?? $this->request->getGet('debug_date') ?? ''));
-        $stage  = (int) ($post['stage'] ?? $this->request->getGet('stage') ?? 0);
-
-        if ($action === 'reset' || $date === 'reset' || $date === 'today') {
-            $this->session->remove('appraisal_debug_date');
-            return $this->response->setJSON(message('success', true, [
-                'message'       => 'Debug date direset ke tanggal sistem hari ini (' . date('d M Y') . ').',
-                'debug_date'    => date('Y-m-d'),
-                'is_debug'      => false,
-                'current_stage' => 2,
-            ]));
-        }
-
-        $activeCycle = $this->cycleModel->where('status', M_AppraisalCycle::STATUS_OPEN)
-                                        ->where('isactive', 'Y')
-                                        ->first();
-
-        // If jump to specific stage requested
-        if ($stage >= 1 && $stage <= 6 && $activeCycle && method_exists($activeCycle, 'getStageTargetDate')) {
-            $date = $activeCycle->getStageTargetDate($stage);
-        }
-
-        if (empty($date) || ! strtotime($date)) {
-            return $this->response->setJSON(message('error', false, 'Format tanggal tidak valid.'));
-        }
-
-        $formattedDate = date('Y-m-d', strtotime($date));
-        $this->session->set('appraisal_debug_date', $formattedDate);
-
-        $stageNum = ($activeCycle && method_exists($activeCycle, 'getCurrentStage')) 
-            ? $activeCycle->getCurrentStage($formattedDate) 
-            : 2;
-
-        return $this->response->setJSON(message('success', true, [
-            'message'       => 'Debug date aktif: ' . date('d M Y', strtotime($formattedDate)) . ' (Tahap ' . $stageNum . ').',
-            'debug_date'    => $formattedDate,
-            'is_debug'      => true,
-            'current_stage' => $stageNum,
-        ]));
     }
 }

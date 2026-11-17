@@ -55,6 +55,7 @@ $routes->get('cron-return-proxy', 'Backend\ProxySpecial::proxySwitching');
 $routes->get('cron-delegation-transfer', 'Backend\DelegationTransfer::delegationSwitching');
 $routes->get('cron-delegation-absent', 'Backend\User::sendEmailWhenDelegationAbsent');
 $routes->get('cron-notif-realization', 'Backend\Realization::doSendNotification');
+$routes->get('cron-appraisal-nudge', 'Backend\PerformanceAppraisal::cronDailyNudge');
 $routes->get('/iclock/cdata', 'IclockApi::handshake');
 $routes->post('/iclock/cdata', 'IclockApi::receive');
 $routes->post('/iclock/ldata', 'IclockApi::receiveLocal');
@@ -927,17 +928,10 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     
 
     // Performance Appraisal Overview & Monitoring Dashboard
-    $routes->match(['get', 'post'], 'performance-appraisal', 'Backend\PerformanceAppraisal::index');
-    $routes->match(['get', 'post'], 'performance-appraisal/showAll', 'Backend\PerformanceAppraisal::showAll');
-    $routes->match(['get', 'post'], 'performance-appraisal/getSummary', 'Backend\PerformanceAppraisal::getSummary');
-
     $routes->match(['get', 'post'], 'monitoring-penilaian', 'Backend\PerformanceAppraisal::index');
     $routes->match(['get', 'post'], 'monitoring-penilaian/showAll', 'Backend\PerformanceAppraisal::showAll');
     $routes->match(['get', 'post'], 'monitoring-penilaian/getSummary', 'Backend\PerformanceAppraisal::getSummary');
-    $routes->match(['get', 'post'], 'monitoring-penilaian/getCycles', 'Backend\PerformanceAppraisal::getCycles');
-    $routes->match(['get', 'post'], 'monitoring-penilaian/getDivisions', 'Backend\PerformanceAppraisal::getDivisions');
     $routes->post('monitoring-penilaian/nudge', 'Backend\PerformanceAppraisal::nudge');
-    $routes->get('cron-appraisal-nudge', 'Backend\PerformanceAppraisal::cronDailyNudge');
 
     // TEMPLATES (Appraisal Template Routes)
     $routes->add('template-penilaian', 'Backend\AppraisalTemplate::index');
@@ -955,25 +949,15 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'template-penilaian/previewForm', 'Backend\AppraisalTemplate::previewForm');
     
     // Cascading Options & Hierarchy Lookup
-    // Dropdown Select2 Endpoints
-    $routes->match(['get', 'post'], 'template-penilaian/getListLevelling', 'Backend\AppraisalTemplate::getListLevelling');
-    $routes->match(['get', 'post'], 'template-penilaian/getListPosition', 'Backend\AppraisalTemplate::getListPosition');
-    $routes->match(['get', 'post'], 'template-penilaian/getListDivision', 'Backend\AppraisalTemplate::getListDivision');
-    $routes->match(['get', 'post'], 'template-penilaian/getListBranch', 'Backend\AppraisalTemplate::getListBranch');
     $routes->match(['get', 'post'], 'template-penilaian/getOptionsByParent', 'Backend\AppraisalTemplate::getOptionsByParent');
     $routes->match(['get', 'post'], 'template-penilaian/getHierarchyInfo', 'Backend\AppraisalTemplate::getHierarchyInfo');
-    // Appraisal Template Mapping Routes
-    $routes->match(['get', 'post'], 'performance-appraisal/template-mappings/showAll', 'Backend\AppraisalTemplateMapping::showAll');
-    $routes->post('performance-appraisal/template-mappings/create', 'Backend\AppraisalTemplateMapping::create');
-    $routes->match(['get', 'post'], 'performance-appraisal/template-mappings/resolve', 'Backend\AppraisalTemplateMapping::resolve');
-    $routes->match(['get', 'post'], 'performance-appraisal/template-mappings/destroy/(:any)', 'Backend\AppraisalTemplateMapping::destroy/$1');
 
     // CYCLES (Siklus Penilaian Routes)
     $routes->add('siklus-penilaian', 'Backend\AppraisalCycle::index');
     $routes->match(['get', 'post'], 'siklus-penilaian/showAll', 'Backend\AppraisalCycle::showAll');
     $routes->post('siklus-penilaian/create', 'Backend\AppraisalCycle::create');
     $routes->match(['get', 'post'], 'siklus-penilaian/show/(:any)', 'Backend\AppraisalCycle::show/$1');
-    $routes->post('siklus-penilaian/destroy/(:any)', 'Backend\AppraisalCycle::destroy/$1');
+    $routes->match(['get', 'post'], 'siklus-penilaian/destroy/(:any)', 'Backend\AppraisalCycle::destroy/$1');
 
     // Status Lifecycle Actions
     $routes->post('siklus-penilaian/open/(:any)', 'Backend\AppraisalCycle::open/$1');
@@ -983,22 +967,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->match(['get', 'post'], 'siklus-penilaian/preview-blast/(:any)', 'Backend\AppraisalCycle::previewBlast/$1');
     $routes->match(['get', 'post'], 'siklus-penilaian/preview-blast', 'Backend\AppraisalCycle::previewBlast');
     $routes->match(['get', 'post'], 'siklus-penilaian/progress/(:any)', 'Backend\AppraisalCycle::progress/$1');
-
-    // Select2 Dropdowns & Lookups
-    $routes->add('siklus-penilaian/getListTemplate', 'Backend\AppraisalCycle::getListTemplate');
-    $routes->add('siklus-penilaian/getListBranch', 'Backend\AppraisalCycle::getListBranch');
-    $routes->add('siklus-penilaian/getListDivision', 'Backend\AppraisalCycle::getListDivision');
-    $routes->add('siklus-penilaian/getListPosition', 'Backend\AppraisalCycle::getListPosition');
-    $routes->add('siklus-penilaian/getListLevelling', 'Backend\AppraisalCycle::getListLevelling');
-
-    // Batch Appraisal Generation Routes
-    $routes->match(['get', 'post'], 'performance-appraisal/appraisals/showAll', 'Backend\AppraisalGenerator::showAll');
-    $routes->post('performance-appraisal/appraisals/generate', 'Backend\AppraisalGenerator::generate');
-
-    // Dynamic Evaluation Form & Scoring Routes
-    $routes->match(['get', 'post'], 'performance-appraisal/evaluations/showAll', 'Backend\AppraisalEvaluation::showAll');
-    $routes->match(['get', 'post'], 'performance-appraisal/evaluations/show/(:any)', 'Backend\AppraisalEvaluation::show/$1');
-    $routes->post('performance-appraisal/evaluations/saveDraft/(:any)', 'Backend\AppraisalEvaluation::saveDraft/$1');
 
     // EVALUATION
     $routes->get('penilaian', 'Backend\AppraisalEvaluation::index');
@@ -1011,7 +979,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->get('penilaian/exportPDF/(:num)', 'Backend\AppraisalEvaluation::exportPDF/$1');
     $routes->match(['get', 'post'], 'penilaian/print/(:num)', 'Backend\AppraisalEvaluation::exportPDF/$1');
     $routes->get('penilaian/scoreComparison/(:num)', 'Backend\AppraisalEvaluation::scoreComparison/$1');
-    $routes->get('performance-appraisal/evaluations/scoreComparison/(:any)', 'Backend\AppraisalEvaluation::scoreComparison/$1');
     $routes->get('penilaian/show/(:num)', 'Backend\AppraisalEvaluation::show/$1');
     $routes->post('penilaian/saveDraft/(:num)', 'Backend\AppraisalEvaluation::saveDraft/$1');
     $routes->post('penilaian/submit/(:num)', 'Backend\AppraisalEvaluation::submit/$1');
@@ -1019,14 +986,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('penilaian/kickbackReviewer/(:num)', 'Backend\AppraisalWorkflow::kickbackReviewer/$1');
     $routes->post('penilaian/acknowledgeEmployee/(:num)', 'Backend\AppraisalWorkflow::acknowledgeEmployee/$1');
     $routes->match(['get', 'post'], 'penilaian/auditLogs/(:num)', 'Backend\AppraisalWorkflow::auditLogs/$1');
-    $routes->match(['get', 'post'], 'penilaian/setDebugDate', 'Backend\AppraisalEvaluation::setDebugDate');
-
-    // Multi-Stage Workflow & Audit Routes
-    $routes->post('performance-appraisal/workflow/submitEvaluator/(:any)', 'Backend\AppraisalWorkflow::submitEvaluator/$1');
-    $routes->post('performance-appraisal/workflow/reviewReviewer/(:any)', 'Backend\AppraisalWorkflow::reviewReviewer/$1');
-    $routes->post('performance-appraisal/workflow/kickbackReviewer/(:any)', 'Backend\AppraisalWorkflow::kickbackReviewer/$1');
-    $routes->post('performance-appraisal/workflow/acknowledgeEmployee/(:any)', 'Backend\AppraisalWorkflow::acknowledgeEmployee/$1');
-    $routes->match(['get', 'post'], 'performance-appraisal/workflow/auditLogs/(:any)', 'Backend\AppraisalWorkflow::auditLogs/$1');
 });
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
