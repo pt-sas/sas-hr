@@ -3,13 +3,13 @@
 namespace App\Services;
 
 use App\Entities\Appraisal;
+use App\Exceptions\NotFoundException;
 use App\Models\M_Appraisal;
 use App\Models\M_AppraisalResponse;
 use App\Models\M_AppraisalAuditLog;
 use CodeIgniter\Database\Exceptions\DatabaseException;
-use Exception;
 
-class AppraisalScoringService
+class AppraisalScoringServices extends BaseServices
 {
     protected M_Appraisal $appraisalModel;
     protected M_AppraisalResponse $responseModel;
@@ -17,6 +17,7 @@ class AppraisalScoringService
 
     public function __construct()
     {
+        parent::__construct();
         $this->appraisalModel = new M_Appraisal();
         $this->responseModel  = new M_AppraisalResponse();
         $this->auditLogModel  = new M_AppraisalAuditLog();
@@ -35,7 +36,7 @@ class AppraisalScoringService
         $appraisal = $this->appraisalModel->find($appraisalId);
 
         if (! $appraisal) {
-            throw new Exception('Form penilaian tidak ditemukan.');
+            throw new NotFoundException('Form penilaian tidak ditemukan.');
         }
 
         $responses = $this->responseModel->where('md_appraisal_id', $appraisalId)
@@ -117,14 +118,14 @@ class AppraisalScoringService
 
             $score = $resp->score !== null ? (float) $resp->score : null;
 
-            // If score is not yet set in normalized column, check GM or evaluator payload
+            // If score is not yet set in normalized column, check Reviewer or evaluator payload
             if ($score === null) {
-                if (! empty($resp->gm_response)) {
-                    $gmPayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
-                    if (isset($gmPayload['score']) && $gmPayload['score'] !== '') {
-                        $score = (float) $gmPayload['score'];
-                    } elseif (! empty($gmPayload['action_scores']) && is_array($gmPayload['action_scores'])) {
-                        $validActs = array_filter($gmPayload['action_scores'], 'is_numeric');
+                if (! empty($resp->reviewer_response)) {
+                    $reviewerPayload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
+                    if (isset($reviewerPayload['score']) && $reviewerPayload['score'] !== '') {
+                        $score = (float) $reviewerPayload['score'];
+                    } elseif (! empty($reviewerPayload['action_scores']) && is_array($reviewerPayload['action_scores'])) {
+                        $validActs = array_filter($reviewerPayload['action_scores'], 'is_numeric');
                         if (! empty($validActs)) {
                             $score = array_sum($validActs) / count($validActs);
                         }
@@ -197,7 +198,12 @@ class AppraisalScoringService
             }
         }
 
-        if ($totalSectionWeight > 0) {
+        helper('appraisal_view');
+        $isOperator = appraisal_is_operator($snapshot);
+
+        if ($isOperator) {
+            $finalScore = round($totalDirectWeightedScore, 2);
+        } elseif ($totalSectionWeight > 0) {
             $finalScore = round($totalSectionWeightedScore / $totalSectionWeight, 2);
         } elseif ($totalDirectWeight > 0) {
             $finalScore = round($totalDirectWeightedScore / $totalDirectWeight, 2);
@@ -205,8 +211,6 @@ class AppraisalScoringService
             $finalScore = round($unweightedScoresSum / $unweightedScoresCount, 2);
         }
 
-        helper('appraisal_view');
-        $isOperator  = appraisal_is_operator($snapshot);
         $ratingScale = $snapshot['config']['rating_scale'] ?? null;
         $rating      = $this->determineRatingLabel($finalScore, $ratingScale, $isOperator);
 
@@ -233,7 +237,9 @@ class AppraisalScoringService
     public function saveResponses(int $appraisalId, array $responseList, int $userId, string $actorRole = 'EVALUATOR'): void
     {
         $db = \Config\Database::connect();
-        $db->transStart();
+        $db->transBegin();
+
+        try {
 
         $appraisal = $this->appraisalModel->find($appraisalId);
         $snapshot  = ($appraisal && ! empty($appraisal->template_snapshot))
@@ -294,7 +300,7 @@ class AppraisalScoringService
             $prevScore = $resp->score !== null ? (float) $resp->score : null;
 
             // Assemble payload using unified normalization
-            $isPeninjau = in_array(strtoupper((string) $actorRole), ['GM', 'PENINJAU', 'REVIEWER'], true);
+            $isPeninjau = in_array(strtoupper((string) $actorRole), ['PENINJAU', 'REVIEWER'], true);
 
             $formatAuditValue = static function (array $payload, ?float $colScore): ?string {
                 $data = $payload;
@@ -305,21 +311,21 @@ class AppraisalScoringService
             };
 
             if ($isPeninjau) {
-                $existingGm = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : ($resp->gm_response ?? []);
-                $existingGm = is_array($existingGm) ? $existingGm : [];
-                $newGm      = $this->prepareResponsePayload($existingGm, $row['gm_response'] ?? $row, $score, $isBoolean);
+                $existingReviewer = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : ($resp->reviewer_response ?? []);
+                $existingReviewer = is_array($existingReviewer) ? $existingReviewer : [];
+                $newReviewer      = $this->prepareResponsePayload($existingReviewer, $row['reviewer_response'] ?? $row, $score, $isBoolean);
 
                 if ($isBoolean) {
                     $resp->score = null;
                 } elseif ($score !== null) {
                     $resp->score = $score;
                 }
-                $resp->gm_response = $newGm;
-                $effectiveScore    = $resp->score !== null ? (float) $resp->score : null;
+                $resp->reviewer_response = $newReviewer;
+                $effectiveScore          = $resp->score !== null ? (float) $resp->score : null;
 
                 // Check delta
                 $scoreChanged   = ($score !== null && ($prevScore === null || round($score, 2) !== round($prevScore, 2)));
-                $payloadChanged = (json_encode($existingGm) !== json_encode($newGm));
+                $payloadChanged = (json_encode($existingReviewer) !== json_encode($newReviewer));
 
                 if ($scoreChanged || $payloadChanged) {
                     $auditDeltas[] = [
@@ -327,8 +333,8 @@ class AppraisalScoringService
                         'actor_id'                      => $userId,
                         'action'                        => 'PENINJAU_OVERRIDE_ITEM',
                         'md_appraisal_template_item_id' => $actualItemId,
-                        'previous_value'                => $formatAuditValue($existingGm, $prevScore),
-                        'new_value'                     => $formatAuditValue($newGm, $effectiveScore),
+                        'previous_value'                => $formatAuditValue($existingReviewer, $prevScore),
+                        'new_value'                     => $formatAuditValue($newReviewer, $effectiveScore),
                         'notes'                         => 'Peninjau memperbarui nilai/catatan butir penilaian.',
                         'created_at'                    => date('Y-m-d H:i:s'),
                     ];
@@ -368,15 +374,20 @@ class AppraisalScoringService
             $this->responseModel->save($resp);
         }
 
-        // Insert granular audit deltas batch if any
-        if (! empty($auditDeltas)) {
-            $db->table('md_appraisal_audit_log')->insertBatch($auditDeltas);
-        }
+            // Insert granular audit deltas batch if any
+            if (! empty($auditDeltas)) {
+                $db->table('md_appraisal_audit_log')->insertBatch($auditDeltas);
+            }
 
-        $db->transComplete();
+            if ($db->transStatus() === false) {
+                $db->transRollback();
+                throw new DatabaseException('Gagal menyimpan respons evaluasi ke database.');
+            }
 
-        if ($db->transStatus() === false) {
-            throw new DatabaseException('Gagal menyimpan respons evaluasi ke database.');
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
         }
 
         // Recalculate overall appraisal score
@@ -461,13 +472,17 @@ class AppraisalScoringService
         }
 
         if ($isOperator) {
-            if ($score >= 2.60) {
+            $finalScoreInt = (int) $score;
+            if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
                 return 'Sangat Baik';
             }
-            if ($score >= 1.80) {
+            if ($finalScoreInt >= 8 && $finalScoreInt <= 12) {
                 return 'Baik';
             }
-            return 'Kurang';
+            if ($finalScoreInt >= 5 && $finalScoreInt <= 7) {
+                return 'Kurang';
+            }
+            return '-';
         }
 
         if ($score >= 3.50) {

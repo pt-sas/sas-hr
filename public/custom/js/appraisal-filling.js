@@ -22,12 +22,19 @@
         var badgeCls = 'r-low';
 
         if (isOperator) {
-            if (score >= 2.60) {
+            var finalScoreInt = parseInt(score, 10);
+            if (finalScoreInt >= 13 && finalScoreInt <= 15) {
                 label = 'Sangat Baik';
                 badgeCls = 'r-great';
-            } else if (score >= 1.80) {
+            } else if (finalScoreInt >= 8 && finalScoreInt <= 12) {
                 label = 'Baik';
                 badgeCls = 'r-good';
+            } else if (finalScoreInt >= 5 && finalScoreInt <= 7) {
+                label = 'Kurang';
+                badgeCls = 'r-low';
+            } else {
+                label = '-';
+                badgeCls = 'r-muted';
             }
         } else {
             if (score >= 3.50) {
@@ -69,10 +76,14 @@
                 });
             });
 
+            var checkedCount = 0;
             document.querySelectorAll('.operator-kriteria-row').forEach(function (row) {
                 var itemId = row.dataset.itemId;
                 var cb = row.querySelector('.operator-kriteria-checkbox');
                 var isChecked = cb ? cb.checked : false;
+                if (isChecked) {
+                    checkedCount++;
+                }
                 var otherInput = row.querySelector('.operator-other-input');
                 var otherText = otherInput ? otherInput.value.trim() : '';
 
@@ -86,18 +97,21 @@
                 payloadArr.push(itemObj);
             });
 
-            var finalScore = totalWeight > 0 ? (totalWeightedScore / totalWeight) : null;
+            var hasScoredItem = totalWeight > 0;
+            var totNilai = hasScoredItem ? totalWeightedScore : null;
+            var suffixA = 'A'.repeat(checkedCount);
+            var displaySkorAkhir = totNilai !== null ? (String(parseInt(totNilai, 10)) + suffixA) : '—';
 
             var badgeOverall = document.getElementById('badge_total_overall_score');
             if (badgeOverall) {
-                badgeOverall.textContent = finalScore !== null ? finalScore.toFixed(2) : '-';
+                badgeOverall.textContent = displaySkorAkhir;
             }
             var finalScoreInput = document.getElementById('final_score');
             if (finalScoreInput) {
-                finalScoreInput.value = finalScore !== null ? finalScore.toFixed(2) : '';
+                finalScoreInput.value = totNilai !== null ? totNilai.toFixed(2) : '';
             }
 
-            updateRatingBadge(finalScore, true);
+            updateRatingBadge(totNilai, true);
 
             var payloadEl = document.getElementById('hidden_responses_payload');
             if (payloadEl) {
@@ -496,8 +510,8 @@
                             var notes = log.notes || '-';
 
                             var badgeClass = '';
-                            if (actionTitle === 'KICKBACK_GM') badgeClass = 'is-danger';
-                            else if (actionTitle === 'GM_OVERRIDE_ITEM') badgeClass = 'is-warning';
+                            if (actionTitle === 'KICKBACK_REVIEWER' || actionTitle === 'KICKBACK_GM') badgeClass = 'is-danger';
+                            else if (actionTitle === 'REVIEWER_OVERRIDE_ITEM' || actionTitle === 'GM_OVERRIDE_ITEM') badgeClass = 'is-warning';
                             else if (actionTitle === 'UPDATE_ITEM_SCORE') badgeClass = 'is-info';
                             else if (actionTitle === 'ACKNOWLEDGE_EMPLOYEE') badgeClass = 'is-success';
 

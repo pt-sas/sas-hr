@@ -112,7 +112,7 @@ $totNilai = 0;
         <td class="lbl-cell">Lokasi / Cabang</td>
         <td><?= esc($employee['branch_name'] ?? '-') ?></td>
         <td class="lbl-cell">Peninjau</td>
-        <td><b><?= esc(mb_strtoupper($reviewer['name'] ?? (!empty($appraisal->snapshot_gm_id) ? '-' : 'Tidak Diperlukan'), 'UTF-8')) ?></b></td>
+        <td><b><?= esc(mb_strtoupper($reviewer['name'] ?? (!empty($appraisal->snapshot_reviewer_id) ? '-' : 'Tidak Diperlukan'), 'UTF-8')) ?></b></td>
     </tr>
 </table>
 <br><br>
@@ -137,10 +137,10 @@ if (!empty($weightedItems)) {
         $resp = $responses_by_item_id[$itemId] ?? null;
         $score = null;
         if ($resp) {
-            if (!empty($resp->gm_response)) {
-                $gmPayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
-                if (isset($gmPayload['score']) && $gmPayload['score'] !== '') {
-                    $score = (int) round((float) $gmPayload['score']);
+            if (!empty($resp->reviewer_response)) {
+                $reviewerPayload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
+                if (isset($reviewerPayload['score']) && $reviewerPayload['score'] !== '') {
+                    $score = (int) round((float) $reviewerPayload['score']);
                 }
             }
             if ($score === null && !empty($resp->evaluator_response)) {
@@ -193,14 +193,14 @@ if (!empty($singleItems)) {
         $evalPayload = ($sResp && !empty($sResp->evaluator_response))
             ? (is_string($sResp->evaluator_response) ? json_decode($sResp->evaluator_response, true) : $sResp->evaluator_response)
             : [];
-        $gmPayload   = ($sResp && !empty($sResp->gm_response))
-            ? (is_string($sResp->gm_response) ? json_decode($sResp->gm_response, true) : $sResp->gm_response)
+        $reviewerPayload = ($sResp && !empty($sResp->reviewer_response))
+            ? (is_string($sResp->reviewer_response) ? json_decode($sResp->reviewer_response, true) : $sResp->reviewer_response)
             : [];
 
-        $checkedActions = isset($gmPayload['checked_actions'])
-            ? $gmPayload['checked_actions']
+        $checkedActions = isset($reviewerPayload['checked_actions'])
+            ? $reviewerPayload['checked_actions']
             : ($evalPayload['checked_actions'] ?? []);
-        $booleanValue   = $gmPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
+        $booleanValue   = $reviewerPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
 
         if (!empty($sActions)) {
             foreach ($sActions as $kIdx => $ka) {
@@ -312,14 +312,14 @@ if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
             $evalPayload  = ($sResp && !empty($sResp->evaluator_response))
                 ? (is_string($sResp->evaluator_response) ? json_decode($sResp->evaluator_response, true) : $sResp->evaluator_response)
                 : [];
-            $gmPayload    = ($sResp && !empty($sResp->gm_response))
-                ? (is_string($sResp->gm_response) ? json_decode($sResp->gm_response, true) : $sResp->gm_response)
+            $reviewerPayload = ($sResp && !empty($sResp->reviewer_response))
+                ? (is_string($sResp->reviewer_response) ? json_decode($sResp->reviewer_response, true) : $sResp->reviewer_response)
                 : [];
 
-            $checkedActions = isset($gmPayload['checked_actions'])
-                ? $gmPayload['checked_actions']
+            $checkedActions = isset($reviewerPayload['checked_actions'])
+                ? $reviewerPayload['checked_actions']
                 : ($evalPayload['checked_actions'] ?? []);
-            $booleanValue   = $gmPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
+            $booleanValue   = $reviewerPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
         ?>
         <?php if (!empty($sActions)): ?>
             <?php foreach ($sActions as $kIdx => $ka): ?>

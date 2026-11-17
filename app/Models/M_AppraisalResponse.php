@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
+use CodeIgniter\HTTP\RequestInterface;
 
 class M_AppraisalResponse extends Model
 {
@@ -15,7 +16,7 @@ class M_AppraisalResponse extends Model
         'md_appraisal_template_item_id',
         'score',
         'evaluator_response',
-        'gm_response',
+        'reviewer_response',
         'isactive',
         'created_by',
         'updated_by',
@@ -24,4 +25,16 @@ class M_AppraisalResponse extends Model
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
+
+    protected $request;
+    protected $db;
+    protected $builder;
+
+    public function __construct(?RequestInterface $request = null)
+    {
+        parent::__construct();
+        $this->db      = db_connect();
+        $this->request = $request ?? \Config\Services::request();
+        $this->builder = $this->db->table($this->table);
+    }
 }

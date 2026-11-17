@@ -5,7 +5,7 @@
     $evalComment = $evaluator_comment ?? ($appraisal->evaluator_comment ?? '');
     $devPlan     = $development_plan ?? ($appraisal->development_plan ?? '');
     $empComment  = $appraisal->employee_comment ?? '';
-    $isEditable  = ($displayMode === 'edit') && in_array($userMode, ['EVALUATOR', 'GM', 'HR'], true);
+    $isEditable  = ($displayMode === 'edit') && in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true);
 ?>
 
 <div class="ap-card<?= $displayMode === 'compare' ? ' mb-0' : '' ?>" id="card_section_feedback">

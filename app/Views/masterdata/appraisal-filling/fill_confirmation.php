@@ -57,23 +57,23 @@
             })();
             </script>
 
-        <?php elseif ($user_mode === 'GM'): ?>
+        <?php elseif ($user_mode === 'REVIEWER'): ?>
             <input type="hidden" name="is_finalize" value="N">
-            <input type="hidden" name="action_type" id="gm_action_type" value="save_draft">
+            <input type="hidden" name="action_type" id="reviewer_action_type" value="save_draft">
 
-            <div class="confirm-callout" id="callout_gm">
-                <label class="confirm-checkbox-label" for="check_finalize_gm">
-                    <input type="checkbox" class="confirm-checkbox" id="check_finalize_gm" name="is_finalize" value="Y">
+            <div class="confirm-callout" id="callout_reviewer">
+                <label class="confirm-checkbox-label" for="check_finalize_reviewer">
+                    <input type="checkbox" class="confirm-checkbox" id="check_finalize_reviewer" name="is_finalize" value="Y">
                     <span class="confirm-text">
                         Saya menyetujui hasil peninjauan evaluasi kinerja ini dan meneruskannya ke tahap Pembacaan Karyawan.
                     </span>
                 </label>
 
                 <div class="confirm-status-box">
-                    <div id="gm_hint_draft" class="status-msg is-draft">
+                    <div id="reviewer_hint_draft" class="status-msg is-draft">
                         <span><strong>Status: DRAFT PENINJAUAN.</strong> Catatan atau penyesuaian nilai disimpan sementara. Dokumen belum diteruskan ke karyawan.</span>
                     </div>
-                    <div id="gm_hint_submit" class="status-msg is-final d-none">
+                    <div id="reviewer_hint_submit" class="status-msg is-final d-none">
                         <span><strong>Status: SIAP DITERUSKAN.</strong> Hasil peninjauan akan diteruskan ke karyawan untuk tahap pembacaan &amp; konfirmasi.</span>
                     </div>
                 </div>
@@ -81,11 +81,11 @@
 
             <script>
             (function () {
-                var chk = document.getElementById('check_finalize_gm');
-                var act = document.getElementById('gm_action_type');
-                var box = document.getElementById('callout_gm');
-                var hintDraft = document.getElementById('gm_hint_draft');
-                var hintSubmit = document.getElementById('gm_hint_submit');
+                var chk = document.getElementById('check_finalize_reviewer');
+                var act = document.getElementById('reviewer_action_type');
+                var box = document.getElementById('callout_reviewer');
+                var hintDraft = document.getElementById('reviewer_hint_draft');
+                var hintSubmit = document.getElementById('reviewer_hint_submit');
 
                 if (chk && act) {
                     function updateSubmitState() {

@@ -89,8 +89,8 @@
     border-color: #f59e0b;
 }
 
-/* GM Stamp */
-.ap-mode.is-gm {
+/* Reviewer Stamp */
+.ap-mode.is-reviewer {
     background-color: #eff6ff;
     color: #1e40af;
     border-color: #3b82f6;
@@ -1206,6 +1206,32 @@ tr:has(input[type="radio"]:checked) .font-weight-600 {
 
 .main-panel.is-loading:after {
     display: none !important;
+}
+
+/* Inline Appraisal Guide */
+.ap-guide {
+    background-color: var(--ap-surface-2);
+    border-bottom: 1.5px solid var(--ap-line-soft);
+    padding: 12px 20px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #334155;
+}
+
+.ap-guide-title {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ap-ink);
+}
+
+.ap-guide-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.ap-guide-list li + li {
+    margin-top: 2px;
 }
 
 @media print {

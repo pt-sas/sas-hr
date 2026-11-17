@@ -33,10 +33,73 @@ class PerformanceAppraisal extends BaseController
     }
 
     /**
+     * Resolve current logged-in employee ID.
+     */
+    protected function getCurrentEmployeeId(): int
+    {
+        $empId = (int) ($this->session->get('md_employee_id') ?? 0);
+        if ($empId <= 0) {
+            $userId = (int) ($this->access->getSessionUser() ?? 0);
+            if ($userId > 0) {
+                $user = $this->db->table('sys_user')
+                    ->select('md_employee_id')
+                    ->where('sys_user_id', $userId)
+                    ->get()
+                    ->getRowArray();
+                $empId = (int) ($user['md_employee_id'] ?? 0);
+            }
+        }
+        return $empId;
+    }
+
+    /**
+     * Check if the current user has superadmin/whitelist access for appraisals.
+     */
+    protected function isAppraisalAdmin(int $empId = 0): bool
+    {
+        $userId = (int) ($this->session->get('sys_user_id') ?? $this->access->getSessionUser() ?? 0);
+        $roleId = (int) ($this->session->get('sys_role_id') ?? 0);
+
+        if ($empId <= 0 && $userId > 0) {
+            return true;
+        }
+
+        if (in_array($roleId, [1, 90], true)) {
+            return true;
+        }
+
+        return (bool) $this->access->getUserRoleName($userId, 'awn Admin')
+            || (bool) $this->access->getUserRoleName($userId, 'Role_Super_HRD');
+    }
+
+    /**
+     * Scope appraisal query to evaluator/reviewer assignments for non-admin users.
+     */
+    protected function applyAppraisalScope($builder, string $alias, int $empId, bool $isAdmin): void
+    {
+        if ($isAdmin) {
+            return;
+        }
+
+        if ($empId <= 0) {
+            $builder->where('1 = 0', null, false);
+            return;
+        }
+
+        $builder->groupStart()
+            ->where("{$alias}.snapshot_evaluator_id", $empId)
+            ->orWhere("{$alias}.snapshot_reviewer_id", $empId)
+            ->groupEnd();
+    }
+
+    /**
      * Render Appraisal History & Monitoring Dashboard View
      */
     public function index()
     {
+        $empId   = $this->getCurrentEmployeeId();
+        $isAdmin = $this->isAppraisalAdmin($empId);
+
         // Fetch all cycles sorted by start date desc
         $cycles = $this->db->table('md_appraisal_cycle')
             ->select('md_appraisal_cycle_id, title, start_date, end_date, deadline_filling, deadline_review, deadline_reading, status')
@@ -45,13 +108,25 @@ class PerformanceAppraisal extends BaseController
             ->get()
             ->getResultArray();
 
-        // Fetch active divisions
-        $divisions = $this->db->table('md_division')
-            ->select('md_division_id, name')
-            ->where('isactive', 'Y')
-            ->orderBy('name', 'ASC')
-            ->get()
-            ->getResultArray();
+        // Fetch active divisions (scoped to assigned appraisals for non-admins)
+        if ($isAdmin) {
+            $divisions = $this->db->table('md_division')
+                ->select('md_division_id, name')
+                ->where('isactive', 'Y')
+                ->orderBy('name', 'ASC')
+                ->get()
+                ->getResultArray();
+        } else {
+            $divBuilder = $this->db->table('md_division d')
+                ->distinct()
+                ->select('d.md_division_id, d.name')
+                ->join('md_appraisal a', 'a.snapshot_division_id = d.md_division_id AND a.isactive = "Y"', 'inner')
+                ->where('d.isactive', 'Y');
+            $this->applyAppraisalScope($divBuilder, 'a', $empId, false);
+            $divisions = $divBuilder->orderBy('d.name', 'ASC')
+                ->get()
+                ->getResultArray();
+        }
 
         // Determine default cycle: preferably latest OPEN cycle, or most recent cycle
         $defaultCycleId = 0;
@@ -69,6 +144,8 @@ class PerformanceAppraisal extends BaseController
             'cycles'           => $cycles,
             'divisions'        => $divisions,
             'default_cycle_id' => $defaultCycleId,
+            'is_admin'         => $isAdmin,
+            'status_labels'    => M_Appraisal::getStatusLabels(),
         ];
 
         return $this->template->render('masterdata/appraisal-dashboard/v_appraisal_dashboard', $data);
@@ -80,14 +157,20 @@ class PerformanceAppraisal extends BaseController
     public function getSummary()
     {
         try {
-            $cycleId    = (int) ($this->request->getVar('cycle_id') ?? 0);
-            $divisionId = (int) ($this->request->getVar('division_id') ?? 0);
-            $year       = $this->request->getVar('year') ?? null;
-            $status     = $this->request->getVar('status') ?? null;
+            $cycleId     = (int) ($this->request->getVar('cycle_id') ?? 0);
+            $divisionId  = (int) ($this->request->getVar('division_id') ?? 0);
+            $year        = $this->request->getVar('year') ?? null;
+            $status      = $this->request->getVar('status') ?? null;
+
+            $empId   = $this->getCurrentEmployeeId();
+            $isAdmin = $this->isAppraisalAdmin($empId);
 
             $builder = $this->db->table('md_appraisal a')
                 ->join('md_appraisal_cycle c', 'c.md_appraisal_cycle_id = a.md_appraisal_cycle_id', 'left')
+                ->join('md_appraisal_template t', 't.md_appraisal_template_id = a.md_appraisal_template_id', 'left')
                 ->where('a.isactive', 'Y');
+
+            $this->applyAppraisalScope($builder, 'a', $empId, $isAdmin);
 
             if ($cycleId > 0) {
                 $builder->where('a.md_appraisal_cycle_id', $cycleId);
@@ -102,7 +185,7 @@ class PerformanceAppraisal extends BaseController
                 $builder->where('c.status', $status);
             }
 
-            $appraisals = $builder->select('a.md_appraisal_id, a.md_appraisal_cycle_id, a.status, a.final_score, a.rating, a.snapshot_division_id, d.name as division_name')
+            $appraisals = $builder->select('a.md_appraisal_id, a.md_appraisal_cycle_id, a.status, a.final_score, a.rating, a.snapshot_division_id, d.name as division_name, t.target_group')
                 ->join('md_division d', 'd.md_division_id = a.snapshot_division_id', 'left')
                 ->get()
                 ->getResultArray();
@@ -110,7 +193,7 @@ class PerformanceAppraisal extends BaseController
             $total              = count($appraisals);
             $draftEvaluator     = 0;
             $submittedEvaluator = 0;
-            $reviewGm           = 0;
+            $reviewReviewer     = 0;
             $pendingAck         = 0;
             $finalized          = 0;
 
@@ -118,10 +201,21 @@ class PerformanceAppraisal extends BaseController
             $finalizedCountWithScore = 0;
 
             $ratingCounts = [
-                'sangat_baik' => 0, // >= 3.50
-                'baik'        => 0, // 2.75 - 3.49
-                'cukup'       => 0, // 2.00 - 2.74
-                'kurang'      => 0, // < 2.00
+                'sangat_baik' => 0,
+                'baik'        => 0,
+                'cukup'       => 0,
+                'kurang'      => 0,
+            ];
+
+            $ratingByGroup = [
+                'PERMANENT' => [
+                    'total_final' => 0,
+                    'counts'      => ['sangat_baik' => 0, 'baik' => 0, 'cukup' => 0, 'kurang' => 0],
+                ],
+                'OPERATOR' => [
+                    'total_final' => 0,
+                    'counts'      => ['sangat_baik' => 0, 'baik' => 0, 'cukup' => 0, 'kurang' => 0],
+                ],
             ];
 
             $divisionGroups = [];
@@ -133,17 +227,19 @@ class PerformanceAppraisal extends BaseController
 
                 if (!isset($divisionGroups[$div])) {
                     $divisionGroups[$div] = [
-                        'division_name' => $div,
-                        'total'         => 0,
-                        'in_progress'   => 0,
-                        'draft'         => 0,
-                        'review_gm'     => 0,
-                        'pending_ack'   => 0,
-                        'finalized'     => 0,
-                        'percent'       => 0.0,
-                        'score_sum'     => 0.0,
-                        'score_count'   => 0,
-                        'avg_score'     => null,
+                        'division_id'      => (int) ($app['snapshot_division_id'] ?? 0),
+                        'division_name'    => $div,
+                        'total'            => 0,
+                        'in_progress'      => 0,
+                        'penilaian'        => 0,
+                        'submit_penilaian' => 0,
+                        'review_reviewer'  => 0,
+                        'pending_ack'      => 0,
+                        'finalized'        => 0,
+                        'percent'          => 0.0,
+                        'score_sum'        => 0.0,
+                        'score_count'      => 0,
+                        'avg_score'        => null,
                     ];
                 }
 
@@ -152,15 +248,15 @@ class PerformanceAppraisal extends BaseController
                 if ($st === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
                     $draftEvaluator++;
                     $divisionGroups[$div]['in_progress']++;
-                    $divisionGroups[$div]['draft']++;
+                    $divisionGroups[$div]['penilaian']++;
                 } elseif ($st === M_Appraisal::STATUS_SUBMITTED_EVALUATOR) {
                     $submittedEvaluator++;
                     $divisionGroups[$div]['in_progress']++;
-                    $divisionGroups[$div]['draft']++;
-                } elseif ($st === M_Appraisal::STATUS_REVIEW_GM) {
-                    $reviewGm++;
+                    $divisionGroups[$div]['submit_penilaian']++;
+                } elseif ($st === M_Appraisal::STATUS_REVIEW) {
+                    $reviewReviewer++;
                     $divisionGroups[$div]['in_progress']++;
-                    $divisionGroups[$div]['review_gm']++;
+                    $divisionGroups[$div]['review_reviewer']++;
                 } elseif ($st === M_Appraisal::STATUS_PENDING_ACK) {
                     $pendingAck++;
                     $divisionGroups[$div]['in_progress']++;
@@ -169,20 +265,41 @@ class PerformanceAppraisal extends BaseController
                     $finalized++;
                     $divisionGroups[$div]['finalized']++;
 
+                    $rowGroup = strtoupper((string) ($app['target_group'] ?? 'PERMANENT'));
+                    if ($rowGroup !== 'OPERATOR') {
+                        $rowGroup = 'PERMANENT';
+                    }
+                    $ratingByGroup[$rowGroup]['total_final']++;
+
                     if ($score !== null) {
                         $totalFinalScore += $score;
                         $finalizedCountWithScore++;
                         $divisionGroups[$div]['score_sum'] += $score;
                         $divisionGroups[$div]['score_count']++;
 
-                        if ($score >= 3.50) {
-                            $ratingCounts['sangat_baik']++;
-                        } elseif ($score >= 2.75) {
-                            $ratingCounts['baik']++;
-                        } elseif ($score >= 2.00) {
-                            $ratingCounts['cukup']++;
+                        if ($rowGroup === 'OPERATOR') {
+                            $scoreInt = (int) $score;
+                            if ($scoreInt >= 13) {
+                                $ratingByGroup['OPERATOR']['counts']['sangat_baik']++;
+                            } elseif ($scoreInt >= 8) {
+                                $ratingByGroup['OPERATOR']['counts']['baik']++;
+                            } else {
+                                $ratingByGroup['OPERATOR']['counts']['kurang']++;
+                            }
                         } else {
-                            $ratingCounts['kurang']++;
+                            if ($score >= 3.50) {
+                                $ratingCounts['sangat_baik']++;
+                                $ratingByGroup['PERMANENT']['counts']['sangat_baik']++;
+                            } elseif ($score >= 2.75) {
+                                $ratingCounts['baik']++;
+                                $ratingByGroup['PERMANENT']['counts']['baik']++;
+                            } elseif ($score >= 2.00) {
+                                $ratingCounts['cukup']++;
+                                $ratingByGroup['PERMANENT']['counts']['cukup']++;
+                            } else {
+                                $ratingCounts['kurang']++;
+                                $ratingByGroup['PERMANENT']['counts']['kurang']++;
+                            }
                         }
                     }
                 }
@@ -199,6 +316,15 @@ class PerformanceAppraisal extends BaseController
             }
             unset($dg);
 
+            $divisionsList = array_values($divisionGroups);
+            usort($divisionsList, static function (array $a, array $b): int {
+                $cmp = $a['percent'] <=> $b['percent'];
+                if ($cmp !== 0) {
+                    return $cmp;
+                }
+                return strcasecmp($a['division_name'], $b['division_name']);
+            });
+
             $completionPercent = $total > 0
                 ? round(($finalized / $total) * 100, 1)
                 : 0.0;
@@ -207,7 +333,7 @@ class PerformanceAppraisal extends BaseController
                 ? round($totalFinalScore / $finalizedCountWithScore, 2)
                 : null;
 
-            $inProgressTotal = $draftEvaluator + $submittedEvaluator + $reviewGm + $pendingAck;
+            $inProgressTotal = $draftEvaluator + $submittedEvaluator + $reviewReviewer + $pendingAck;
 
             // Fetch cycle details if a specific cycle is selected
             $cycleInfo = null;
@@ -235,24 +361,25 @@ class PerformanceAppraisal extends BaseController
             }
 
             $result = [
-                'cycle'     => $cycleInfo,
-                'metrics'   => [
+                'cycle'        => $cycleInfo,
+                'metrics'      => [
                     'total'               => $total,
                     'in_progress'         => $inProgressTotal,
                     'draft_evaluator'     => $draftEvaluator,
                     'submitted_evaluator' => $submittedEvaluator,
-                    'review_gm'           => $reviewGm,
+                    'review_reviewer'     => $reviewReviewer,
                     'pending_ack'         => $pendingAck,
                     'finalized'           => $finalized,
                     'completion_percent'  => $completionPercent,
                     'avg_final_score'     => $avgFinalScore,
                     'rating_counts'       => $ratingCounts,
+                    'rating_by_group'     => $ratingByGroup,
                 ],
-                'divisions' => array_values($divisionGroups),
+                'divisions'    => $divisionsList,
             ];
 
             return $this->response->setJSON(message('success', true, $result));
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
     }
@@ -267,21 +394,19 @@ class PerformanceAppraisal extends BaseController
         }
 
         try {
-            $builder = $this->db->table('md_appraisal a')
-                ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_cycle_id, a.status, a.final_score, a.rating, a.finalized_at,
-                          e.nik as nik, e.fullname as employee_name,
-                          d.name as division_name, p.name as position_name, l.name as level_name, b.name as branch_name,
-                          c.title as cycle_title, c.status as cycle_status,
-                          eval.fullname as evaluator_name, gm.fullname as gm_name')
-                ->join('md_employee e', 'e.md_employee_id = a.md_employee_id', 'left')
-                ->join('md_division d', 'd.md_division_id = a.snapshot_division_id', 'left')
-                ->join('md_branch b', 'b.md_branch_id = a.snapshot_branch_id', 'left')
-                ->join('md_position p', 'p.md_position_id = a.snapshot_position_id', 'left')
-                ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
-                ->join('md_appraisal_cycle c', 'c.md_appraisal_cycle_id = a.md_appraisal_cycle_id', 'left')
-                ->join('md_employee eval', 'eval.md_employee_id = a.snapshot_evaluator_id', 'left')
-                ->join('md_employee gm', 'gm.md_employee_id = a.snapshot_gm_id', 'left')
-                ->where('a.isactive', 'Y');
+            $empId   = $this->getCurrentEmployeeId();
+            $isAdmin = $this->isAppraisalAdmin($empId);
+
+            $table   = $this->model->table;
+            $builder = $this->db->table($table)
+                ->select($this->model->getSelect() . ', t.target_group as template_target_group');
+            foreach ($this->model->getJoin() as $join) {
+                $builder->join($join['tableJoin'], $join['columnJoin'], $join['typeJoin']);
+            }
+            $builder->join('md_appraisal_template t', "t.md_appraisal_template_id = {$table}.md_appraisal_template_id", 'left');
+            $builder->where("{$table}.isactive", 'Y');
+
+            $this->applyAppraisalScope($builder, $table, $empId, $isAdmin);
 
             // Form Filter Parsing
             $formFilter  = $this->request->getPost('form') ?? [];
@@ -317,10 +442,10 @@ class PerformanceAppraisal extends BaseController
             }
 
             if ($cycleId > 0) {
-                $builder->where('a.md_appraisal_cycle_id', $cycleId);
+                $builder->where("{$table}.md_appraisal_cycle_id", $cycleId);
             }
             if ($divisionId > 0) {
-                $builder->where('a.snapshot_division_id', $divisionId);
+                $builder->where("{$table}.snapshot_division_id", $divisionId);
             }
             if (!empty($year)) {
                 $builder->where('YEAR(c.start_date)', (int) $year);
@@ -329,7 +454,7 @@ class PerformanceAppraisal extends BaseController
                 $builder->where('c.status', $cycleStatus);
             }
             if (!empty($status) && $status !== 'ALL') {
-                $builder->where('a.status', $status);
+                $builder->where("{$table}.status", $status);
             }
 
             // Global Search Filter
@@ -338,13 +463,11 @@ class PerformanceAppraisal extends BaseController
                 $s = trim($search);
                 $builder->groupStart()
                     ->like('e.fullname', $s)
-                    ->orLike('e.value', $s)
+                    ->orLike('e.nik', $s)
                     ->orLike('c.title', $s)
                     ->orLike('b.name', $s)
                     ->orLike('d.name', $s)
                     ->orLike('p.name', $s)
-                    ->orLike('eval.fullname', $s)
-                    ->orLike('gm.fullname', $s)
                     ->groupEnd();
             }
 
@@ -355,25 +478,23 @@ class PerformanceAppraisal extends BaseController
             $orderDir    = $this->request->getPost('order')[0]['dir'] ?? 'desc';
             
             $columnMap = [
-                0  => 'a.md_appraisal_id',
-                1  => 'a.md_appraisal_id',
+                0  => "{$table}.md_appraisal_id",
+                1  => "{$table}.md_appraisal_id",
                 2  => 'e.fullname',
                 3  => 'p.name',
                 4  => 'l.name',
                 5  => 'b.name',
                 6  => 'd.name',
                 7  => 'c.title',
-                8  => 'eval.fullname',
-                9  => 'gm.fullname',
-                10 => 'a.final_score',
-                11 => 'a.status',
-                12 => 'a.md_appraisal_id',
+                8  => "{$table}.final_score",
+                9  => "{$table}.status",
+                10 => "{$table}.md_appraisal_id",
             ];
 
             if (isset($columnMap[$orderColIdx])) {
                 $builder->orderBy($columnMap[$orderColIdx], $orderDir);
             } else {
-                $builder->orderBy('a.md_appraisal_id', 'DESC');
+                $builder->orderBy("{$table}.md_appraisal_id", 'DESC');
             }
 
             // Pagination
@@ -395,8 +516,6 @@ class PerformanceAppraisal extends BaseController
                 $rating       = $val['rating'] ?? '-';
                 $cycleTitle   = $val['cycle_title'] ?? '-';
                 $cycleStatus  = $val['cycle_status'] ?? 'OPEN';
-                $evalName     = !empty($val['evaluator_name']) ? mb_strtoupper($val['evaluator_name'], 'UTF-8') : '-';
-                $gmName       = !empty($val['gm_name']) ? mb_strtoupper($val['gm_name'], 'UTF-8') : '-';
                 $empName      = !empty($val['employee_name']) ? mb_strtoupper($val['employee_name'], 'UTF-8') : '-';
                 $posName      = $val['position_name'] ?? '-';
                 $levelName    = $val['level_name'] ?? '-';
@@ -411,7 +530,12 @@ class PerformanceAppraisal extends BaseController
                 $scoreCol = '<div class="text-center">';
                 if ($score !== '-') {
                     $numScore = (float) $val['final_score'];
-                    $scoreColor = ($numScore >= 3.50) ? 'text-success' : (($numScore >= 2.75) ? 'text-primary' : (($numScore >= 2.00) ? 'text-warning' : 'text-danger'));
+                    $rowGroup = strtoupper((string) ($val['template_target_group'] ?? 'PERMANENT'));
+                    if ($rowGroup === 'OPERATOR') {
+                        $scoreColor = ($numScore >= 13) ? 'text-success' : (($numScore >= 8) ? 'text-primary' : 'text-danger');
+                    } else {
+                        $scoreColor = ($numScore >= 3.50) ? 'text-success' : (($numScore >= 2.75) ? 'text-primary' : (($numScore >= 2.00) ? 'text-warning' : 'text-danger'));
+                    }
                     $scoreCol .= '<span class="font-weight-bold ' . $scoreColor . '">' . $score . '</span>';
                     if (!empty($rating) && $rating !== '-') {
                         $shortRating = esc(explode('(', $rating)[0]);
@@ -426,27 +550,17 @@ class PerformanceAppraisal extends BaseController
                 $statusBadge = $this->renderStatusBadge($appStatus);
 
                 // Action Buttons
-                $actions = '<div class="d-flex align-items-center justify-content-center" style="gap: 4px;">';
-                if ($appStatus !== M_Appraisal::STATUS_FINALIZED) {
-                    // Pending / Active: Nudge + Preview Form
-                    $actions .= '<button type="button" class="btn btn-sm" onclick="window.nudgeAppraisal(' . $id . ', \'' . esc(addslashes($val['employee_name'] ?? 'Karyawan')) . '\')" data-toggle="tooltip" title="Kirim Pengingat (Nudge)"><i class="fas fa-bell text-warning"></i></button>';
-                    $actions .= '<a href="' . base_url('sas/penilaian/complete/' . $id) . '" class="btn btn-sm" data-toggle="tooltip" title="Pratinjau Form"><i class="fas fa-eye text-info"></i></a>';
-                } else {
-                    // Finalized: Rapor Lengkap + Cetak PDF
-                    $actions .= '<a href="' . base_url('sas/penilaian/complete/' . $id) . '" class="btn btn-sm" data-toggle="tooltip" title="Lihat Rapor Lengkap"><i class="fas fa-file-alt text-success"></i></a>';
-                    $actions .= '<a href="' . base_url('sas/penilaian/exportPDF/' . $id) . '" target="_blank" class="btn btn-sm" data-toggle="tooltip" title="Cetak Rapor (PDF)"><i class="fas fa-print text-danger"></i></a>';
-                }
-                // Riwayat & Komparasi Skor Historis
-                $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat &amp; Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
-                $actions .= '</div>';
+                $actions = $this->template->appraisalTableButton('dashboard', $id, [
+                    'status'        => $appStatus,
+                    'employee_name' => $val['employee_name'] ?? 'Karyawan',
+                    'is_admin'      => $isAdmin,
+                ]);
 
                 $karyawanCol = '<span class="font-weight-bold text-dark" title="' . esc($nik) . '">' . esc($empName) . '</span>';
                 $posisiCol   = '<span class="text-dark">' . esc($posName) . '</span>';
                 $levelCol    = '<span class="text-dark">' . esc($levelName) . '</span>';
                 $cabangCol   = '<span class="text-dark">' . esc($branchName ?: '-') . '</span>';
                 $divisiCol   = '<span class="text-dark">' . esc($divName) . '</span>';
-                $evalCol     = '<span class="text-dark font-weight-500">' . esc($evalName) . '</span>';
-                $gmCol       = '<span class="text-dark font-weight-500">' . esc($gmName) . '</span>';
 
                 $row = [];
                 $row[] = $id;          // [0] ID (hidden)
@@ -457,11 +571,9 @@ class PerformanceAppraisal extends BaseController
                 $row[] = $cabangCol;   // [5] Cabang
                 $row[] = $divisiCol;   // [6] Divisi
                 $row[] = $cycleCol;    // [7] Siklus Penilaian
-                $row[] = $evalCol;     // [8] Penilai (Evaluator)
-                $row[] = $gmCol;       // [9] Peninjau (Reviewer)
-                $row[] = $scoreCol;    // [10] Nilai
-                $row[] = $statusBadge; // [11] Status
-                $row[] = $actions;     // [12] Aksi
+                $row[] = $scoreCol;    // [8] Nilai
+                $row[] = $statusBadge; // [9] Status
+                $row[] = $actions;     // [10] Aksi
 
                 $data[] = $row;
             }
@@ -473,7 +585,7 @@ class PerformanceAppraisal extends BaseController
                 'data'            => $data,
             ]);
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->response->setJSON([
                 'draw'            => (int) ($this->request->getPost('draw') ?? 1),
                 'recordsTotal'    => 0,
@@ -499,13 +611,19 @@ class PerformanceAppraisal extends BaseController
     public function nudge()
     {
         try {
+            $empId = $this->getCurrentEmployeeId();
+            if (!$this->isAppraisalAdmin($empId)) {
+                return $this->response->setStatusCode(403)
+                    ->setJSON(message('error', false, 'Anda tidak memiliki hak akses untuk mengirim pengingat.'));
+            }
+
             $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
             if ($id <= 0) {
                 return $this->response->setJSON(message('error', false, 'ID Penilaian tidak valid.'));
             }
 
             $actorId = (int) ($this->session->get('sys_user_id') ?? 100000);
-            $nudgeService = new \App\Services\AppraisalNudgeService();
+            $nudgeService = new \App\Services\AppraisalNudgeServices();
             $result = $nudgeService->manualNudge($id, $actorId);
 
             if ($result['success']) {
@@ -524,11 +642,11 @@ class PerformanceAppraisal extends BaseController
     public function cronDailyNudge()
     {
         try {
-            $nudgeService = new \App\Services\AppraisalNudgeService();
+            $nudgeService = new \App\Services\AppraisalNudgeServices();
             $result = $nudgeService->runDailyNudge();
-            return $this->response->setJSON($result);
+            return $this->response->setJSON(message('success', true, 'Daily appraisal nudge selesai diproses.', $result));
         } catch (\Throwable $e) {
-            return $this->response->setJSON(['status' => 'error', 'message' => $e->getMessage()]);
+            return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
     }
 }

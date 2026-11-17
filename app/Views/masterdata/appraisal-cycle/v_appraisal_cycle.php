@@ -226,6 +226,10 @@
                 var $modal = $('#modal_preview_blast');
                 $modal.appendTo('body').modal('show');
 
+                if ($('#filter_preview_blast').length) {
+                    $('#filter_preview_blast')[0].reset();
+                }
+
                 // Populate dynamic options for Branch, Division, Level (single index, split combinations like "Glodok, Kalimalang")
                 var branches  = {};
                 var divisions = {};
@@ -269,9 +273,14 @@
 
                 // Initialize Select2 on blast filters if plugin is present
                 if ($.fn.select2) {
-                    $('.select2-blast').select2({
-                        theme: 'bootstrap',
-                        dropdownParent: $modal
+                    $('.select2-blast').each(function () {
+                        if ($(this).hasClass('select2-hidden-accessible')) {
+                            $(this).select2('destroy');
+                        }
+                        $(this).select2({
+                            theme: 'bootstrap',
+                            dropdownParent: $modal
+                        });
                     });
                 }
 
@@ -309,8 +318,13 @@
                                 return false;
                             }
                         }
-                        if (fTemplate && rowData.template_status !== fTemplate) {
-                            return false;
+                        if (fTemplate) {
+                            var tplStatus = rowData.template_status || 'NONE';
+                            if (tplStatus === 'CO') tplStatus = 'PUBLISHED';
+                            if (tplStatus === 'DR') tplStatus = 'DRAFT';
+                            if (tplStatus !== fTemplate) {
+                                return false;
+                            }
                         }
 
                         return true;
@@ -542,8 +556,8 @@
                 // KPI Metric Cards
                 $('#prog_kpi_total').text(summary.total || 0);
                 $('#prog_kpi_draft').text(summary.draft_evaluator || 0);
-                var reviewGmTotal = (summary.submitted_evaluator || 0) + (summary.review_gm || 0) + (summary.pending_ack || 0);
-                $('#prog_kpi_review').text(reviewGmTotal);
+                var reviewReviewerTotal = (summary.submitted_evaluator || 0) + (summary.review_reviewer || 0) + (summary.pending_ack || 0);
+                $('#prog_kpi_review').text(reviewReviewerTotal);
                 $('#prog_kpi_finalized').text(summary.finalized || 0);
 
                 // Open Modal & Populate Division Breakdown Datatable

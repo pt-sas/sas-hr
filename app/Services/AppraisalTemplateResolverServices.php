@@ -2,17 +2,18 @@
 
 namespace App\Services;
 
+use App\Exceptions\NotFoundException;
 use App\Models\M_AppraisalTemplate;
 use CodeIgniter\Database\BaseConnection;
-use Exception;
 
-class AppraisalTemplateResolverService
+class AppraisalTemplateResolverServices extends BaseServices
 {
     protected BaseConnection $db;
     protected M_AppraisalTemplate $templateModel;
 
     public function __construct()
     {
+        parent::__construct();
         $this->db            = \Config\Database::connect();
         $this->templateModel = new M_AppraisalTemplate();
     }
@@ -39,11 +40,9 @@ class AppraisalTemplateResolverService
         $branchIds = is_array($branchId) ? array_filter(array_map('intval', $branchId)) : ($branchId > 0 ? [(int) $branchId] : []);
         $divisionIds = is_array($divisionId) ? array_filter(array_map('intval', $divisionId)) : ($divisionId > 0 ? [(int) $divisionId] : []);
 
-        $allowedStatuses = [M_AppraisalTemplate::STATUS_PUBLISHED, 'PUBLISHED', 'CO'];
+        $allowedStatuses = [M_AppraisalTemplate::STATUS_PUBLISHED];
         if ($includeDraft) {
             $allowedStatuses[] = M_AppraisalTemplate::STATUS_DRAFT;
-            $allowedStatuses[] = 'DRAFT';
-            $allowedStatuses[] = 'DR';
         }
 
         // 1. Fetch active templates, prioritizing higher version numbers
@@ -58,23 +57,24 @@ class AppraisalTemplateResolverService
 
         if (empty($candidates)) {
             $statusLabel = $includeDraft ? 'aktif' : 'PUBLISHED yang aktif';
-            throw new Exception("Tidak ada template appraisal {$statusLabel} di sistem.");
+            throw new NotFoundException("Tidak ada template appraisal {$statusLabel} di sistem.");
         }
 
-        // 2. Load all active scopes for candidate templates in ONE query
+        // 2. Load all active scopes for candidate templates across the 4 mapping tables
         $candidateIds = array_column($candidates, 'md_appraisal_template_id');
-        $scopeRows = $this->db->table('md_template_scope')
-            ->select('md_appraisal_template_id, scope_type, scope_id')
-            ->whereIn('md_appraisal_template_id', $candidateIds)
-            ->where('isactive', 'Y')
-            ->get()
-            ->getResultArray();
+        $scopesByTpl  = [];
+        foreach (AppraisalTemplateServices::SCOPE_TABLES as $cfg) {
+            $rows = $this->db->table($cfg['table'])
+                ->select("md_appraisal_template_id, {$cfg['fk']} AS scope_id")
+                ->whereIn('md_appraisal_template_id', $candidateIds)
+                ->where('isactive', 'Y')
+                ->get()
+                ->getResultArray();
 
-        $scopesByTpl = [];
-        foreach ($scopeRows as $row) {
-            $tId = (int) $row['md_appraisal_template_id'];
-            $sType = $row['scope_type'];
-            $scopesByTpl[$tId][$sType][] = (int) $row['scope_id'];
+            foreach ($rows as $row) {
+                $tId = (int) $row['md_appraisal_template_id'];
+                $scopesByTpl[$tId][$cfg['type']][] = (int) $row['scope_id'];
+            }
         }
 
         $bestMatch = null;
@@ -121,7 +121,7 @@ class AppraisalTemplateResolverService
         if (! $bestMatch) {
             $branchStr = implode(',', $branchIds);
             $divisionStr = implode(',', $divisionIds);
-            throw new Exception("No published appraisal template found matching Branch: [{$branchStr}], Division: [{$divisionStr}], Levelling: {$levellingId}, Position: {$positionId}.");
+            throw new NotFoundException("No published appraisal template found matching Branch: [{$branchStr}], Division: [{$divisionStr}], Levelling: {$levellingId}, Position: {$positionId}.");
         }
 
         return (int) $bestMatch['md_appraisal_template_id'];

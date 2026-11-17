@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\M_Appraisal;
 use Config\Database;
 use Throwable;
 
@@ -9,12 +10,13 @@ use Throwable;
  * Service to dispatch Performance Appraisal nudges and notifications
  * leveraging SAS-HR's existing core broadcast queue (`trx_broadcast` & `trx_broadcast_queue`).
  */
-class AppraisalNudgeService
+class AppraisalNudgeServices extends BaseServices
 {
     protected $db;
 
     public function __construct()
     {
+        parent::__construct();
         $this->db = Database::connect();
     }
 
@@ -75,19 +77,19 @@ class AppraisalNudgeService
 
             return false;
         } catch (Throwable $e) {
-            log_message('error', '[AppraisalNudgeService::enqueueBroadcast] ' . $e->getMessage());
+            log_message('error', '[AppraisalNudgeServices::enqueueBroadcast] ' . $e->getMessage());
             return false;
         }
     }
 
     /**
      * Notify workflow transitions between stages:
-     * - SUBMIT_EVALUATOR -> Alert GM for review
-     * - APPROVE_GM      -> Alert Employee for reading/acknowledgment
-     * - RETURN_GM       -> Alert Evaluator that form was returned
+     * - SUBMIT_EVALUATOR -> Alert Reviewer for review
+     * - APPROVE_REVIEWER -> Alert Employee for reading/acknowledgment
+     * - RETURN_REVIEWER  -> Alert Evaluator that form was returned
      *
      * @param int $appraisalId
-     * @param string $event 'SUBMIT_EVALUATOR'|'APPROVE_GM'|'RETURN_GM'
+     * @param string $event 'SUBMIT_EVALUATOR'|'APPROVE_REVIEWER'|'RETURN_REVIEWER'
      * @param int $actorUserId
      * @return bool
      */
@@ -111,23 +113,23 @@ class AppraisalNudgeService
 
             switch ($event) {
                 case 'SUBMIT_EVALUATOR':
-                    // Target: GM / Reviewer
-                    $gmId = (int) ($row['snapshot_gm_id'] ?? 0);
-                    if ($gmId <= 0) {
+                    // Target: Reviewer
+                    $reviewerId = (int) ($row['snapshot_reviewer_id'] ?? 0);
+                    if ($reviewerId <= 0) {
                         return false;
                     }
 
                     $dlStr = ! empty($row['deadline_review']) ? date('d-M-Y', strtotime($row['deadline_review'])) : '-';
-                    $title = "Menunggu Review GM: Evaluasi Kinerja {$empName}";
+                    $title = "Menunggu Review: Evaluasi Kinerja {$empName}";
                     $html  = "<p>Halo,</p>"
                         . "<p>Penilaian kinerja untuk <b>{$empName}</b> pada siklus <b>{$cycleTitle}</b> telah diselesaikan oleh atasan langsung dan saat ini <b>menunggu peninjauan (review) Anda</b>.</p>"
                         . "<p><b>Batas Waktu Review:</b> {$dlStr}</p>"
                         . "<p>Silakan periksa dan berikan tanggapan melalui menu Task List Penilaian pada sistem SAS-HR.</p>"
                         . "<p><small>Pesan otomatis sistem SAS-HR.</small></p>";
 
-                    return (bool) $this->enqueueBroadcast($gmId, $title, $html, $actorUserId);
+                    return (bool) $this->enqueueBroadcast($reviewerId, $title, $html, $actorUserId);
 
-                case 'APPROVE_GM':
+                case 'APPROVE_REVIEWER':
                     // Target: Employee for reading & signing
                     $empId = (int) ($row['md_employee_id'] ?? 0);
                     if ($empId <= 0) {
@@ -176,7 +178,7 @@ class AppraisalNudgeService
 
                     return (bool) $this->enqueueBroadcast($empId, $title, $html, $actorUserId);
 
-                case 'RETURN_GM':
+                case 'RETURN_REVIEWER':
                     // Target: Evaluator (Returned for revision)
                     $evalId = (int) ($row['snapshot_evaluator_id'] ?? 0);
                     if ($evalId <= 0) {
@@ -185,7 +187,7 @@ class AppraisalNudgeService
 
                     $title = "Evaluasi Dikembalikan untuk Revisi: {$empName}";
                     $html  = "<p>Halo,</p>"
-                        . "<p>Form evaluasi kinerja karyawan <b>{$empName}</b> pada siklus <b>{$cycleTitle}</b> telah <b>dikembalikan oleh General Manager</b> untuk direvisi/dilengkapi.</p>"
+                        . "<p>Form evaluasi kinerja karyawan <b>{$empName}</b> pada siklus <b>{$cycleTitle}</b> telah <b>dikembalikan oleh Peninjau</b> untuk direvisi/dilengkapi.</p>"
                         . "<p>Silakan buka form dan periksa catatan revisi melalui menu Task List Penilaian pada sistem SAS-HR.</p>"
                         . "<p><small>Pesan otomatis sistem SAS-HR.</small></p>";
 
@@ -195,7 +197,7 @@ class AppraisalNudgeService
                     return false;
             }
         } catch (Throwable $e) {
-            log_message('error', '[AppraisalNudgeService::notifyWorkflowTransition] ' . $e->getMessage());
+            log_message('error', '[AppraisalNudgeServices::notifyWorkflowTransition] ' . $e->getMessage());
             return false;
         }
     }
@@ -251,7 +253,7 @@ class AppraisalNudgeService
 
             return $sentCount;
         } catch (Throwable $e) {
-            log_message('error', '[AppraisalNudgeService::notifyCycleKickoff] ' . $e->getMessage());
+            log_message('error', '[AppraisalNudgeServices::notifyCycleKickoff] ' . $e->getMessage());
             return 0;
         }
     }
@@ -286,15 +288,15 @@ class AppraisalNudgeService
             $roleLabel = '';
             $dlStr     = '-';
 
-            if ($status === 'DRAFT_EVALUATOR' || $status === 'SUBMITTED_EVALUATOR') {
+            if ($status === M_Appraisal::STATUS_PENILAIAN || $status === M_Appraisal::STATUS_SUBMIT_PENILAIAN) {
                 $targetId  = (int) ($row['snapshot_evaluator_id'] ?? 0);
                 $roleLabel = 'Atasan Langsung (Penilai)';
                 $dlStr     = ! empty($row['deadline_filling']) ? date('d-M-Y', strtotime($row['deadline_filling'])) : '-';
-            } elseif ($status === 'REVIEW_GM') {
-                $targetId  = (int) ($row['snapshot_gm_id'] ?? 0);
-                $roleLabel = 'General Manager (Reviewer)';
+            } elseif ($status === M_Appraisal::STATUS_REVIEW) {
+                $targetId  = (int) ($row['snapshot_reviewer_id'] ?? 0);
+                $roleLabel = 'Peninjau (Reviewer)';
                 $dlStr     = ! empty($row['deadline_review']) ? date('d-M-Y', strtotime($row['deadline_review'])) : '-';
-            } elseif ($status === 'PENDING_ACK') {
+            } elseif ($status === M_Appraisal::STATUS_SUBMIT_REVIEW) {
                 $empId = (int) ($row['md_employee_id'] ?? 0);
                 $hasUser = (bool) $this->db->table('sys_user')
                     ->where('md_employee_id', $empId)
@@ -378,20 +380,20 @@ class AppraisalNudgeService
         try {
             // 1. Auto-close expired cycles whose end_date has passed
             try {
-                $cycleService      = new AppraisalCycleService();
+                $cycleService      = new AppraisalCycleServices();
                 $closedCyclesCount = $cycleService->closeExpiredCycles(1);
             } catch (Throwable $ce) {
-                log_message('error', '[AppraisalNudgeService::runDailyNudge] Auto-close cycles error: ' . $ce->getMessage());
+                log_message('error', '[AppraisalNudgeServices::runDailyNudge] Auto-close cycles error: ' . $ce->getMessage());
             }
 
             // 2. Check active appraisals in open cycles
             $appraisals = $this->db->table('md_appraisal a')
-                ->select('a.md_appraisal_id, a.status, a.snapshot_evaluator_id, a.snapshot_gm_id, a.md_employee_id, e.fullname as emp_name, c.title as cycle_title, c.deadline_filling, c.deadline_review, c.deadline_reading')
+                ->select('a.md_appraisal_id, a.status, a.snapshot_evaluator_id, a.snapshot_reviewer_id, a.md_employee_id, e.fullname as emp_name, c.title as cycle_title, c.deadline_filling, c.deadline_review, c.deadline_reading')
                 ->join('md_appraisal_cycle c', 'c.md_appraisal_cycle_id = a.md_appraisal_cycle_id', 'inner')
                 ->join('md_employee e', 'e.md_employee_id = a.md_employee_id', 'left')
                 ->where('c.status', 'OPEN')
                 ->where('a.isactive', 'Y')
-                ->where('a.status !=', 'FINALIZED')
+                ->where('a.status !=', M_Appraisal::STATUS_FINAL)
                 ->get()
                 ->getResultArray();
 
@@ -403,15 +405,15 @@ class AppraisalNudgeService
                 $deadline = null;
                 $stageName = '';
 
-                if ($st === 'DRAFT_EVALUATOR' || $st === 'SUBMITTED_EVALUATOR') {
+                if ($st === M_Appraisal::STATUS_PENILAIAN || $st === M_Appraisal::STATUS_SUBMIT_PENILAIAN) {
                     $targetId  = (int) $app['snapshot_evaluator_id'];
                     $deadline  = $app['deadline_filling'];
                     $stageName = 'Pengisian Atasan';
-                } elseif ($st === 'REVIEW_GM') {
-                    $targetId  = (int) $app['snapshot_gm_id'];
+                } elseif ($st === M_Appraisal::STATUS_REVIEW) {
+                    $targetId  = (int) $app['snapshot_reviewer_id'];
                     $deadline  = $app['deadline_review'];
-                    $stageName = 'Review GM';
-                } elseif ($st === 'PENDING_ACK') {
+                    $stageName = 'Review Peninjau';
+                } elseif ($st === M_Appraisal::STATUS_SUBMIT_REVIEW) {
                     $targetId  = (int) $app['md_employee_id'];
                     $deadline  = $app['deadline_reading'];
                     $stageName = 'Pembacaan / TTD';
@@ -465,7 +467,7 @@ class AppraisalNudgeService
                 'total_groups'  => count($pendingByTarget),
             ];
         } catch (Throwable $e) {
-            log_message('error', '[AppraisalNudgeService::runDailyNudge] ' . $e->getMessage());
+            log_message('error', '[AppraisalNudgeServices::runDailyNudge] ' . $e->getMessage());
             return [
                 'status'  => 'error',
                 'message' => $e->getMessage(),

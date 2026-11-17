@@ -71,6 +71,9 @@
                     </div>
                 </div>
 
+                <!-- Filter Section -->
+                <?= $this->include('masterdata/appraisal-cycle/form_filter_blast'); ?>
+
                 <!-- Datatable Container -->
                 <div class="table-responsive">
                     <table class="table table-striped table-hover" id="tb_preview_blast" style="width: 100%;">

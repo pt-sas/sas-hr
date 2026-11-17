@@ -12,14 +12,14 @@
             <button type="button" class="ap-btn ap-btn-primary" id="btn_submit_evaluator">
                 <i class="fas fa-paper-plane"></i> Submit ke reviewer
             </button>
-        <?php elseif ($user_mode === 'GM'): ?>
+        <?php elseif ($user_mode === 'REVIEWER'): ?>
             <button type="button" class="ap-btn ap-btn-soft-warn" id="btn_save_draft">
                 <i class="fas fa-save"></i> Simpan draft review
             </button>
-            <button type="button" class="ap-btn ap-btn-danger-ghost" id="btn_kickback_gm">
+            <button type="button" class="ap-btn ap-btn-danger-ghost" id="btn_kickback_reviewer">
                 <i class="fas fa-undo"></i> Kembalikan untuk revisi
             </button>
-            <button type="button" class="ap-btn ap-btn-primary" id="btn_submit_gm">
+            <button type="button" class="ap-btn ap-btn-primary" id="btn_submit_reviewer">
                 <i class="fas fa-check-double"></i> Setujui &amp; teruskan
             </button>
         <?php elseif ($user_mode === 'EMPLOYEE'): ?>

@@ -139,7 +139,7 @@ if (! function_exists('appraisal_is_operator')) {
 
 if (! function_exists('appraisal_rating_meta')) {
     /**
-     * Resolve rating label and CSS class for Staff (0-4) or Operator (1-3) overall scores.
+     * Resolve rating label and CSS class for Staff (0-4) or Operator (totNilai 5-15) overall scores.
      */
     function appraisal_rating_meta(?float $score, bool $isOperator = false): array
     {
@@ -148,13 +148,17 @@ if (! function_exists('appraisal_rating_meta')) {
         }
 
         if ($isOperator) {
-            if ($score >= 2.60) {
+            $finalScoreInt = (int) $score;
+            if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
                 return ['label' => 'Sangat Baik', 'class' => 'r-great'];
             }
-            if ($score >= 1.80) {
+            if ($finalScoreInt >= 8 && $finalScoreInt <= 12) {
                 return ['label' => 'Baik', 'class' => 'r-good'];
             }
-            return ['label' => 'Kurang', 'class' => 'r-low'];
+            if ($finalScoreInt >= 5 && $finalScoreInt <= 7) {
+                return ['label' => 'Kurang', 'class' => 'r-low'];
+            }
+            return ['label' => '-', 'class' => 'r-muted'];
         }
 
         if ($score >= 3.50) {
@@ -181,35 +185,57 @@ if (! function_exists('appraisal_extract_complete_summary')) {
         $items    = $snapshot['items'] ?? [];
 
         if ($isOperator) {
-            $totNilai = 0.0;
+            $totNilai     = 0.0;
+            $checkedCount = 0;
             foreach ($items as $item) {
-                if (strtoupper($item['input_type'] ?? '') !== 'WEIGHTED_CHECKLIST') {
-                    continue;
-                }
-                $itemId = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id'] ?? 0);
-                $cfg    = (array) ($item['config'] ?? []);
-                $bobot  = (float) ($item['weight'] ?? $cfg['bobot'] ?? 1.0);
-                if ($bobot <= 0) {
-                    $bobot = 1.0;
-                }
-                $resp  = $responsesByItemId[$itemId] ?? null;
-                $score = null;
-                if ($resp) {
-                    if (! empty($resp->gm_response)) {
-                        $p     = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
-                        $score = isset($p['score']) ? (float) $p['score'] : ($resp->score !== null ? (float) $resp->score : null);
+                $inputType = strtoupper($item['input_type'] ?? '');
+                $itemId    = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id'] ?? 0);
+                $resp      = $responsesByItemId[$itemId] ?? null;
+
+                if ($inputType === 'WEIGHTED_CHECKLIST') {
+                    $cfg   = (array) ($item['config'] ?? []);
+                    $bobot = (float) ($item['weight'] ?? $cfg['bobot'] ?? 1.0);
+                    if ($bobot <= 0) {
+                        $bobot = 1.0;
+                    }
+                    $score = null;
+                    if ($resp) {
+                        if (! empty($resp->reviewer_response)) {
+                            $p     = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
+                            $score = isset($p['score']) ? (float) $p['score'] : ($resp->score !== null ? (float) $resp->score : null);
+                        } elseif (! empty($resp->evaluator_response)) {
+                            $p     = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
+                            $score = isset($p['score']) ? (float) $p['score'] : ($resp->score !== null ? (float) $resp->score : null);
+                        } elseif ($resp->score !== null) {
+                            $score = (float) $resp->score;
+                        }
+                    }
+                    if ($score !== null) {
+                        $totNilai += ($bobot * $score);
+                    }
+                } elseif ($inputType === 'SINGLE_CHECKLIST' && $resp) {
+                    $p = [];
+                    if (! empty($resp->reviewer_response)) {
+                        $p = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
                     } elseif (! empty($resp->evaluator_response)) {
-                        $p     = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
-                        $score = isset($p['score']) ? (float) $p['score'] : ($resp->score !== null ? (float) $resp->score : null);
-                    } elseif ($resp->score !== null) {
-                        $score = (float) $resp->score;
+                        $p = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
+                    }
+                    if (isset($p['boolean_value']) && in_array(strtoupper((string) $p['boolean_value']), ['Y', '1', 'TRUE'], true)) {
+                        $checkedCount++;
+                    } elseif (! empty($p['checked_actions'])) {
+                        $checkedCount++;
                     }
                 }
-                if ($score !== null) {
-                    $totNilai += ($bobot * $score);
-                }
             }
-            return ['totNilai' => $totNilai];
+            $suffixA          = str_repeat('A', $checkedCount);
+            $displaySkorAkhir = ((int) $totNilai) . $suffixA;
+
+            return [
+                'totNilai'         => $totNilai,
+                'checkedCount'     => $checkedCount,
+                'suffixA'          => $suffixA,
+                'displaySkorAkhir' => $displaySkorAkhir,
+            ];
         }
 
         $itemsNilai4             = [];
@@ -226,8 +252,8 @@ if (! function_exists('appraisal_extract_complete_summary')) {
             $actions   = appraisal_parse_actions($cfg['key_actions'] ?? null);
             $resp      = $responsesByItemId[$itemId] ?? null;
             $payload   = [];
-            if ($resp && ! empty($resp->gm_response)) {
-                $payload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+            if ($resp && ! empty($resp->reviewer_response)) {
+                $payload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
             } elseif ($resp && ! empty($resp->evaluator_response)) {
                 $payload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
             }

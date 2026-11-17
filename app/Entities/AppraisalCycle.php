@@ -111,16 +111,6 @@ class AppraisalCycle extends Entity
         return $this->setDeadlineFilling($date);
     }
 
-    public function getGmDueDate()
-    {
-        return $this->getDeadlineReview();
-    }
-
-    public function setGmDueDate($date)
-    {
-        return $this->setDeadlineReview($date);
-    }
-
     public function getStatus()
     {
         return $this->attributes['status'] ?? M_AppraisalCycle::STATUS_DRAFT;

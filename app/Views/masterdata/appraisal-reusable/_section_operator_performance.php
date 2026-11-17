@@ -5,7 +5,7 @@
     $userMode    = $user_mode ?? '';
 
     if ($displayMode === 'compare') {
-        $isReviewed    = ! empty($is_gm_reviewed);
+        $isReviewed    = ! empty($is_reviewer_reviewed);
         $weightedItems = $weighted_items ?? [];
         $totBobot      = 0.0;
         $totEvalSkor   = 0.0;
@@ -21,9 +21,9 @@
             $totEvalSkor  += $es;
             $totEvalNilai += $en;
 
-            if ($isReviewed && isset($w['gm_score']) && $w['gm_score'] !== null) {
-                $gs = (float) $w['gm_score'];
-                $gn = (float) ($w['gm_nilai'] ?? ($b * $gs));
+            if ($isReviewed && isset($w['reviewer_score']) && $w['reviewer_score'] !== null) {
+                $gs = (float) $w['reviewer_score'];
+                $gn = (float) ($w['reviewer_nilai'] ?? ($b * $gs));
                 $totGmSkor  += $gs;
                 $totGmNilai += $gn;
             }
@@ -61,8 +61,11 @@
             }
         }
 
-        $canEditScores       = ($displayMode === 'edit') && (in_array($userMode, ['EVALUATOR', 'GM', 'HR'], true) || ! empty($is_preview));
-        $initialOverallScore = $appraisal->final_score !== null ? (float) $appraisal->final_score : null;
+        $canEditScores       = ($displayMode === 'edit') && (in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true) || ! empty($is_preview));
+        $opSummary           = appraisal_extract_complete_summary($template_snapshot ?? [], $responses_by_item_id ?? [], true);
+        $hasInitialScore     = ((float) ($opSummary['totNilai'] ?? 0)) > 0;
+        $initialOverallScore = $hasInitialScore ? (float) $opSummary['totNilai'] : null;
+        $initialDisplayScore = $hasInitialScore ? ($opSummary['displaySkorAkhir'] ?? '0') : '—';
         $initialRating       = appraisal_rating_meta($initialOverallScore, true);
 
         if ($displayMode === 'readonly') {
@@ -88,9 +91,20 @@
         <div class="ap-score-bar" role="status" aria-live="polite">
             <span class="ap-score-label">Skor Akhir (Pratinjau)</span>
             <span class="ap-score-group">
-                <span class="ap-score-num" id="badge_total_overall_score"><?= $initialOverallScore !== null ? number_format($initialOverallScore, 2) : '—' ?></span>
+                <span class="ap-score-num" id="badge_total_overall_score"><?= esc($initialDisplayScore) ?></span>
                 <span class="ap-rating <?= esc($initialRating['class']) ?>" id="badge_overall_rating"><?= esc($initialRating['label']) ?></span>
             </span>
+        </div>
+    <?php endif; ?>
+
+    <?php if (in_array($displayMode, ['edit', 'readonly'], true)): ?>
+        <div class="ap-guide">
+            <p class="ap-guide-title">Ringkasan Kategori Penilaian Operator (1–3)</p>
+            <ul class="ap-guide-list">
+                <li><strong>Nilai 1 (Kurang):</strong> Memerlukan perbaikan signifikan untuk memenuhi standar kinerja yang ditetapkan.</li>
+                <li><strong>Nilai 2 (Baik):</strong> Secara konsisten memenuhi standar kinerja yang ditetapkan secara memadai.</li>
+                <li><strong>Nilai 3 (Sangat Baik):</strong> Sering melampaui standar kinerja yang ditetapkan.</li>
+            </ul>
         </div>
     <?php endif; ?>
 
@@ -119,8 +133,8 @@
                                 $b  = (float) ($row['bobot'] ?? 1.0);
                                 $es = isset($row['eval_score']) && $row['eval_score'] !== null ? (float) $row['eval_score'] : null;
                                 $en = isset($row['eval_nilai']) && $row['eval_nilai'] !== null ? (float) $row['eval_nilai'] : ($es !== null ? ($b * $es) : null);
-                                $gs = isset($row['gm_score']) && $row['gm_score'] !== null ? (float) $row['gm_score'] : null;
-                                $gn = isset($row['gm_nilai']) && $row['gm_nilai'] !== null ? (float) $row['gm_nilai'] : ($gs !== null ? ($b * $gs) : null);
+                                $gs = isset($row['reviewer_score']) && $row['reviewer_score'] !== null ? (float) $row['reviewer_score'] : null;
+                                $gn = isset($row['reviewer_nilai']) && $row['reviewer_nilai'] !== null ? (float) $row['reviewer_nilai'] : ($gs !== null ? ($b * $gs) : null);
                             ?>
                             <tr>
                                 <td class="text-center align-middle font-weight-bold" style="background: var(--ap-surface);"><?= $idx + 1 ?></td>
@@ -185,8 +199,8 @@
                                 $resp  = $responses_by_item_id[$itemId] ?? null;
                                 $score = null;
                                 if ($resp) {
-                                    if (! empty($resp->gm_response)) {
-                                        $payload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                                    if (! empty($resp->reviewer_response)) {
+                                        $payload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
                                         $score   = isset($payload['score']) ? (float) $payload['score'] : ($resp->score !== null ? (float) $resp->score : null);
                                     } elseif (! empty($resp->evaluator_response)) {
                                         $payload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
@@ -249,8 +263,8 @@
                                 $resp       = $responses_by_item_id[$itemId] ?? null;
                                 $savedScore = null;
                                 if ($resp) {
-                                    if ($userMode === 'GM' && ! empty($resp->gm_response)) {
-                                        $payload    = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                                    if ($userMode === 'REVIEWER' && ! empty($resp->reviewer_response)) {
+                                        $payload    = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
                                         $savedScore = isset($payload['score']) ? (float) $payload['score'] : ($resp->score !== null ? (float) $resp->score : null);
                                     } elseif (! empty($resp->evaluator_response)) {
                                         $payload    = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;

@@ -16,9 +16,9 @@
                 <th>Cabang</th>
                 <th>Divisi</th>
                 <th>Level</th>
+                <th>Jabatan</th>
                 <th style="width: 15%;">No Doc</th>
                 <th style="width: 60px;">Versi</th>
-                <th style="width: 110px;">Tanggal</th>
                 <th style="width: 100px;">Status</th>
                 <th style="width: 100px;">Aksi</th>
             </tr>
@@ -44,9 +44,7 @@
     .tb_display th:nth-child(8),
     .tb_display td:nth-child(8),
     .tb_display th:nth-child(9),
-    .tb_display td:nth-child(9),
-    .tb_display th:nth-child(10),
-    .tb_display td:nth-child(10) {
+    .tb_display td:nth-child(9) {
         white-space: nowrap !important;
     }
 </style>

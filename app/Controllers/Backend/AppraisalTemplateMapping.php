@@ -4,13 +4,14 @@ namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
 use App\Models\M_AppraisalTemplate;
+use App\Services\AppraisalTemplateServices;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Exception;
 
-class AppraisalTemplateMappingController extends BaseController
+class AppraisalTemplateMapping extends BaseController
 {
     protected BaseConnection $db;
 
@@ -23,72 +24,69 @@ class AppraisalTemplateMappingController extends BaseController
     }
 
     /**
-     * Datatable / summary list of template target scoping in md_template_scope
+     * Datatable / summary list of template target scoping across the 4 mapping tables
      */
     public function showAll()
     {
+        if ($this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(['error' => 'Method Not Allowed']);
+        }
+
         try {
-            $templates = $this->db->table('md_appraisal_template')
-                ->select('md_appraisal_template_id, template_code, title, version, isactive, updated_at')
-                ->orderBy('md_appraisal_template_id', 'DESC')
-                ->get()
-                ->getResultArray();
+            $table  = $this->model->table;
+            $select = "{$table}.md_appraisal_template_id, {$table}.template_code, {$table}.title, {$table}.version, {$table}.isactive, {$table}.updated_at";
+            $order  = [null, "{$table}.template_code", "{$table}.title", "{$table}.version", "{$table}.isactive"];
+            $sort   = [$table . '.md_appraisal_template_id' => 'DESC'];
+            $search = $this->model->column_search;
+            $join   = $this->model->getJoin();
 
-            $scopes = $this->db->table('md_template_scope s')
-                ->select("s.md_appraisal_template_id, s.scope_type, s.scope_id, "
-                    . "COALESCE(b.name, d.name, l.name, p.name) AS scope_name")
-                ->join('md_branch b', "b.md_branch_id = s.scope_id AND s.scope_type = 'BRANCH'", 'left')
-                ->join('md_division d', "d.md_division_id = s.scope_id AND s.scope_type = 'DIVISION'", 'left')
-                ->join('md_levelling l', "l.md_levelling_id = s.scope_id AND s.scope_type = 'LEVELLING'", 'left')
-                ->join('md_position p', "p.md_position_id = s.scope_id AND s.scope_type = 'POSITION'", 'left')
-                ->where('s.isactive', 'Y')
-                ->get()
-                ->getResultArray();
+            $templates   = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join);
+            $templateIds = array_map(static fn($t) => (int) $t->md_appraisal_template_id, $templates);
 
-            $branchByTpl    = [];
-            $divisionByTpl  = [];
-            $levellingByTpl = [];
-            $positionByTpl  = [];
+            $byTpl = [];
+            if (! empty($templateIds)) {
+                foreach (AppraisalTemplateServices::SCOPE_TABLES as $key => $cfg) {
+                    $fk   = $cfg['fk'];
+                    $rows = $this->db->table("{$cfg['table']} s")
+                        ->select("s.md_appraisal_template_id, s.{$fk} AS scope_id, m.name AS scope_name")
+                        ->join("{$cfg['master']} m", "m.{$fk} = s.{$fk}", 'left')
+                        ->whereIn('s.md_appraisal_template_id', $templateIds)
+                        ->where('s.isactive', 'Y')
+                        ->get()
+                        ->getResultArray();
 
-            foreach ($scopes as $row) {
-                $tId  = (int) $row['md_appraisal_template_id'];
-                $item = [
-                    'id'   => (int) $row['scope_id'],
-                    'text' => $row['scope_name'] ?? ('#' . $row['scope_id']),
-                ];
-                if ($row['scope_type'] === 'BRANCH') {
-                    $branchByTpl[$tId][] = $item;
-                } elseif ($row['scope_type'] === 'DIVISION') {
-                    $divisionByTpl[$tId][] = $item;
-                } elseif ($row['scope_type'] === 'LEVELLING') {
-                    $levellingByTpl[$tId][] = $item;
-                } elseif ($row['scope_type'] === 'POSITION') {
-                    $positionByTpl[$tId][] = $item;
+                    foreach ($rows as $row) {
+                        $tId = (int) $row['md_appraisal_template_id'];
+                        $byTpl[$key][$tId][] = [
+                            'id'   => (int) $row['scope_id'],
+                            'text' => $row['scope_name'] ?? ('#' . $row['scope_id']),
+                        ];
+                    }
                 }
             }
 
             $data = [];
-            $no   = 1;
+            $no   = (int) ($this->request->getPost('start') ?? 0) + 1;
             foreach ($templates as $tpl) {
-                $tplId = (int) $tpl['md_appraisal_template_id'];
+                $tplId  = (int) $tpl->md_appraisal_template_id;
                 $data[] = [
                     $no++,
-                    $tpl['template_code'],
-                    $tpl['title'],
-                    (int) $tpl['version'],
-                    $tpl['isactive'],
-                    'branches'                 => $branchByTpl[$tplId] ?? [],
-                    'divisions'                => $divisionByTpl[$tplId] ?? [],
-                    'levellings'               => $levellingByTpl[$tplId] ?? [],
-                    'positions'                => $positionByTpl[$tplId] ?? [],
+                    $tpl->template_code,
+                    $tpl->title,
+                    (int) $tpl->version,
+                    $tpl->isactive,
+                    'branches'                 => $byTpl['branch_ids'][$tplId] ?? [],
+                    'divisions'                => $byTpl['division_ids'][$tplId] ?? [],
+                    'levellings'               => $byTpl['levelling_ids'][$tplId] ?? [],
+                    'positions'                => $byTpl['position_ids'][$tplId] ?? [],
                     'md_appraisal_template_id' => $tplId,
                 ];
             }
 
             return $this->response->setJSON([
-                'draw'            => (int) ($this->request->getVar('draw') ?? 1),
-                'recordsTotal'    => count($data),
-                'recordsFiltered' => count($data),
+                'draw'            => (int) ($this->request->getPost('draw') ?? 1),
+                'recordsTotal'    => $this->datatable->countAll($table, $select, $order, $sort, $search, $join),
+                'recordsFiltered' => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join),
                 'data'            => $data,
             ]);
         } catch (Exception $e) {
@@ -97,7 +95,7 @@ class AppraisalTemplateMappingController extends BaseController
     }
 
     /**
-     * Sync target scoping in md_template_scope (BRANCH, DIVISION, LEVELLING, POSITION)
+     * Sync target scoping across the 4 mapping tables (branch, division, levelling, position)
      * for a given md_appraisal_template_id
      */
     public function create()
@@ -144,19 +142,19 @@ class AppraisalTemplateMappingController extends BaseController
         $this->db->transBegin();
 
         try {
-            $this->db->table('md_template_scope')->where('md_appraisal_template_id', $templateId)->delete();
+            $idsByKey = [
+                'branch_ids'    => $branchIds,
+                'division_ids'  => $divisionIds,
+                'levelling_ids' => $levellingIds,
+                'position_ids'  => $positionIds,
+            ];
 
-            foreach ([
-                'BRANCH'    => $branchIds,
-                'DIVISION'  => $divisionIds,
-                'LEVELLING' => $levellingIds,
-                'POSITION'  => $positionIds,
-            ] as $scopeType => $ids) {
-                foreach ($ids as $scopeId) {
-                    $this->db->table('md_template_scope')->insert([
+            foreach (AppraisalTemplateServices::SCOPE_TABLES as $key => $cfg) {
+                $this->db->table($cfg['table'])->where('md_appraisal_template_id', $templateId)->delete();
+                foreach ($idsByKey[$key] ?? [] as $scopeId) {
+                    $this->db->table($cfg['table'])->insert([
                         'md_appraisal_template_id' => $templateId,
-                        'scope_type'               => $scopeType,
-                        'scope_id'                 => $scopeId,
+                        $cfg['fk']                 => $scopeId,
                         'isactive'                 => 'Y',
                         'created_by'               => $userId,
                         'updated_by'               => $userId,
@@ -180,7 +178,7 @@ class AppraisalTemplateMappingController extends BaseController
     }
 
     /**
-     * Resolve active template across md_template_scope (BRANCH, DIVISION, LEVELLING, POSITION)
+     * Resolve active template across the 4 scope mapping tables
      */
     public function resolve()
     {
@@ -199,16 +197,18 @@ class AppraisalTemplateMappingController extends BaseController
                 ->getResultArray();
 
             $candidateIds = array_column($candidates, 'md_appraisal_template_id');
-            $scopeRows = !empty($candidateIds)
-                ? $this->db->table('md_template_scope')
-                    ->select('md_appraisal_template_id, scope_type, scope_id')
-                    ->whereIn('md_appraisal_template_id', $candidateIds)
-                    ->where('isactive', 'Y')
-                    ->get()->getResultArray()
-                : [];
-            $scopesByTpl = [];
-            foreach ($scopeRows as $sr) {
-                $scopesByTpl[(int) $sr['md_appraisal_template_id']][$sr['scope_type']][] = (int) $sr['scope_id'];
+            $scopesByTpl  = [];
+            if (! empty($candidateIds)) {
+                foreach (AppraisalTemplateServices::SCOPE_TABLES as $cfg) {
+                    $rows = $this->db->table($cfg['table'])
+                        ->select("md_appraisal_template_id, {$cfg['fk']} AS scope_id")
+                        ->whereIn('md_appraisal_template_id', $candidateIds)
+                        ->where('isactive', 'Y')
+                        ->get()->getResultArray();
+                    foreach ($rows as $sr) {
+                        $scopesByTpl[(int) $sr['md_appraisal_template_id']][$cfg['type']][] = (int) $sr['scope_id'];
+                    }
+                }
             }
 
             $bestMatch = null;
@@ -286,7 +286,9 @@ class AppraisalTemplateMappingController extends BaseController
         $this->db->transBegin();
 
         try {
-            $this->db->table('md_template_scope')->where('md_appraisal_template_id', $templateId)->delete();
+            foreach (AppraisalTemplateServices::SCOPE_TABLES as $cfg) {
+                $this->db->table($cfg['table'])->where('md_appraisal_template_id', $templateId)->delete();
+            }
 
             if ($this->db->transStatus() === false) {
                 $this->db->transRollback();

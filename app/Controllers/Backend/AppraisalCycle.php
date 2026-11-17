@@ -3,22 +3,22 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use App\Entities\AppraisalCycle;
+use App\Entities\AppraisalCycle as AppraisalCycleEntity;
 use App\Models\M_Appraisal;
 use App\Models\M_AppraisalCycle;
 use App\Models\M_Employee;
-use App\Services\AppraisalCycleService;
-use App\Services\AppraisalGeneratorService;
-use App\Services\AppraisalTemplateResolverService;
+use App\Services\AppraisalCycleServices;
+use App\Services\AppraisalGeneratorServices;
+use App\Services\AppraisalTemplateResolverServices;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-class AppraisalCycleController extends BaseController
+class AppraisalCycle extends BaseController
 {
-    protected AppraisalCycleService $cycleService;
-    protected AppraisalTemplateResolverService $resolverService;
+    protected AppraisalCycleServices $cycleService;
+    protected AppraisalTemplateResolverServices $resolverService;
     protected M_Employee $mEmployee;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
@@ -26,9 +26,9 @@ class AppraisalCycleController extends BaseController
         parent::initController($request, $response, $logger);
 
         $this->model           = new M_AppraisalCycle();
-        $this->entity          = new AppraisalCycle();
-        $this->cycleService    = new AppraisalCycleService();
-        $this->resolverService = new AppraisalTemplateResolverService();
+        $this->entity          = new AppraisalCycleEntity();
+        $this->cycleService    = new AppraisalCycleServices();
+        $this->resolverService = new AppraisalTemplateResolverServices();
         $this->mEmployee       = new M_Employee($this->request);
         $this->primaryKey      = $this->model->primaryKey;
         $this->db              = \Config\Database::connect();
@@ -118,20 +118,9 @@ class AppraisalCycleController extends BaseController
                         $statusBadge = '<center><span class="badge badge-warning px-2 py-1"><i class="fas fa-edit mr-1"></i>DRAFT</span></center>';
                     }
 
-                    $actions = '';
-                    if ($status === M_AppraisalCycle::STATUS_DRAFT) {
-                        $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit"><i class="fas fa-edit text-info"></i></a>';
-                        $actions .= '<a class="btn btn-sm" onclick="window.cycPreviewBlast(\'' . $id . '\')" title="Simulasi Distribusi"><i class="fas fa-paper-plane text-warning"></i></a>';
-                        $actions .= '<a class="btn btn-sm" onclick="window.cycOpen(\'' . $id . '\')" title="Buka Siklus"><i class="fas fa-play text-success"></i></a>';
-                        $actions .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus"><i class="fas fa-trash-alt text-danger"></i></a>';
-                    } elseif ($status === M_AppraisalCycle::STATUS_OPEN) {
-                        $actions .= '<a class="btn btn-sm" onclick="window.cycProgress(\'' . $id . '\')" title="Monitoring Progres"><i class="fas fa-chart-line text-primary"></i></a>';
-                        $actions .= '<a class="btn btn-sm" onclick="window.cycPreviewBlast(\'' . $id . '\')" title="Daftar Karyawan"><i class="fas fa-users text-info"></i></a>';
-                        $actions .= '<a class="btn btn-sm" onclick="window.cycClose(\'' . $id . '\')" title="Tutup Siklus"><i class="fas fa-lock text-danger"></i></a>';
-                    } else {
-                        $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'CLOSED\')" id="' . $id . '" data-status="CLOSED" title="Detail"><i class="fas fa-eye text-info"></i></a>';
-                        $actions .= '<a class="btn btn-sm" onclick="window.cycProgress(\'' . $id . '\')" title="Laporan Akhir"><i class="fas fa-chart-line text-primary"></i></a>';
-                    }
+                    $actions = $this->template->appraisalTableButton('cycle', $id, [
+                        'status' => $status,
+                    ]);
 
                     $titleCol = '<strong>' . esc($title) . '</strong>';
                     $semCol   = '<center>Semester ' . esc($sem) . '</center>';
@@ -166,7 +155,7 @@ class AppraisalCycleController extends BaseController
                     'recordsTotal'    => 0,
                     'recordsFiltered' => 0,
                     'data'            => [],
-                    'error'           => '[AppraisalCycleController::showAll] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(),
+                    'error'           => '[AppraisalCycle::showAll] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(),
                 ]);
             }
         }
@@ -200,10 +189,10 @@ class AppraisalCycleController extends BaseController
 
                     $response = message('success', true, $result);
                 } else {
-                    $response = message('error', false, '[AppraisalCycleController::show] Siklus penilaian tidak ditemukan.');
+                    $response = message('error', false, '[AppraisalCycle::show] Siklus penilaian tidak ditemukan.');
                 }
             } catch (Throwable $e) {
-                $response = message('error', false, '[AppraisalCycleController::show] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                $response = message('error', false, '[AppraisalCycle::show] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             }
 
             return $this->response->setJSON($response);
@@ -365,7 +354,7 @@ class AppraisalCycleController extends BaseController
     public function open($id = null)
     {
         if ($this->request->getMethod(true) !== 'POST') {
-            return $this->response->setStatusCode(405)->setJSON(message('error', false, '[AppraisalCycleController::open] Metode HTTP tidak diizinkan. Gunakan POST.'));
+            return $this->response->setStatusCode(405)->setJSON(message('error', false, '[AppraisalCycle::open] Metode HTTP tidak diizinkan. Gunakan POST.'));
         }
 
         try {
@@ -381,7 +370,7 @@ class AppraisalCycleController extends BaseController
 
             return $this->response->setJSON(message('success', true, $msg, $result));
         } catch (Throwable $e) {
-            return $this->response->setJSON(message('error', false, '[AppraisalCycleController::open] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
+            return $this->response->setJSON(message('error', false, '[AppraisalCycle::open] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
         }
     }
 
@@ -391,7 +380,7 @@ class AppraisalCycleController extends BaseController
     public function close($id = null)
     {
         if ($this->request->getMethod(true) !== 'POST') {
-            return $this->response->setStatusCode(405)->setJSON(message('error', false, '[AppraisalCycleController::close] Metode HTTP tidak diizinkan. Gunakan POST.'));
+            return $this->response->setStatusCode(405)->setJSON(message('error', false, '[AppraisalCycle::close] Metode HTTP tidak diizinkan. Gunakan POST.'));
         }
 
         try {
@@ -400,7 +389,7 @@ class AppraisalCycleController extends BaseController
 
             return $this->response->setJSON(message('success', true, 'Siklus penilaian berhasil ditutup.'));
         } catch (Throwable $e) {
-            return $this->response->setJSON(message('error', false, '[AppraisalCycleController::close] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
+            return $this->response->setJSON(message('error', false, '[AppraisalCycle::close] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
         }
     }
 
@@ -410,7 +399,7 @@ class AppraisalCycleController extends BaseController
     public function destroy($id = null)
     {
         if ($this->request->getMethod(true) !== 'POST') {
-            return $this->response->setStatusCode(405)->setJSON(message('error', false, '[AppraisalCycleController::destroy] Metode HTTP tidak diizinkan. Gunakan POST.'));
+            return $this->response->setStatusCode(405)->setJSON(message('error', false, '[AppraisalCycle::destroy] Metode HTTP tidak diizinkan. Gunakan POST.'));
         }
 
         try {
@@ -420,13 +409,13 @@ class AppraisalCycleController extends BaseController
                 ->countAllResults();
 
             if ($hasAppraisals > 0) {
-                return $this->response->setJSON(message('error', false, "[AppraisalCycleController::destroy] Siklus tidak dapat dihapus karena sudah memiliki {$hasAppraisals} data form penilaian yang terdistribusi."));
+                return $this->response->setJSON(message('error', false, "[AppraisalCycle::destroy] Siklus tidak dapat dihapus karena sudah memiliki {$hasAppraisals} data form penilaian yang terdistribusi."));
             }
 
             $result = $this->delete((int) $id);
             return $this->response->setJSON(message('success', $result, notification('updated')));
         } catch (Throwable $e) {
-            return $this->response->setJSON(message('error', false, '[AppraisalCycleController::destroy] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
+            return $this->response->setJSON(message('error', false, '[AppraisalCycle::destroy] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
         }
     }
 
@@ -437,7 +426,7 @@ class AppraisalCycleController extends BaseController
     {
         try {
             $cycleId   = !empty($id) ? (int) $id : (int) ($this->request->getVar('id') ?? 0);
-            $generator = new AppraisalGeneratorService();
+            $generator = new AppraisalGeneratorServices();
             $preview   = $generator->previewBatchForCycle($cycleId > 0 ? $cycleId : null);
 
             return $this->response->setJSON(message('success', true, $preview));
@@ -454,7 +443,7 @@ class AppraisalCycleController extends BaseController
         try {
             $cycle = $this->model->find((int) $id);
             if (! $cycle) {
-                return $this->response->setJSON(message('error', false, '[AppraisalCycleController::progress] Siklus penilaian tidak ditemukan.'));
+                return $this->response->setJSON(message('error', false, '[AppraisalCycle::progress] Siklus penilaian tidak ditemukan.'));
             }
 
             $appraisals = $this->db->table('md_appraisal a')
@@ -468,7 +457,7 @@ class AppraisalCycleController extends BaseController
             $total              = count($appraisals);
             $draftEvaluator     = 0;
             $submittedEvaluator = 0;
-            $reviewGm           = 0;
+            $reviewReviewer     = 0;
             $pendingAck         = 0;
             $finalized          = 0;
 
@@ -496,8 +485,8 @@ class AppraisalCycleController extends BaseController
                 } elseif ($st === M_Appraisal::STATUS_SUBMITTED_EVALUATOR) {
                     $submittedEvaluator++;
                     $divisionGroups[$div]['in_progress']++;
-                } elseif ($st === M_Appraisal::STATUS_REVIEW_GM) {
-                    $reviewGm++;
+                } elseif ($st === M_Appraisal::STATUS_REVIEW) {
+                    $reviewReviewer++;
                     $divisionGroups[$div]['in_progress']++;
                 } elseif ($st === M_Appraisal::STATUS_PENDING_ACK) {
                     $pendingAck++;
@@ -523,7 +512,7 @@ class AppraisalCycleController extends BaseController
                 'total'               => $total,
                 'draft_evaluator'     => $draftEvaluator,
                 'submitted_evaluator' => $submittedEvaluator,
-                'review_gm'           => $reviewGm,
+                'review_reviewer'     => $reviewReviewer,
                 'pending_ack'         => $pendingAck,
                 'finalized'           => $finalized,
                 'completion_percent'  => $completionPercent,
@@ -555,7 +544,7 @@ class AppraisalCycleController extends BaseController
                 'divisions' => array_values($divisionGroups),
             ]));
         } catch (Throwable $e) {
-            return $this->response->setJSON(message('error', false, '[AppraisalCycleController::progress] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
+            return $this->response->setJSON(message('error', false, '[AppraisalCycle::progress] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()));
         }
     }
 

@@ -8,10 +8,10 @@ use App\Models\M_Appraisal;
 use App\Models\M_AppraisalCycle;
 use App\Models\M_AppraisalResponse;
 use App\Models\M_Employee;
-use App\Services\AppraisalCycleService;
-use App\Services\AppraisalScoringService;
+use App\Services\AppraisalCycleServices;
+use App\Services\AppraisalScoringServices;
 use App\Services\AppraisalTemplateServices;
-use App\Services\AppraisalWorkflowService;
+use App\Services\AppraisalWorkflowServices;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -56,11 +56,11 @@ class AppraisalPdfReport extends TCPDF
     }
 }
 
-class AppraisalEvaluationController extends BaseController
+class AppraisalEvaluation extends BaseController
 {
-    protected AppraisalScoringService $scoringService;
-    protected AppraisalWorkflowService $workflowService;
-    protected AppraisalCycleService $cycleService;
+    protected AppraisalScoringServices $scoringService;
+    protected AppraisalWorkflowServices $workflowService;
+    protected AppraisalCycleServices $cycleService;
     protected M_AppraisalCycle $cycleModel;
     protected M_Employee $mEmployee;
 
@@ -71,9 +71,9 @@ class AppraisalEvaluationController extends BaseController
         $this->model           = new M_Appraisal();
         $this->modelDetail     = new M_AppraisalResponse();
         $this->entity          = new Appraisal();
-        $this->scoringService  = new AppraisalScoringService();
-        $this->workflowService = new AppraisalWorkflowService();
-        $this->cycleService    = new AppraisalCycleService();
+        $this->scoringService  = new AppraisalScoringServices();
+        $this->workflowService = new AppraisalWorkflowServices();
+        $this->cycleService    = new AppraisalCycleServices();
         $this->cycleModel      = new M_AppraisalCycle();
         $this->mEmployee       = new M_Employee();
         $this->primaryKey      = $this->model->primaryKey ?? 'md_appraisal_id';
@@ -179,36 +179,48 @@ class AppraisalEvaluationController extends BaseController
         $userId = (int) ($this->session->get('sys_user_id') ?? 0);
         $roleId = (int) ($this->session->get('sys_role_id') ?? 0);
         $isAdmin = $this->isAppraisalAdmin($empId);
+        $activeCycleId = $activeCycle ? (int) $activeCycle->md_appraisal_cycle_id : 0;
 
-        // 2. Count tasks per role
-        $countEvaluator = $this->model->where('snapshot_evaluator_id', $empId)
-                                      ->where('isactive', 'Y')
-                                      ->where('status', M_Appraisal::STATUS_DRAFT_EVALUATOR)
-                                      ->countAllResults();
+        // 2. Count tasks per role (scoped strictly to current active cycle)
+        if ($activeCycleId > 0) {
+            $countEvaluator = $this->model->where('md_appraisal_cycle_id', $activeCycleId)
+                                          ->where('snapshot_evaluator_id', $empId)
+                                          ->where('isactive', 'Y')
+                                          ->where('status', M_Appraisal::STATUS_DRAFT_EVALUATOR)
+                                          ->countAllResults();
 
-        $countGm = $this->model->where('snapshot_gm_id', $empId)
-                               ->where('isactive', 'Y')
-                               ->where('status', M_Appraisal::STATUS_REVIEW_GM)
-                               ->countAllResults();
+            $countReviewer = $this->model->where('md_appraisal_cycle_id', $activeCycleId)
+                                         ->where('snapshot_reviewer_id', $empId)
+                                         ->where('isactive', 'Y')
+                                         ->where('status', M_Appraisal::STATUS_REVIEW)
+                                         ->countAllResults();
+        } else {
+            $countEvaluator = 0;
+            $countReviewer  = 0;
+        }
 
         $userId = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
         $delegatedEmpIdsWithoutUser = $this->getDelegatedEmployeesWithoutUser($userId);
         $empIdsForAck = array_values(array_unique(array_filter(array_merge([$empId], $delegatedEmpIdsWithoutUser))));
 
-        // Count employee tasks: reviewed employees can only see appraisals once READING phase (Stage >= 4) commences
-        if (! $isAdmin && $currentStage < 4) {
-            $countEmp = 0;
-        } else {
-            if (! empty($empIdsForAck)) {
-                $countEmpQuery = $this->model->whereIn('md_employee_id', $empIdsForAck)
-                                             ->where('isactive', 'Y');
-                if (! $isAdmin) {
-                    $countEmpQuery->whereIn('status', [M_Appraisal::STATUS_PENDING_ACK, M_Appraisal::STATUS_FINALIZED]);
-                }
-                $countEmp = $countEmpQuery->countAllResults();
-            } else {
-                $countEmp = 0;
+        // Count employee tasks: finalized history across all cycles + active-cycle pending ack when Stage >= 4
+        $countEmp = 0;
+        if (! empty($empIdsForAck)) {
+            $countEmpHistory = $this->model->whereIn('md_employee_id', $empIdsForAck)
+                                           ->where('isactive', 'Y')
+                                           ->where('status', M_Appraisal::STATUS_FINALIZED)
+                                           ->countAllResults();
+
+            $countEmpActive = 0;
+            if ($activeCycleId > 0 && ($isAdmin || $currentStage >= 4)) {
+                $countEmpActive = $this->model->where('md_appraisal_cycle_id', $activeCycleId)
+                                              ->whereIn('md_employee_id', $empIdsForAck)
+                                              ->where('isactive', 'Y')
+                                              ->where('status', M_Appraisal::STATUS_PENDING_ACK)
+                                              ->countAllResults();
             }
+
+            $countEmp = $countEmpHistory + $countEmpActive;
         }
 
         // Count personal history (Finalized past appraisals)
@@ -234,7 +246,7 @@ class AppraisalEvaluationController extends BaseController
             $countAll = $countAllQuery->countAllResults();
         }
 
-        $totalActiveTasks = $countEvaluator + $countGm;
+        $totalActiveTasks = $countEvaluator + $countReviewer;
 
         // If no cycle and no active tasks and no employee appraisals and no history, render empty state
         if (! $activeCycle && $totalActiveTasks === 0 && $countEmp === 0 && $countHistory === 0 && ! $isAdmin) {
@@ -257,30 +269,26 @@ class AppraisalEvaluationController extends BaseController
         if ($isAdmin) {
             $canAll       = true;
             $canEvaluator = false;
-            $canGm        = false;
+            $canReviewer  = false;
             $canEmployee  = false;
-            $canHistory   = true;
+            $canHistory   = false;
             $defaultTab   = 'ALL';
         } else {
             $canAll       = false;
             $canEvaluator = in_array($empLevel, ['MANAGER', 'GM', 'DIREKSI']) || $countEvaluator > 0;
-            $canGm        = in_array($empLevel, ['GM', 'DIREKSI']) || $countGm > 0;
+            $canReviewer  = in_array($empLevel, ['GM', 'DIREKSI']) || $countReviewer > 0;
             $canEmployee  = ($empId > 0 || ! empty($delegatedEmpIdsWithoutUser));
-            $canHistory   = ($empId > 0 || ! empty($delegatedEmpIdsWithoutUser));
+            $canHistory   = false;
 
             $defaultTab   = 'EVALUATOR';
-            if ($countEvaluator === 0 && $countGm > 0) {
-                $defaultTab = 'GM';
-            } elseif ($countEvaluator === 0 && $countGm === 0 && $countEmp > 0) {
+            if ($countEvaluator === 0 && $countReviewer > 0) {
+                $defaultTab = 'REVIEWER';
+            } elseif ($countEvaluator === 0 && $countReviewer === 0 && $countEmp > 0) {
                 $defaultTab = 'EMPLOYEE';
-            } elseif (! $canEvaluator && $canGm) {
-                $defaultTab = 'GM';
+            } elseif (! $canEvaluator && $canReviewer) {
+                $defaultTab = 'REVIEWER';
             } elseif (! $canEvaluator && $canEmployee) {
-                $defaultTab = ($countEmp > 0 || $currentStage >= 4) ? 'EMPLOYEE' : ($canGm ? 'GM' : 'EMPLOYEE');
-            } elseif (! $canEvaluator && ! $canGm && ! $canEmployee && $countHistory > 0) {
-                $defaultTab = 'HISTORY';
-            } elseif (! $activeCycle && $countHistory > 0) {
-                $defaultTab = 'HISTORY';
+                $defaultTab = ($countEmp > 0 || $currentStage >= 4) ? 'EMPLOYEE' : ($canReviewer ? 'REVIEWER' : 'EMPLOYEE');
             }
         }
 
@@ -288,13 +296,13 @@ class AppraisalEvaluationController extends BaseController
             'active_cycle'      => $activeCycle,
             'count_all'         => $countAll,
             'count_evaluator'   => $countEvaluator,
-            'count_gm'          => $countGm,
+            'count_reviewer'    => $countReviewer,
             'count_employee'    => $countEmp,
             'count_history'     => $countHistory,
             'current_emp_id'    => $empId,
             'can_all'           => $canAll,
             'can_evaluator'     => $canEvaluator,
-            'can_gm'            => $canGm,
+            'can_reviewer'      => $canReviewer,
             'can_employee'      => $canEmployee,
             'can_history'       => $canHistory,
             'has_delegated_emp' => ! empty($delegatedEmpIdsWithoutUser),
@@ -337,26 +345,28 @@ class AppraisalEvaluationController extends BaseController
 
                 $roleTab = $formValues['role_tab'] ?? $this->request->getPost('role_tab') ?? 'EVALUATOR';
 
-                $builder = $this->db->table('md_appraisal a')
-                    ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_cycle_id, a.status, a.final_score, a.rating, a.evaluator_submitted_at, a.gm_reviewed_at, a.finalized_at,
-                              a.snapshot_evaluator_id, a.snapshot_gm_id,
-                              e.nik as nik, e.fullname as employee_name,
-                              ev.nik as evaluator_nik, ev.fullname as evaluator_name,
-                              gm.nik as gm_nik, gm.fullname as gm_name,
-                              d.name as division_name, p.name as position_name, l.name as level_name, b.name as branch_name,
-                              c.title as cycle_title, c.deadline_filling, c.deadline_review, c.deadline_reading, c.deadline_override, c.start_date, c.end_date')
-                    ->join('md_employee e', 'e.md_employee_id = a.md_employee_id', 'left')
-                    ->join('md_employee ev', 'ev.md_employee_id = a.snapshot_evaluator_id', 'left')
-                    ->join('md_employee gm', 'gm.md_employee_id = a.snapshot_gm_id', 'left')
-                    ->join('md_division d', 'd.md_division_id = a.snapshot_division_id', 'left')
-                    ->join('md_branch b', 'b.md_branch_id = a.snapshot_branch_id', 'left')
-                    ->join('md_position p', 'p.md_position_id = a.snapshot_position_id', 'left')
-                    ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
-                    ->join('md_appraisal_cycle c', 'c.md_appraisal_cycle_id = a.md_appraisal_cycle_id', 'left')
-                    ->where('a.isactive', 'Y');
+                $table   = $this->model->table;
+                $builder = $this->db->table($table)
+                    ->select($this->model->getSelect() . ", {$table}.evaluator_submitted_at, {$table}.reviewer_reviewed_at, eval.nik as evaluator_nik, rev.nik as reviewer_nik");
+                foreach ($this->model->getJoin() as $join) {
+                    $builder->join($join['tableJoin'], $join['columnJoin'], $join['typeJoin']);
+                }
+                $builder->where("{$table}.isactive", 'Y');
 
                 // Role Tab Scope (If Admin/System $empId <= 0 or roleTab is ALL, don't filter to single user)
                 $isAdmin = $this->isAppraisalAdmin($empId);
+
+                $debugDate   = $this->session->get('appraisal_debug_date');
+                $currentDate = $debugDate ?: date('Y-m-d');
+                $activeCycle = $this->cycleService->getActiveCycle($currentDate);
+
+                if ($roleTab !== 'HISTORY' && $roleTab !== 'EMPLOYEE') {
+                    if ($activeCycle) {
+                        $builder->where("{$table}.md_appraisal_cycle_id", (int) $activeCycle->md_appraisal_cycle_id);
+                    } else {
+                        $builder->where('1 = 0', null, false);
+                    }
+                }
 
                 if ($roleTab === 'HISTORY') {
                     if (! $isAdmin) {
@@ -365,14 +375,14 @@ class AppraisalEvaluationController extends BaseController
                         $ackEmpIds    = array_values(array_unique(array_filter(array_merge([$empId], $delegatedIds))));
 
                         if (! empty($ackEmpIds)) {
-                            $builder->whereIn('a.md_employee_id', $ackEmpIds);
+                            $builder->whereIn("{$table}.md_employee_id", $ackEmpIds);
                         } elseif ($empId > 0) {
-                            $builder->where('a.md_employee_id', $empId);
+                            $builder->where("{$table}.md_employee_id", $empId);
                         } else {
                             $builder->where('1 = 0');
                         }
                     }
-                    $builder->where('a.status', M_Appraisal::STATUS_FINALIZED);
+                    $builder->where("{$table}.status", M_Appraisal::STATUS_FINALIZED);
                 } elseif ($empId > 0 && (! $isAdmin || $roleTab !== 'ALL')) {
                     if (! $isAdmin) {
                         $empRow = $this->db->table('md_employee e')
@@ -384,46 +394,51 @@ class AppraisalEvaluationController extends BaseController
                         $empLevel = strtoupper($empRow->level_name ?? '');
 
                         $canEvaluator = in_array($empLevel, ['MANAGER', 'GM', 'DIREKSI']);
-                        $canGm        = in_array($empLevel, ['GM', 'DIREKSI']);
+                        $canReviewer  = in_array($empLevel, ['GM', 'DIREKSI']);
 
                         if ($roleTab === 'EVALUATOR' && ! $canEvaluator) {
                             $hasEvalTasks = $this->model->where('snapshot_evaluator_id', $empId)->countAllResults() > 0;
                             if (! $hasEvalTasks) {
                                 $roleTab = 'EMPLOYEE';
                             }
-                        } elseif ($roleTab === 'GM' && ! $canGm) {
-                            $hasGmTasks = $this->model->where('snapshot_gm_id', $empId)->countAllResults() > 0;
-                            if (! $hasGmTasks) {
+                        } elseif ($roleTab === 'REVIEWER' && ! $canReviewer) {
+                            $hasReviewerTasks = $this->model->where('snapshot_reviewer_id', $empId)->countAllResults() > 0;
+                            if (! $hasReviewerTasks) {
                                 $roleTab = 'EMPLOYEE';
                             }
                         }
                     }
 
-                    if ($roleTab === 'GM') {
-                        $builder->where('a.snapshot_gm_id', $empId);
+                    if ($roleTab === 'REVIEWER') {
+                        $builder->where("{$table}.snapshot_reviewer_id", $empId);
                     } elseif ($roleTab === 'EMPLOYEE') {
                         $userId       = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
                         $delegatedIds = $this->getDelegatedEmployeesWithoutUser($userId);
                         $ackEmpIds    = array_values(array_unique(array_filter(array_merge([$empId], $delegatedIds))));
 
                         if (! empty($ackEmpIds)) {
-                            $builder->whereIn('a.md_employee_id', $ackEmpIds);
+                            $builder->whereIn("{$table}.md_employee_id", $ackEmpIds);
                         } else {
-                            $builder->where('a.md_employee_id', $empId);
+                            $builder->where("{$table}.md_employee_id", $empId);
                         }
 
-                        if (! $isAdmin) {
-                            $activeCycleStage = $this->resolveCycleStage();
-                            if ($activeCycleStage < 4) {
-                                // READING phase not yet reached: reviewed employee cannot see appraisals
-                                $builder->where('1 = 0');
-                            } else {
-                                // In READING phase: employee can only see appraisals that are ready for reading
-                                $builder->whereIn('a.status', [M_Appraisal::STATUS_PENDING_ACK, M_Appraisal::STATUS_FINALIZED]);
-                            }
+                        $activeCycleStage = $this->resolveCycleStage();
+                        $activeCycleId    = $activeCycle ? (int) $activeCycle->md_appraisal_cycle_id : 0;
+
+                        if ($activeCycleId > 0 && ($isAdmin || $activeCycleStage >= 4)) {
+                            $builder->groupStart()
+                                ->where("{$table}.status", M_Appraisal::STATUS_FINALIZED)
+                                ->orGroupStart()
+                                    ->where("{$table}.md_appraisal_cycle_id", $activeCycleId)
+                                    ->where("{$table}.status", M_Appraisal::STATUS_PENDING_ACK)
+                                ->groupEnd()
+                            ->groupEnd();
+                        } else {
+                            // Before READING phase (Stage < 4) or no active cycle: show only finalized history
+                            $builder->where("{$table}.status", M_Appraisal::STATUS_FINALIZED);
                         }
                     } elseif ($roleTab === 'EVALUATOR') {
-                        $builder->where('a.snapshot_evaluator_id', $empId);
+                        $builder->where("{$table}.snapshot_evaluator_id", $empId);
                     }
                 }
 
@@ -432,8 +447,7 @@ class AppraisalEvaluationController extends BaseController
                 if (!empty(trim($search))) {
                     $builder->groupStart()
                         ->like('e.fullname', trim($search))
-                        ->orLike('e.value', trim($search))
-                        ->orLike('ev.fullname', trim($search))
+                        ->orLike('e.nik', trim($search))
                         ->orLike('b.name', trim($search))
                         ->orLike('d.name', trim($search))
                         ->orLike('p.name', trim($search))
@@ -443,16 +457,16 @@ class AppraisalEvaluationController extends BaseController
 
                 // Form Filters (Status, Cycle ID, etc.)
                 if (isset($formValues['status'])) {
-                    $builder->where('a.status', $formValues['status']);
+                    $builder->where("{$table}.status", $formValues['status']);
                 }
                 if (isset($formValues['cycle_id'])) {
-                    $builder->where('a.md_appraisal_cycle_id', (int) $formValues['cycle_id']);
+                    $builder->where("{$table}.md_appraisal_cycle_id", (int) $formValues['cycle_id']);
                 }
 
                 $totalFiltered = (clone $builder)->countAllResults(false);
 
-                // Sorting
-                $builder->orderBy('a.md_appraisal_id', 'DESC');
+                // Sorting: prioritize actionable tasks by role urgency, then newest first
+                $this->applyUrgencyOrder($builder, $table, $roleTab);
 
                 // Pagination
                 $start  = (int) ($this->request->getPost('start') ?? 0);
@@ -490,10 +504,6 @@ class AppraisalEvaluationController extends BaseController
                     $divName  = esc($value['division_name'] ?? '-');
                     $posName  = esc($value['position_name'] ?? '-');
                     $cycTitle = esc($value['cycle_title'] ?? '-');
-                    $evalName = esc(mb_strtoupper($value['evaluator_name'] ?? '-', 'UTF-8'));
-                    $evalNik  = esc($value['evaluator_nik'] ?? '');
-                    $gmName   = esc(mb_strtoupper($value['gm_name'] ?? '-', 'UTF-8'));
-                    $gmNik    = esc($value['gm_nik'] ?? '');
 
                     $isDelegatedRow = (! empty($delegatedIds) && in_array((int) $value['md_employee_id'], $delegatedIds, true) && (int) $value['md_employee_id'] !== $empId);
                     $delegatedBadge = $isDelegatedRow ? ' <span class="badge badge-info ml-1" style="font-size: 10px; font-weight: normal;" title="Delegasi Duta"><i class="fas fa-user-friends mr-1"></i>Duta</span>' : '';
@@ -503,8 +513,6 @@ class AppraisalEvaluationController extends BaseController
                     $levelCol    = '<span class="text-dark">' . ($level ?: '-') . '</span>';
                     $cabangCol   = '<span class="text-dark">' . esc($value['branch_name'] ?: '-') . '</span>';
                     $divisiCol   = '<span class="text-dark">' . $divName . '</span>';
-                    $evaluatorCol = '<span class="text-dark font-weight-500" title="' . $evalNik . '">' . $evalName . '</span>';
-                    $reviewerCol  = '<span class="text-dark font-weight-500" title="' . $gmNik . '">' . $gmName . '</span>';
 
                     $row = [];
                     $row[] = $id;                                    // [0] ID (hidden)
@@ -514,11 +522,9 @@ class AppraisalEvaluationController extends BaseController
                     $row[] = $levelCol;                              // [4] Level
                     $row[] = $cabangCol;                             // [5] Cabang
                     $row[] = $divisiCol;                             // [6] Divisi
-                    $row[] = $evaluatorCol;                          // [7] Penilai (Evaluator)
-                    $row[] = $reviewerCol;                           // [8] Peninjau (Reviewer)
-                    $row[] = '<strong>' . $cycTitle . '</strong>';   // [9] Siklus Penilaian
-                    $row[] = $stageProgress;                         // [10] Tahapan (Plain Text)
-                    $row[] = $actionBtn;                             // [11] Aksi Buttons
+                    $row[] = '<strong>' . $cycTitle . '</strong>';   // [7] Siklus Penilaian
+                    $row[] = $stageProgress;                         // [8] Tahapan (Plain Text)
+                    $row[] = $actionBtn;                             // [9] Aksi Buttons
 
                     $data[] = $row;
                 }
@@ -540,6 +546,51 @@ class AppraisalEvaluationController extends BaseController
                 ]);
             }
         }
+    }
+
+    /**
+     * Order appraisal tasks by role-specific urgency so actionable items appear first.
+     */
+    protected function applyUrgencyOrder($builder, string $table, string $roleTab): void
+    {
+        $col = "{$table}.status";
+
+        if ($roleTab === 'EVALUATOR') {
+            $case = "CASE {$col} "
+                . "WHEN '" . M_Appraisal::STATUS_DRAFT_EVALUATOR . "' THEN 1 "
+                . "WHEN '" . M_Appraisal::STATUS_REVIEW . "' THEN 2 "
+                . "WHEN '" . M_Appraisal::STATUS_SUBMITTED_EVALUATOR . "' THEN 2 "
+                . "WHEN '" . M_Appraisal::STATUS_PENDING_ACK . "' THEN 3 "
+                . "WHEN '" . M_Appraisal::STATUS_FINALIZED . "' THEN 4 "
+                . "ELSE 5 END";
+            $builder->orderBy($case, 'ASC', false);
+        } elseif ($roleTab === 'REVIEWER') {
+            $case = "CASE {$col} "
+                . "WHEN '" . M_Appraisal::STATUS_REVIEW . "' THEN 1 "
+                . "WHEN '" . M_Appraisal::STATUS_DRAFT_EVALUATOR . "' THEN 2 "
+                . "WHEN '" . M_Appraisal::STATUS_SUBMITTED_EVALUATOR . "' THEN 2 "
+                . "WHEN '" . M_Appraisal::STATUS_PENDING_ACK . "' THEN 3 "
+                . "WHEN '" . M_Appraisal::STATUS_FINALIZED . "' THEN 4 "
+                . "ELSE 5 END";
+            $builder->orderBy($case, 'ASC', false);
+        } elseif ($roleTab === 'EMPLOYEE') {
+            $case = "CASE {$col} "
+                . "WHEN '" . M_Appraisal::STATUS_PENDING_ACK . "' THEN 1 "
+                . "WHEN '" . M_Appraisal::STATUS_FINALIZED . "' THEN 2 "
+                . "ELSE 3 END";
+            $builder->orderBy($case, 'ASC', false);
+        } elseif ($roleTab === 'ALL') {
+            $case = "CASE {$col} "
+                . "WHEN '" . M_Appraisal::STATUS_DRAFT_EVALUATOR . "' THEN 1 "
+                . "WHEN '" . M_Appraisal::STATUS_REVIEW . "' THEN 2 "
+                . "WHEN '" . M_Appraisal::STATUS_PENDING_ACK . "' THEN 3 "
+                . "WHEN '" . M_Appraisal::STATUS_SUBMITTED_EVALUATOR . "' THEN 4 "
+                . "WHEN '" . M_Appraisal::STATUS_FINALIZED . "' THEN 5 "
+                . "ELSE 6 END";
+            $builder->orderBy($case, 'ASC', false);
+        }
+
+        $builder->orderBy("{$table}.md_appraisal_id", 'DESC');
     }
 
     /**
@@ -574,7 +625,7 @@ class AppraisalEvaluationController extends BaseController
             ->getRowArray();
 
         $evaluator = $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_evaluator_id)->get()->getRowArray();
-        $gm        = $appraisal->snapshot_gm_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_gm_id)->get()->getRowArray() : null;
+        $reviewer  = $appraisal->snapshot_reviewer_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_reviewer_id)->get()->getRowArray() : null;
         $cycle     = $this->cycleModel->find($appraisal->md_appraisal_cycle_id);
 
         $userId  = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
@@ -616,16 +667,16 @@ class AppraisalEvaluationController extends BaseController
         if ($cycleStage < 6) {
             if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
                 $mode = 'EVALUATOR';
-            } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-                $mode = 'GM';
+            } elseif ($empId === (int) $appraisal->snapshot_reviewer_id && $appraisal->status === M_Appraisal::STATUS_REVIEW) {
+                $mode = 'REVIEWER';
             } elseif ($isAdmin) {
                 // If HR is acting as the direct reviewed employee or has selected EMPLOYEE mode
                 if ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
                     $mode = 'EMPLOYEE';
                 } elseif ($appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
                     $mode = 'EVALUATOR';
-                } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-                    $mode = 'GM';
+                } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW) {
+                    $mode = 'REVIEWER';
                 } elseif ($appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
                     // Intervensi HR is after pembacaan (Stage 5)
                     $mode = ($cycleStage === 5) ? 'HR' : 'EMPLOYEE';
@@ -646,8 +697,8 @@ class AppraisalEvaluationController extends BaseController
             'appraisal'              => $appraisal,
             'employee'               => $employee ?: [],
             'evaluator'              => $evaluator ?: ['name' => '-'],
-            'gm'                     => $gm ?: ['name' => '-'],
-            'has_reviewer'           => ! empty($appraisal->snapshot_gm_id),
+            'reviewer'               => $reviewer ?: ['name' => '-'],
+            'has_reviewer'           => ! empty($appraisal->snapshot_reviewer_id),
             'cycle'                  => $cycle,
             'template_snapshot'      => $snapshot,
             'responses_by_item_id'   => $responsesByItemId,
@@ -684,7 +735,7 @@ class AppraisalEvaluationController extends BaseController
             ->getRowArray();
 
         $evaluator = $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_evaluator_id)->get()->getRowArray();
-        $gm        = $appraisal->snapshot_gm_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_gm_id)->get()->getRowArray() : null;
+        $reviewer  = $appraisal->snapshot_reviewer_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_reviewer_id)->get()->getRowArray() : null;
         $cycle     = $this->cycleModel->find($appraisal->md_appraisal_cycle_id);
 
         $isAdmin = $this->isAppraisalAdmin($empId);
@@ -722,15 +773,15 @@ class AppraisalEvaluationController extends BaseController
             if ($cycleStage < 6) {
                 if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
                     $mode = 'EVALUATOR';
-                } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-                    $mode = 'GM';
+                } elseif ($empId === (int) $appraisal->snapshot_reviewer_id && $appraisal->status === M_Appraisal::STATUS_REVIEW) {
+                    $mode = 'REVIEWER';
                 } elseif ($isAdmin) {
                     if ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
                         $mode = 'EMPLOYEE';
                     } elseif ($appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
                         $mode = 'EVALUATOR';
-                    } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-                        $mode = 'GM';
+                    } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW) {
+                        $mode = 'REVIEWER';
                     } elseif ($appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
                         // Intervensi HR is after pembacaan (Stage 5)
                         $mode = ($cycleStage === 5) ? 'HR' : 'EMPLOYEE';
@@ -754,8 +805,8 @@ class AppraisalEvaluationController extends BaseController
             'appraisal'              => $appraisal,
             'employee'               => $employee ?: [],
             'evaluator'              => $evaluator ?: ['name' => '-'],
-            'gm'                     => $gm ?: ['name' => '-'],
-            'has_reviewer'           => ! empty($appraisal->snapshot_gm_id),
+            'reviewer'               => $reviewer ?: ['name' => '-'],
+            'has_reviewer'           => ! empty($appraisal->snapshot_reviewer_id),
             'cycle'                  => $cycle,
             'template_snapshot'      => $snapshot,
             'responses_by_item_id'   => $responsesByItemId,
@@ -805,7 +856,7 @@ class AppraisalEvaluationController extends BaseController
             ->getRowArray();
 
         $evaluator = $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_evaluator_id)->get()->getRowArray();
-        $gm        = $appraisal->snapshot_gm_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_gm_id)->get()->getRowArray() : null;
+        $reviewer  = $appraisal->snapshot_reviewer_id ? $this->db->table('md_employee')->select('fullname as name')->where('md_employee_id', $appraisal->snapshot_reviewer_id)->get()->getRowArray() : null;
         $cycle     = $this->cycleModel->find($appraisal->md_appraisal_cycle_id);
 
         $empId   = $this->getCurrentEmployeeId();
@@ -854,7 +905,7 @@ class AppraisalEvaluationController extends BaseController
             'appraisal'            => $appraisal,
             'employee'             => $employee ?: [],
             'evaluator'            => $evaluator ?: ['name' => '-'],
-            'gm'                   => $gm ?: ['name' => '-'],
+            'reviewer'             => $reviewer ?: ['name' => '-'],
             'cycle'                => $cycle,
             'template_snapshot'    => $snapshot,
             'responses_by_item_id' => $responsesByItemId,
@@ -885,7 +936,7 @@ class AppraisalEvaluationController extends BaseController
         $appraisal         = $formData['appraisal'];
         $employee          = $formData['employee'];
         $evaluator         = $formData['evaluator'];
-        $gm                = $formData['gm'];
+        $reviewer          = $formData['reviewer'];
         $cycle             = $formData['cycle'];
         $snapshot          = $formData['template_snapshot'];
         $responsesByItemId = $formData['responses_by_item_id'];
@@ -901,10 +952,10 @@ class AppraisalEvaluationController extends BaseController
             $itemsBySection[$secId][] = $item;
         }
 
-        $isGmReviewed = ! empty($appraisal->gm_reviewed_at) || ! empty($appraisal->gm_comment);
+        $isReviewerReviewed = ! empty($appraisal->reviewer_reviewed_at) || ! empty($appraisal->reviewer_comment);
         foreach ($responsesByItemId as $r) {
-            if (! empty($r->gm_response)) {
-                $isGmReviewed = true;
+            if (! empty($r->reviewer_response)) {
+                $isReviewerReviewed = true;
                 break;
             }
         }
@@ -927,8 +978,8 @@ class AppraisalEvaluationController extends BaseController
                 $evalPayload = ($resp && ! empty($resp->evaluator_response))
                     ? (is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response)
                     : [];
-                $gmPayload = ($resp && ! empty($resp->gm_response))
-                    ? (is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response)
+                $reviewerPayload = ($resp && ! empty($resp->reviewer_response))
+                    ? (is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response)
                     : [];
 
                 if ($inputType === 'WEIGHTED_CHECKLIST') {
@@ -942,23 +993,23 @@ class AppraisalEvaluationController extends BaseController
                         $evalScore = (float) $resp->score;
                     }
 
-                    $gmScore = null;
-                    if ($isGmReviewed) {
-                        if (isset($gmPayload['score']) && $gmPayload['score'] !== '') {
-                            $gmScore = (float) $gmPayload['score'];
+                    $reviewerScore = null;
+                    if ($isReviewerReviewed) {
+                        if (isset($reviewerPayload['score']) && $reviewerPayload['score'] !== '') {
+                            $reviewerScore = (float) $reviewerPayload['score'];
                         } elseif ($evalScore !== null) {
-                            $gmScore = $evalScore;
+                            $reviewerScore = $evalScore;
                         }
                     }
 
                     $weightedItems[] = [
-                        'item_id'    => $itemId,
-                        'title'      => $title,
-                        'bobot'      => $bobot,
-                        'eval_score' => $evalScore,
-                        'eval_nilai' => $evalScore !== null ? ($bobot * $evalScore) : null,
-                        'gm_score'   => $gmScore,
-                        'gm_nilai'   => $gmScore !== null ? ($bobot * $gmScore) : null,
+                        'item_id'        => $itemId,
+                        'title'          => $title,
+                        'bobot'          => $bobot,
+                        'eval_score'     => $evalScore,
+                        'eval_nilai'     => $evalScore !== null ? ($bobot * $evalScore) : null,
+                        'reviewer_score' => $reviewerScore,
+                        'reviewer_nilai' => $reviewerScore !== null ? ($bobot * $reviewerScore) : null,
                     ];
                 } elseif ($inputType === 'SINGLE_CHECKLIST') {
                     $evalChecked = false;
@@ -968,56 +1019,56 @@ class AppraisalEvaluationController extends BaseController
                         $evalChecked = true;
                     }
 
-                    $gmChecked = false;
-                    if ($isGmReviewed) {
-                        if (isset($gmPayload['boolean_value'])) {
-                            $gmChecked = in_array(strtoupper((string) $gmPayload['boolean_value']), ['Y', '1', 'TRUE'], true);
-                        } elseif (! empty($gmPayload['checked_actions'])) {
-                            $gmChecked = true;
+                    $reviewerChecked = false;
+                    if ($isReviewerReviewed) {
+                        if (isset($reviewerPayload['boolean_value'])) {
+                            $reviewerChecked = in_array(strtoupper((string) $reviewerPayload['boolean_value']), ['Y', '1', 'TRUE'], true);
+                        } elseif (! empty($reviewerPayload['checked_actions'])) {
+                            $reviewerChecked = true;
                         } else {
-                            $gmChecked = $evalChecked;
+                            $reviewerChecked = $evalChecked;
                         }
                     }
 
                     $isOther = (stripos(trim($title), 'lainnya') === 0 || stripos(trim($title), 'lain-lain') === 0);
 
                     $singleItems[] = [
-                        'item_id'         => $itemId,
-                        'title'           => $title,
-                        'is_other'        => $isOther,
-                        'eval_checked'    => $evalChecked,
-                        'eval_other_text' => $evalPayload['other_text'] ?? '',
-                        'gm_checked'      => $gmChecked,
-                        'gm_other_text'   => $gmPayload['other_text'] ?? ($evalPayload['other_text'] ?? ''),
+                        'item_id'             => $itemId,
+                        'title'               => $title,
+                        'is_other'            => $isOther,
+                        'eval_checked'        => $evalChecked,
+                        'eval_other_text'     => $evalPayload['other_text'] ?? '',
+                        'reviewer_checked'    => $reviewerChecked,
+                        'reviewer_other_text' => $reviewerPayload['other_text'] ?? ($evalPayload['other_text'] ?? ''),
                     ];
                 }
             }
 
             $opViewData = [
-                'display_mode'      => 'compare',
-                'is_operator'       => true,
-                'appraisal_id'      => $id,
-                'appraisal'         => $appraisal,
-                'employee'          => $employee,
-                'evaluator'         => $evaluator,
-                'gm'                => $gm,
-                'cycle'             => $cycle,
-                'weighted_items'    => $weightedItems,
-                'single_items'      => $singleItems,
-                'is_gm_reviewed'    => $isGmReviewed,
-                'evaluator_comment' => $appraisal->evaluator_comment ?? '',
-                'development_plan'  => $appraisal->development_plan ?? '',
-                'gm_comment'        => $appraisal->gm_comment ?? '',
+                'display_mode'         => 'compare',
+                'is_operator'          => true,
+                'appraisal_id'         => $id,
+                'appraisal'            => $appraisal,
+                'employee'             => $employee,
+                'evaluator'            => $evaluator,
+                'reviewer'             => $reviewer,
+                'cycle'                => $cycle,
+                'weighted_items'       => $weightedItems,
+                'single_items'         => $singleItems,
+                'is_reviewer_reviewed' => $isReviewerReviewed,
+                'evaluator_comment'    => $appraisal->evaluator_comment ?? '',
+                'development_plan'     => $appraisal->development_plan ?? '',
+                'reviewer_comment'     => $appraisal->reviewer_comment ?? '',
             ];
 
             return view('masterdata/appraisal-reusable/modal_score_comparison_content', $opViewData);
         }
 
         $comparisonSections     = [];
-        $evalTotalWeightedScore = 0.0;
-        $evalTotalWeight        = 0.0;
-        $gmTotalWeightedScore   = 0.0;
-        $gmTotalWeight          = 0.0;
+        $evalTotalWeightedScore     = 0.0;
+        $evalTotalWeight            = 0.0;
+        $reviewerTotalWeightedScore = 0.0;
+        $reviewerTotalWeight        = 0.0;
         $hasOverride            = false;
 
         foreach ($sections as $sec) {
@@ -1046,19 +1097,19 @@ class AppraisalEvaluationController extends BaseController
                 $evalActionScores   = $evalPayload['action_scores'] ?? [];
                 $evalCheckedActions = $evalPayload['checked_actions'] ?? [];
 
-                $gmPayload = ($resp && !empty($resp->gm_response))
-                    ? (is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response)
+                $reviewerPayload = ($resp && !empty($resp->reviewer_response))
+                    ? (is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response)
                     : [];
-                $gmActionScores   = $gmPayload['action_scores'] ?? [];
-                $gmCheckedActions = $gmPayload['checked_actions'] ?? [];
+                $reviewerActionScores   = $reviewerPayload['action_scores'] ?? [];
+                $reviewerCheckedActions = $reviewerPayload['checked_actions'] ?? [];
 
                 if ($inputType === 'SCORE') {
                     $hasKeyActions = !empty($actions);
                     $totalActions  = $hasKeyActions ? count($actions) : 1;
 
-                    $evalActionSum = 0.0;
-                    $gmActionSum   = 0.0;
-                    $actionRows    = [];
+                    $evalActionSum     = 0.0;
+                    $reviewerActionSum = 0.0;
+                    $actionRows        = [];
 
                     if ($hasKeyActions) {
                         foreach ($actions as $aIdx => $actionText) {
@@ -1072,69 +1123,69 @@ class AppraisalEvaluationController extends BaseController
                             }
                             $evalActionSum += $evalActScore;
 
-                            $gmActScore   = $evalActScore;
-                            $isOverridden = false;
-                            if ($isGmReviewed) {
-                                if (isset($gmActionScores[$aIdx]) && $gmActionScores[$aIdx] !== '') {
-                                    $gmActScore = (float) $gmActionScores[$aIdx];
-                                    if (round($gmActScore, 2) !== round($evalActScore, 2)) {
+                            $reviewerActScore = $evalActScore;
+                            $isOverridden     = false;
+                            if ($isReviewerReviewed) {
+                                if (isset($reviewerActionScores[$aIdx]) && $reviewerActionScores[$aIdx] !== '') {
+                                    $reviewerActScore = (float) $reviewerActionScores[$aIdx];
+                                    if (round($reviewerActScore, 2) !== round($evalActScore, 2)) {
                                         $isOverridden = true;
                                         $hasOverride  = true;
                                     }
-                                } elseif (isset($gmActionScores[(string) $aIdx]) && $gmActionScores[(string) $aIdx] !== '') {
-                                    $gmActScore = (float) $gmActionScores[(string) $aIdx];
-                                    if (round($gmActScore, 2) !== round($evalActScore, 2)) {
+                                } elseif (isset($reviewerActionScores[(string) $aIdx]) && $reviewerActionScores[(string) $aIdx] !== '') {
+                                    $reviewerActScore = (float) $reviewerActionScores[(string) $aIdx];
+                                    if (round($reviewerActScore, 2) !== round($evalActScore, 2)) {
                                         $isOverridden = true;
                                         $hasOverride  = true;
                                     }
                                 }
                             }
-                            $gmActionSum += $gmActScore;
+                            $reviewerActionSum += $reviewerActScore;
 
                             $actionRows[] = [
-                                'index'         => $aIdx,
-                                'letter'        => chr(97 + $aIdx),
-                                'text'          => $actionText,
-                                'eval_score'    => $evalActScore,
-                                'gm_score'      => $isGmReviewed ? $gmActScore : null,
-                                'is_overridden' => $isOverridden,
-                                'delta'         => $isGmReviewed ? round($gmActScore - $evalActScore, 2) : 0,
+                                'index'          => $aIdx,
+                                'letter'         => chr(97 + $aIdx),
+                                'text'           => $actionText,
+                                'eval_score'     => $evalActScore,
+                                'reviewer_score' => $isReviewerReviewed ? $reviewerActScore : null,
+                                'is_overridden'  => $isOverridden,
+                                'delta'          => $isReviewerReviewed ? round($reviewerActScore - $evalActScore, 2) : 0,
                             ];
                         }
 
-                        $evalAvg = $totalActions > 0 ? ($evalActionSum / $totalActions) : 3.00;
-                        $gmAvg   = $totalActions > 0 ? ($gmActionSum / $totalActions) : 3.00;
+                        $evalAvg     = $totalActions > 0 ? ($evalActionSum / $totalActions) : 3.00;
+                        $reviewerAvg = $totalActions > 0 ? ($reviewerActionSum / $totalActions) : 3.00;
                     } else {
-                        $evalAvg = ($resp && $resp->score !== null) ? (float) $resp->score : 3.00;
-                        $gmAvg   = $evalAvg;
+                        $evalAvg      = ($resp && $resp->score !== null) ? (float) $resp->score : 3.00;
+                        $reviewerAvg  = $evalAvg;
                         $isOverridden = false;
-                        if ($isGmReviewed && isset($gmPayload['score']) && $gmPayload['score'] !== '') {
-                            $gmAvg = (float) $gmPayload['score'];
-                            if (round($gmAvg, 2) !== round($evalAvg, 2)) {
+                        if ($isReviewerReviewed && isset($reviewerPayload['score']) && $reviewerPayload['score'] !== '') {
+                            $reviewerAvg = (float) $reviewerPayload['score'];
+                            if (round($reviewerAvg, 2) !== round($evalAvg, 2)) {
                                 $isOverridden = true;
                                 $hasOverride  = true;
                             }
                         }
 
                         $actionRows[] = [
-                            'index'         => 0,
-                            'letter'        => 'a',
-                            'text'          => 'Indikator umum',
-                            'eval_score'    => $evalAvg,
-                            'gm_score'      => $isGmReviewed ? $gmAvg : null,
-                            'is_overridden' => $isOverridden,
-                            'delta'         => $isGmReviewed ? round($gmAvg - $evalAvg, 2) : 0,
+                            'index'          => 0,
+                            'letter'         => 'a',
+                            'text'           => 'Indikator umum',
+                            'eval_score'     => $evalAvg,
+                            'reviewer_score' => $isReviewerReviewed ? $reviewerAvg : null,
+                            'is_overridden'  => $isOverridden,
+                            'delta'          => $isReviewerReviewed ? round($reviewerAvg - $evalAvg, 2) : 0,
                         ];
                     }
 
-                    $evalAvg = round($evalAvg, 2);
-                    $gmAvg   = round($gmAvg, 2);
+                    $evalAvg     = round($evalAvg, 2);
+                    $reviewerAvg = round($reviewerAvg, 2);
 
                     $effectiveWeight = $weight > 0 ? $weight : 1.0;
-                    $evalTotalWeightedScore += ($evalAvg * $effectiveWeight);
-                    $evalTotalWeight        += $effectiveWeight;
-                    $gmTotalWeightedScore   += ($gmAvg * $effectiveWeight);
-                    $gmTotalWeight          += $effectiveWeight;
+                    $evalTotalWeightedScore     += ($evalAvg * $effectiveWeight);
+                    $evalTotalWeight            += $effectiveWeight;
+                    $reviewerTotalWeightedScore += ($reviewerAvg * $effectiveWeight);
+                    $reviewerTotalWeight        += $effectiveWeight;
 
                     $processedItems[] = [
                         'item_id'       => $itemId,
@@ -1144,8 +1195,8 @@ class AppraisalEvaluationController extends BaseController
                         'input_type'    => 'SCORE',
                         'actions'       => $actionRows,
                         'eval_avg'      => $evalAvg,
-                        'gm_avg'        => $isGmReviewed ? $gmAvg : null,
-                        'is_overridden' => $isGmReviewed && (round($gmAvg, 2) !== round($evalAvg, 2)),
+                        'reviewer_avg'  => $isReviewerReviewed ? $reviewerAvg : null,
+                        'is_overridden' => $isReviewerReviewed && (round($reviewerAvg, 2) !== round($evalAvg, 2)),
                     ];
                 } else {
                     // BOOLEAN / CHECKLIST
@@ -1154,54 +1205,54 @@ class AppraisalEvaluationController extends BaseController
                         foreach ($actions as $aIdx => $actionText) {
                             $evalChecked = is_array($evalCheckedActions) && appraisal_parse_checked((int) $aIdx, $evalCheckedActions);
 
-                            $gmChecked    = null;
-                            $isOverridden = false;
+                            $reviewerChecked = null;
+                            $isOverridden    = false;
 
-                            if ($isGmReviewed) {
-                                if (isset($gmPayload['checked_actions'])) {
-                                    $gmChecked = is_array($gmCheckedActions) && appraisal_parse_checked((int) $aIdx, $gmCheckedActions);
-                                    if ($gmChecked !== $evalChecked) {
+                            if ($isReviewerReviewed) {
+                                if (isset($reviewerPayload['checked_actions'])) {
+                                    $reviewerChecked = is_array($reviewerCheckedActions) && appraisal_parse_checked((int) $aIdx, $reviewerCheckedActions);
+                                    if ($reviewerChecked !== $evalChecked) {
                                         $isOverridden = true;
                                         $hasOverride  = true;
                                     }
                                 } else {
-                                    $gmChecked = $evalChecked;
+                                    $reviewerChecked = $evalChecked;
                                 }
                             }
 
                             $actionRows[] = [
-                                'index'         => $aIdx,
-                                'letter'        => chr(97 + $aIdx),
-                                'text'          => $actionText,
-                                'eval_checked'  => $evalChecked,
-                                'gm_checked'    => $isGmReviewed ? $gmChecked : null,
-                                'is_overridden' => $isOverridden,
+                                'index'            => $aIdx,
+                                'letter'           => chr(97 + $aIdx),
+                                'text'             => $actionText,
+                                'eval_checked'     => $evalChecked,
+                                'reviewer_checked' => $isReviewerReviewed ? $reviewerChecked : null,
+                                'is_overridden'    => $isOverridden,
                             ];
                         }
                     } else {
-                        $evalChecked  = in_array(strtoupper((string) ($evalPayload['boolean_value'] ?? '')), ['Y', '1', 'TRUE'], true);
-                        $gmChecked    = null;
-                        $isOverridden = false;
+                        $evalChecked     = in_array(strtoupper((string) ($evalPayload['boolean_value'] ?? '')), ['Y', '1', 'TRUE'], true);
+                        $reviewerChecked = null;
+                        $isOverridden    = false;
 
-                        if ($isGmReviewed) {
-                            if (isset($gmPayload['boolean_value'])) {
-                                $gmChecked = in_array(strtoupper((string) $gmPayload['boolean_value']), ['Y', '1', 'TRUE'], true);
-                                if ($gmChecked !== $evalChecked) {
+                        if ($isReviewerReviewed) {
+                            if (isset($reviewerPayload['boolean_value'])) {
+                                $reviewerChecked = in_array(strtoupper((string) $reviewerPayload['boolean_value']), ['Y', '1', 'TRUE'], true);
+                                if ($reviewerChecked !== $evalChecked) {
                                     $isOverridden = true;
                                     $hasOverride  = true;
                                 }
                             } else {
-                                $gmChecked = $evalChecked;
+                                $reviewerChecked = $evalChecked;
                             }
                         }
 
                         $actionRows[] = [
-                            'index'         => 0,
-                            'letter'        => 'a',
-                            'text'          => $compTitle,
-                            'eval_checked'  => $evalChecked,
-                            'gm_checked'    => $isGmReviewed ? $gmChecked : null,
-                            'is_overridden' => $isOverridden,
+                            'index'            => 0,
+                            'letter'           => 'a',
+                            'text'             => $compTitle,
+                            'eval_checked'     => $evalChecked,
+                            'reviewer_checked' => $isReviewerReviewed ? $reviewerChecked : null,
+                            'is_overridden'    => $isOverridden,
                         ];
                     }
 
@@ -1227,16 +1278,16 @@ class AppraisalEvaluationController extends BaseController
         $evalFinalOverall = $evalTotalWeight > 0 ? ($evalTotalWeightedScore / $evalTotalWeight) : 3.00;
         $evalFinalOverall = max(0.00, min(4.00, round($evalFinalOverall, 2)));
 
-        if ($isGmReviewed) {
-            $gmFinalOverall = $gmTotalWeight > 0 ? ($gmTotalWeightedScore / $gmTotalWeight) : 3.00;
-            if ($appraisal->final_score !== null && !empty($appraisal->gm_reviewed_at) && (float) $appraisal->final_score > 0) {
-                $gmFinalOverall = (float) $appraisal->final_score;
+        if ($isReviewerReviewed) {
+            $reviewerFinalOverall = $reviewerTotalWeight > 0 ? ($reviewerTotalWeightedScore / $reviewerTotalWeight) : 3.00;
+            if ($appraisal->final_score !== null && !empty($appraisal->reviewer_reviewed_at) && (float) $appraisal->final_score > 0) {
+                $reviewerFinalOverall = (float) $appraisal->final_score;
             }
-            $gmFinalOverall = max(0.00, min(4.00, round($gmFinalOverall, 2)));
-            $delta          = round($gmFinalOverall - $evalFinalOverall, 2);
+            $reviewerFinalOverall = max(0.00, min(4.00, round($reviewerFinalOverall, 2)));
+            $delta                = round($reviewerFinalOverall - $evalFinalOverall, 2);
         } else {
-            $gmFinalOverall = null;
-            $delta          = null;
+            $reviewerFinalOverall = null;
+            $delta                = null;
         }
 
         $getRating = function ($score): array {
@@ -1247,8 +1298,8 @@ class AppraisalEvaluationController extends BaseController
             return ['label' => 'Kurang', 'class' => 'r-low'];
         };
 
-        $evalRating = $getRating($evalFinalOverall);
-        $gmRating   = $getRating($gmFinalOverall);
+        $evalRating     = $getRating($evalFinalOverall);
+        $reviewerRating = $getRating($reviewerFinalOverall);
 
         $scoreSections   = [];
         $booleanSections = [];
@@ -1261,27 +1312,27 @@ class AppraisalEvaluationController extends BaseController
         }
 
         $viewData = [
-            'display_mode'         => 'compare',
-            'is_operator'          => false,
-            'appraisal_id'         => $id,
-            'appraisal'            => $appraisal,
-            'employee'             => $employee,
-            'evaluator'            => $evaluator,
-            'gm'                   => $gm,
-            'cycle'                => $cycle,
-            'sections'             => $comparisonSections,
-            'scoreSections'        => $scoreSections,
-            'booleanSections'      => $booleanSections,
-            'eval_overall_score'   => $evalFinalOverall,
-            'eval_rating'          => $evalRating,
-            'gm_overall_score'     => $gmFinalOverall,
-            'gm_rating'            => $gmRating,
-            'delta'                => $delta,
-            'is_gm_reviewed'       => $isGmReviewed,
-            'has_override'         => $hasOverride,
-            'evaluator_comment'    => $appraisal->evaluator_comment ?? '',
-            'development_plan'     => $appraisal->development_plan ?? '',
-            'gm_comment'           => $appraisal->gm_comment ?? '',
+            'display_mode'           => 'compare',
+            'is_operator'            => false,
+            'appraisal_id'           => $id,
+            'appraisal'              => $appraisal,
+            'employee'               => $employee,
+            'evaluator'              => $evaluator,
+            'reviewer'               => $reviewer,
+            'cycle'                  => $cycle,
+            'sections'               => $comparisonSections,
+            'scoreSections'          => $scoreSections,
+            'booleanSections'        => $booleanSections,
+            'eval_overall_score'     => $evalFinalOverall,
+            'eval_rating'            => $evalRating,
+            'reviewer_overall_score' => $reviewerFinalOverall,
+            'reviewer_rating'        => $reviewerRating,
+            'delta'                  => $delta,
+            'is_reviewer_reviewed'   => $isReviewerReviewed,
+            'has_override'           => $hasOverride,
+            'evaluator_comment'      => $appraisal->evaluator_comment ?? '',
+            'development_plan'       => $appraisal->development_plan ?? '',
+            'reviewer_comment'       => $appraisal->reviewer_comment ?? '',
         ];
 
         return view('masterdata/appraisal-reusable/modal_score_comparison_content', $viewData);
@@ -1332,11 +1383,11 @@ class AppraisalEvaluationController extends BaseController
             ->getRowArray();
 
         $reviewer = null;
-        if (!empty($appraisal->snapshot_gm_id)) {
+        if (!empty($appraisal->snapshot_reviewer_id)) {
             $reviewer = $this->db->table('md_employee e')
                 ->select('e.fullname as name, p.name as position_name')
                 ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
-                ->where('e.md_employee_id', $appraisal->snapshot_gm_id)
+                ->where('e.md_employee_id', $appraisal->snapshot_reviewer_id)
                 ->get()
                 ->getRowArray();
         }
@@ -1399,13 +1450,13 @@ class AppraisalEvaluationController extends BaseController
         // Format: PA/Tahun/Semester/No Urut (Contoh: PA/2026/1/0001)
         $docNo = 'PA/' . $createdYear . '/' . $semesterVal . '/' . $noUrut;
 
-        $empAckDate  = !empty($appraisal->employee_acknowledged_at) ? date('d/m/Y H:i', strtotime($appraisal->employee_acknowledged_at)) . ' WIB' : null;
-        $evalSubDate = !empty($appraisal->evaluator_submitted_at) ? date('d/m/Y H:i', strtotime($appraisal->evaluator_submitted_at)) . ' WIB' : null;
-        $gmRevDate   = !empty($appraisal->gm_reviewed_at) ? date('d/m/Y H:i', strtotime($appraisal->gm_reviewed_at)) . ' WIB' : null;
+        $empAckDate      = !empty($appraisal->employee_acknowledged_at) ? date('d/m/Y H:i', strtotime($appraisal->employee_acknowledged_at)) . ' WIB' : null;
+        $evalSubDate     = !empty($appraisal->evaluator_submitted_at) ? date('d/m/Y H:i', strtotime($appraisal->evaluator_submitted_at)) . ' WIB' : null;
+        $reviewerRevDate = !empty($appraisal->reviewer_reviewed_at) ? date('d/m/Y H:i', strtotime($appraisal->reviewer_reviewed_at)) . ' WIB' : null;
 
-        $empDateStr  = !empty($appraisal->employee_acknowledged_at) ? date('d M Y', strtotime($appraisal->employee_acknowledged_at)) : '-';
-        $evalDateStr = !empty($appraisal->evaluator_submitted_at) ? date('d M Y', strtotime($appraisal->evaluator_submitted_at)) : (!empty($appraisal->created_at) ? date('d M Y', strtotime($appraisal->created_at)) : '-');
-        $reviewerDateStr = !empty($appraisal->gm_reviewed_at) ? date('d M Y', strtotime($appraisal->gm_reviewed_at)) : (!empty($appraisal->snapshot_gm_id) ? '-' : 'N/A');
+        $empDateStr      = !empty($appraisal->employee_acknowledged_at) ? date('d M Y', strtotime($appraisal->employee_acknowledged_at)) : '-';
+        $evalDateStr     = !empty($appraisal->evaluator_submitted_at) ? date('d M Y', strtotime($appraisal->evaluator_submitted_at)) : (!empty($appraisal->created_at) ? date('d M Y', strtotime($appraisal->created_at)) : '-');
+        $reviewerDateStr = !empty($appraisal->reviewer_reviewed_at) ? date('d M Y', strtotime($appraisal->reviewer_reviewed_at)) : (!empty($appraisal->snapshot_reviewer_id) ? '-' : 'N/A');
 
         $pdf = new AppraisalPdfReport('P', PDF_UNIT, 'A4', true, 'UTF-8', false);
         $pdf->docNo        = (string) $docNo;
@@ -1432,7 +1483,7 @@ class AppraisalEvaluationController extends BaseController
             'ratingText'           => $ratingText,
             'empAckDate'           => $empAckDate,
             'evalSubDate'          => $evalSubDate,
-            'gmRevDate'            => $gmRevDate,
+            'reviewerRevDate'      => $reviewerRevDate,
             'empDateStr'           => $empDateStr,
             'evalDateStr'          => $evalDateStr,
             'reviewerDateStr'      => $reviewerDateStr,
@@ -1542,15 +1593,15 @@ class AppraisalEvaluationController extends BaseController
         if ($cycleStage < 6) {
             if ($empId === (int) $appraisal->snapshot_evaluator_id && $appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
                 $userMode = 'EVALUATOR';
-            } elseif ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-                $userMode = 'GM';
+            } elseif ($empId === (int) $appraisal->snapshot_reviewer_id && $appraisal->status === M_Appraisal::STATUS_REVIEW) {
+                $userMode = 'REVIEWER';
             } elseif ($isAdmin) {
                 if ($empId === (int) $appraisal->md_employee_id && $appraisal->status === M_Appraisal::STATUS_PENDING_ACK && ($post['user_mode'] ?? '') === 'EMPLOYEE') {
                     $userMode = 'EMPLOYEE';
                 } elseif ($appraisal->status === M_Appraisal::STATUS_DRAFT_EVALUATOR) {
                     $userMode = 'EVALUATOR';
-                } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW_GM) {
-                    $userMode = 'GM';
+                } elseif ($appraisal->status === M_Appraisal::STATUS_REVIEW) {
+                    $userMode = 'REVIEWER';
                 } elseif ($appraisal->status === M_Appraisal::STATUS_PENDING_ACK) {
                     // Intervensi HR is after pembacaan (Stage 5)
                     $userMode = ($cycleStage === 5) ? 'HR' : 'EMPLOYEE';
@@ -1578,7 +1629,7 @@ class AppraisalEvaluationController extends BaseController
         }
 
         $db = \Config\Database::connect();
-        $db->transStart();
+        $db->transBegin();
 
         try {
             // Extract and normalize responses
@@ -1610,29 +1661,29 @@ class AppraisalEvaluationController extends BaseController
                     $this->workflowService->submitByEvaluator($appraisalId, $userId, $evaluatorComment, $developmentPlan);
                 }
 
-            } elseif ($userMode === 'GM') {
+            } elseif ($userMode === 'REVIEWER') {
                 $evaluatorComment = isset($post['evaluator_comment']) ? trim($post['evaluator_comment']) : $appraisal->evaluator_comment;
                 $developmentPlan  = isset($post['development_plan']) ? trim($post['development_plan']) : $appraisal->development_plan;
-                $gmComment        = isset($post['gm_comment']) ? trim($post['gm_comment']) : $appraisal->gm_comment;
+                $reviewerComment  = isset($post['reviewer_comment']) ? trim($post['reviewer_comment']) : $appraisal->reviewer_comment;
 
                 $appraisal->evaluator_comment = $evaluatorComment;
                 $appraisal->development_plan  = $developmentPlan;
-                $appraisal->gm_comment        = $gmComment;
+                $appraisal->reviewer_comment  = $reviewerComment;
                 $appraisal->updated_by        = $userId;
                 $this->model->save($appraisal);
 
                 if (! empty($responseList)) {
-                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'GM');
+                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'REVIEWER');
                 }
 
                 if ($actionType === 'kickback') {
-                    $reason = trim($post['kickback_reason'] ?? $gmComment ?? '');
+                    $reason = trim($post['kickback_reason'] ?? $reviewerComment ?? '');
                     if (empty($reason)) {
                         throw new \RuntimeException('Alasan revisi wajib diisi jika mengembalikan form.');
                     }
-                    $this->workflowService->kickbackByGm($appraisalId, $userId, $reason);
+                    $this->workflowService->kickbackByReviewer($appraisalId, $userId, $reason);
                 } elseif ($actionType === 'submit') {
-                    $this->workflowService->reviewByGm($appraisalId, $userId, $gmComment);
+                    $this->workflowService->reviewByReviewer($appraisalId, $userId, $reviewerComment);
                 }
 
             } elseif ($userMode === 'EMPLOYEE') {
@@ -1650,12 +1701,12 @@ class AppraisalEvaluationController extends BaseController
                 // Intervensi HR mode: HR can edit responses, evaluator comment, development plan, or finalize
                 $evaluatorComment = isset($post['evaluator_comment']) ? trim($post['evaluator_comment']) : $appraisal->evaluator_comment;
                 $developmentPlan  = isset($post['development_plan']) ? trim($post['development_plan']) : $appraisal->development_plan;
-                $gmComment        = isset($post['gm_comment']) ? trim($post['gm_comment']) : $appraisal->gm_comment;
+                $reviewerComment  = isset($post['reviewer_comment']) ? trim($post['reviewer_comment']) : $appraisal->reviewer_comment;
                 $employeeComment  = isset($post['employee_comment']) ? trim($post['employee_comment']) : $appraisal->employee_comment;
 
                 $appraisal->evaluator_comment = $evaluatorComment;
                 $appraisal->development_plan  = $developmentPlan;
-                $appraisal->gm_comment        = $gmComment;
+                $appraisal->reviewer_comment  = $reviewerComment;
                 if ($employeeComment !== null) {
                     $appraisal->employee_comment = $employeeComment;
                 }
@@ -1663,7 +1714,7 @@ class AppraisalEvaluationController extends BaseController
                 $this->model->save($appraisal);
 
                 if (! empty($responseList)) {
-                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'GM');
+                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'REVIEWER');
                 } else {
                     $this->scoringService->calculateAndUpdateScores($appraisalId, $userId);
                 }
@@ -1674,11 +1725,12 @@ class AppraisalEvaluationController extends BaseController
                 }
             }
 
-            $db->transComplete();
-
             if ($db->transStatus() === false) {
+                $db->transRollback();
                 throw new \RuntimeException('Gagal memproses transaksi database penyimpanan penilaian.');
             }
+
+            $db->transCommit();
 
             if ($actionType === 'submit') {
                 $msg = ($userMode === 'EMPLOYEE') ? 'Penilaian berhasil dikonfirmasi dan difinalisasi.' : 'Penilaian berhasil disubmit.';
@@ -1737,8 +1789,8 @@ class AppraisalEvaluationController extends BaseController
             if (isset($post['development_plan'])) {
                 $appraisal->development_plan = $post['development_plan'];
             }
-            if (isset($post['gm_comment'])) {
-                $appraisal->gm_comment = $post['gm_comment'];
+            if (isset($post['reviewer_comment'])) {
+                $appraisal->reviewer_comment = $post['reviewer_comment'];
             }
 
             $appraisal->updated_by = $userId;
@@ -1751,7 +1803,7 @@ class AppraisalEvaluationController extends BaseController
             $booleanValuesFallback   = $post['boolean_value'] ?? [];
             $responseList            = $this->normalizeResponseList($rawList, $actionScoresFallback, $checkedActionsFallback, $booleanValuesFallback);
 
-            $actorRole = ($empId === (int) $appraisal->snapshot_gm_id && $appraisal->status === M_Appraisal::STATUS_REVIEW_GM) ? 'GM' : 'EVALUATOR';
+            $actorRole = ($empId === (int) $appraisal->snapshot_reviewer_id && $appraisal->status === M_Appraisal::STATUS_REVIEW) ? 'REVIEWER' : 'EVALUATOR';
 
             if (is_array($responseList) && ! empty($responseList)) {
                 $this->scoringService->saveResponses($appraisalId, $responseList, $userId, $actorRole);
@@ -1769,7 +1821,7 @@ class AppraisalEvaluationController extends BaseController
 
     /**
      * POST /penilaian/submit/(:num)
-     * Evaluator submits form to GM or Employee sign-off
+     * Evaluator submits form to Reviewer or Employee sign-off
      */
     public function submit($id = null)
     {
@@ -1860,7 +1912,7 @@ class AppraisalEvaluationController extends BaseController
                 $label = 'Pengisian';
                 break;
             case M_Appraisal::STATUS_SUBMITTED_EVALUATOR:
-            case M_Appraisal::STATUS_REVIEW_GM:
+            case M_Appraisal::STATUS_REVIEW:
                 $label = 'Peninjauan';
                 break;
             case M_Appraisal::STATUS_PENDING_ACK:
@@ -1884,63 +1936,19 @@ class AppraisalEvaluationController extends BaseController
 
     protected function renderActionButton(array $row, string $roleTab, int $empId): string
     {
-        $id     = $row['md_appraisal_id'];
-        $status = $row['status'];
-        $actions = '';
-
+        $id      = $row['md_appraisal_id'];
         $empId   = $this->getCurrentEmployeeId();
         $isAdmin = $this->isAppraisalAdmin($empId);
         $userId  = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
         $isDuta  = (! empty($userId) && $this->isDutaForEmployeeWithoutUser($userId, (int) ($row['md_employee_id'] ?? 0)));
 
-        $cycleStage = null;
-        if (! empty($row['start_date']) || ! empty($row['deadline_filling'])) {
-            $today = ! empty($this->session->get('appraisal_debug_date')) ? strtotime($this->session->get('appraisal_debug_date')) : time();
-            $fill  = ! empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
-            $rev   = ! empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
-            $read  = ! empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
-            $over  = ! empty($row['deadline_override']) ? strtotime($row['deadline_override']) : null;
-            $end   = ! empty($row['end_date']) ? strtotime($row['end_date']) : null;
-
-            if ($fill && $today <= $fill) {
-                $cycleStage = 2;
-            } elseif ($rev && $today <= $rev) {
-                $cycleStage = 3;
-            } elseif ($read && $today <= $read) {
-                $cycleStage = 4;
-            } elseif ($over && $today <= $over) {
-                $cycleStage = 5;
-            } elseif ($end && $today > $end) {
-                $cycleStage = 6;
-            }
-        }
-
-        if ($status === M_Appraisal::STATUS_DRAFT_EVALUATOR && ($roleTab === 'EVALUATOR' || (int) ($row['snapshot_evaluator_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
-            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Isi Penilaian"><i class="fas fa-edit text-primary"></i></a>';
-        } elseif ($status === M_Appraisal::STATUS_REVIEW_GM && ($roleTab === 'GM' || (int) ($row['snapshot_gm_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
-            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Review GM"><i class="fas fa-user-check text-info"></i></a>';
-        } elseif ($status === M_Appraisal::STATUS_PENDING_ACK && ((int) $row['md_employee_id'] === $empId || $isDuta || $isAdmin)) {
-            $isDirectEmployee = ((int) $row['md_employee_id'] === $empId);
-            // Intervensi HR is strictly AFTER pembacaan (Stage 5)
-            if ($isAdmin && ! $isDirectEmployee && ! $isDuta && $cycleStage === 5) {
-                $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Edit Penilaian"><i class="fas fa-edit text-primary"></i></a>';
-            } else {
-                $ttdTitle = 'Konfirmasi TTD';
-                if ($isDuta && ! $isDirectEmployee) {
-                    $ttdTitle .= ' (Duta)';
-                }
-                $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="' . $ttdTitle . '"><i class="fas fa-signature text-warning"></i></a>';
-            }
-        } elseif ($status === M_Appraisal::STATUS_FINALIZED) {
-            $actions .= '<a class="btn btn-sm" href="' . base_url('sas/penilaian/complete/' . $id) . '" title="Rapor Kinerja"><i class="fas fa-file-alt text-success"></i></a>';
-        } else {
-            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'VIEW\')" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
-        }
-
-        // Score Comparison & History Action Button
-        $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat & Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
-
-        return $actions;
+        return $this->template->appraisalTableButton('evaluation', $id, [
+            'row'      => $row,
+            'role_tab' => $roleTab,
+            'emp_id'   => $empId,
+            'is_admin' => $isAdmin,
+            'is_duta'  => $isDuta,
+        ]);
     }
 
     /**

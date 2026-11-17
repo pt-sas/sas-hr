@@ -10,11 +10,12 @@
         $periodeText = $cycleTitle;
     }
 
-    $empName    = esc(mb_strtoupper($employee['name'] ?? '-', 'UTF-8'));
-    $empNik     = esc($employee['nik'] ?? '-');
-    $statusText = esc($appraisal->status ?? 'DRAFT_EVALUATOR');
+    $empName     = esc(mb_strtoupper($employee['name'] ?? '-', 'UTF-8'));
+    $empNik      = esc($employee['nik'] ?? '-');
+    $statusCode  = $appraisal->status ?? \App\Models\M_Appraisal::STATUS_PENILAIAN;
+    $statusLabel = \App\Models\M_Appraisal::getStatusLabel($statusCode);
 
-    $isReviewed = !empty($is_gm_reviewed);
+    $isReviewed = !empty($is_reviewer_reviewed);
 
     // Totals for Rekap
     $totBobot    = 0.0;
@@ -31,9 +32,9 @@
         $totEvalSkor += $es;
         $totEvalNilai += $en;
 
-        if ($isReviewed && isset($w['gm_score']) && $w['gm_score'] !== null) {
-            $gs = (float) $w['gm_score'];
-            $gn = (float) ($w['gm_nilai'] ?? ($b * $gs));
+        if ($isReviewed && isset($w['reviewer_score']) && $w['reviewer_score'] !== null) {
+            $gs = (float) $w['reviewer_score'];
+            $gn = (float) ($w['reviewer_nilai'] ?? ($b * $gs));
             $totGmSkor += $gs;
             $totGmNilai += $gn;
         }
@@ -60,7 +61,7 @@
             <div class="ap-card-head d-flex justify-content-between align-items-center">
                 <div class="ap-card-title-group d-flex align-items-center">
                     <h5 class="ap-card-title d-inline-block mb-0 mr-2">I. Informasi Karyawan &amp; Siklus Evaluasi PA</h5>
-                    <span class="ap-mode is-gm">STATUS: <?= esc($statusText === 'FINALIZED' ? 'FINAL' : 'GENERAL MANAGER') ?></span>
+                    <span class="ap-mode is-reviewer">STATUS: <?= esc(mb_strtoupper($statusLabel, 'UTF-8')) ?></span>
                 </div>
             </div>
             <div class="ap-card-body">
@@ -97,7 +98,7 @@
                     </div>
                     <div class="ap-info-item">
                         <div class="ap-info-label">Peninjau</div>
-                        <div class="ap-info-value"><?= esc(mb_strtoupper($gm['name'] ?? '-', 'UTF-8')) ?></div>
+                        <div class="ap-info-value"><?= esc(mb_strtoupper($reviewer['name'] ?? '-', 'UTF-8')) ?></div>
                     </div>
 
                 </div>
@@ -138,8 +139,8 @@
                                     $es = isset($row['eval_score']) && $row['eval_score'] !== null ? (float) $row['eval_score'] : null;
                                     $en = isset($row['eval_nilai']) && $row['eval_nilai'] !== null ? (float) $row['eval_nilai'] : ($es !== null ? ($b * $es) : null);
 
-                                    $gs = isset($row['gm_score']) && $row['gm_score'] !== null ? (float) $row['gm_score'] : null;
-                                    $gn = isset($row['gm_nilai']) && $row['gm_nilai'] !== null ? (float) $row['gm_nilai'] : ($gs !== null ? ($b * $gs) : null);
+                                    $gs = isset($row['reviewer_score']) && $row['reviewer_score'] !== null ? (float) $row['reviewer_score'] : null;
+                                    $gn = isset($row['reviewer_nilai']) && $row['reviewer_nilai'] !== null ? (float) $row['reviewer_nilai'] : ($gs !== null ? ($b * $gs) : null);
                                 ?>
                                 <tr>
                                     <td class="text-center align-middle font-weight-bold" style="background: var(--ap-surface);">
@@ -234,11 +235,11 @@
                         <?php if (!empty($single_items)): ?>
                             <?php foreach ($single_items as $idx => $row): ?>
                                 <?php
-                                    $isOtherRow = !empty($row['is_other']);
-                                    $evalChecked = !empty($row['eval_checked']);
-                                    $gmChecked   = !empty($row['gm_checked']);
-                                    $evalOther   = $row['eval_other_text'] ?? '';
-                                    $gmOther     = $row['gm_other_text'] ?? '';
+                                    $isOtherRow      = !empty($row['is_other']);
+                                    $evalChecked     = !empty($row['eval_checked']);
+                                    $reviewerChecked = !empty($row['reviewer_checked']);
+                                    $evalOther       = $row['eval_other_text'] ?? '';
+                                    $reviewerOther   = $row['reviewer_other_text'] ?? '';
                                 ?>
                                 <tr>
                                     <td class="text-center align-middle font-weight-bold" style="background: var(--ap-surface);">
@@ -248,13 +249,13 @@
                                         <?php if ($isOtherRow): ?>
                                             <div>
                                                 <span class="font-weight-600 text-dark">Lainnya :</span>
-                                                <?php if (!empty($evalOther) || !empty($gmOther)): ?>
+                                                <?php if (!empty($evalOther) || !empty($reviewerOther)): ?>
                                                     <div class="small mt-1 text-muted">
                                                         <?php if (!empty($evalOther)): ?>
                                                             <div><span class="font-weight-bold text-primary">Penilai:</span> <?= esc($evalOther) ?></div>
                                                         <?php endif; ?>
-                                                        <?php if ($isReviewed && !empty($gmOther) && $gmOther !== $evalOther): ?>
-                                                            <div><span class="font-weight-bold text-success">Reviewer:</span> <?= esc($gmOther) ?></div>
+                                                        <?php if ($isReviewed && !empty($reviewerOther) && $reviewerOther !== $evalOther): ?>
+                                                            <div><span class="font-weight-bold text-success">Reviewer:</span> <?= esc($reviewerOther) ?></div>
                                                         <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
@@ -276,8 +277,8 @@
                                     <!-- Reviewer Checked -->
                                     <td class="text-center align-middle py-3" style="background: #fdfefe; border-left: 1px solid var(--ap-line-soft);">
                                         <?php if ($isReviewed): ?>
-                                            <span class="operator-comparison-chip <?= $gmChecked ? 'is-checked-gm' : 'is-empty' ?>">
-                                                <?= $gmChecked ? 'v' : '-' ?>
+                                            <span class="operator-comparison-chip <?= $reviewerChecked ? 'is-checked-reviewer' : 'is-empty' ?>">
+                                                <?= $reviewerChecked ? 'v' : '-' ?>
                                             </span>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
@@ -361,7 +362,7 @@
     border: 2px solid #3b82f6;
     color: #1e40af;
 }
-.operator-comparison-chip.is-checked-gm {
+.operator-comparison-chip.is-checked-reviewer {
     background: #f0fdf4;
     border: 2px solid #22c55e;
     color: #166534;

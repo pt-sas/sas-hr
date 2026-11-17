@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
+use CodeIgniter\HTTP\RequestInterface;
 
 class M_AppraisalAuditLog extends Model
 {
@@ -26,4 +27,16 @@ class M_AppraisalAuditLog extends Model
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
     protected $updatedField  = false;
+
+    protected $request;
+    protected $db;
+    protected $builder;
+
+    public function __construct(?RequestInterface $request = null)
+    {
+        parent::__construct();
+        $this->db      = db_connect();
+        $this->request = $request ?? \Config\Services::request();
+        $this->builder = $this->db->table($this->table);
+    }
 }

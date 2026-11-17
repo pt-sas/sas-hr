@@ -48,7 +48,7 @@
             }
         }
 
-        $canEditScores       = ($displayMode === 'edit') && in_array($userMode, ['EVALUATOR', 'GM', 'HR'], true);
+        $canEditScores       = ($displayMode === 'edit') && in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true);
         $initialOverallScore = $appraisal->final_score !== null ? (float) $appraisal->final_score : null;
         $initialRating       = appraisal_rating_meta($initialOverallScore, false);
 
@@ -83,7 +83,7 @@
                 <span class="text-muted font-weight-bold">|</span>
                 <div class="d-inline-flex align-items-center" style="gap: 8px;">
                     <span class="text-muted font-weight-bold">Peninjau =</span>
-                    <?php if (! empty($is_gm_reviewed) && $gm_overall_score !== null): ?>
+                    <?php if (! empty($is_reviewer_reviewed) && $reviewer_overall_score !== null): ?>
                         <?php
                             $gmBarColor = '';
                             if ($delta > 0) {
@@ -93,9 +93,9 @@
                             }
                         ?>
                         <span class="ap-score-num" style="<?= $gmBarColor ?>">
-                            <?= number_format((float) $gm_overall_score, 2) ?>
+                            <?= number_format((float) $reviewer_overall_score, 2) ?>
                         </span>
-                        <span class="ap-rating <?= esc($gm_rating['class']) ?>"><?= esc($gm_rating['label']) ?></span>
+                        <span class="ap-rating <?= esc($reviewer_rating['class']) ?>"><?= esc($reviewer_rating['label']) ?></span>
                         <?php if ($delta !== null && round($delta, 2) != 0.0): ?>
                             <span class="font-weight-bold ml-1" style="color: <?= $delta > 0 ? '#059669' : '#dc2626' ?>; font-size: 13px;">
                                 (<?= ($delta > 0 ? '+' : '') . number_format($delta, 2) ?>)
@@ -115,6 +115,19 @@
                 <span class="ap-score-num" id="badge_total_overall_score"><?= $initialOverallScore !== null ? number_format($initialOverallScore, 2) : '—' ?></span>
                 <span class="ap-rating <?= esc($initialRating['class']) ?>" id="badge_overall_rating"><?= esc($initialRating['label']) ?></span>
             </span>
+        </div>
+    <?php endif; ?>
+
+    <?php if (in_array($displayMode, ['edit', 'readonly'], true)): ?>
+        <div class="ap-guide">
+            <p class="ap-guide-title">Skala Penilaian Dasar (0–4)</p>
+            <ul class="ap-guide-list">
+                <li><strong>Nilai 0:</strong> Tidak menunjukkan standar kinerja yang ditetapkan sama sekali.</li>
+                <li><strong>Nilai 1:</strong> Memerlukan perbaikan signifikan untuk memenuhi standar kinerja yang ditetapkan.</li>
+                <li><strong>Nilai 2:</strong> Memenuhi standar kinerja secara memadai, namun belum konsisten.</li>
+                <li><strong>Nilai 3:</strong> Secara konsisten memenuhi standar kinerja yang ditetapkan.</li>
+                <li><strong>Nilai 4:</strong> Sering melampaui standar kinerja yang ditetapkan.</li>
+            </ul>
         </div>
     <?php endif; ?>
 
@@ -143,13 +156,13 @@
                                     $itemTitle    = esc($item['title'] ?? ('Kompetensi ' . $scoreItemNumber));
                                     $itemDef      = esc($item['definition'] ?? '-');
                                     $evalSubtotal = $item['eval_avg'] ?? 3.00;
-                                    $gmSubtotal   = $item['gm_avg'] ?? null;
+                                    $gmSubtotal   = $item['reviewer_avg'] ?? null;
                                     $totalRowSpan = $hasActions ? $actionCount : 1;
                                 ?>
                                 <?php if ($hasActions): ?>
                                     <?php foreach ($actions as $aIdx => $act): ?>
                                         <?php
-                                            $gmScore   = $act['gm_score'];
+                                            $gmScore   = $act['reviewer_score'];
                                             $evalScore = $act['eval_score'];
                                             $gmStyle   = 'color: #334155; font-weight: 700;';
                                             if ($gmScore !== null) {
@@ -280,14 +293,14 @@
                             $resp          = $responses_by_item_id[$itemId] ?? null;
                             $activePayload = [];
                             if ($displayMode === 'readonly') {
-                                if ($resp && ! empty($resp->gm_response)) {
-                                    $activePayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                                if ($resp && ! empty($resp->reviewer_response)) {
+                                    $activePayload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
                                 } elseif ($resp && ! empty($resp->evaluator_response)) {
                                     $activePayload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
                                 }
                             } else {
-                                if ($userMode === 'GM' && ! empty($resp->gm_response)) {
-                                    $activePayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                                if ($userMode === 'REVIEWER' && ! empty($resp->reviewer_response)) {
+                                    $activePayload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
                                 } elseif ($resp && ! empty($resp->evaluator_response)) {
                                     $activePayload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
                                 }

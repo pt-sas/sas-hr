@@ -48,7 +48,7 @@
             }
         }
 
-        $canEditScores = ($displayMode === 'edit') && in_array($userMode, ['EVALUATOR', 'GM', 'HR'], true);
+        $canEditScores = ($displayMode === 'edit') && in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true);
 
         if ($displayMode === 'readonly') {
             $itemsKompetensiTambahan = $itemsKompetensiTambahan ?? [];
@@ -67,6 +67,17 @@
             <span class="text-muted font-weight-bold" style="font-size: 13px;">*Beri tanda centang pada perilaku yang ditunjukkan</span>
         <?php endif; ?>
     </div>
+
+    <?php if (in_array($displayMode, ['edit', 'readonly'], true)): ?>
+        <div class="ap-guide">
+            <p class="ap-guide-title">Panduan Pengisian Kompetensi Tambahan (Ya / Tidak)</p>
+            <ul class="ap-guide-list">
+                <li>Centang indikator perilaku yang secara nyata ditunjukkan oleh karyawan selama periode penilaian.</li>
+                <li>Biarkan tidak tercentang apabila perilaku belum terlihat atau belum konsisten.</li>
+                <li>Bagian ini bersifat kualitatif dan tidak mengubah perhitungan skor akhir.</li>
+            </ul>
+        </div>
+    <?php endif; ?>
 
     <div class="table-responsive<?= $displayMode !== 'compare' ? ' ap-table-wrapper' : '' ?>">
         <?php if ($displayMode === 'compare'): ?>
@@ -122,8 +133,8 @@
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center align-middle">
-                                                <?php if ($bAct['gm_checked'] !== null): ?>
-                                                    <?php if (! empty($bAct['gm_checked'])): ?>
+                                                <?php if ($bAct['reviewer_checked'] !== null): ?>
+                                                    <?php if (! empty($bAct['reviewer_checked'])): ?>
                                                         <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">&check;</span>
                                                     <?php elseif (! empty($bAct['is_overridden'])): ?>
                                                         <span style="color: #dc2626; font-weight: 800; font-size: 13px; background: #fef2f2; border: 1.5px solid #fecaca; padding: 3px 10px; border-radius: 4px;">&times;</span>
@@ -155,8 +166,8 @@
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-center align-middle">
-                                            <?php if (isset($singleAct['gm_checked']) && $singleAct['gm_checked'] !== null): ?>
-                                                <?php if (! empty($singleAct['gm_checked'])): ?>
+                                            <?php if (isset($singleAct['reviewer_checked']) && $singleAct['reviewer_checked'] !== null): ?>
+                                                <?php if (! empty($singleAct['reviewer_checked'])): ?>
                                                     <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">&check;</span>
                                                 <?php elseif (! empty($singleAct['is_overridden'])): ?>
                                                     <span style="color: #dc2626; font-weight: 800; font-size: 13px; background: #fef2f2; border: 1.5px solid #fecaca; padding: 3px 10px; border-radius: 4px;">&times;</span>
@@ -203,20 +214,20 @@
                             $evalPayload = ($bResp && ! empty($bResp->evaluator_response))
                                 ? (is_string($bResp->evaluator_response) ? json_decode($bResp->evaluator_response, true) : $bResp->evaluator_response)
                                 : [];
-                            $gmPayload   = ($bResp && ! empty($bResp->gm_response))
-                                ? (is_string($bResp->gm_response) ? json_decode($bResp->gm_response, true) : $bResp->gm_response)
+                            $reviewerPayload = ($bResp && ! empty($bResp->reviewer_response))
+                                ? (is_string($bResp->reviewer_response) ? json_decode($bResp->reviewer_response, true) : $bResp->reviewer_response)
                                 : [];
 
                             if ($displayMode === 'readonly') {
-                                $checkedActions = ! empty($gmPayload) && isset($gmPayload['checked_actions'])
-                                    ? $gmPayload['checked_actions']
+                                $checkedActions = ! empty($reviewerPayload) && isset($reviewerPayload['checked_actions'])
+                                    ? $reviewerPayload['checked_actions']
                                     : ($evalPayload['checked_actions'] ?? []);
-                                $booleanValue   = $gmPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
-                            } elseif ($userMode === 'GM') {
-                                $checkedActions = isset($gmPayload['checked_actions'])
-                                    ? $gmPayload['checked_actions']
+                                $booleanValue   = $reviewerPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
+                            } elseif ($userMode === 'REVIEWER') {
+                                $checkedActions = isset($reviewerPayload['checked_actions'])
+                                    ? $reviewerPayload['checked_actions']
                                     : ($evalPayload['checked_actions'] ?? []);
-                                $booleanValue   = $gmPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
+                                $booleanValue   = $reviewerPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
                             } else {
                                 $checkedActions = $evalPayload['checked_actions'] ?? [];
                                 $booleanValue   = $evalPayload['boolean_value'] ?? null;

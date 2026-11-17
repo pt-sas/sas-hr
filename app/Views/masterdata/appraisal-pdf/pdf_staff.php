@@ -149,7 +149,7 @@ $itemsKompetensiTambahan = [];
         <td class="lbl-cell">Lokasi / Cabang</td>
         <td><?= esc($employee['branch_name'] ?? '-') ?></td>
         <td class="lbl-cell">Peninjau</td>
-        <td><b><?= esc(mb_strtoupper($reviewer['name'] ?? (!empty($appraisal->snapshot_gm_id) ? '-' : 'Tidak Diperlukan'), 'UTF-8')) ?></b></td>
+        <td><b><?= esc(mb_strtoupper($reviewer['name'] ?? (!empty($appraisal->snapshot_reviewer_id) ? '-' : 'Tidak Diperlukan'), 'UTF-8')) ?></b></td>
     </tr>
 </table>
 <br><br>
@@ -185,8 +185,8 @@ $itemsKompetensiTambahan = [];
 
                 $resp          = $responses_by_item_id[$itemId] ?? null;
                 $activePayload = [];
-                if ($resp && !empty($resp->gm_response)) {
-                    $activePayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                if ($resp && !empty($resp->reviewer_response)) {
+                    $activePayload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
                 } elseif ($resp && !empty($resp->evaluator_response)) {
                     $activePayload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
                 }
@@ -311,14 +311,14 @@ $itemsKompetensiTambahan = [];
                 $evalPayload = ($bResp && !empty($bResp->evaluator_response))
                     ? (is_string($bResp->evaluator_response) ? json_decode($bResp->evaluator_response, true) : $bResp->evaluator_response)
                     : [];
-                $gmPayload   = ($bResp && !empty($bResp->gm_response))
-                    ? (is_string($bResp->gm_response) ? json_decode($bResp->gm_response, true) : $bResp->gm_response)
+                $reviewerPayload = ($bResp && !empty($bResp->reviewer_response))
+                    ? (is_string($bResp->reviewer_response) ? json_decode($bResp->reviewer_response, true) : $bResp->reviewer_response)
                     : [];
 
-                $checkedActions = isset($gmPayload['checked_actions'])
-                    ? $gmPayload['checked_actions']
+                $checkedActions = isset($reviewerPayload['checked_actions'])
+                    ? $reviewerPayload['checked_actions']
                     : ($evalPayload['checked_actions'] ?? []);
-                $booleanValue   = $gmPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
+                $booleanValue   = $reviewerPayload['boolean_value'] ?? $evalPayload['boolean_value'] ?? null;
 
                 $totalActions = !empty($bKeyActions) ? count($bKeyActions) : 1;
             ?>

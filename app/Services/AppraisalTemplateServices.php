@@ -3,16 +3,26 @@
 namespace App\Services;
 
 use App\Entities\AppraisalTemplate;
+use App\Exceptions\BusinessException;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
 use App\Models\M_AppraisalTemplate;
 use CodeIgniter\Database\Exceptions\DatabaseException;
-use Exception;
 
-class AppraisalTemplateServices
+class AppraisalTemplateServices extends BaseServices
 {
+    public const SCOPE_TABLES = [
+        'branch_ids'    => ['table' => 'md_template_branch',    'fk' => 'md_branch_id',    'master' => 'md_branch',    'type' => 'BRANCH'],
+        'division_ids'  => ['table' => 'md_template_division',  'fk' => 'md_division_id',  'master' => 'md_division',  'type' => 'DIVISION'],
+        'levelling_ids' => ['table' => 'md_template_levelling', 'fk' => 'md_levelling_id', 'master' => 'md_levelling', 'type' => 'LEVELLING'],
+        'position_ids'  => ['table' => 'md_template_position',  'fk' => 'md_position_id',  'master' => 'md_position',  'type' => 'POSITION'],
+    ];
+
     protected M_AppraisalTemplate $templateModel;
 
     public function __construct()
     {
+        parent::__construct();
         $this->templateModel = new M_AppraisalTemplate();
     }
 
@@ -34,34 +44,35 @@ class AppraisalTemplateServices
         $scoping = (array) ($payload['scoping'] ?? []);
 
         if (trim((string) ($payload['template_code'] ?? '')) === '' || trim((string) ($payload['title'] ?? '')) === '') {
-            throw new Exception('Kode dan judul template wajib diisi.');
+            throw new ValidationException('Kode dan judul template wajib diisi.');
         }
         if (empty($sections)) {
-            throw new Exception('Template harus memiliki minimal satu kelompok kompetensi.');
+            throw new ValidationException('Template harus memiliki minimal satu kelompok kompetensi.');
         }
 
         // Scoping & Section compatibility validation
-        $rawLevellingIds = $scoping['levelling_ids'] ?? $scoping['leveling_ids'] ?? $scoping['position_ids'] ?? [];
-        $levellingIds    = array_unique(array_filter(array_map('intval', (array) $rawLevellingIds)));
-        $hasOperator     = in_array(100006, $levellingIds, true);
-        $hasNonOperator  = !empty(array_diff($levellingIds, [100006]));
+        $rawLevellingIds     = $scoping['levelling_ids'] ?? $scoping['leveling_ids'] ?? $scoping['position_ids'] ?? [];
+        $levellingIds        = array_unique(array_filter(array_map('intval', (array) $rawLevellingIds)));
+        $operatorLevellingIds = $this->getOperatorLevellingIds();
+        $hasOperator         = !empty(array_intersect($levellingIds, $operatorLevellingIds));
+        $hasNonOperator      = !empty(array_diff($levellingIds, $operatorLevellingIds));
 
         if ($hasOperator && $hasNonOperator) {
-            throw new Exception('Jenjang Operator tidak dapat digabungkan dengan jenjang jabatan lainnya.');
+            throw new ValidationException('Jenjang Operator tidak dapat digabungkan dengan jenjang jabatan lainnya.');
         }
 
         if ($hasOperator) {
             foreach ($sections as $sec) {
                 $secType = $sec['section_type'] ?? '';
                 if (in_array($secType, ['SCORE', 'BOOLEAN'], true)) {
-                    throw new Exception('Template Operator hanya boleh menggunakan Single Checklist dan Weighted Checklist.');
+                    throw new ValidationException('Template Operator hanya boleh menggunakan Single Checklist dan Weighted Checklist.');
                 }
             }
         } elseif ($hasNonOperator) {
             foreach ($sections as $sec) {
                 $secType = $sec['section_type'] ?? '';
                 if (in_array($secType, ['SINGLE_CHECKLIST', 'WEIGHTED_CHECKLIST'], true)) {
-                    throw new Exception('Template Staff/Supervisor hanya boleh menggunakan Checklist dan Skala.');
+                    throw new ValidationException('Template Staff/Supervisor hanya boleh menggunakan Checklist dan Skala.');
                 }
             }
         }
@@ -77,100 +88,98 @@ class AppraisalTemplateServices
             }
         }
         if ($hasScore && $totalScoreWeight > 0 && abs($totalScoreWeight - 100.0) > 0.05) {
-            throw new Exception('Total bobot kelompok skala harus tepat 100%. Total saat ini: ' . $totalScoreWeight . '%');
+            throw new ValidationException('Total bobot kelompok skala harus tepat 100%. Total saat ini: ' . $totalScoreWeight . '%');
         }
 
         $db = \Config\Database::connect();
-        $db->transStart();
+        $db->transBegin();
 
-        // 1. Header persistence (with target_group & compact schema_json)
-        $code        = trim((string) ($payload['template_code'] ?? ''));
-        $title       = trim((string) ($payload['title'] ?? ''));
-        $description = trim((string) ($payload['description'] ?? ''));
-        $isactive    = (($payload['isactive'] ?? 'N') === 'Y') ? 'Y' : 'N';
-        $targetGroup = $hasOperator ? 'OPERATOR' : 'STAFF_SPV';
-        $schemaJson  = self::compactSchema($sections, $targetGroup);
+        try {
+            // 1. Header persistence (with target_group & compact schema_json)
+            $code        = trim((string) ($payload['template_code'] ?? ''));
+            $title       = trim((string) ($payload['title'] ?? ''));
+            $description = trim((string) ($payload['description'] ?? ''));
+            $isactive    = (($payload['isactive'] ?? 'N') === 'Y') ? 'Y' : 'N';
+            $targetGroup = $hasOperator ? 'OPERATOR' : 'PERMANENT';
+            $schemaJson  = self::compactSchema($sections, $targetGroup);
 
-        if (!empty($templateId)) {
-            $existing = $this->templateModel->find($templateId);
-            if (!$existing) {
-                throw new Exception('Template tidak ditemukan.');
-            }
-            if (!$existing->isDraft() && $this->isTemplateInUse($templateId)) {
-                throw new Exception('Template ini sudah digunakan oleh data penilaian karyawan aktif sehingga tidak dapat diubah secara langsung. Silakan buat Versi Baru.');
-            }
+            if (!empty($templateId)) {
+                $existing = $this->templateModel->find($templateId);
+                if (!$existing) {
+                    throw new NotFoundException('Template tidak ditemukan.');
+                }
+                if (!$existing->isDraft() && $this->isTemplateInUse($templateId)) {
+                    throw new BusinessException('Template ini sudah digunakan oleh data penilaian karyawan aktif sehingga tidak dapat diubah secara langsung. Silakan buat Versi Baru.');
+                }
 
-            $this->templateModel->update($templateId, [
-                'template_code' => $code,
-                'title'         => $title,
-                'description'   => $description,
-                'target_group'  => $targetGroup,
-                'schema_json'   => json_encode($schemaJson, JSON_UNESCAPED_UNICODE),
-                'isactive'      => $isactive,
-                'updated_by'    => $userId,
-                'updated_at'    => date('Y-m-d H:i:s'),
-            ]);
-        } else {
-            // Auto-increment version if template_code already exists
-            $existingMax = $this->templateModel
-                ->selectMax('version')
-                ->where('template_code', $code)
-                ->first();
-            $maxVer = $existingMax ? (int) $existingMax->version : 0;
-            $version = ($maxVer > 0) ? ($maxVer + 1) : 1;
-
-            $templateId = (int) $this->templateModel->insert([
-                'template_code' => $code,
-                'version'       => $version,
-                'title'         => $title,
-                'description'   => $description,
-                'target_group'  => $targetGroup,
-                'schema_json'   => json_encode($schemaJson, JSON_UNESCAPED_UNICODE),
-                'status'        => M_AppraisalTemplate::STATUS_DRAFT,
-                'isactive'      => $isactive,
-                'created_by'    => $userId,
-                'updated_by'    => $userId,
-            ], true);
-
-            if (empty($templateId)) {
-                $db->transRollback();
-                throw new Exception('Gagal membuat header template baru.');
-            }
-        }
-
-        // 2. Unified scoping sync (md_template_scope)
-        $db->table('md_template_scope')->where('md_appraisal_template_id', $templateId)->delete();
-        $scopeMap = [
-            'BRANCH'    => 'branch_ids',
-            'DIVISION'  => 'division_ids',
-            'LEVELLING' => 'levelling_ids',
-            'POSITION'  => 'position_ids',
-        ];
-        foreach ($scopeMap as $scopeType => $key) {
-            $rawIds = $scoping[$key] ?? [];
-            if ($key === 'levelling_ids' && empty($rawIds)) {
-                $rawIds = $scoping['leveling_ids'] ?? [];
-            }
-            $ids = array_unique(array_filter(array_map('intval', (array) $rawIds)));
-            foreach ($ids as $scopeId) {
-                $db->table('md_template_scope')->insert([
-                    'md_appraisal_template_id' => $templateId,
-                    'scope_type'               => $scopeType,
-                    'scope_id'                 => $scopeId,
-                    'isactive'                 => 'Y',
-                    'created_by'               => $userId,
-                    'updated_by'               => $userId,
+                $this->templateModel->update($templateId, [
+                    'template_code' => $code,
+                    'title'         => $title,
+                    'description'   => $description,
+                    'target_group'  => $targetGroup,
+                    'schema_json'   => json_encode($schemaJson, JSON_UNESCAPED_UNICODE),
+                    'isactive'      => $isactive,
+                    'updated_by'    => $userId,
+                    'updated_at'    => date('Y-m-d H:i:s'),
                 ]);
+            } else {
+                // Auto-increment version if template_code already exists
+                $existingMax = $this->templateModel
+                    ->selectMax('version')
+                    ->where('template_code', $code)
+                    ->first();
+                $maxVer = $existingMax ? (int) $existingMax->version : 0;
+                $version = ($maxVer > 0) ? ($maxVer + 1) : 1;
+
+                $templateId = (int) $this->templateModel->insert([
+                    'template_code' => $code,
+                    'version'       => $version,
+                    'title'         => $title,
+                    'description'   => $description,
+                    'target_group'  => $targetGroup,
+                    'schema_json'   => json_encode($schemaJson, JSON_UNESCAPED_UNICODE),
+                    'status'        => M_AppraisalTemplate::STATUS_DRAFT,
+                    'isactive'      => $isactive,
+                    'created_by'    => $userId,
+                    'updated_by'    => $userId,
+                ], true);
+
+                if (empty($templateId)) {
+                    throw new DatabaseException('Gagal membuat header template baru.');
+                }
             }
+
+            // 2. Sync scoping across the 4 mapping tables
+            foreach (self::SCOPE_TABLES as $key => $cfg) {
+                $db->table($cfg['table'])->where('md_appraisal_template_id', $templateId)->delete();
+                $rawIds = $scoping[$key] ?? [];
+                if ($key === 'levelling_ids' && empty($rawIds)) {
+                    $rawIds = $scoping['leveling_ids'] ?? [];
+                }
+                $ids = array_unique(array_filter(array_map('intval', (array) $rawIds)));
+                foreach ($ids as $scopeId) {
+                    $db->table($cfg['table'])->insert([
+                        'md_appraisal_template_id' => $templateId,
+                        $cfg['fk']                 => $scopeId,
+                        'isactive'                 => 'Y',
+                        'created_by'               => $userId,
+                        'updated_by'               => $userId,
+                    ]);
+                }
+            }
+
+            if ($db->transStatus() === false) {
+                $db->transRollback();
+                throw new DatabaseException('Gagal menyimpan template penilaian.');
+            }
+
+            $db->transCommit();
+
+            return $templateId;
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
         }
-
-        $db->transComplete();
-
-        if ($db->transStatus() === false) {
-            throw new Exception('Gagal menyimpan template penilaian.');
-        }
-
-        return $templateId;
     }
 
     /**
@@ -181,11 +190,11 @@ class AppraisalTemplateServices
         $template = $this->templateModel->find($templateId);
 
         if (! $template) {
-            throw new Exception('Appraisal template not found.');
+            throw new NotFoundException('Appraisal template not found.');
         }
 
         if ($template->status !== M_AppraisalTemplate::STATUS_DRAFT) {
-            throw new Exception('Only DRAFT templates can be published.');
+            throw new ValidationException('Only DRAFT templates can be published.');
         }
 
         // Verify template has at least one active item in schema_json
@@ -198,32 +207,41 @@ class AppraisalTemplateServices
         }
 
         if ($itemCount === 0) {
-            throw new Exception('Cannot publish an appraisal template without evaluation items.');
+            throw new ValidationException('Cannot publish an appraisal template without evaluation items.');
         }
 
         $db = \Config\Database::connect();
-        $db->transStart();
+        $db->transBegin();
 
-        $template->status       = M_AppraisalTemplate::STATUS_PUBLISHED;
-        $template->published_at = date('Y-m-d H:i:s');
-        $template->updated_by   = $userId;
+        try {
+            $template->status       = M_AppraisalTemplate::STATUS_PUBLISHED;
+            $template->published_at = date('Y-m-d H:i:s');
+            $template->updated_by   = $userId;
 
-        $this->templateModel->save($template);
+            $this->templateModel->save($template);
 
-        // Auto-archive previous published versions for this template_code
-        $db->table('md_appraisal_template')
-            ->where('template_code', $template->template_code)
-            ->where('md_appraisal_template_id !=', $templateId)
-            ->where('status', M_AppraisalTemplate::STATUS_PUBLISHED)
-            ->update([
-                'status'     => M_AppraisalTemplate::STATUS_ARCHIVED,
-                'updated_by' => $userId,
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
+            // Auto-archive previous published versions for this template_code
+            $db->table('md_appraisal_template')
+                ->where('template_code', $template->template_code)
+                ->where('md_appraisal_template_id !=', $templateId)
+                ->where('status', M_AppraisalTemplate::STATUS_PUBLISHED)
+                ->update([
+                    'status'     => M_AppraisalTemplate::STATUS_ARCHIVED,
+                    'updated_by' => $userId,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
 
-        $db->transComplete();
+            if ($db->transStatus() === false) {
+                $db->transRollback();
+                return false;
+            }
 
-        return $db->transStatus() !== false;
+            $db->transCommit();
+            return true;
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
+        }
     }
 
     /**
@@ -256,11 +274,11 @@ class AppraisalTemplateServices
         $sourceTemplate = $this->templateModel->find($templateId);
 
         if (! $sourceTemplate) {
-            throw new Exception('Source appraisal template not found.');
+            throw new NotFoundException('Source appraisal template not found.');
         }
 
         if ($sourceTemplate->status !== M_AppraisalTemplate::STATUS_PUBLISHED) {
-            throw new Exception('New versions can only be created from PUBLISHED templates.');
+            throw new ValidationException('New versions can only be created from PUBLISHED templates.');
         }
 
         // Guard against multiple active drafts for the same template code
@@ -271,57 +289,64 @@ class AppraisalTemplateServices
             ->first();
 
         if ($existingDraft) {
-            throw new Exception("Draft versi {$existingDraft->version} sudah ada untuk template {$existingDraft->template_code}. Selesaikan atau hapus draft tersebut terlebih dahulu.");
+            throw new BusinessException("Draft versi {$existingDraft->version} sudah ada untuk template {$existingDraft->template_code}. Selesaikan atau hapus draft tersebut terlebih dahulu.");
         }
 
         $db = \Config\Database::connect();
-        $db->transStart();
+        $db->transBegin();
 
-        // Determine next version number for this template_code
-        $maxVersionRow = $this->templateModel
-            ->selectMax('version')
-            ->where('template_code', $sourceTemplate->template_code)
-            ->first();
+        try {
+            // Determine next version number for this template_code
+            $maxVersionRow = $this->templateModel
+                ->selectMax('version')
+                ->where('template_code', $sourceTemplate->template_code)
+                ->first();
 
-        $nextVersion = ($maxVersionRow->version ?? $sourceTemplate->version) + 1;
+            $nextVersion = ($maxVersionRow->version ?? $sourceTemplate->version) + 1;
 
-        // 1. Duplicate Template Header (including target_group & compact schema_json)
-        $newTemplate = new AppraisalTemplate();
-        $newTemplate->template_code   = $sourceTemplate->template_code;
-        $newTemplate->version         = $nextVersion;
-        $newTemplate->title           = $sourceTemplate->title;
-        $newTemplate->description     = $sourceTemplate->description;
-        $newTemplate->target_group    = $sourceTemplate->target_group ?? 'STAFF_SPV';
-        $newTemplate->schema_json     = $sourceTemplate->schema_json;
-        $newTemplate->status          = M_AppraisalTemplate::STATUS_DRAFT;
-        $newTemplate->isactive        = 'Y';
-        $newTemplate->created_by      = $userId;
-        $newTemplate->updated_by      = $userId;
+            // 1. Duplicate Template Header (including target_group & compact schema_json)
+            $newTemplate = new AppraisalTemplate();
+            $newTemplate->template_code   = $sourceTemplate->template_code;
+            $newTemplate->version         = $nextVersion;
+            $newTemplate->title           = $sourceTemplate->title;
+            $newTemplate->description     = $sourceTemplate->description;
+            $newTemplate->target_group    = $sourceTemplate->target_group ?? 'PERMANENT';
+            $newTemplate->schema_json     = $sourceTemplate->schema_json;
+            $newTemplate->status          = M_AppraisalTemplate::STATUS_DRAFT;
+            $newTemplate->isactive        = 'Y';
+            $newTemplate->created_by      = $userId;
+            $newTemplate->updated_by      = $userId;
 
-        $newTemplateId = $this->templateModel->insert($newTemplate, true);
+            $newTemplateId = $this->templateModel->insert($newTemplate, true);
 
-        // 2. Duplicate unified scoping mappings (md_template_scope)
-        $scopeRows = $db->table('md_template_scope')
-            ->where('md_appraisal_template_id', $templateId)
-            ->where('isactive', 'Y')
-            ->get()
-            ->getResultArray();
+            // 2. Duplicate scoping mappings across the 4 tables
+            foreach (self::SCOPE_TABLES as $cfg) {
+                $rows = $db->table($cfg['table'])
+                    ->where('md_appraisal_template_id', $templateId)
+                    ->where('isactive', 'Y')
+                    ->get()
+                    ->getResultArray();
 
-        foreach ($scopeRows as $row) {
-            $db->table('md_template_scope')->insert([
-                'md_appraisal_template_id' => $newTemplateId,
-                'scope_type'               => $row['scope_type'],
-                'scope_id'                 => $row['scope_id'],
-                'isactive'                 => 'Y',
-                'created_by'               => $userId,
-                'updated_by'               => $userId,
-            ]);
-        }
+                foreach ($rows as $row) {
+                    $db->table($cfg['table'])->insert([
+                        'md_appraisal_template_id' => $newTemplateId,
+                        $cfg['fk']                 => (int) $row[$cfg['fk']],
+                        'isactive'                 => 'Y',
+                        'created_by'               => $userId,
+                        'updated_by'               => $userId,
+                    ]);
+                }
+            }
 
-        $db->transComplete();
+            if ($db->transStatus() === false) {
+                $db->transRollback();
+                throw new DatabaseException('Failed to clone appraisal template version.');
+            }
 
-        if ($db->transStatus() === false) {
-            throw new DatabaseException('Failed to clone appraisal template version.');
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
         }
 
         return $this->templateModel->find($newTemplateId);
@@ -340,11 +365,11 @@ class AppraisalTemplateServices
         $template = $this->templateModel->find($templateId);
 
         if (! $template) {
-            throw new Exception('Appraisal template not found.');
+            throw new NotFoundException('Appraisal template not found.');
         }
 
-        if ($template->status === M_AppraisalTemplate::STATUS_ARCHIVED || $template->status === 'VO') {
-            throw new Exception('Template is already archived.');
+        if ($template->status === M_AppraisalTemplate::STATUS_ARCHIVED) {
+            throw new ValidationException('Template is already archived.');
         }
 
         $template->status     = M_AppraisalTemplate::STATUS_ARCHIVED;
@@ -360,18 +385,17 @@ class AppraisalTemplateServices
      * @param int $templateId
      * @param int $userId
      * @return bool
-     * @throws Exception
      */
     public function activateTemplate(int $templateId, int $userId): bool
     {
         $template = $this->templateModel->find($templateId);
 
         if (! $template) {
-            throw new Exception('Template appraisal tidak ditemukan.');
+            throw new NotFoundException('Template appraisal tidak ditemukan.');
         }
 
         if ($template->status === M_AppraisalTemplate::STATUS_PUBLISHED) {
-            throw new Exception('Template sudah berstatus PUBLISHED (aktif).');
+            throw new ValidationException('Template sudah berstatus PUBLISHED (aktif).');
         }
 
         $template->status     = M_AppraisalTemplate::STATUS_PUBLISHED;
@@ -389,52 +413,60 @@ class AppraisalTemplateServices
      * @param int $templateId
      * @param int $userId
      * @return bool
-     * @throws Exception
      */
     public function unpublishTemplate(int $templateId, int $userId): bool
     {
         $template = $this->templateModel->find($templateId);
 
         if (! $template) {
-            throw new Exception('Appraisal template not found.');
+            throw new NotFoundException('Appraisal template not found.');
         }
 
         if ($template->status !== M_AppraisalTemplate::STATUS_PUBLISHED) {
-            throw new Exception('Hanya template berstatus PUBLISHED yang dapat dibatalkan publish-nya.');
+            throw new ValidationException('Hanya template berstatus PUBLISHED yang dapat dibatalkan publish-nya.');
         }
 
         $usageCount = $this->getAppraisalUsageCount($templateId);
         if ($usageCount > 0) {
-            throw new Exception("Tidak dapat membatalkan publish: Template ini sudah digunakan oleh {$usageCount} penilaian karyawan aktif.");
+            throw new BusinessException("Tidak dapat membatalkan publish: Template ini sudah digunakan oleh {$usageCount} penilaian karyawan aktif.");
         }
 
         $db = \Config\Database::connect();
-        $db->transStart();
+        $db->transBegin();
 
-        $template->status       = M_AppraisalTemplate::STATUS_DRAFT;
-        $template->published_at = null;
-        $template->updated_by   = $userId;
+        try {
+            $template->status       = M_AppraisalTemplate::STATUS_DRAFT;
+            $template->published_at = null;
+            $template->updated_by   = $userId;
 
-        $this->templateModel->save($template);
+            $this->templateModel->save($template);
 
-        // If publishing this template had auto-archived a previous version, restore the most recent one
-        $lastArchived = $this->templateModel
-            ->where('template_code', $template->template_code)
-            ->where('md_appraisal_template_id !=', $templateId)
-            ->whereIn('status', [M_AppraisalTemplate::STATUS_ARCHIVED, 'VO'])
-            ->where('isactive', 'Y')
-            ->orderBy('version', 'DESC')
-            ->first();
+            // If publishing this template had auto-archived a previous version, restore the most recent one
+            $lastArchived = $this->templateModel
+                ->where('template_code', $template->template_code)
+                ->where('md_appraisal_template_id !=', $templateId)
+                ->where('status', M_AppraisalTemplate::STATUS_ARCHIVED)
+                ->where('isactive', 'Y')
+                ->orderBy('version', 'DESC')
+                ->first();
 
-        if ($lastArchived) {
-            $lastArchived->status     = M_AppraisalTemplate::STATUS_PUBLISHED;
-            $lastArchived->updated_by = $userId;
-            $this->templateModel->save($lastArchived);
+            if ($lastArchived) {
+                $lastArchived->status     = M_AppraisalTemplate::STATUS_PUBLISHED;
+                $lastArchived->updated_by = $userId;
+                $this->templateModel->save($lastArchived);
+            }
+
+            if ($db->transStatus() === false) {
+                $db->transRollback();
+                return false;
+            }
+
+            $db->transCommit();
+            return true;
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
         }
-
-        $db->transComplete();
-
-        return $db->transStatus() !== false;
     }
 
     /**
@@ -443,40 +475,70 @@ class AppraisalTemplateServices
      *
      * @param int $templateId
      * @return bool
-     * @throws Exception
      */
     public function deleteTemplate(int $templateId): bool
     {
         $template = $this->templateModel->find($templateId);
 
         if (! $template) {
-            throw new Exception('Template appraisal tidak ditemukan.');
+            throw new NotFoundException('Template appraisal tidak ditemukan.');
         }
 
         $usageCount = $this->getAppraisalUsageCount($templateId);
         if ($usageCount > 0) {
-            throw new Exception("Template tidak dapat dihapus karena sudah memiliki {$usageCount} data penilaian karyawan. Silakan gunakan fungsi Arsip.");
+            throw new BusinessException("Template tidak dapat dihapus karena sudah memiliki {$usageCount} data penilaian karyawan. Silakan gunakan fungsi Arsip.");
         }
 
         $db = \Config\Database::connect();
-        $db->transStart();
+        $db->transBegin();
 
-        // 1. Delete unified scoping mappings
-        $db->table('md_template_scope')->where('md_appraisal_template_id', $templateId)->delete();
+        try {
+            // 1. Delete scoping mappings across the 4 tables
+            foreach (self::SCOPE_TABLES as $cfg) {
+                $db->table($cfg['table'])->where('md_appraisal_template_id', $templateId)->delete();
+            }
 
-        // 2. Delete header
-        $this->templateModel->delete($templateId, true); // true for permanent delete
+            // 2. Delete header
+            $this->templateModel->delete($templateId, true); // true for permanent delete
 
-        $db->transComplete();
+            if ($db->transStatus() === false) {
+                $db->transRollback();
+                return false;
+            }
 
-        return $db->transStatus() !== false;
+            $db->transCommit();
+            return true;
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
+        }
+    }
+
+    /**
+     * Resolve Operator md_levelling_id(s) dynamically from md_levelling.
+     *
+     * @return int[]
+     */
+    protected function getOperatorLevellingIds(): array
+    {
+        $db   = \Config\Database::connect();
+        $rows = $db->table('md_levelling')
+            ->select('md_levelling_id')
+            ->where('UPPER(name)', 'OPERATOR')
+            ->where('isactive', 'Y')
+            ->get()
+            ->getResultArray();
+
+        $ids = array_values(array_filter(array_map('intval', array_column($rows, 'md_levelling_id'))));
+
+        return ! empty($ids) ? $ids : [100006];
     }
 
     /**
      * Compact sections & items into the zero-surplus schema_json contract
      * aligned with pdf_staff.php and pdf_operator.php.
      */
-    public static function compactSchema(array $sections, string $targetGroup = 'STAFF_SPV'): array
+    public static function compactSchema(array $sections, string $targetGroup = 'PERMANENT'): array
     {
         $compactSections = [];
         $nextSecId       = 1;
@@ -612,7 +674,7 @@ class AppraisalTemplateServices
 
     /**
      * Expand compact schema_json into the legacy {template, sections, items} shape
-     * consumed by AppraisalScoringService, AppraisalEvaluationController, and PDF/filling views.
+     * consumed by AppraisalScoringServices, AppraisalEvaluation, and PDF/filling views.
      * Returns legacy snapshots unchanged for full backward compatibility.
      */
     public static function expandSchema(array $data, ?AppraisalTemplate $template = null): array
@@ -696,7 +758,7 @@ class AppraisalTemplateServices
                 'title'                    => $template->title,
                 'version'                  => (int) $template->version,
                 'status'                   => $template->status,
-                'target_group'             => $template->target_group ?? 'STAFF_SPV',
+                'target_group'             => $template->target_group ?? 'PERMANENT',
             ];
         }
 

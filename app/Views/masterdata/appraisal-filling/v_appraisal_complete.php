@@ -15,7 +15,9 @@
     $this->setVar('section_number', $is_operator ? 'IV' : 'V');
 
     $finalScoreVal = (float) ($appraisal->final_score ?? 0);
-    $ratingMeta    = appraisal_rating_meta($appraisal->final_score !== null ? $finalScoreVal : null, $is_operator);
+    $ratingMeta    = $is_operator
+        ? appraisal_rating_meta((float) ($summary['totNilai'] ?? 0), true)
+        : appraisal_rating_meta($appraisal->final_score !== null ? $finalScoreVal : null, false);
 
     $backUrl = base_url('sas/penilaian');
     if (isset($_SERVER['HTTP_REFERER']) && (strpos($_SERVER['HTTP_REFERER'], 'monitoring-penilaian') !== false || strpos($_SERVER['HTTP_REFERER'], 'performance-appraisal') !== false)) {
@@ -137,7 +139,7 @@
                     <div class="ap-summary-label">Skor Akhir Performa</div>
                     <div class="ap-summary-score">
                         <?php if ($is_operator): ?>
-                            <?= number_format((float) ($summary['totNilai'] ?? 0), 0) ?>
+                            <?= esc($summary['displaySkorAkhir'] ?? '0') ?>
                         <?php else: ?>
                             <?= number_format($finalScoreVal, 2) ?> <small>/ 4.00</small>
                         <?php endif; ?>
@@ -147,7 +149,7 @@
                     <div class="ap-summary-label">Predikat Penilaian</div>
                     <div>
                         <span class="ap-rating ap-summary-rating <?= esc($ratingMeta['class']) ?>">
-                            <?= esc($appraisal->rating ?? $ratingMeta['label']) ?>
+                            <?= esc($is_operator ? $ratingMeta['label'] : ($appraisal->rating ?? $ratingMeta['label'])) ?>
                         </span>
                     </div>
                 </div>

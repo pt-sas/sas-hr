@@ -331,16 +331,16 @@
             <?php if (!empty($can_evaluator)): ?>
             <li role="presentation">
                 <button type="button" class="atl-tab" id="tab_evaluator" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'EVALUATOR' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'EVALUATOR' ? '0' : '-1' ?>" data-role="EVALUATOR">
-                    <i class="fas fa-edit" aria-hidden="true"></i> Penilai
+                    <i class="fas fa-edit" aria-hidden="true"></i> Sebagai Penilai
                     <span class="atl-count ml-1"><?= (int) ($count_evaluator ?? 0) ?></span>
                 </button>
             </li>
             <?php endif; ?>
-            <?php if (!empty($can_gm)): ?>
+            <?php if (!empty($can_reviewer)): ?>
             <li role="presentation">
-                <button type="button" class="atl-tab" id="tab_gm" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'GM' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'GM' ? '0' : '-1' ?>" data-role="GM">
-                    <i class="fas fa-user-tie" aria-hidden="true"></i> Peninjau
-                    <span class="atl-count ml-1"><?= (int) ($count_gm ?? 0) ?></span>
+                <button type="button" class="atl-tab" id="tab_reviewer" role="tab" aria-selected="<?= ($default_tab ?? 'EVALUATOR') === 'REVIEWER' ? 'true' : 'false' ?>" tabindex="<?= ($default_tab ?? 'EVALUATOR') === 'REVIEWER' ? '0' : '-1' ?>" data-role="REVIEWER">
+                    <i class="fas fa-user-tie" aria-hidden="true"></i> Sebagai Peninjau
+                    <span class="atl-count ml-1"><?= (int) ($count_reviewer ?? 0) ?></span>
                 </button>
             </li>
             <?php endif; ?>
@@ -386,8 +386,6 @@
                     <th>Level</th>
                     <th>Cabang</th>
                     <th>Divisi</th>
-                    <th>Penilai</th>
-                    <th>Peninjau</th>
                     <th class="text-center">Siklus Penilaian</th>
                     <th class="text-center" style="width: 150px;">Tahapan</th>
                     <th class="text-center" style="width: 90px;">Aksi</th>
@@ -498,7 +496,7 @@
 
             var rawDate = '';
             var label = 'Deadline';
-            if (role === 'GM') {
+            if (role === 'REVIEWER') {
                 rawDate = $box.data('review') || $box.data('end') || '';
                 label = 'Deadline Review';
             } else if (role === 'EMPLOYEE') {
@@ -616,8 +614,8 @@
                         var notes = log.notes || '-';
 
                         var pillTone = 'primary';
-                        if (actionTitle === 'KICKBACK_GM') pillTone = 'danger';
-                        else if (actionTitle === 'GM_OVERRIDE_ITEM') pillTone = 'warning';
+                        if (actionTitle === 'KICKBACK_REVIEWER' || actionTitle === 'KICKBACK_GM') pillTone = 'danger';
+                        else if (actionTitle === 'REVIEWER_OVERRIDE_ITEM' || actionTitle === 'GM_OVERRIDE_ITEM') pillTone = 'warning';
                         else if (actionTitle === 'UPDATE_ITEM_SCORE') pillTone = 'info';
                         else if (actionTitle === 'ACKNOWLEDGE_EMPLOYEE') pillTone = 'ok';
 

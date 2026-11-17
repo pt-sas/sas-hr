@@ -17,15 +17,15 @@
                 I. Informasi Karyawan &amp; Siklus Evaluasi PA
             </h5>
             <?php if ($displayMode === 'compare'): ?>
-                <span class="ap-mode is-gm">STATUS: KOMPARASI SKOR</span>
+                <span class="ap-mode is-reviewer">STATUS: KOMPARASI SKOR</span>
             <?php elseif (! empty($is_preview)): ?>
                 <span class="ap-mode is-none">STATUS: MODE SIMULASI</span>
             <?php elseif ($displayMode === 'readonly' || $userMode === 'VIEW'): ?>
                 <span class="ap-mode is-emp">STATUS: <?= esc(mb_strtoupper($statusLabel, 'UTF-8')) ?></span>
-            <?php elseif ($userMode === 'GM'): ?>
-                <span class="ap-mode is-gm">STATUS: PENINJAU</span>
+            <?php elseif ($userMode === 'REVIEWER'): ?>
+                <span class="ap-mode is-reviewer">STATUS: PENINJAU</span>
             <?php elseif ($userMode === 'HR'): ?>
-                <span class="ap-mode is-gm" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">STATUS: INTERVENSI HR</span>
+                <span class="ap-mode is-reviewer" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">STATUS: INTERVENSI HR</span>
             <?php elseif ($userMode === 'EVALUATOR'): ?>
                 <span class="ap-mode is-evaluator">STATUS: PENILAI</span>
             <?php elseif ($userMode === 'EMPLOYEE'): ?>
@@ -93,18 +93,18 @@
             </div>
             <div class="ap-info-item">
                 <div class="ap-info-label">Peninjau</div>
-                <div class="ap-info-value"><?= esc(mb_strtoupper($gm['name'] ?? '-', 'UTF-8')) ?></div>
+                <div class="ap-info-value"><?= esc(mb_strtoupper($reviewer['name'] ?? '-', 'UTF-8')) ?></div>
             </div>
         </div>
     </div>
 </div>
 
-<?php if ($displayMode === 'edit' && ! empty($appraisal->gm_comment) && $curSt === \App\Models\M_Appraisal::STATUS_DRAFT_EVALUATOR): ?>
+<?php if ($displayMode === 'edit' && ! empty($appraisal->reviewer_comment) && $curSt === \App\Models\M_Appraisal::STATUS_DRAFT_EVALUATOR): ?>
     <div class="ap-kickback">
         <div class="ap-kickback-icon"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></div>
         <div>
             <div class="ap-kickback-title">Form dikembalikan oleh Peninjau untuk revisi</div>
-            <p class="ap-kickback-text"><?= nl2br(esc($appraisal->gm_comment)) ?></p>
+            <p class="ap-kickback-text"><?= nl2br(esc($appraisal->reviewer_comment)) ?></p>
         </div>
     </div>
 <?php endif; ?>

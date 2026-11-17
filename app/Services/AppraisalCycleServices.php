@@ -3,15 +3,19 @@
 namespace App\Services;
 
 use App\Entities\AppraisalCycle;
+use App\Exceptions\BusinessException;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
 use App\Models\M_AppraisalCycle;
 use Exception;
 
-class AppraisalCycleService
+class AppraisalCycleServices extends BaseServices
 {
     protected M_AppraisalCycle $cycleModel;
 
     public function __construct()
     {
+        parent::__construct();
         $this->cycleModel = new M_AppraisalCycle();
     }
 
@@ -28,11 +32,11 @@ class AppraisalCycleService
         $cycle = $this->cycleModel->find($cycleId);
 
         if (! $cycle) {
-            throw new Exception('Siklus penilaian tidak ditemukan.');
+            throw new NotFoundException('Siklus penilaian tidak ditemukan.');
         }
 
         if ($cycle->status !== M_AppraisalCycle::STATUS_DRAFT) {
-            throw new Exception('Hanya siklus berstatus DRAFT yang dapat dibuka.');
+            throw new ValidationException('Hanya siklus berstatus DRAFT yang dapat dibuka.');
         }
 
         // Ensure there is only one active OPEN cycle at a time
@@ -44,7 +48,7 @@ class AppraisalCycleService
         $activeTitle  = $activeOpenCycle ? (is_object($activeOpenCycle) ? ($activeOpenCycle->title ?? '') : ($activeOpenCycle['title'] ?? '')) : '';
 
         if ($activeOpenCycle && $activeOpenId !== $cycleId) {
-            throw new Exception("Tidak dapat membuka siklus. Siklus '{$activeTitle}' saat ini sedang AKTIF (OPEN).");
+            throw new BusinessException("Tidak dapat membuka siklus. Siklus '{$activeTitle}' saat ini sedang AKTIF (OPEN).");
         }
 
         // 1. Update cycle status to OPEN
@@ -54,24 +58,24 @@ class AppraisalCycleService
 
         // 2. Trigger batch generation
         try {
-            $generator = new AppraisalGeneratorService();
+            $generator = new AppraisalGeneratorServices();
             $genResult = $generator->generateBatchForCycle($cycleId, $userId);
 
             if (($genResult['generated'] ?? 0) === 0 && ($genResult['skipped'] ?? 0) === 0) {
                 $errDetail = !empty($genResult['errors']) ? ' Detail: ' . implode('; ', array_slice($genResult['errors'], 0, 3)) : '';
-                throw new Exception('Tidak ada form penilaian yang berhasil di-generate. Pastikan terdapat template PUBLISHED dan karyawan aktif.' . $errDetail);
+                throw new BusinessException('Tidak ada form penilaian yang berhasil di-generate. Pastikan terdapat template PUBLISHED dan karyawan aktif.' . $errDetail);
             }
 
             // Trigger Nudge: Notify cycle kickoff to all evaluators
             try {
-                $nudgeService = new AppraisalNudgeService();
+                $nudgeService = new AppraisalNudgeServices();
                 $nudgeService->notifyCycleKickoff($cycleId, $userId);
             } catch (\Throwable $ne) {
-                log_message('error', '[AppraisalCycleService] Kickoff nudge error: ' . $ne->getMessage());
+                log_message('error', '[AppraisalCycleServices] Kickoff nudge error: ' . $ne->getMessage());
             }
 
             return $genResult;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Revert cycle status back to DRAFT if generation completely failed
             $cycle->status     = M_AppraisalCycle::STATUS_DRAFT;
             $cycle->updated_by = $userId;
@@ -94,11 +98,11 @@ class AppraisalCycleService
         $cycle = $this->cycleModel->find($cycleId);
 
         if (! $cycle) {
-            throw new Exception('Siklus penilaian tidak ditemukan.');
+            throw new NotFoundException('Siklus penilaian tidak ditemukan.');
         }
 
         if (! $cycle->isOpen()) {
-            throw new Exception('Hanya siklus berstatus OPEN yang dapat ditutup.');
+            throw new ValidationException('Hanya siklus berstatus OPEN yang dapat ditutup.');
         }
 
         $cycle->status     = M_AppraisalCycle::STATUS_CLOSED;
@@ -132,9 +136,9 @@ class AppraisalCycleService
             $cycleId = is_object($cycle) ? (int) $cycle->md_appraisal_cycle_id : (int) ($cycle['md_appraisal_cycle_id'] ?? 0);
             try {
                 $this->closeCycle($cycleId, 1);
-                log_message('info', "[AppraisalCycleService::getActiveCycle] Auto-closed expired cycle #{$cycleId} (end_date: {$endDate})");
+                log_message('info', "[AppraisalCycleServices::getActiveCycle] Auto-closed expired cycle #{$cycleId} (end_date: {$endDate})");
             } catch (Exception $e) {
-                log_message('error', "[AppraisalCycleService::getActiveCycle] Failed to auto-close cycle #{$cycleId}: " . $e->getMessage());
+                log_message('error', "[AppraisalCycleServices::getActiveCycle] Failed to auto-close cycle #{$cycleId}: " . $e->getMessage());
             }
             return null;
         }
@@ -163,10 +167,10 @@ class AppraisalCycleService
             $cycleId = is_object($cycle) ? (int) $cycle->md_appraisal_cycle_id : (int) ($cycle['md_appraisal_cycle_id'] ?? 0);
             try {
                 $this->closeCycle($cycleId, $actorId);
-                log_message('info', "[AppraisalCycleService::closeExpiredCycles] Auto-closed expired cycle #{$cycleId}");
+                log_message('info', "[AppraisalCycleServices::closeExpiredCycles] Auto-closed expired cycle #{$cycleId}");
                 $closedCount++;
             } catch (Exception $e) {
-                log_message('error', "[AppraisalCycleService::closeExpiredCycles] Failed to close cycle #{$cycleId}: " . $e->getMessage());
+                log_message('error', "[AppraisalCycleServices::closeExpiredCycles] Failed to close cycle #{$cycleId}: " . $e->getMessage());
             }
         }
 
@@ -186,16 +190,16 @@ class AppraisalCycleService
         $cycle = $this->cycleModel->find($cycleId);
 
         if (! $cycle) {
-            throw new Exception('Siklus penilaian tidak ditemukan.');
+            throw new NotFoundException('Siklus penilaian tidak ditemukan.');
         }
 
         if (is_object($cycle) && method_exists($cycle, 'isClosed') && $cycle->isClosed()) {
-            throw new Exception('Siklus penilaian telah ditutup (CLOSED). Form penilaian tidak dapat diubah.');
+            throw new BusinessException('Siklus penilaian telah ditutup (CLOSED). Form penilaian tidak dapat diubah.');
         }
 
         $status = is_object($cycle) ? ($cycle->status ?? '') : ($cycle['status'] ?? '');
         if ($status !== M_AppraisalCycle::STATUS_OPEN) {
-            throw new Exception("Siklus penilaian sedang tidak aktif (Status: {$status}). Form penilaian tidak dapat diubah.");
+            throw new BusinessException("Siklus penilaian sedang tidak aktif (Status: {$status}). Form penilaian tidak dapat diubah.");
         }
 
         $nowStr  = $currentDate ?: date('Y-m-d');
@@ -204,10 +208,10 @@ class AppraisalCycleService
         // Stage 6 / Finalisasi guard
         if (is_object($cycle) && method_exists($cycle, 'getCurrentStage')) {
             if ($cycle->getCurrentStage($nowStr) >= 6) {
-                throw new Exception('Siklus penilaian sudah memasuki tahap Finalisasi. Pengisian dan perubahan form telah dikunci.');
+                throw new BusinessException('Siklus penilaian sudah memasuki tahap Finalisasi. Pengisian dan perubahan form telah dikunci.');
             }
         } elseif (! empty($endDate) && $nowStr > $endDate) {
-            throw new Exception('Siklus penilaian telah melewati batas tanggal akhir. Pengisian dan perubahan form telah dikunci.');
+            throw new BusinessException('Siklus penilaian telah melewati batas tanggal akhir. Pengisian dan perubahan form telah dikunci.');
         }
     }
 }

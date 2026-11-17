@@ -56,11 +56,9 @@
                                 <div class="select2-input select2-primary">
                                     <select class="form-control select2" id="filter_status" name="status" style="width: 100%;">
                                         <option value="ALL">Semua Status</option>
-                                        <option value="PENILAIAN">Penilaian</option>
-                                        <option value="SUBMIT_PENILAIAN">Submit Penilaian</option>
-                                        <option value="REVIEW">Review</option>
-                                        <option value="SUBMIT_REVIEW">Submit Review</option>
-                                        <option value="FINAL">Final</option>
+                                        <?php foreach (($status_labels ?? \App\Models\M_Appraisal::getStatusLabels()) as $statusCode => $statusName) : ?>
+                                            <option value="<?= esc($statusCode) ?>"><?= esc($statusName) ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                             </div>

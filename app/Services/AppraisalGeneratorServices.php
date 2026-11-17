@@ -3,29 +3,31 @@
 namespace App\Services;
 
 use App\Entities\Appraisal;
+use App\Exceptions\BusinessException;
+use App\Exceptions\ValidationException;
 use App\Models\M_Appraisal;
 use App\Models\M_AppraisalCycle;
 use App\Models\M_AppraisalTemplate;
 use App\Models\M_AppraisalResponse;
 use CodeIgniter\Database\Exceptions\DatabaseException;
-use Exception;
 
-class AppraisalGeneratorService
+class AppraisalGeneratorServices extends BaseServices
 {
     protected M_AppraisalCycle $cycleModel;
     protected M_Appraisal $appraisalModel;
     protected M_AppraisalTemplate $templateModel;
     protected M_AppraisalResponse $responseModel;
-    protected AppraisalTemplateResolverService $resolverService;
+    protected AppraisalTemplateResolverServices $resolverService;
     protected \App\Models\M_Employee $employeeModel;
 
     public function __construct()
     {
+        parent::__construct();
         $this->cycleModel      = new M_AppraisalCycle();
         $this->appraisalModel  = new M_Appraisal();
         $this->templateModel   = new M_AppraisalTemplate();
         $this->responseModel   = new M_AppraisalResponse();
-        $this->resolverService = new AppraisalTemplateResolverService();
+        $this->resolverService = new AppraisalTemplateResolverServices();
         $this->employeeModel   = new \App\Models\M_Employee();
     }
 
@@ -37,7 +39,7 @@ class AppraisalGeneratorService
         $cycle = $this->cycleModel->find($cycleId);
 
         if (! $cycle || ! $cycle->isOpen()) {
-            throw new Exception('Appraisals can only be generated for OPEN cycles.');
+            throw new ValidationException('Appraisals can only be generated for OPEN cycles.');
         }
 
         $db = \Config\Database::connect();
@@ -61,7 +63,7 @@ class AppraisalGeneratorService
             ->getResultArray();
 
         if (empty($employees)) {
-            throw new Exception('No active employees found to generate appraisals.');
+            throw new BusinessException('No active employees found to generate appraisals.');
         }
 
         $generatedCount = 0;
@@ -85,7 +87,7 @@ class AppraisalGeneratorService
                 continue;
             }
 
-            $db->transStart();
+            $db->transBegin();
 
             try {
                 $branchIds   = !empty($employee['branch_ids']) ? explode(',', $employee['branch_ids']) : [];
@@ -112,13 +114,13 @@ class AppraisalGeneratorService
                     }
 
                     if (empty($schema['sections'])) {
-                        throw new Exception("Template ID {$templateId} tidak memiliki struktur schema_json yang valid.");
+                        throw new ValidationException("Template ID {$templateId} tidak memiliki struktur schema_json yang valid.");
                     }
 
                     $expanded = AppraisalTemplateServices::expandSchema($schema, $template);
                     $tplMeta  = $expanded['template'];
                     if (empty($tplMeta['target_group'])) {
-                        $tplMeta['target_group'] = strtoupper((string) ($template->target_group ?? 'STAFF_SPV'));
+                        $tplMeta['target_group'] = strtoupper((string) ($template->target_group ?? 'PERMANENT'));
                     }
 
                     $templateCache[$templateId] = [
@@ -138,20 +140,20 @@ class AppraisalGeneratorService
                 $appraisal->md_appraisal_template_id = $templateId;
                 $appraisal->md_employee_id           = $employeeId;
 
-                // Deduce hierarchy (Evaluator/Manager & Reviewer/GM)
+                // Deduce hierarchy (Evaluator/Manager & Reviewer)
                 $hierarchy   = $this->employeeModel->getAppraisalHierarchy($employeeId);
                 $evaluatorId = (int) ($hierarchy['manager_id'] ?? 0);
                 if ($evaluatorId <= 0 && ! empty($employee['superior_id'])) {
                     $evaluatorId = (int) $employee['superior_id'];
                 }
-                $gmId = (int) ($hierarchy['reviewer_id'] ?? 0);
+                $reviewerId = (int) ($hierarchy['reviewer_id'] ?? 0);
 
                 // Freeze organizational structure
                 $appraisal->snapshot_branch_id    = $branchId ?: null;
                 $appraisal->snapshot_division_id  = $divisionId;
                 $appraisal->snapshot_position_id  = $positionId;
                 $appraisal->snapshot_evaluator_id = $evaluatorId;
-                $appraisal->snapshot_gm_id        = $gmId > 0 ? $gmId : null;
+                $appraisal->snapshot_reviewer_id  = $reviewerId > 0 ? $reviewerId : null;
 
                 // Freeze template JSON structure
                 $appraisal->template_snapshot     = $cachedData['snapshot'];
@@ -180,14 +182,14 @@ class AppraisalGeneratorService
                     $db->table('md_appraisal_response')->insertBatch($responseBatch);
                 }
 
-                $db->transComplete();
-
                 if ($db->transStatus() === false) {
+                    $db->transRollback();
                     throw new DatabaseException("Failed transaction for employee ID {$employeeId}");
                 }
 
+                $db->transCommit();
                 $generatedCount++;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $db->transRollback();
                 $errors[] = "Employee ID {$employeeId}: " . $e->getMessage();
             }
@@ -227,8 +229,8 @@ class AppraisalGeneratorService
                     . 'e.nik as nik, e.fullname, '
                     . 'b.name as branch_name, d.name as division_name, l.name as level_name, p.name as position_name, '
                     . 't.title as template_title, t.template_code, t.status as template_status, '
-                    . 'sup.fullname as evaluator_name, gm.fullname as reviewer_name, '
-                    . 'a.snapshot_evaluator_id as evaluator_id, a.snapshot_gm_id as reviewer_id')
+                    . 'sup.fullname as evaluator_name, rev.fullname as reviewer_name, '
+                    . 'a.snapshot_evaluator_id as evaluator_id, a.snapshot_reviewer_id as reviewer_id')
                 ->join('md_employee e', 'e.md_employee_id = a.md_employee_id', 'left')
                 ->join('md_branch b', 'b.md_branch_id = a.snapshot_branch_id', 'left')
                 ->join('md_division d', 'd.md_division_id = a.snapshot_division_id', 'left')
@@ -236,7 +238,7 @@ class AppraisalGeneratorService
                 ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
                 ->join('md_appraisal_template t', 't.md_appraisal_template_id = a.md_appraisal_template_id', 'left')
                 ->join('md_employee sup', 'sup.md_employee_id = a.snapshot_evaluator_id', 'left')
-                ->join('md_employee gm', 'gm.md_employee_id = a.snapshot_gm_id', 'left')
+                ->join('md_employee rev', 'rev.md_employee_id = a.snapshot_reviewer_id', 'left')
                 ->where('a.md_appraisal_cycle_id', (int) $cycleIdVal)
                 ->where('a.isactive', 'Y')
                 ->orderBy('e.fullname', 'ASC')
@@ -329,7 +331,7 @@ class AppraisalGeneratorService
         $templateStatusCache = [];
         $templateRows = $db->table('md_appraisal_template')
             ->select('md_appraisal_template_id, title, template_code, status')
-            ->whereIn('status', [M_AppraisalTemplate::STATUS_PUBLISHED, 'PUBLISHED', 'CO', M_AppraisalTemplate::STATUS_DRAFT, 'DRAFT', 'DR'])
+            ->whereIn('status', [M_AppraisalTemplate::STATUS_PUBLISHED, M_AppraisalTemplate::STATUS_DRAFT])
             ->where('isactive', 'Y')
             ->get()
             ->getResultArray();
@@ -342,7 +344,7 @@ class AppraisalGeneratorService
         if ($cycle) {
             $cycleIdVal = is_object($cycle) ? ($cycle->md_appraisal_cycle_id ?? 0) : ($cycle['md_appraisal_cycle_id'] ?? 0);
             $existingAppraisals = $db->table('md_appraisal a')
-                ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_template_id, a.snapshot_evaluator_id, a.snapshot_gm_id, a.status, t.title as template_title, t.template_code, t.status as template_status')
+                ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_template_id, a.snapshot_evaluator_id, a.snapshot_reviewer_id, a.status, t.title as template_title, t.template_code, t.status as template_status')
                 ->join('md_appraisal_template t', 't.md_appraisal_template_id = a.md_appraisal_template_id', 'left')
                 ->where('a.md_appraisal_cycle_id', (int) $cycleIdVal)
                 ->where('a.isactive', 'Y')
@@ -382,7 +384,7 @@ class AppraisalGeneratorService
                     ? $empNameMap[$evaluatorId]
                     : ($evaluatorId > 0 ? "Karyawan #{$evaluatorId}" : '-');
 
-                $reviewerId = (int) ($existingApp['snapshot_gm_id'] ?? 0);
+                $reviewerId = (int) ($existingApp['snapshot_reviewer_id'] ?? 0);
                 $reviewerName = ($reviewerId > 0 && isset($empNameMap[$reviewerId]))
                     ? $empNameMap[$reviewerId]
                     : ($reviewerId > 0 ? "Karyawan #{$reviewerId}" : '-');

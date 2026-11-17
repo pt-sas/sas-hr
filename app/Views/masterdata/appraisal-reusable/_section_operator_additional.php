@@ -3,7 +3,7 @@
     $userMode    = $user_mode ?? '';
 
     if ($displayMode === 'compare') {
-        $isReviewed  = ! empty($is_gm_reviewed);
+        $isReviewed  = ! empty($is_reviewer_reviewed);
         $singleItems = $single_items ?? [];
     } else {
         $sections = $template_snapshot['sections'] ?? [];
@@ -38,7 +38,7 @@
             }
         }
 
-        $canEditScores = ($displayMode === 'edit') && (in_array($userMode, ['EVALUATOR', 'GM', 'HR'], true) || ! empty($is_preview));
+        $canEditScores = ($displayMode === 'edit') && (in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true) || ! empty($is_preview));
     }
 ?>
 
@@ -52,6 +52,18 @@
             <span class="text-muted font-weight-bold" style="font-size: 13px;">*Beri tanda centang pada perilaku yang ditunjukkan</span>
         <?php endif; ?>
     </div>
+
+    <?php if (in_array($displayMode, ['edit', 'readonly'], true)): ?>
+        <div class="ap-guide">
+            <p class="ap-guide-title">Panduan Pengisian Kompetensi Tambahan (Ya / Tidak)</p>
+            <ul class="ap-guide-list">
+                <li>Beri tanda centang pada kriteria yang terpenuhi / teramati selama periode penilaian; biarkan kosong jika tidak berlaku.</li>
+                <li>Jika mencentang Lainnya, tuliskan keterangan kriteria tambahan pada kolom teks yang tersedia.</li>
+                <li>Setiap kriteria yang dicentang akan menambahkan poin tambahan berupa huruf <strong>"A"</strong> pada Skor Akhir (contoh: skor 8 dengan 2 kriteria tercentang menjadi
+                <strong>8AA</strong>).</li>
+            </ul>
+        </div>
+    <?php endif; ?>
 
     <div class="table-responsive<?= $displayMode !== 'compare' ? ' ap-table-wrapper' : '' ?>">
         <?php if ($displayMode === 'compare'): ?>
@@ -68,11 +80,11 @@
                     <?php if (! empty($singleItems)): ?>
                         <?php foreach ($singleItems as $idx => $row): ?>
                             <?php
-                                $isOtherRow  = ! empty($row['is_other']);
-                                $evalChecked = ! empty($row['eval_checked']);
-                                $gmChecked   = ! empty($row['gm_checked']);
-                                $evalOther   = $row['eval_other_text'] ?? '';
-                                $gmOther     = $row['gm_other_text'] ?? '';
+                                $isOtherRow      = ! empty($row['is_other']);
+                                $evalChecked     = ! empty($row['eval_checked']);
+                                $reviewerChecked = ! empty($row['reviewer_checked']);
+                                $evalOther       = $row['eval_other_text'] ?? '';
+                                $reviewerOther   = $row['reviewer_other_text'] ?? '';
                             ?>
                             <tr>
                                 <td class="text-center font-weight-bold align-middle" style="width: 50px; background: var(--ap-surface);"><?= $idx + 1 ?>.</td>
@@ -81,7 +93,7 @@
                                         <div class="ap-action-text">
                                             <span class="font-weight-bold">Lainnya :</span>
                                             <span class="font-italic text-muted">
-                                                <?= ! empty($gmOther ?: $evalOther) ? esc($gmOther ?: $evalOther) : '-' ?>
+                                                <?= ! empty($reviewerOther ?: $evalOther) ? esc($reviewerOther ?: $evalOther) : '-' ?>
                                             </span>
                                         </div>
                                     <?php else: ?>
@@ -97,7 +109,7 @@
                                 </td>
                                 <td class="text-center align-middle">
                                     <?php if ($isReviewed): ?>
-                                        <?php if ($gmChecked): ?>
+                                        <?php if ($reviewerChecked): ?>
                                             <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">&check;</span>
                                         <?php elseif ($evalChecked): ?>
                                             <span style="color: #dc2626; font-weight: 800; font-size: 13px; background: #fef2f2; border: 1.5px solid #fecaca; padding: 3px 10px; border-radius: 4px;">&times;</span>
@@ -140,10 +152,10 @@
 
                                 if ($resp) {
                                     $activePayload = [];
-                                    if ($displayMode === 'readonly' && ! empty($resp->gm_response)) {
-                                        $activePayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
-                                    } elseif ($userMode === 'GM' && ! empty($resp->gm_response)) {
-                                        $activePayload = is_string($resp->gm_response) ? json_decode($resp->gm_response, true) : $resp->gm_response;
+                                    if ($displayMode === 'readonly' && ! empty($resp->reviewer_response)) {
+                                        $activePayload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
+                                    } elseif ($userMode === 'REVIEWER' && ! empty($resp->reviewer_response)) {
+                                        $activePayload = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response;
                                     } elseif (! empty($resp->evaluator_response)) {
                                         $activePayload = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
                                     }

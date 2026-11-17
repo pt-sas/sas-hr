@@ -3,30 +3,31 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
+use App\Entities\Appraisal;
+use App\Exceptions\UnAuthorizedException;
 use App\Models\M_Appraisal;
 use App\Models\M_AppraisalAuditLog;
-use App\Services\AppraisalWorkflowService;
-use App\Services\AppraisalScoringService;
-use App\Services\AppraisalCycleService;
+use App\Services\AppraisalWorkflowServices;
+use App\Services\AppraisalScoringServices;
+use App\Services\AppraisalCycleServices;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
-use Exception;
 
-class AppraisalWorkflowController extends BaseController
+class AppraisalWorkflow extends BaseController
 {
-    protected AppraisalWorkflowService $workflowService;
-    protected AppraisalScoringService $scoringService;
-    protected AppraisalCycleService $cycleService;
+    protected AppraisalWorkflowServices $workflowService;
+    protected AppraisalScoringServices $scoringService;
+    protected AppraisalCycleServices $cycleService;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
 
         $this->model           = new M_Appraisal();
-        $this->workflowService = new AppraisalWorkflowService();
-        $this->scoringService  = new AppraisalScoringService();
-        $this->cycleService    = new AppraisalCycleService();
+        $this->workflowService = new AppraisalWorkflowServices();
+        $this->scoringService  = new AppraisalScoringServices();
+        $this->cycleService    = new AppraisalCycleServices();
     }
 
     /**
@@ -58,7 +59,7 @@ class AppraisalWorkflowController extends BaseController
             $debugDate = $this->session->get('appraisal_debug_date');
             $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
 
-            $userId = (int) ($this->access->getSessionUser() ?? 1);
+            $userId = $this->assertWorkflowActor($appraisal, 'EVALUATOR');
 
             // Optional save responses if provided
             $responseList = [];
@@ -75,16 +76,16 @@ class AppraisalWorkflowController extends BaseController
             $appraisal = $this->workflowService->submitByEvaluator((int) $id, $userId, $evaluatorComment, $developmentPlan);
 
             return $this->response->setJSON(message('success', true, 'Evaluasi berhasil disubmit ke tahapan berikutnya.', $appraisal));
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
     }
 
     /**
-     * POST /sas/performance-appraisal/workflow/reviewGm/(:num)
-     * GM reviews and forwards form to employee.
+     * POST /sas/penilaian/reviewReviewer/(:num)
+     * Reviewer reviews and forwards form to employee.
      */
-    public function reviewGm($id = null)
+    public function reviewReviewer($id = null)
     {
         if (strpos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false) {
             $json = $this->request->getJSON(true);
@@ -96,8 +97,8 @@ class AppraisalWorkflowController extends BaseController
             }
         }
 
-        $post      = $this->request->getPost();
-        $gmComment = $post['gm_comment'] ?? $this->request->getVar('gm_comment');
+        $post            = $this->request->getPost();
+        $reviewerComment = $post['reviewer_comment'] ?? $this->request->getVar('reviewer_comment');
 
         try {
             $appraisal = $this->model->find((int) $id);
@@ -108,9 +109,9 @@ class AppraisalWorkflowController extends BaseController
             $debugDate = $this->session->get('appraisal_debug_date');
             $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id, $debugDate);
 
-            $userId = (int) ($this->access->getSessionUser() ?? 1);
+            $userId = $this->assertWorkflowActor($appraisal, 'REVIEWER');
 
-            // Optional save revised responses by GM if provided
+            // Optional save revised responses by Reviewer if provided
             $responseList = [];
             if (! empty($post['responses'])) {
                 $responseList = is_string($post['responses']) ? json_decode($post['responses'], true) : $post['responses'];
@@ -119,23 +120,23 @@ class AppraisalWorkflowController extends BaseController
             }
 
             if (is_array($responseList) && ! empty($responseList)) {
-                $this->scoringService->saveResponses((int) $id, $responseList, $userId, 'GM');
+                $this->scoringService->saveResponses((int) $id, $responseList, $userId, 'REVIEWER');
             }
 
-            $appraisal = $this->workflowService->reviewByGm((int) $id, $userId, $gmComment);
+            $appraisal = $this->workflowService->reviewByReviewer((int) $id, $userId, $reviewerComment);
 
-            return $this->response->setJSON(message('success', true, 'Review evaluasi oleh GM berhasil disimpan.', $appraisal));
-        } catch (Exception $e) {
+            return $this->response->setJSON(message('success', true, 'Review evaluasi oleh Peninjau berhasil disimpan.', $appraisal));
+        } catch (\Throwable $e) {
             return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
     }
 
     /**
-     * POST /penilaian/kickbackGm/(:num)
-     * POST /performance-appraisal/workflow/kickbackGm/(:any)
-     * GM kicks back form to evaluator with revision notes.
+     * POST /penilaian/kickbackReviewer/(:num)
+     * POST /performance-appraisal/workflow/kickbackReviewer/(:any)
+     * Reviewer kicks back form to evaluator with revision notes.
      */
-    public function kickbackGm($id = null)
+    public function kickbackReviewer($id = null)
     {
         if (strpos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false) {
             $json = $this->request->getJSON(true);
@@ -145,14 +146,19 @@ class AppraisalWorkflowController extends BaseController
         }
 
         $post           = $this->request->getPost();
-        $kickbackReason = $post['kickback_reason'] ?? $post['gm_comment'] ?? $post['notes'] ?? $this->request->getVar('kickback_reason');
+        $kickbackReason = $post['kickback_reason'] ?? $post['reviewer_comment'] ?? $post['notes'] ?? $this->request->getVar('kickback_reason');
 
         try {
-            $userId    = (int) ($this->access->getSessionUser() ?? 1);
-            $appraisal = $this->workflowService->kickbackByGm((int) $id, $userId, (string) $kickbackReason);
+            $appraisal = $this->model->find((int) $id);
+            if (! $appraisal) {
+                return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
+            }
+
+            $userId    = $this->assertWorkflowActor($appraisal, 'REVIEWER');
+            $appraisal = $this->workflowService->kickbackByReviewer((int) $id, $userId, (string) $kickbackReason);
 
             return $this->response->setJSON(message('success', true, 'Form penilaian berhasil dikembalikan ke Penilai untuk direvisi.', $appraisal));
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
     }
@@ -174,29 +180,16 @@ class AppraisalWorkflowController extends BaseController
         $employeeComment = $post['employee_comment'] ?? $this->request->getVar('employee_comment');
 
         try {
-            $userId    = (int) ($this->access->getSessionUser() ?? 1);
             $appraisal = $this->model->find((int) $id);
             if (! $appraisal) {
                 return $this->response->setJSON(message('error', false, 'Data penilaian tidak ditemukan.'));
             }
 
-            $currentEmpId = (int) ($this->session->get('md_employee_id') ?? 0);
-            $targetEmpId  = (int) $appraisal->md_employee_id;
-            $role         = $this->access->getRole();
-            $roleName     = $role ? $role->getName() : '';
-            $isAdmin      = $this->access->getUserRoleName($userId, 'W_Emp_All_Data') || in_array($roleName, ['Admin', 'Super HRD', 'DEVELOPER', 'ADMINISTRATOR'], true);
-
-            $isDirectEmp  = ($currentEmpId > 0 && $currentEmpId === $targetEmpId);
-            $isDuta       = (! $isDirectEmp && $this->workflowService->isDutaForEmployeeWithoutUser($userId, $targetEmpId));
-
-            if (! $isDirectEmp && ! $isDuta && ! $isAdmin) {
-                return $this->response->setJSON(message('error', false, 'Anda tidak memiliki hak akses untuk menandatangani penilaian ini.'));
-            }
-
+            $userId    = $this->assertWorkflowActor($appraisal, 'EMPLOYEE');
             $appraisal = $this->workflowService->acknowledgeByEmployee((int) $id, $userId, $employeeComment);
 
             return $this->response->setJSON(message('success', true, 'Penilaian kinerja berhasil ditandatangani dan difinalisasi.', $appraisal));
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
     }
@@ -211,8 +204,47 @@ class AppraisalWorkflowController extends BaseController
             $logs = $this->workflowService->getAuditLogs((int) $id);
 
             return $this->response->setJSON(message('success', true, 'Audit log berhasil dimuat.', $logs));
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->response->setJSON(message('error', false, $e->getMessage()));
         }
+    }
+
+    /**
+     * Verify that the current user is authorized for the given workflow stage.
+     *
+     * @throws UnAuthorizedException
+     */
+    private function assertWorkflowActor(Appraisal $appraisal, string $requiredRole): int
+    {
+        $userId       = (int) ($this->access->getSessionUser() ?? 1);
+        $currentEmpId = (int) ($this->session->get('md_employee_id') ?? 0);
+        $role         = $this->access->getRole();
+        $roleName     = $role ? $role->getName() : '';
+        $isAdmin      = $this->access->getUserRoleName($userId, 'W_Emp_All_Data')
+            || in_array($roleName, ['Admin', 'Super HRD', 'DEVELOPER', 'ADMINISTRATOR'], true);
+
+        if ($isAdmin) {
+            return $userId;
+        }
+
+        if ($requiredRole === 'EVALUATOR' && $currentEmpId > 0 && $currentEmpId === (int) $appraisal->snapshot_evaluator_id) {
+            return $userId;
+        }
+
+        if ($requiredRole === 'REVIEWER' && $currentEmpId > 0 && $currentEmpId === (int) $appraisal->snapshot_reviewer_id) {
+            return $userId;
+        }
+
+        if ($requiredRole === 'EMPLOYEE') {
+            $targetEmpId = (int) $appraisal->md_employee_id;
+            $isDirectEmp = ($currentEmpId > 0 && $currentEmpId === $targetEmpId);
+            $isDuta      = (! $isDirectEmp && $this->workflowService->isDutaForEmployeeWithoutUser($userId, $targetEmpId));
+            if ($isDirectEmp || $isDuta) {
+                return $userId;
+            }
+            throw new UnAuthorizedException('Anda tidak memiliki hak akses untuk menandatangani penilaian ini.');
+        }
+
+        throw new UnAuthorizedException('Anda tidak memiliki hak akses untuk memproses tahapan penilaian ini.');
     }
 }

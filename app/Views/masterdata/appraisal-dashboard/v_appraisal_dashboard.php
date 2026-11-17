@@ -331,6 +331,48 @@
 .apd-table tbody tr:hover {
     background-color: #fbfcfd;
 }
+.apd-table tfoot {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: #fbfcfd;
+    box-shadow: 0 -1px 0 #ebedf2;
+}
+.apd-div-row {
+    cursor: pointer;
+}
+.apd-div-cell-filter:hover {
+    text-decoration: underline;
+}
+
+/* Form Type Segmented Switcher (inside Distribusi Predikat header) */
+.apd-type-switch {
+    display: inline-flex;
+    background: #f1f3f7;
+    padding: 2px;
+    border-radius: 5px;
+    gap: 2px;
+}
+.apd-type-btn {
+    border: 0;
+    background: transparent;
+    color: #575962;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0.25rem 0.65rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+}
+.apd-type-btn:hover {
+    color: #2a2f5b;
+}
+.apd-type-btn.is-active {
+    background: #1572e8;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(21, 114, 232, 0.25);
+}
 
 /* 6. Audit Trail Timeline */
 .apd-timeline {
@@ -420,7 +462,7 @@
                     <span class="apd-stat-num apd-tone-warn" id="kpi_in_progress">0</span>
                     <span class="apd-stat-unit">form</span>
                 </div>
-                <p class="apd-stat-note" id="kpi_in_progress_detail" title="Rincian tahapan berjalan">0 Draft · 0 GM · 0 TTD</p>
+                <p class="apd-stat-note" id="kpi_in_progress_detail" title="Rincian tahapan berjalan">0 Draft · 0 Review · 0 TTD</p>
             </div>
 
             <!-- Rata-Rata Skor Akhir -->
@@ -431,7 +473,7 @@
                 </div>
                 <div class="apd-stat-main">
                     <span class="apd-stat-num apd-tone-pri" id="kpi_avg_score">-</span>
-                    <span class="apd-stat-unit">/ 4.00</span>
+                    <span class="apd-stat-unit" id="kpi_avg_scale">/ 4.00</span>
                 </div>
                 <p class="apd-stat-note" id="kpi_avg_grade">Skala penilaian 1.00 – 4.00</p>
             </div>
@@ -447,7 +489,13 @@
             <div class="apd-panel w-100 d-flex flex-column">
                 <div class="apd-panel-head">
                     <h2 class="apd-panel-title">Distribusi Predikat</h2>
-                    <span class="badge badge-light border font-weight-bold text-dark" id="badge_final_total">0 Form Final</span>
+                    <div class="d-flex align-items-center" style="gap: 0.5rem;">
+                        <div class="apd-type-switch" role="tablist" aria-label="Pilih Tipe Form Distribusi Predikat">
+                            <button type="button" class="apd-type-btn is-active" data-target-group="PERMANENT" aria-pressed="true">Permanent</button>
+                            <button type="button" class="apd-type-btn" data-target-group="OPERATOR" aria-pressed="false">Operator</button>
+                        </div>
+                        <span class="badge badge-light border font-weight-bold text-dark" id="badge_final_total">0 Form Final</span>
+                    </div>
                 </div>
 
                 <div class="p-3 d-flex flex-column justify-content-between flex-grow-1" id="apd_grade_container">
@@ -476,25 +524,25 @@
                             <ul class="apd-grade-list">
                                 <li class="apd-grade-row">
                                     <span class="apd-grade-name"><span class="apd-stat-dot" style="background:#15803d;"></span>Sangat Baik</span>
-                                    <span class="apd-grade-range">&ge; 3.50</span>
+                                    <span class="apd-grade-range" id="range_rating_sb">&ge; 3.50</span>
                                     <div class="apd-grade-bar"><span id="bar_rating_sb" style="background:#15803d;"></span></div>
                                     <span class="apd-grade-count"><b id="cnt_rating_sb">0</b> <small class="text-muted" id="pct_rating_sb">(0%)</small></span>
                                 </li>
                                 <li class="apd-grade-row">
                                     <span class="apd-grade-name"><span class="apd-stat-dot" style="background:#1572e8;"></span>Baik</span>
-                                    <span class="apd-grade-range">2.75 – 3.49</span>
+                                    <span class="apd-grade-range" id="range_rating_b">2.75 – 3.49</span>
                                     <div class="apd-grade-bar"><span id="bar_rating_b" style="background:#1572e8;"></span></div>
                                     <span class="apd-grade-count"><b id="cnt_rating_b">0</b> <small class="text-muted" id="pct_rating_b">(0%)</small></span>
                                 </li>
-                                <li class="apd-grade-row">
+                                <li class="apd-grade-row" id="row_rating_c">
                                     <span class="apd-grade-name"><span class="apd-stat-dot" style="background:#d97706;"></span>Cukup</span>
-                                    <span class="apd-grade-range">2.00 – 2.74</span>
+                                    <span class="apd-grade-range" id="range_rating_c">2.00 – 2.74</span>
                                     <div class="apd-grade-bar"><span id="bar_rating_c" style="background:#d97706;"></span></div>
                                     <span class="apd-grade-count"><b id="cnt_rating_c">0</b> <small class="text-muted" id="pct_rating_c">(0%)</small></span>
                                 </li>
                                 <li class="apd-grade-row">
                                     <span class="apd-grade-name"><span class="apd-stat-dot" style="background:#b91c1c;"></span>Kurang</span>
-                                    <span class="apd-grade-range">&lt; 2.00</span>
+                                    <span class="apd-grade-range" id="range_rating_k">&lt; 2.00</span>
                                     <div class="apd-grade-bar"><span id="bar_rating_k" style="background:#b91c1c;"></span></div>
                                     <span class="apd-grade-count"><b id="cnt_rating_k">0</b> <small class="text-muted" id="pct_rating_k">(0%)</small></span>
                                 </li>
@@ -516,7 +564,7 @@
                     <!-- Footer Insight -->
                     <div class="apd-grade-footer mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
                         <span id="txt_dominant_grade"><i class="fas fa-info-circle text-primary mr-1"></i> Predikat Dominan: <strong>-</strong></span>
-                        <span class="text-muted">Skala 1.00 – 4.00</span>
+                        <span class="text-muted" id="txt_grade_scale">Skala 1.00 – 4.00</span>
                     </div>
                 </div>
             </div>
@@ -536,23 +584,25 @@
                 <div class="table-responsive flex-grow-1" style="overflow-y: auto; overflow-x: auto; max-height: 380px;">
                     <table class="table apd-table mb-0 table-hover">
                         <thead style="position: sticky; top: 0; z-index: 2;">
+                            <?php $stLabels = $status_labels ?? \App\Models\M_Appraisal::getStatusLabels(); ?>
                             <tr>
                                 <th rowspan="2" class="align-middle px-2 py-1">Divisi</th>
                                 <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 38px;">Total</th>
-                                <th colspan="3" class="text-center py-1 border-bottom-0" style="background: #f1f3f7 !important;">Berjalan</th>
-                                <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 44px;">Final</th>
-                                <th rowspan="2" class="align-middle px-2 py-1" style="min-width: 100px; width: 110px;">Progres</th>
+                                <th colspan="4" class="text-center py-1 border-bottom-0" style="background: #f1f3f7 !important;">Berjalan</th>
+                                <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 44px;"><?= esc($stLabels[\App\Models\M_Appraisal::STATUS_FINAL] ?? 'Selesai') ?></th>
+                                <th rowspan="2" class="align-middle px-2 py-1" style="min-width: 105px; width: 115px;">Progres</th>
                                 <th rowspan="2" class="text-center align-middle px-1 py-1" style="width: 55px;">Rata-Rata</th>
                             </tr>
                             <tr>
-                                <th class="text-center p-1 text-muted" style="width: 58px; background: #f8f9fa !important;" title="Tahap Penilaian">Penilaian</th>
-                                <th class="text-center p-1 text-muted" style="width: 50px; background: #f8f9fa !important;" title="Tahap Review">Review</th>
-                                <th class="text-center p-1 text-muted" style="width: 76px; background: #f8f9fa !important;" title="Tahap Submit Review">Submit Review</th>
+                                <th class="text-center p-1 text-muted" style="width: 56px; background: #f8f9fa !important;" title="Tahap <?= esc($stLabels[\App\Models\M_Appraisal::STATUS_PENILAIAN] ?? 'Penilaian') ?>"><?= esc($stLabels[\App\Models\M_Appraisal::STATUS_PENILAIAN] ?? 'Penilaian') ?></th>
+                                <th class="text-center p-1 text-muted" style="width: 68px; background: #f8f9fa !important;" title="Tahap <?= esc($stLabels[\App\Models\M_Appraisal::STATUS_SUBMIT_PENILAIAN] ?? 'Dinilai') ?>"><?= esc($stLabels[\App\Models\M_Appraisal::STATUS_SUBMIT_PENILAIAN] ?? 'Dinilai') ?></th>
+                                <th class="text-center p-1 text-muted" style="width: 48px; background: #f8f9fa !important;" title="Tahap <?= esc($stLabels[\App\Models\M_Appraisal::STATUS_REVIEW] ?? 'Peninjauan') ?>"><?= esc($stLabels[\App\Models\M_Appraisal::STATUS_REVIEW] ?? 'Peninjauan') ?></th>
+                                <th class="text-center p-1 text-muted" style="width: 68px; background: #f8f9fa !important;" title="Tahap <?= esc($stLabels[\App\Models\M_Appraisal::STATUS_SUBMIT_REVIEW] ?? 'Ditinjau') ?>"><?= esc($stLabels[\App\Models\M_Appraisal::STATUS_SUBMIT_REVIEW] ?? 'Ditinjau') ?></th>
                             </tr>
                         </thead>
                         <tbody id="tbody_division_progress">
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-muted" style="font-size: 11.5px;">
+                                <td colspan="9" class="text-center py-4 text-muted" style="font-size: 11.5px;">
                                     <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data divisi...
                                 </td>
                             </tr>
@@ -581,8 +631,6 @@
                         <th>Cabang</th>
                         <th>Divisi</th>
                         <th>Siklus Penilaian</th>
-                        <th>Penilai</th>
-                        <th>Peninjau</th>
                         <th class="text-center">Nilai</th>
                         <th class="text-center" style="width: 140px;">Status</th>
                         <th class="text-center" style="width: 110px;">Aksi</th>
@@ -645,15 +693,118 @@ function initAppraisalDashboard() {
     // =========================================================================
     // 1. FETCH SUMMARY METRICS & DIVISION PROGRESS
     // =========================================================================
+    var activeGradeGroup = 'PERMANENT';
+    var latestRatingByGroup = null;
+    var latestFallbackCounts = null;
+    var latestFallbackFinal = 0;
+
+    function reloadDataTable() {
+        if (typeof reloadTable === 'function') {
+            reloadTable();
+        } else if (typeof _table !== 'undefined' && _table) {
+            _table.ajax.reload();
+        }
+    }
+
+    function syncGradeSwitcherUI(group) {
+        activeGradeGroup = (group === 'OPERATOR') ? 'OPERATOR' : 'PERMANENT';
+        $('.apd-type-btn').each(function () {
+            var isMatch = $(this).data('target-group') === activeGradeGroup;
+            $(this).toggleClass('is-active', isMatch).attr('aria-pressed', isMatch ? 'true' : 'false');
+        });
+        if (activeGradeGroup === 'OPERATOR') {
+            $('#txt_grade_scale').text('Skala 5 – 15');
+            $('#range_rating_sb').text('13 – 15');
+            $('#range_rating_b').text('8 – 12');
+            $('#range_rating_k').text('5 – 7');
+            $('#row_rating_c, #ribbon_c').hide();
+        } else {
+            $('#txt_grade_scale').text('Skala 1.00 – 4.00');
+            $('#range_rating_sb').html('&ge; 3.50');
+            $('#range_rating_b').text('2.75 – 3.49');
+            $('#range_rating_c').text('2.00 – 2.74');
+            $('#range_rating_k').html('&lt; 2.00');
+            $('#row_rating_c, #ribbon_c').show();
+        }
+    }
+
+    function renderGradeDistribution() {
+        var isOp = activeGradeGroup === 'OPERATOR';
+        var groupData = latestRatingByGroup && latestRatingByGroup[activeGradeGroup] ? latestRatingByGroup[activeGradeGroup] : null;
+        var rc = groupData ? (groupData.counts || {}) : (latestFallbackCounts || {});
+        var groupFinalCount = groupData ? (parseInt(groupData.total_final, 10) || 0) : latestFallbackFinal;
+
+        $('#badge_final_total').text(groupFinalCount + ' Form Final');
+
+        var sb = parseInt(rc.sangat_baik, 10) || 0;
+        var b  = parseInt(rc.baik, 10) || 0;
+        var c  = isOp ? 0 : (parseInt(rc.cukup, 10) || 0);
+        var k  = parseInt(rc.kurang, 10) || 0;
+        var ratedTotal = sb + b + c + k;
+
+        if (groupFinalCount > 0 && ratedTotal > 0) {
+            $('#apd_grade_content').show();
+            $('#apd_grade_empty').hide();
+
+            var pctSb = (sb / ratedTotal) * 100;
+            var pctB  = (b / ratedTotal) * 100;
+            var pctC  = (c / ratedTotal) * 100;
+            var pctK  = (k / ratedTotal) * 100;
+
+            $('#cnt_rating_sb').text(sb);
+            $('#pct_rating_sb').text('(' + pctSb.toFixed(0) + '%)');
+            $('#cnt_rating_b').text(b);
+            $('#pct_rating_b').text('(' + pctB.toFixed(0) + '%)');
+            $('#cnt_rating_c').text(c);
+            $('#pct_rating_c').text('(' + pctC.toFixed(0) + '%)');
+            $('#cnt_rating_k').text(k);
+            $('#pct_rating_k').text('(' + pctK.toFixed(0) + '%)');
+
+            $('#ribbon_sb').css('width', pctSb + '%').attr('title', 'Sangat Baik: ' + sb + ' (' + pctSb.toFixed(1) + '%)');
+            $('#ribbon_b').css('width', pctB + '%').attr('title', 'Baik: ' + b + ' (' + pctB.toFixed(1) + '%)');
+            $('#ribbon_c').css('width', pctC + '%').attr('title', 'Cukup: ' + c + ' (' + pctC.toFixed(1) + '%)');
+            $('#ribbon_k').css('width', pctK + '%').attr('title', 'Kurang: ' + k + ' (' + pctK.toFixed(1) + '%)');
+
+            var maxCount = Math.max(sb, b, c, k, 1);
+            $('#bar_rating_sb').css('width', ((sb / maxCount) * 100) + '%');
+            $('#bar_rating_b').css('width', ((b / maxCount) * 100) + '%');
+            $('#bar_rating_c').css('width', ((c / maxCount) * 100) + '%');
+            $('#bar_rating_k').css('width', ((k / maxCount) * 100) + '%');
+
+            var dominantName = 'Baik';
+            var dominantPct = pctB;
+            if (sb >= b && sb >= c && sb >= k) {
+                dominantName = 'Sangat Baik';
+                dominantPct = pctSb;
+            } else if (b >= sb && b >= c && b >= k) {
+                dominantName = 'Baik';
+                dominantPct = pctB;
+            } else if (!isOp && c >= sb && c >= b && c >= k) {
+                dominantName = 'Cukup';
+                dominantPct = pctC;
+            } else {
+                dominantName = 'Kurang';
+                dominantPct = pctK;
+            }
+            $('#txt_dominant_grade').html('<i class="fas fa-info-circle text-primary mr-1"></i> Predikat Dominan: <strong>' + dominantName + '</strong> (' + dominantPct.toFixed(0) + '%)');
+        } else {
+            $('#apd_grade_content').hide();
+            $('#apd_grade_empty').show();
+            $('#txt_dominant_grade').html('<i class="fas fa-info-circle text-muted mr-1"></i> Predikat Dominan: <strong>-</strong>');
+        }
+    }
+
     function loadSummaryMetrics() {
         var $filterForm = $('.filter_page form, .card-filter form, #filter_appraisal_dashboard, #filter_appraisal_cycle');
-        var cycleId    = $('#filter_cycle').val() || $filterForm.find('[name="cycle_id"]').val() || '';
-        var divisionId = $('#filter_division').val() || $filterForm.find('[name="division_id"]').val() || '';
-        var year       = $('#filter_year').val() || $filterForm.find('[name="year"]').val() || '';
-        var status     = $('#filter_status').val() || $filterForm.find('[name="status"]').val() || '';
+        var cycleId     = $('#filter_cycle').val() || $filterForm.find('[name="cycle_id"]').val() || '';
+        var divisionId  = $('#filter_division').val() || $filterForm.find('[name="division_id"]').val() || '';
+        var year        = $('#filter_year').val() || $filterForm.find('[name="year"]').val() || '';
+        var status      = $('#filter_status').val() || $filterForm.find('[name="status"]').val() || '';
+
+        syncGradeSwitcherUI(activeGradeGroup);
 
         $.ajax({
-            url: '<?= base_url('monitoring-penilaian/getSummary') ?>',
+            url: '<?= base_url('sas/monitoring-penilaian/getSummary') ?>',
             type: 'GET',
             data: {
                 cycle_id: cycleId,
@@ -687,7 +838,7 @@ function initAppraisalDashboard() {
                 if (cycle && cycle.title) {
                     $('#banner_period').text((cycle.start_date || '-') + ' s/d ' + (cycle.end_date || '-'));
                     $('#banner_eval_due').text(cycle.deadline_filling || '-');
-                    $('#banner_gm_due').text(cycle.deadline_review || '-');
+                    $('#banner_reviewer_due').text(cycle.deadline_review || '-');
                     $('#banner_reading_due').text(cycle.deadline_reading || '-');
 
                     var isOpen = cycle.status === 'OPEN';
@@ -705,9 +856,9 @@ function initAppraisalDashboard() {
                 var totalCount = parseInt(metrics.total, 10) || 0;
                 var finalCount = parseInt(metrics.finalized, 10) || 0;
                 var inProgCount = parseInt(metrics.in_progress, 10) || 0;
-                var draftCount = (parseInt(metrics.draft_evaluator, 10) || 0) + (parseInt(metrics.submitted_evaluator, 10) || 0);
-                var gmCount    = parseInt(metrics.review_gm, 10) || 0;
-                var ackCount   = parseInt(metrics.pending_ack, 10) || 0;
+                var draftCount    = (parseInt(metrics.draft_evaluator, 10) || 0) + (parseInt(metrics.submitted_evaluator, 10) || 0);
+                var reviewerCount = parseInt(metrics.review_reviewer, 10) || 0;
+                var ackCount      = parseInt(metrics.pending_ack, 10) || 0;
 
                 $('#kpi_total').text(totalCount);
                 $('#kpi_finalized').text(finalCount);
@@ -717,7 +868,7 @@ function initAppraisalDashboard() {
                 $('#kpi_completion_badge').text('(' + compPct.toFixed(1) + '%)');
 
                 $('#kpi_in_progress').text(inProgCount);
-                var inProgDetail = draftCount + ' Evaluasi · ' + gmCount + ' Review · ' + ackCount + ' Pembacaan';
+                var inProgDetail = draftCount + ' Evaluasi · ' + reviewerCount + ' Review · ' + ackCount + ' Pembacaan';
                 $('#kpi_in_progress_detail').text(inProgDetail).attr('title', inProgDetail);
 
                 var avgScore = metrics.avg_final_score !== null && metrics.avg_final_score !== undefined
@@ -733,70 +884,11 @@ function initAppraisalDashboard() {
                     $('#kpi_avg_grade').text('Belum ada form selesai');
                 }
 
-                // 2.3 Predicate Distribution & Proportion Ribbon
-                $('#badge_final_total').text(finalCount + ' Form Final');
-
-                var rc = metrics.rating_counts || {};
-                var sb = parseInt(rc.sangat_baik, 10) || 0;
-                var b  = parseInt(rc.baik, 10) || 0;
-                var c  = parseInt(rc.cukup, 10) || 0;
-                var k  = parseInt(rc.kurang, 10) || 0;
-                var ratedTotal = sb + b + c + k;
-
-                if (finalCount > 0 && ratedTotal > 0) {
-                    $('#apd_grade_content').show();
-                    $('#apd_grade_empty').hide();
-
-                    var pctSb = (sb / ratedTotal) * 100;
-                    var pctB  = (b / ratedTotal) * 100;
-                    var pctC  = (c / ratedTotal) * 100;
-                    var pctK  = (k / ratedTotal) * 100;
-
-                    // Update Counts & Percentages
-                    $('#cnt_rating_sb').text(sb);
-                    $('#pct_rating_sb').text('(' + pctSb.toFixed(0) + '%)');
-                    $('#cnt_rating_b').text(b);
-                    $('#pct_rating_b').text('(' + pctB.toFixed(0) + '%)');
-                    $('#cnt_rating_c').text(c);
-                    $('#pct_rating_c').text('(' + pctC.toFixed(0) + '%)');
-                    $('#cnt_rating_k').text(k);
-                    $('#pct_rating_k').text('(' + pctK.toFixed(0) + '%)');
-
-                    // Stacked Proportion Ribbon Segments
-                    $('#ribbon_sb').css('width', pctSb + '%').attr('title', 'Sangat Baik: ' + sb + ' (' + pctSb.toFixed(1) + '%)');
-                    $('#ribbon_b').css('width', pctB + '%').attr('title', 'Baik: ' + b + ' (' + pctB.toFixed(1) + '%)');
-                    $('#ribbon_c').css('width', pctC + '%').attr('title', 'Cukup: ' + c + ' (' + pctC.toFixed(1) + '%)');
-                    $('#ribbon_k').css('width', pctK + '%').attr('title', 'Kurang: ' + k + ' (' + pctK.toFixed(1) + '%)');
-
-                    // Individual Relative Bars (relative to highest category count for visual distinction)
-                    var maxCount = Math.max(sb, b, c, k, 1);
-                    $('#bar_rating_sb').css('width', ((sb / maxCount) * 100) + '%');
-                    $('#bar_rating_b').css('width', ((b / maxCount) * 100) + '%');
-                    $('#bar_rating_c').css('width', ((c / maxCount) * 100) + '%');
-                    $('#bar_rating_k').css('width', ((k / maxCount) * 100) + '%');
-
-                    // Dominant Predicate Insight
-                    var dominantName = 'Baik';
-                    var dominantPct = pctB;
-                    if (sb >= b && sb >= c && sb >= k) {
-                        dominantName = 'Sangat Baik';
-                        dominantPct = pctSb;
-                    } else if (b >= sb && b >= c && b >= k) {
-                        dominantName = 'Baik';
-                        dominantPct = pctB;
-                    } else if (c >= sb && c >= b && c >= k) {
-                        dominantName = 'Cukup';
-                        dominantPct = pctC;
-                    } else {
-                        dominantName = 'Kurang';
-                        dominantPct = pctK;
-                    }
-                    $('#txt_dominant_grade').html('<i class="fas fa-info-circle text-primary mr-1"></i> Predikat Dominan: <strong>' + dominantName + '</strong> (' + dominantPct.toFixed(0) + '%)');
-                } else {
-                    $('#apd_grade_content').hide();
-                    $('#apd_grade_empty').show();
-                    $('#txt_dominant_grade').html('<i class="fas fa-info-circle text-muted mr-1"></i> Predikat Dominan: <strong>-</strong>');
-                }
+                // 2.3 Predicate Distribution & Proportion Ribbon (Scoped to activeGradeGroup)
+                latestRatingByGroup = metrics.rating_by_group || null;
+                latestFallbackCounts = metrics.rating_counts || {};
+                latestFallbackFinal = finalCount;
+                renderGradeDistribution();
 
                 // 2.5 Division Progress Breakdown Table
                 $('#txt_div_count').text(divs.length + ' Divisi');
@@ -806,50 +898,58 @@ function initAppraisalDashboard() {
                 $tfoot.empty();
 
                 if (divs.length === 0) {
-                    $tbody.html('<tr><td colspan="8" class="text-center py-4 text-muted">Belum ada data evaluasi divisi pada siklus ini.</td></tr>');
+                    $tbody.html('<tr><td colspan="9" class="text-center py-4 text-muted">Belum ada data evaluasi divisi pada siklus ini.</td></tr>');
                 } else {
                     var sumTotal = 0;
-                    var sumDraft = 0;
-                    var sumReviewGm = 0;
+                    var sumPenilaian = 0;
+                    var sumSubmitPenilaian = 0;
+                    var sumReviewReviewer = 0;
                     var sumPendingAck = 0;
                     var sumFinalized = 0;
                     var sumScoreTotal = 0.0;
                     var sumScoreCount = 0;
 
                     $.each(divs, function (i, d) {
-                        var totalVal      = parseInt(d.total, 10) || 0;
-                        var draftVal      = parseInt(d.draft, 10) || 0;
-                        var reviewGmVal   = parseInt(d.review_gm, 10) || 0;
-                        var pendingAckVal = parseInt(d.pending_ack, 10) || 0;
-                        var finalVal      = parseInt(d.finalized, 10) || 0;
-                        var scoreSumVal   = parseFloat(d.score_sum || 0.0);
-                        var scoreCountVal = parseInt(d.score_count, 10) || 0;
+                        var divId               = parseInt(d.division_id, 10) || 0;
+                        var totalVal            = parseInt(d.total, 10) || 0;
+                        var penilaianVal        = parseInt(d.penilaian, 10) || 0;
+                        var submitPenilaianVal  = parseInt(d.submit_penilaian, 10) || 0;
+                        var reviewReviewerVal   = parseInt(d.review_reviewer, 10) || 0;
+                        var pendingAckVal       = parseInt(d.pending_ack, 10) || 0;
+                        var finalVal            = parseInt(d.finalized, 10) || 0;
+                        var inProgVal           = penilaianVal + submitPenilaianVal + reviewReviewerVal + pendingAckVal;
+                        var scoreSumVal         = parseFloat(d.score_sum || 0.0);
+                        var scoreCountVal       = parseInt(d.score_count, 10) || 0;
 
-                        sumTotal      += totalVal;
-                        sumDraft      += draftVal;
-                        sumReviewGm   += reviewGmVal;
-                        sumPendingAck += pendingAckVal;
-                        sumFinalized  += finalVal;
-                        sumScoreTotal += scoreSumVal;
-                        sumScoreCount += scoreCountVal;
+                        sumTotal           += totalVal;
+                        sumPenilaian       += penilaianVal;
+                        sumSubmitPenilaian += submitPenilaianVal;
+                        sumReviewReviewer  += reviewReviewerVal;
+                        sumPendingAck      += pendingAckVal;
+                        sumFinalized       += finalVal;
+                        sumScoreTotal      += scoreSumVal;
+                        sumScoreCount      += scoreCountVal;
 
                         var pVal = parseFloat(d.percent || 0.0);
+                        var wipBarPct = totalVal > 0 ? Math.min(100 - pVal, (inProgVal / totalVal) * 100) : 0.0;
                         var avgDivScore = d.avg_score !== null && d.avg_score !== undefined ? Number(d.avg_score).toFixed(2) : '-';
                         var avgColor = avgDivScore !== '-' ? 'apd-tone-pri font-weight-bold' : 'text-muted';
 
-                        var rowHtml = '<tr>' +
-                            '<td class="font-weight-bold text-dark px-2 py-1 text-truncate" style="max-width: 130px;" title="' + esc(d.division_name) + '">' + esc(d.division_name) + '</td>' +
+                        var rowHtml = '<tr class="apd-div-row" data-division-id="' + divId + '" title="Klik untuk memfilter tabel ke divisi ' + esc(d.division_name) + '">' +
+                            '<td class="font-weight-bold text-dark px-2 py-1 text-truncate" style="max-width: 180px;" title="' + esc(d.division_name) + '">' + esc(d.division_name) + '</td>' +
                             '<td class="text-center text-dark font-weight-bold px-1 py-1">' + totalVal + '</td>' +
-                            '<td class="text-center px-1 py-1 ' + (draftVal > 0 ? 'text-warning font-weight-bold' : 'text-muted') + '">' + draftVal + '</td>' +
-                            '<td class="text-center px-1 py-1 ' + (reviewGmVal > 0 ? 'text-info font-weight-bold' : 'text-muted') + '">' + reviewGmVal + '</td>' +
-                            '<td class="text-center px-1 py-1 ' + (pendingAckVal > 0 ? 'text-primary font-weight-bold' : 'text-muted') + '">' + pendingAckVal + '</td>' +
-                            '<td class="text-center apd-tone-ok font-weight-bold px-1 py-1">' + finalVal + '</td>' +
+                            '<td class="text-center px-1 py-1 apd-div-cell-filter ' + (penilaianVal > 0 ? 'text-warning font-weight-bold' : 'text-muted') + '" data-status="PENILAIAN">' + penilaianVal + '</td>' +
+                            '<td class="text-center px-1 py-1 apd-div-cell-filter ' + (submitPenilaianVal > 0 ? 'text-warning font-weight-bold' : 'text-muted') + '" data-status="SUBMIT_PENILAIAN">' + submitPenilaianVal + '</td>' +
+                            '<td class="text-center px-1 py-1 apd-div-cell-filter ' + (reviewReviewerVal > 0 ? 'text-info font-weight-bold' : 'text-muted') + '" data-status="REVIEW">' + reviewReviewerVal + '</td>' +
+                            '<td class="text-center px-1 py-1 apd-div-cell-filter ' + (pendingAckVal > 0 ? 'text-primary font-weight-bold' : 'text-muted') + '" data-status="SUBMIT_REVIEW">' + pendingAckVal + '</td>' +
+                            '<td class="text-center apd-tone-ok font-weight-bold px-1 py-1 apd-div-cell-filter" data-status="FINAL">' + finalVal + '</td>' +
                             '<td class="px-2 py-1">' +
                                 '<div class="d-flex align-items-center" style="gap: 6px;">' +
-                                    '<div class="apd-prog-track flex-grow-1" style="height: 6px; min-width: 32px;">' +
+                                    '<div class="apd-prog-track flex-grow-1" style="height: 6px; min-width: 36px;" title="Final: ' + finalVal + ' · Berjalan: ' + inProgVal + '">' +
                                         '<div class="apd-prog-fill-ok" style="width:' + pVal + '%;"></div>' +
+                                        '<div class="apd-prog-fill-wip" style="width:' + wipBarPct.toFixed(1) + '%;"></div>' +
                                     '</div>' +
-                                    '<span class="font-weight-bold text-dark" style="font-size: 11px; width: 28px; text-align: right; white-space: nowrap;">' + pVal.toFixed(0) + '%</span>' +
+                                    '<span class="font-weight-bold text-dark" style="font-size: 11px; width: 32px; text-align: right; white-space: nowrap;">' + pVal.toFixed(0) + '%</span>' +
                                 '</div>' +
                             '</td>' +
                             '<td class="text-center px-1 py-1 ' + avgColor + '">' + avgDivScore + '</td>' +
@@ -858,7 +958,9 @@ function initAppraisalDashboard() {
                     });
 
                     // Summary Aggregate Row in TFOOT
+                    var sumInProg = sumPenilaian + sumSubmitPenilaian + sumReviewReviewer + sumPendingAck;
                     var overallPct = sumTotal > 0 ? ((sumFinalized / sumTotal) * 100) : 0.0;
+                    var overallWipPct = sumTotal > 0 ? Math.min(100 - overallPct, (sumInProg / sumTotal) * 100) : 0.0;
                     var overallAvg = metrics.avg_final_score !== null && metrics.avg_final_score !== undefined
                         ? Number(metrics.avg_final_score).toFixed(2)
                         : (sumScoreCount > 0 ? (sumScoreTotal / sumScoreCount).toFixed(2) : '-');
@@ -867,16 +969,18 @@ function initAppraisalDashboard() {
                     var tfootHtml = '<tr>' +
                         '<td class="font-weight-bold text-dark text-uppercase px-2 py-1">Total</td>' +
                         '<td class="text-center font-weight-bold text-dark px-1 py-1">' + sumTotal + '</td>' +
-                        '<td class="text-center font-weight-bold px-1 py-1 ' + (sumDraft > 0 ? 'text-warning' : 'text-muted') + '">' + sumDraft + '</td>' +
-                        '<td class="text-center font-weight-bold px-1 py-1 ' + (sumReviewGm > 0 ? 'text-info' : 'text-muted') + '">' + sumReviewGm + '</td>' +
+                        '<td class="text-center font-weight-bold px-1 py-1 ' + (sumPenilaian > 0 ? 'text-warning' : 'text-muted') + '">' + sumPenilaian + '</td>' +
+                        '<td class="text-center font-weight-bold px-1 py-1 ' + (sumSubmitPenilaian > 0 ? 'text-warning' : 'text-muted') + '">' + sumSubmitPenilaian + '</td>' +
+                        '<td class="text-center font-weight-bold px-1 py-1 ' + (sumReviewReviewer > 0 ? 'text-info' : 'text-muted') + '">' + sumReviewReviewer + '</td>' +
                         '<td class="text-center font-weight-bold px-1 py-1 ' + (sumPendingAck > 0 ? 'text-primary' : 'text-muted') + '">' + sumPendingAck + '</td>' +
                         '<td class="text-center apd-tone-ok font-weight-bold px-1 py-1">' + sumFinalized + '</td>' +
                         '<td class="px-2 py-1">' +
                             '<div class="d-flex align-items-center" style="gap: 6px;">' +
-                                '<div class="apd-prog-track flex-grow-1" style="height: 6px; min-width: 32px;">' +
+                                '<div class="apd-prog-track flex-grow-1" style="height: 6px; min-width: 36px;">' +
                                     '<div class="apd-prog-fill-ok" style="width: ' + overallPct + '%;"></div>' +
+                                    '<div class="apd-prog-fill-wip" style="width: ' + overallWipPct.toFixed(1) + '%;"></div>' +
                                 '</div>' +
-                                '<span class="font-weight-bold text-dark" style="font-size: 11px; width: 28px; text-align: right; white-space: nowrap;">' + overallPct.toFixed(0) + '%</span>' +
+                                '<span class="font-weight-bold text-dark" style="font-size: 11px; width: 32px; text-align: right; white-space: nowrap;">' + overallPct.toFixed(0) + '%</span>' +
                             '</div>' +
                         '</td>' +
                         '<td class="text-center font-weight-bold px-1 py-1 ' + overallAvgColor + '">' + overallAvg + '</td>' +
@@ -885,7 +989,7 @@ function initAppraisalDashboard() {
                 }
             },
             error: function () {
-                $('#tbody_division_progress').html('<tr><td colspan="8" class="text-center py-3 text-danger"><i class="fas fa-exclamation-triangle mr-1"></i> Gagal memuat ringkasan divisi.</td></tr>');
+                $('#tbody_division_progress').html('<tr><td colspan="9" class="text-center py-3 text-danger"><i class="fas fa-exclamation-triangle mr-1"></i> Gagal memuat ringkasan divisi.</td></tr>');
                 $('#tfoot_division_progress').empty();
             }
         });
@@ -897,52 +1001,63 @@ function initAppraisalDashboard() {
     loadSummaryMetrics();
 
     $('#filter_cycle, #filter_division, #filter_status, #filter_year').on('change', function () {
-        if (typeof reloadTable === 'function') {
-            reloadTable();
-        } else if (typeof _table !== 'undefined' && _table) {
-            _table.ajax.reload();
-        }
+        reloadDataTable();
         loadSummaryMetrics();
     });
 
-    // Listen to global filter buttons and inputs
+    // Listen to global filter buttons
     $(document).on('click', '.btn_filter, .btn_reset_filter, .btn_requery', function () {
         setTimeout(function () {
             loadSummaryMetrics();
         }, 300);
     });
 
-    $(document).on('change', '.filter_page select, .filter_page input, .card-filter select, .card-filter input', function () {
-        setTimeout(function () {
-            loadSummaryMetrics();
-        }, 150);
-    });
-
     // Refresh Button
     $('#btn_refresh_all').on('click', function () {
         var $icon = $(this).find('i');
         $icon.addClass('fa-spin');
-        if (typeof reloadTable === 'function') {
-            reloadTable();
-        } else if (typeof _table !== 'undefined' && _table) {
-            _table.ajax.reload(null, false);
-        }
+        reloadDataTable();
         loadSummaryMetrics();
         setTimeout(function () {
             $icon.removeClass('fa-spin');
         }, 500);
     });
 
+    // Distribusi Predikat Switcher (PERMANENT vs OPERATOR)
+    $('.apd-type-btn').on('click', function () {
+        var tg = $(this).data('target-group');
+        if (!tg || tg === activeGradeGroup) {
+            return;
+        }
+        syncGradeSwitcherUI(tg);
+        renderGradeDistribution();
+    });
+
+    // Click-to-drill-down on Progres per Divisi rows & status cells
+    $(document).on('click', '#tbody_division_progress tr.apd-div-row', function (e) {
+        var divId = $(this).data('division-id');
+        if (!divId) return;
+
+        var $cell = $(e.target).closest('[data-status]');
+        var st = $cell.length ? $cell.data('status') : 'ALL';
+
+        $('#filter_division').val(String(divId)).trigger('change.select2');
+        $('#filter_status').val(st).trigger('change.select2');
+        reloadDataTable();
+        loadSummaryMetrics();
+
+        var $grid = $('.card-main .tb_display').closest('.card-main');
+        if ($grid.length) {
+            $('html, body').animate({ scrollTop: $grid.offset().top - 70 }, 250);
+        }
+    });
+
     // Reset Filter Button
     $('#btn_reset_filter, .btn_reset').on('click', function () {
         $('#filter_cycle').val('<?= (int) $default_cycle_id ?>').trigger('change.select2');
         $('#filter_division').val('0').trigger('change.select2');
-        $('#filter_status').val('ALL').trigger('change');
-        if (typeof reloadTable === 'function') {
-            reloadTable();
-        } else if (typeof _table !== 'undefined' && _table) {
-            _table.ajax.reload();
-        }
+        $('#filter_status').val('ALL').trigger('change.select2');
+        reloadDataTable();
         loadSummaryMetrics();
     });
 
@@ -960,7 +1075,7 @@ function initAppraisalDashboard() {
         );
 
         $.ajax({
-            url: '<?= base_url('penilaian/auditLogs') ?>/' + appraisalId,
+            url: '<?= base_url('sas/penilaian/auditLogs') ?>/' + appraisalId,
             type: 'GET',
             dataType: 'JSON',
             success: function (res) {
@@ -1044,7 +1159,7 @@ function initAppraisalDashboard() {
                 postData['<?= csrf_token() ?>'] = '<?= csrf_hash() ?>';
 
                 $.ajax({
-                    url: '<?= base_url('monitoring-penilaian/nudge') ?>',
+                    url: '<?= base_url('sas/monitoring-penilaian/nudge') ?>',
                     type: 'POST',
                     data: postData,
                     dataType: 'JSON',

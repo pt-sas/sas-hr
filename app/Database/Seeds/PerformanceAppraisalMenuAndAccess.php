@@ -4,7 +4,6 @@ namespace App\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
 
-// TODO : Accesses still wont checked out [ ]
 class PerformanceAppraisalMenuAndAccess extends Seeder
 {
     public function run()
@@ -22,36 +21,56 @@ class PerformanceAppraisalMenuAndAccess extends Seeder
         }
 
         // ------------------------------------------------------------------
-        // 2. Insert Parent Menu (sys_menu)
+        // 2. Insert or Reuse Parent Menu (sys_menu)
         // ------------------------------------------------------------------
         // Action: 'N' (None) - Folder/dropdown parent header with no direct view page
-        $menuData = [
-            'name'        => 'Penilaian Kerja',
-            'url'         => 'performance-appraisal',
-            'sequence'    => 12,
-            'icon'        => 'fas fa-clipboard-check',
-            'action'      => 'N',
-            'isactive'    => 'Y',
-            'created_by'  => $sysUserId,
-            'updated_by'  => $sysUserId,
-        ];
+        $existingMenu = $this->db->table('sys_menu')
+            ->where('url', 'performance-appraisal')
+            ->get()
+            ->getRow();
 
-        $this->db->table('sys_menu')->insert($menuData);
-        $sysMenuId = $this->db->insertID();
+        if ($existingMenu) {
+            $sysMenuId = (int) $existingMenu->sys_menu_id;
+        } else {
+            $menuData = [
+                'name'        => 'Penilaian Kerja',
+                'url'         => 'performance-appraisal',
+                'sequence'    => 12,
+                'icon'        => 'fas fa-clipboard-check',
+                'action'      => 'N',
+                'isactive'    => 'Y',
+                'created_by'  => $sysUserId,
+                'updated_by'  => $sysUserId,
+            ];
 
-        // Grant access to Parent Menu in sys_access_menu
-        $this->db->table('sys_access_menu')->insert([
-            'sys_role_id'    => $sysRoleId,
-            'sys_menu_id'    => $sysMenuId,
-            'sys_submenu_id' => 0,
-            'isview'         => 'Y',
-            'iscreate'       => 'Y',
-            'isupdate'       => 'Y',
-            'isdelete'       => 'Y',
-            'isactive'       => 'Y',
-            'created_by'     => $sysUserId,
-            'updated_by'     => $sysUserId,
-        ]);
+            $this->db->table('sys_menu')->insert($menuData);
+            $sysMenuId = (int) $this->db->insertID();
+        }
+
+        // Grant access to Parent Menu in sys_access_menu if not already present
+        $existingParentAccess = $this->db->table('sys_access_menu')
+            ->where([
+                'sys_role_id'    => $sysRoleId,
+                'sys_menu_id'    => $sysMenuId,
+                'sys_submenu_id' => 0,
+            ])
+            ->get()
+            ->getRow();
+
+        if (!$existingParentAccess) {
+            $this->db->table('sys_access_menu')->insert([
+                'sys_role_id'    => $sysRoleId,
+                'sys_menu_id'    => $sysMenuId,
+                'sys_submenu_id' => 0,
+                'isview'         => 'Y',
+                'iscreate'       => 'Y',
+                'isupdate'       => 'Y',
+                'isdelete'       => 'Y',
+                'isactive'       => 'Y',
+                'created_by'     => $sysUserId,
+                'updated_by'     => $sysUserId,
+            ]);
+        }
 
         // ------------------------------------------------------------------
         // 3. Insert Submenus (sys_submenu) & Access Permissions
@@ -103,38 +122,46 @@ class PerformanceAppraisalMenuAndAccess extends Seeder
             ],
         ];
 
-        // TODO : So there are also accesses for the menu. Need to know how this work [x]
-        // 1. Insert access permission for the parent MENU itself (sys_submenu_id = 0)
-        $this->db->table('sys_access_menu')->insert([
-            'sys_role_id'    => $sysRoleId,
-            'sys_menu_id'    => $sysMenuId,
-            'sys_submenu_id' => 0, // Parent menu access
-            'isview'         => 'Y',
-            'iscreate'       => 'Y',
-            'isupdate'       => 'Y',
-            'isdelete'       => 'Y',
-            'isactive'       => 'Y',
-            'created_by'     => $sysUserId,
-            'updated_by'     => $sysUserId,
-        ]);
-
-        // 2. Insert submenus & their respective access permissions
+        // Insert submenus & their respective access permissions idempotently
         foreach ($submenus as $submenu) {
-            $this->db->table('sys_submenu')->insert($submenu);
-            $sysSubmenuId = $this->db->insertID();
+            $existingSubmenu = $this->db->table('sys_submenu')
+                ->where([
+                    'sys_menu_id' => $sysMenuId,
+                    'url'         => $submenu['url'],
+                ])
+                ->get()
+                ->getRow();
 
-            $this->db->table('sys_access_menu')->insert([
-                'sys_role_id'    => $sysRoleId,
-                'sys_menu_id'    => $sysMenuId,
-                'sys_submenu_id' => $sysSubmenuId,
-                'isview'         => 'Y',
-                'iscreate'       => 'Y',
-                'isupdate'       => 'Y',
-                'isdelete'       => 'Y',
-                'isactive'       => 'Y',
-                'created_by'     => $sysUserId,
-                'updated_by'     => $sysUserId,
-            ]);
+            if ($existingSubmenu) {
+                $sysSubmenuId = (int) $existingSubmenu->sys_submenu_id;
+            } else {
+                $this->db->table('sys_submenu')->insert($submenu);
+                $sysSubmenuId = (int) $this->db->insertID();
+            }
+
+            $existingSubAccess = $this->db->table('sys_access_menu')
+                ->where([
+                    'sys_role_id'    => $sysRoleId,
+                    'sys_menu_id'    => $sysMenuId,
+                    'sys_submenu_id' => $sysSubmenuId,
+                ])
+                ->get()
+                ->getRow();
+
+            if (!$existingSubAccess) {
+                $this->db->table('sys_access_menu')->insert([
+                    'sys_role_id'    => $sysRoleId,
+                    'sys_menu_id'    => $sysMenuId,
+                    'sys_submenu_id' => $sysSubmenuId,
+                    'isview'         => 'Y',
+                    'iscreate'       => 'Y',
+                    'isupdate'       => 'Y',
+                    'isdelete'       => 'Y',
+                    'isactive'       => 'Y',
+                    'created_by'     => $sysUserId,
+                    'updated_by'     => $sysUserId,
+                ]);
+            }
         }
     }
 }

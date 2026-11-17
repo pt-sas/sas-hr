@@ -11,7 +11,7 @@ class Appraisal extends Entity
         'created_at',
         'updated_at',
         'evaluator_submitted_at',
-        'gm_reviewed_at',
+        'reviewer_reviewed_at',
         'employee_acknowledged_at',
         'finalized_at',
     ];
@@ -25,7 +25,7 @@ class Appraisal extends Entity
         'snapshot_position_id'     => 'integer',
         'snapshot_branch_id'       => '?integer',
         'snapshot_evaluator_id'    => 'integer',
-        'snapshot_gm_id'           => '?integer',
+        'snapshot_reviewer_id'     => '?integer',
         'template_snapshot'        => 'json-array', // Automatically cast JSON snapshot to array
         'final_score'              => '?float',
         'created_by'               => 'integer',
@@ -50,7 +50,7 @@ class Appraisal extends Entity
      */
     public function getPeninjauId(): ?int
     {
-        return !empty($this->attributes['snapshot_gm_id']) ? (int) $this->attributes['snapshot_gm_id'] : null;
+        return !empty($this->attributes['snapshot_reviewer_id']) ? (int) $this->attributes['snapshot_reviewer_id'] : null;
     }
 
     public function isFinalized(): bool

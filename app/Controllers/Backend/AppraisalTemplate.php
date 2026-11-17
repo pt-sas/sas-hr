@@ -3,23 +3,26 @@
 namespace App\Controllers\Backend;
 
 use App\Controllers\BaseController;
-use App\Entities\AppraisalTemplate;
+use App\Entities\AppraisalTemplate as AppraisalTemplateEntity;
 use App\Models\M_AppraisalTemplate;
 use App\Services\AppraisalTemplateServices;
 use App\Models\M_Employee;
-use Config\Services;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 use Exception;
 
-class AppraisalTemplateController extends BaseController
+class AppraisalTemplate extends BaseController
 {
     protected AppraisalTemplateServices $templateService; // Fixed: removed trailing 's' to match usage
     protected M_Employee $mEmployee;                      // Fixed: declared property
 
-    public function __construct()
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
-        $this->request         = Services::request();
+        parent::initController($request, $response, $logger);
+
         $this->model           = new M_AppraisalTemplate();
-        $this->entity          = new AppraisalTemplate();
+        $this->entity          = new AppraisalTemplateEntity();
         $this->mEmployee       = new M_Employee($this->request);
         $this->templateService = new AppraisalTemplateServices();
 
@@ -64,21 +67,21 @@ class AppraisalTemplateController extends BaseController
                     }
 
                     $scopeMap = [
-                        'md_branch_id'    => 'BRANCH',
-                        'md_division_id'  => 'DIVISION',
-                        'md_levelling_id' => 'LEVELLING',
-                        'md_position_id'  => 'POSITION',
+                        'md_branch_id'    => ['md_template_branch',    'md_branch_id'],
+                        'md_division_id'  => ['md_template_division',  'md_division_id'],
+                        'md_levelling_id' => ['md_template_levelling', 'md_levelling_id'],
+                        'md_position_id'  => ['md_template_position',  'md_position_id'],
                     ];
                     if (isset($scopeMap[$name])) {
-                        $sType = $scopeMap[$name];
-                        $val   = (int) $value;
-                        $where[] = "EXISTS (SELECT 1 FROM md_template_scope f WHERE f.md_appraisal_template_id = md_appraisal_template.md_appraisal_template_id AND f.scope_type = '{$sType}' AND f.scope_id = {$val} AND f.isactive = 'Y')";
+                        [$scopeTable, $fk] = $scopeMap[$name];
+                        $val               = (int) $value;
+                        $where[]           = "EXISTS (SELECT 1 FROM {$scopeTable} f WHERE f.md_appraisal_template_id = md_appraisal_template.md_appraisal_template_id AND f.{$fk} = {$val} AND f.isactive = 'Y')";
                     }
                     if ($name === 'status') {
                         $statusMap = [
-                            'DR' => [M_AppraisalTemplate::STATUS_DRAFT, 'DR', 'DRAFT'],
-                            'CO' => [M_AppraisalTemplate::STATUS_PUBLISHED, 'CO', 'PUBLISHED'],
-                            'VO' => [M_AppraisalTemplate::STATUS_ARCHIVED, 'VO', 'ARCHIVED'],
+                            $this->DOCSTATUS_Drafted   => [M_AppraisalTemplate::STATUS_DRAFT, $this->DOCSTATUS_Drafted, 'DRAFT'],
+                            $this->DOCSTATUS_Completed => [M_AppraisalTemplate::STATUS_PUBLISHED, $this->DOCSTATUS_Completed, 'PUBLISHED'],
+                            $this->DOCSTATUS_Voided    => [M_AppraisalTemplate::STATUS_ARCHIVED, $this->DOCSTATUS_Voided, 'ARCHIVED'],
                         ];
                         if (isset($statusMap[$value])) {
                             $where['md_appraisal_template.status'] = $statusMap[$value];
@@ -101,23 +104,21 @@ class AppraisalTemplateController extends BaseController
                     $branchName   = is_object($value) ? ($value->branch_name ?? 'Semua Cabang') : ($value['branch_name'] ?? 'Semua Cabang');
                     $divisionName = is_object($value) ? ($value->division_name ?? 'Semua Divisi') : ($value['division_name'] ?? 'Semua Divisi');
                     $levelName    = is_object($value) ? ($value->level_name ?? 'Semua Level') : ($value['level_name'] ?? 'Semua Level');
+                    $positionName = is_object($value) ? ($value->position_name ?? 'Semua Jabatan') : ($value['position_name'] ?? 'Semua Jabatan');
                     $templateCode = is_object($value) ? ($value->template_code ?? '-') : ($value['template_code'] ?? '-');
                     $version      = is_object($value) ? ($value->version ?? '1') : ($value['version'] ?? '1');
-                    $createdAt    = is_object($value) ? ($value->created_at ?? null) : ($value['created_at'] ?? null);
                     $status       = is_object($value) ? ($value->status ?? M_AppraisalTemplate::STATUS_DRAFT) : ($value['status'] ?? M_AppraisalTemplate::STATUS_DRAFT);
 
                     $number++;
-
-                    $dateFormatted = !empty($createdAt) ? date('d-m-Y', strtotime($createdAt)) : '-';
 
                     // Contextual Action & Usage Check
                     $usageCount   = (int) (is_object($value) ? ($value->appraisal_usage_count ?? 0) : ($value['appraisal_usage_count'] ?? 0));
                     $latestPubVer = (int) (is_object($value) ? ($value->latest_published_version ?? 0) : ($value['latest_published_version'] ?? 0));
                     $inUse        = ($usageCount > 0);
 
-                    $isDraft     = in_array($status, [M_AppraisalTemplate::STATUS_DRAFT, 'DRAFT', 'DR'], true);
-                    $isPublished = in_array($status, [M_AppraisalTemplate::STATUS_PUBLISHED, 'PUBLISHED', 'CO'], true);
-                    $isArchived  = in_array($status, [M_AppraisalTemplate::STATUS_ARCHIVED, 'ARCHIVED', 'VO'], true);
+                    $isDraft     = ($status === M_AppraisalTemplate::STATUS_DRAFT);
+                    $isPublished = ($status === M_AppraisalTemplate::STATUS_PUBLISHED);
+                    $isArchived  = ($status === M_AppraisalTemplate::STATUS_ARCHIVED);
 
                     // Descriptive 2-line Status Display
                     if ($isDraft) {
@@ -149,42 +150,16 @@ class AppraisalTemplateController extends BaseController
                     $row[] = $branchName;
                     $row[] = $divisionName;
                     $row[] = $levelName;
+                    $row[] = $positionName;
                     $row[] = $templateCode;
                     $row[] = 'v' . $version;
-                    $row[] = $dateFormatted;
                     $row[] = $statusCol;
 
                     // Contextual Action Buttons based on Template Status & Usage
-                    $actionBtns = '';
-                    if ($isDraft) {
-                        $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\')" id="' . $ID . '" title="Edit Template"><i class="fas fa-edit text-info"></i></a>';
-                        $actionBtns .= '<a class="btn btn-sm" onclick="window.tplPublish(\'' . $ID . '\')" title="Publish Template"><i class="fas fa-check-circle text-success"></i></a>';
-                        $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $ID . '\')" title="Hapus Draft"><i class="fas fa-trash-alt text-danger"></i></a>';
-                    } elseif ($isPublished) {
-                        if (! $inUse) {
-                            // Unused Published: Allow in-place edit, undo/unpublish, and clean deletion
-                            $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\')" id="' . $ID . '" title="Edit Template (Belum Pernah Digunakan)"><i class="fas fa-edit text-info"></i></a>';
-                            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplUnpublish(\'' . $ID . '\')" title="Batalkan Publish (Kembalikan ke Draft)"><i class="fas fa-undo text-warning"></i></a>';
-                            $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $ID . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
-                        } else {
-                            // In-Use Published (Locked): Strictly view-only, allow deactivate/archive and clone
-                            $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\', \'CO\')" id="' . $ID . '" data-status="CO" title="Lihat Detail (Terkunci: ' . $usageCount . ' Penilaian)"><i class="fas fa-eye text-info"></i></a>';
-                            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplClone(\'' . $ID . '\')" title="Buat Versi Baru (Draft)"><i class="fas fa-code-branch text-warning"></i></a>';
-                            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplArchive(\'' . $ID . '\')" title="Nonaktifkan / Arsipkan Template (Terkunci)"><i class="fas fa-power-off text-secondary"></i></a>';
-                        }
-                    } else {
-                        // ARCHIVED or others
-                        $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $ID . '\', \'VO\')" id="' . $ID . '" data-status="VO" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
-                        if ($inUse) {
-                            // In-Use Archived: Allow reactivation back to published
-                            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplActivate(\'' . $ID . '\')" title="Aktifkan Kembali Template (Published)"><i class="fas fa-check-circle text-success"></i></a>';
-                        } else {
-                            $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $ID . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
-                        }
-                    }
-
-                    $btnPreview = '<button type="button" class="btn btn-sm btn_preview_template" data-id="' . $ID . '" data-toggle="tooltip" title="Pratinjau Form" data-original-title="Pratinjau Form"><i class="fas fa-file-alt text-primary"></i></button>';
-                    $row[]      = $actionBtns . $btnPreview;
+                    $row[] = $this->template->appraisalTableButton('template', $ID, [
+                        'status'      => $status,
+                        'usage_count' => $usageCount,
+                    ]);
 
                     $data[] = $row;
                 }
@@ -287,31 +262,27 @@ class AppraisalTemplateController extends BaseController
                     $fieldHeader->setTable($this->model->table);
                     $fieldHeader->setList($list);
 
-                    // Scoping from unified md_template_scope (id + name for Select2)
+                    // Scoping from the 4 mapping tables (id + name for Select2)
                     $scoping = [];
-                    foreach ([
-                        'branch_ids'    => ['BRANCH',    'md_branch',    'md_branch_id'],
-                        'division_ids'  => ['DIVISION',  'md_division',  'md_division_id'],
-                        'levelling_ids' => ['LEVELLING', 'md_levelling', 'md_levelling_id'],
-                        'position_ids'  => ['POSITION',  'md_position',  'md_position_id'],
-                    ] as $key => [$scopeType, $master, $fk]) {
-                        $scoping[$key] = $this->db->table('md_template_scope x')
+                    foreach (AppraisalTemplateServices::SCOPE_TABLES as $key => $cfg) {
+                        $fk = $cfg['fk'];
+                        $scoping[$key] = $this->db->table("{$cfg['table']} x")
                             ->select("m.{$fk} AS id, m.name AS text")
-                            ->join("{$master} m", "m.{$fk} = x.scope_id")
+                            ->join("{$cfg['master']} m", "m.{$fk} = x.{$fk}")
                             ->where('x.md_appraisal_template_id', $id)
-                            ->where('x.scope_type', $scopeType)
                             ->where('x.isactive', 'Y')
                             ->get()->getResultArray();
                     }
 
                     // Sections with nested items from schema_json
-                    $schema = is_string($data->schema_json ?? null)
-                        ? (json_decode($data->schema_json, true) ?: [])
-                        : ((array) ($data->schema_json ?? []));
+                    $record = $list[0];
+                    $schema = is_string($record->schema_json ?? null)
+                        ? (json_decode($record->schema_json, true) ?: [])
+                        : ((array) ($record->schema_json ?? []));
 
                     $sections = [];
                     if (!empty($schema['sections'])) {
-                        $expanded = AppraisalTemplateServices::expandSchema($schema, $data);
+                        $expanded = AppraisalTemplateServices::expandSchema($schema, $record);
                         $itemsBySec = [];
                         foreach ($expanded['items'] as $it) {
                             $itemsBySec[(int) $it['md_appraisal_section_id']][] = $it;
@@ -342,7 +313,7 @@ class AppraisalTemplateController extends BaseController
     }
 
     /**
-     * Publish Template ('DR' -> 'CO')
+     * Publish Template (DRAFT -> PUBLISHED)
      */
     public function publish($id = null)
     {
@@ -361,7 +332,7 @@ class AppraisalTemplateController extends BaseController
     }
 
     /**
-     * Clone Published Template into New Version Draft ('DR')
+     * Clone Published Template into New Version Draft (DRAFT)
      */
     public function cloneVersion($id = null)
     {
@@ -384,7 +355,7 @@ class AppraisalTemplateController extends BaseController
     }
 
     /**
-     * Unpublish Template ('CO' -> 'DR')
+     * Unpublish Template (PUBLISHED -> DRAFT)
      * Allowed only if 0 employee appraisals have snapshotted it.
      */
     public function unpublish($id = null)
@@ -431,7 +402,7 @@ class AppraisalTemplateController extends BaseController
     }
 
     /**
-     * Archive Template ('CO' -> 'VO') / Deactivate
+     * Archive Template (PUBLISHED -> ARCHIVED) / Deactivate
      */
     public function archive($id = null)
     {
@@ -454,7 +425,7 @@ class AppraisalTemplateController extends BaseController
     }
 
     /**
-     * Activate / Reactivate Template ('VO' -> 'CO')
+     * Activate / Reactivate Template (ARCHIVED -> PUBLISHED)
      */
     public function activate($id = null)
     {
@@ -503,29 +474,29 @@ class AppraisalTemplateController extends BaseController
             $levellingIds = $this->normalizeIdArray($scoping['levelling_ids'] ?? $scoping['md_levelling_id'] ?? $scoping['leveling_ids'] ?? []);
             $positionIds  = $this->normalizeIdArray($scoping['position_ids'] ?? $scoping['md_position_id'] ?? []);
 
-            // If template_id provided and no scoping params, load from md_template_scope
+            // If template_id provided and no scoping params, load from the 4 mapping tables
             $templateId = (int) ($post['md_appraisal_template_id'] ?? $post['id'] ?? 0);
             if ($templateId > 0 && empty($branchIds) && empty($divisionIds) && empty($levellingIds) && empty($positionIds)) {
-                $scopeRows = $this->db->table('md_template_scope')
-                    ->select('scope_type, scope_id')
-                    ->where('md_appraisal_template_id', $templateId)
-                    ->where('isactive', 'Y')
-                    ->get()->getResultArray();
-                $byType = [];
-                foreach ($scopeRows as $sr) {
-                    $byType[$sr['scope_type']][] = (int) $sr['scope_id'];
+                $loadedScopes = [];
+                foreach (AppraisalTemplateServices::SCOPE_TABLES as $key => $cfg) {
+                    $rows = $this->db->table($cfg['table'])
+                        ->select($cfg['fk'])
+                        ->where('md_appraisal_template_id', $templateId)
+                        ->where('isactive', 'Y')
+                        ->get()->getResultArray();
+                    $loadedScopes[$key] = array_column($rows, $cfg['fk']);
                 }
-                $branchIds    = $this->normalizeIdArray($byType['BRANCH'] ?? []);
-                $divisionIds  = $this->normalizeIdArray($byType['DIVISION'] ?? []);
-                $levellingIds = $this->normalizeIdArray($byType['LEVELLING'] ?? []);
-                $positionIds  = $this->normalizeIdArray($byType['POSITION'] ?? []);
+                $branchIds    = $this->normalizeIdArray($loadedScopes['branch_ids'] ?? []);
+                $divisionIds  = $this->normalizeIdArray($loadedScopes['division_ids'] ?? []);
+                $levellingIds = $this->normalizeIdArray($loadedScopes['levelling_ids'] ?? []);
+                $positionIds  = $this->normalizeIdArray($loadedScopes['position_ids'] ?? []);
             }
 
             $builder = $this->db->table('md_employee e')
                 ->select('e.md_employee_id, e.nik, e.fullname, e.superior_id, '
                     . 'b.name AS branch_name, d.name AS division_name, '
                     . 'l.name AS level_name, p.name AS position_name, '
-                    . 'sup.fullname AS evaluator_name, gm.fullname AS reviewer_name')
+                    . 'sup.fullname AS evaluator_name, rev.fullname AS reviewer_name')
                 ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
                 ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
                 ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
@@ -533,7 +504,7 @@ class AppraisalTemplateController extends BaseController
                 ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
                 ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
                 ->join('md_employee sup', 'sup.md_employee_id = e.superior_id', 'left')
-                ->join('md_employee gm', 'gm.md_employee_id = sup.superior_id', 'left')
+                ->join('md_employee rev', 'rev.md_employee_id = sup.superior_id', 'left')
                 ->where('e.isactive', 'Y')
                 ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")');
 
@@ -602,7 +573,7 @@ class AppraisalTemplateController extends BaseController
             $templateTitle = 'Preview Evaluasi Kinerja';
             $templateCode  = '-';
             $version       = 1;
-            $targetGroup   = 'STAFF_SPV';
+            $targetGroup   = 'PERMANENT';
             $sections      = [];
             $items         = [];
 
@@ -618,7 +589,7 @@ class AppraisalTemplateController extends BaseController
                     $templateTitle = !empty($payload['title']) ? $payload['title'] : $templateTitle;
                     $templateCode  = !empty($payload['template_code']) ? $payload['template_code'] : $templateCode;
                     $version       = (int) ($payload['version'] ?? 1);
-                    $targetGroup   = strtoupper((string) ($payload['target_group'] ?? 'STAFF_SPV'));
+                    $targetGroup   = strtoupper((string) ($payload['target_group'] ?? 'PERMANENT'));
 
                     $rawSections = (array) ($payload['sections'] ?? []);
                     if (empty($payload['target_group'])) {
@@ -643,7 +614,7 @@ class AppraisalTemplateController extends BaseController
                     $templateTitle = $tpl->title;
                     $templateCode  = $tpl->template_code;
                     $version       = (int) $tpl->version;
-                    $targetGroup   = strtoupper((string) ($tpl->target_group ?? 'STAFF_SPV'));
+                    $targetGroup   = strtoupper((string) ($tpl->target_group ?? 'PERMANENT'));
                 }
 
                 $schema = is_string($tpl->schema_json ?? null)
@@ -683,7 +654,7 @@ class AppraisalTemplateController extends BaseController
                     'final_score'       => 3.00,
                     'status'            => 'PREVIEW',
                     'evaluator_comment' => '',
-                    'gm_comment'        => '',
+                    'reviewer_comment'  => '',
                 ],
                 'employee'             => [
                     'nik'           => '123456',
@@ -700,7 +671,7 @@ class AppraisalTemplateController extends BaseController
                 'evaluator'            => [
                     'name' => 'Penilai',
                 ],
-                'gm'                   => [
+                'reviewer'             => [
                     'name' => 'Peninjau',
                 ],
             ];

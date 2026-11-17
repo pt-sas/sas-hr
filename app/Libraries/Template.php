@@ -6,6 +6,9 @@ use App\Models\M_Menu;
 use App\Models\M_Submenu;
 use App\Models\M_Employee;
 use App\Libraries\Access;
+use App\Models\M_Appraisal;
+use App\Models\M_AppraisalCycle;
+use App\Models\M_AppraisalTemplate;
 use App\Models\M_DocumentType;
 use Config\Services;
 
@@ -460,5 +463,177 @@ class Template
             $allBtn = $btnInputNews;
 
         return $allBtn;
+    }
+
+    /**
+     * Render contextual DataTable action buttons for appraisal modules.
+     *
+     * @param string     $context 'evaluation' | 'dashboard' | 'cycle' | 'template'
+     * @param int|string $id
+     * @param array      $options Context-specific data & flags
+     */
+    public function appraisalTableButton(string $context, $id, array $options = []): string
+    {
+        switch ($context) {
+            case 'evaluation':
+                return $this->appraisalEvaluationButton($id, $options);
+            case 'dashboard':
+                return $this->appraisalDashboardButton($id, $options);
+            case 'cycle':
+                return $this->appraisalCycleButton($id, $options);
+            case 'template':
+                return $this->appraisalTemplateButton($id, $options);
+            default:
+                return '';
+        }
+    }
+
+    private function appraisalEvaluationButton($id, array $options): string
+    {
+        $row     = $options['row'] ?? [];
+        $roleTab = (string) ($options['role_tab'] ?? 'EVALUATOR');
+        $empId   = (int) ($options['emp_id'] ?? 0);
+        $isAdmin = !empty($options['is_admin']);
+        $isDuta  = !empty($options['is_duta']);
+        $status  = $row['status'] ?? ($options['status'] ?? '');
+        $actions = '';
+
+        $cycleStage = null;
+        if (!empty($row['start_date']) || !empty($row['deadline_filling'])) {
+            $today = !empty($this->session->get('appraisal_debug_date')) ? strtotime($this->session->get('appraisal_debug_date')) : time();
+            $fill  = !empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
+            $rev   = !empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
+            $read  = !empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
+            $over  = !empty($row['deadline_override']) ? strtotime($row['deadline_override']) : null;
+            $end   = !empty($row['end_date']) ? strtotime($row['end_date']) : null;
+
+            if ($fill && $today <= $fill) {
+                $cycleStage = 2;
+            } elseif ($rev && $today <= $rev) {
+                $cycleStage = 3;
+            } elseif ($read && $today <= $read) {
+                $cycleStage = 4;
+            } elseif ($over && $today <= $over) {
+                $cycleStage = 5;
+            } elseif ($end && $today > $end) {
+                $cycleStage = 6;
+            }
+        }
+
+        if ($status === M_Appraisal::STATUS_DRAFT_EVALUATOR && ($roleTab === 'EVALUATOR' || (int) ($row['snapshot_evaluator_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Isi Penilaian"><i class="fas fa-edit text-primary"></i></a>';
+        } elseif ($status === M_Appraisal::STATUS_REVIEW && ($roleTab === 'REVIEWER' || (int) ($row['snapshot_reviewer_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Review Peninjau"><i class="fas fa-user-check text-info"></i></a>';
+        } elseif ($status === M_Appraisal::STATUS_PENDING_ACK && ((int) ($row['md_employee_id'] ?? 0) === $empId || $isDuta || $isAdmin)) {
+            $isDirectEmployee = ((int) ($row['md_employee_id'] ?? 0) === $empId);
+            // Intervensi HR is strictly AFTER pembacaan (Stage 5)
+            if ($isAdmin && !$isDirectEmployee && !$isDuta && $cycleStage === 5) {
+                $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Edit Penilaian"><i class="fas fa-edit text-primary"></i></a>';
+            } else {
+                $ttdTitle = 'Konfirmasi TTD';
+                if ($isDuta && !$isDirectEmployee) {
+                    $ttdTitle .= ' (Duta)';
+                }
+                $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="' . $ttdTitle . '"><i class="fas fa-signature text-warning"></i></a>';
+            }
+        } elseif ($status === M_Appraisal::STATUS_FINALIZED) {
+            $actions .= '<a class="btn btn-sm" href="' . base_url('sas/penilaian/complete/' . $id) . '" title="Rapor Kinerja"><i class="fas fa-file-alt text-success"></i></a>';
+        } else {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'VIEW\')" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
+        }
+
+        // Score Comparison & History Action Button
+        $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat & Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
+
+        return $actions;
+    }
+
+    private function appraisalDashboardButton($id, array $options): string
+    {
+        $appStatus    = (string) ($options['status'] ?? '');
+        $employeeName = (string) ($options['employee_name'] ?? 'Karyawan');
+        $isAdmin      = !empty($options['is_admin']);
+
+        $actions = '<div class="d-flex align-items-center justify-content-center" style="gap: 4px;">';
+        if ($appStatus !== M_Appraisal::STATUS_FINALIZED) {
+            // Pending / Active: Nudge (HR/Admin only) + Preview Form
+            if ($isAdmin) {
+                $actions .= '<button type="button" class="btn btn-sm" onclick="window.nudgeAppraisal(' . $id . ', \'' . esc(addslashes($employeeName)) . '\')" data-toggle="tooltip" title="Kirim Pengingat (Nudge)"><i class="fas fa-bell text-warning"></i></button>';
+            }
+            $actions .= '<a href="' . base_url('sas/penilaian/complete/' . $id) . '" class="btn btn-sm" data-toggle="tooltip" title="Pratinjau Form"><i class="fas fa-eye text-info"></i></a>';
+        } else {
+            // Finalized: Rapor Lengkap + Cetak PDF
+            $actions .= '<a href="' . base_url('sas/penilaian/complete/' . $id) . '" class="btn btn-sm" data-toggle="tooltip" title="Lihat Rapor Lengkap"><i class="fas fa-file-alt text-success"></i></a>';
+            $actions .= '<a href="' . base_url('sas/penilaian/exportPDF/' . $id) . '" target="_blank" class="btn btn-sm" data-toggle="tooltip" title="Cetak Rapor (PDF)"><i class="fas fa-print text-danger"></i></a>';
+        }
+        // Riwayat & Komparasi Skor Historis
+        $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat &amp; Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
+        $actions .= '</div>';
+
+        return $actions;
+    }
+
+    private function appraisalCycleButton($id, array $options): string
+    {
+        $status  = (string) ($options['status'] ?? '');
+        $actions = '';
+
+        if ($status === M_AppraisalCycle::STATUS_DRAFT) {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit"><i class="fas fa-edit text-info"></i></a>';
+            $actions .= '<a class="btn btn-sm" onclick="window.cycPreviewBlast(\'' . $id . '\')" title="Simulasi Distribusi"><i class="fas fa-paper-plane text-warning"></i></a>';
+            $actions .= '<a class="btn btn-sm" onclick="window.cycOpen(\'' . $id . '\')" title="Buka Siklus"><i class="fas fa-play text-success"></i></a>';
+            $actions .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus"><i class="fas fa-trash-alt text-danger"></i></a>';
+        } elseif ($status === M_AppraisalCycle::STATUS_OPEN) {
+            $actions .= '<a class="btn btn-sm" onclick="window.cycProgress(\'' . $id . '\')" title="Monitoring Progres"><i class="fas fa-chart-line text-primary"></i></a>';
+            $actions .= '<a class="btn btn-sm" onclick="window.cycPreviewBlast(\'' . $id . '\')" title="Daftar Karyawan"><i class="fas fa-users text-info"></i></a>';
+            $actions .= '<a class="btn btn-sm" onclick="window.cycClose(\'' . $id . '\')" title="Tutup Siklus"><i class="fas fa-lock text-danger"></i></a>';
+        } else {
+            $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'CLOSED\')" id="' . $id . '" data-status="CLOSED" title="Detail"><i class="fas fa-eye text-info"></i></a>';
+            $actions .= '<a class="btn btn-sm" onclick="window.cycProgress(\'' . $id . '\')" title="Laporan Akhir"><i class="fas fa-chart-line text-primary"></i></a>';
+        }
+
+        return $actions;
+    }
+
+    private function appraisalTemplateButton($id, array $options): string
+    {
+        $status     = (string) ($options['status'] ?? M_AppraisalTemplate::STATUS_DRAFT);
+        $usageCount = (int) ($options['usage_count'] ?? 0);
+        $inUse      = ($usageCount > 0);
+
+        $isDraft     = ($status === M_AppraisalTemplate::STATUS_DRAFT);
+        $isPublished = ($status === M_AppraisalTemplate::STATUS_PUBLISHED);
+
+        $actionBtns = '';
+        if ($isDraft) {
+            $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit Template"><i class="fas fa-edit text-info"></i></a>';
+            $actionBtns .= '<a class="btn btn-sm" onclick="window.tplPublish(\'' . $id . '\')" title="Publish Template"><i class="fas fa-check-circle text-success"></i></a>';
+            $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus Draft"><i class="fas fa-trash-alt text-danger"></i></a>';
+        } elseif ($isPublished) {
+            if (!$inUse) {
+                // Unused Published: Allow in-place edit, undo/unpublish, and clean deletion
+                $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" id="' . $id . '" title="Edit Template (Belum Pernah Digunakan)"><i class="fas fa-edit text-info"></i></a>';
+                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplUnpublish(\'' . $id . '\')" title="Batalkan Publish (Kembalikan ke Draft)"><i class="fas fa-undo text-warning"></i></a>';
+                $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
+            } else {
+                // In-Use Published (Locked): Strictly view-only, allow deactivate/archive and clone
+                $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'CO\')" id="' . $id . '" data-status="CO" title="Lihat Detail (Terkunci: ' . $usageCount . ' Penilaian)"><i class="fas fa-eye text-info"></i></a>';
+                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplClone(\'' . $id . '\')" title="Buat Versi Baru (Draft)"><i class="fas fa-code-branch text-warning"></i></a>';
+                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplArchive(\'' . $id . '\')" title="Nonaktifkan / Arsipkan Template (Terkunci)"><i class="fas fa-power-off text-secondary"></i></a>';
+            }
+        } else {
+            // ARCHIVED or others
+            $actionBtns .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'VO\')" id="' . $id . '" data-status="VO" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
+            if ($inUse) {
+                // In-Use Archived: Allow reactivation back to published
+                $actionBtns .= '<a class="btn btn-sm" onclick="window.tplActivate(\'' . $id . '\')" title="Aktifkan Kembali Template (Published)"><i class="fas fa-check-circle text-success"></i></a>';
+            } else {
+                $actionBtns .= '<a class="btn btn-sm" onclick="Destroy(\'' . $id . '\')" title="Hapus Template (Belum Pernah Digunakan)"><i class="fas fa-trash-alt text-danger"></i></a>';
+            }
+        }
+
+        $btnPreview = '<button type="button" class="btn btn-sm btn_preview_template" data-id="' . $id . '" data-toggle="tooltip" title="Pratinjau Form" data-original-title="Pratinjau Form"><i class="fas fa-file-alt text-primary"></i></button>';
+
+        return $actionBtns . $btnPreview;
     }
 }
