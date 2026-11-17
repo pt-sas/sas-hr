@@ -4,20 +4,22 @@ namespace App\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
 
-class PerformanceAppraisalMenuAndAccess extends Seeder
+class PerformanceAppraisalMenu extends Seeder
 {
     public function run()
     {
         // ------------------------------------------------------------------
-        // 1. Fetch Existing Master User & Role (ID 1)
+        // 1. Fetch Existing Master User (ID 1) or First Active User
         // ------------------------------------------------------------------
-        $sysRoleId = 1;
         $sysUserId = 1;
-
-        // Ensure user 1 exists, fallback to first active user if 1 isn't found
         $user = $this->db->table('sys_user')->getWhere(['sys_user_id' => $sysUserId])->getRow();
         if ($user) {
-            $sysUserId = $user->sys_user_id;
+            $sysUserId = (int) $user->sys_user_id;
+        } else {
+            $fallbackUser = $this->db->table('sys_user')->where('isactive', 'Y')->get()->getRow();
+            if ($fallbackUser) {
+                $sysUserId = (int) $fallbackUser->sys_user_id;
+            }
         }
 
         // ------------------------------------------------------------------
@@ -38,6 +40,8 @@ class PerformanceAppraisalMenuAndAccess extends Seeder
                 'sequence'    => 12,
                 'icon'        => 'fas fa-clipboard-check',
                 'action'      => 'N',
+                'initialcode' => '',
+                'status'      => 'Y',
                 'isactive'    => 'Y',
                 'created_by'  => $sysUserId,
                 'updated_by'  => $sysUserId,
@@ -47,33 +51,8 @@ class PerformanceAppraisalMenuAndAccess extends Seeder
             $sysMenuId = (int) $this->db->insertID();
         }
 
-        // Grant access to Parent Menu in sys_access_menu if not already present
-        $existingParentAccess = $this->db->table('sys_access_menu')
-            ->where([
-                'sys_role_id'    => $sysRoleId,
-                'sys_menu_id'    => $sysMenuId,
-                'sys_submenu_id' => 0,
-            ])
-            ->get()
-            ->getRow();
-
-        if (!$existingParentAccess) {
-            $this->db->table('sys_access_menu')->insert([
-                'sys_role_id'    => $sysRoleId,
-                'sys_menu_id'    => $sysMenuId,
-                'sys_submenu_id' => 0,
-                'isview'         => 'Y',
-                'iscreate'       => 'Y',
-                'isupdate'       => 'Y',
-                'isdelete'       => 'Y',
-                'isactive'       => 'Y',
-                'created_by'     => $sysUserId,
-                'updated_by'     => $sysUserId,
-            ]);
-        }
-
         // ------------------------------------------------------------------
-        // 3. Insert Submenus (sys_submenu) & Access Permissions
+        // 3. Insert Submenus (sys_submenu) Idempotently
         // ------------------------------------------------------------------
         $submenus = [
             [
@@ -111,10 +90,10 @@ class PerformanceAppraisalMenuAndAccess extends Seeder
             ],
             [
                 'sys_menu_id' => $sysMenuId,
-                'name'        => 'Monitoring penilaian',
+                'name'        => 'Monitoring Penilaian',
                 'url'         => 'monitoring-penilaian',
                 'sequence'    => 4,
-                'action'      => 'N', // Report: Analytics, status dashboards, summary reports
+                'action'      => 'N', // Dashboard/Analytics view (no generic New button)
                 'status'      => 'Y',
                 'isactive'    => 'Y',
                 'created_by'  => $sysUserId,
@@ -122,7 +101,6 @@ class PerformanceAppraisalMenuAndAccess extends Seeder
             ],
         ];
 
-        // Insert submenus & their respective access permissions idempotently
         foreach ($submenus as $submenu) {
             $existingSubmenu = $this->db->table('sys_submenu')
                 ->where([
@@ -132,35 +110,8 @@ class PerformanceAppraisalMenuAndAccess extends Seeder
                 ->get()
                 ->getRow();
 
-            if ($existingSubmenu) {
-                $sysSubmenuId = (int) $existingSubmenu->sys_submenu_id;
-            } else {
+            if (!$existingSubmenu) {
                 $this->db->table('sys_submenu')->insert($submenu);
-                $sysSubmenuId = (int) $this->db->insertID();
-            }
-
-            $existingSubAccess = $this->db->table('sys_access_menu')
-                ->where([
-                    'sys_role_id'    => $sysRoleId,
-                    'sys_menu_id'    => $sysMenuId,
-                    'sys_submenu_id' => $sysSubmenuId,
-                ])
-                ->get()
-                ->getRow();
-
-            if (!$existingSubAccess) {
-                $this->db->table('sys_access_menu')->insert([
-                    'sys_role_id'    => $sysRoleId,
-                    'sys_menu_id'    => $sysMenuId,
-                    'sys_submenu_id' => $sysSubmenuId,
-                    'isview'         => 'Y',
-                    'iscreate'       => 'Y',
-                    'isupdate'       => 'Y',
-                    'isdelete'       => 'Y',
-                    'isactive'       => 'Y',
-                    'created_by'     => $sysUserId,
-                    'updated_by'     => $sysUserId,
-                ]);
             }
         }
     }
