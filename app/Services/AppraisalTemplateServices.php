@@ -541,15 +541,37 @@ class AppraisalTemplateServices extends BaseServices
     public static function compactSchema(array $sections, string $targetGroup = 'PERMANENT'): array
     {
         $compactSections = [];
-        $nextSecId       = 1;
-        $nextItemId      = 101;
+        $usedSecIds      = [];
+        $usedItemIds     = [];
+        $maxSecId        = 0;
+        $maxItemId       = 100;
+
+        foreach ($sections as $sec) {
+            $sid = (int) ($sec['md_appraisal_section_id'] ?? $sec['id'] ?? 0);
+            if ($sid > $maxSecId) {
+                $maxSecId = $sid;
+            }
+            foreach ((array) ($sec['items'] ?? []) as $it) {
+                $iid = (int) ($it['md_appraisal_template_item_id'] ?? $it['id'] ?? 0);
+                if ($iid > $maxItemId) {
+                    $maxItemId = $iid;
+                }
+            }
+        }
+
+        $nextSecId  = max(1, $maxSecId + 1);
+        $nextItemId = max(101, $maxItemId + 1);
 
         foreach ($sections as $sec) {
             $secType = strtoupper((string) ($sec['section_type'] ?? 'SCORE'));
             $secId   = (int) ($sec['md_appraisal_section_id'] ?? $sec['id'] ?? 0);
-            if ($secId <= 0) {
+            if ($secId <= 0 || isset($usedSecIds[$secId])) {
+                while (isset($usedSecIds[$nextSecId])) {
+                    $nextSecId++;
+                }
                 $secId = $nextSecId++;
             }
+            $usedSecIds[$secId] = true;
 
             // Auto-distribute weights if scored items sum to 0
             $rawItems = (array) ($sec['items'] ?? []);
@@ -587,9 +609,13 @@ class AppraisalTemplateServices extends BaseServices
                 }
 
                 $itemId = (int) ($it['md_appraisal_template_item_id'] ?? $it['id'] ?? 0);
-                if ($itemId <= 0) {
+                if ($itemId <= 0 || isset($usedItemIds[$itemId])) {
+                    while (isset($usedItemIds[$nextItemId])) {
+                        $nextItemId++;
+                    }
                     $itemId = $nextItemId++;
                 }
+                $usedItemIds[$itemId] = true;
 
                 $w = (float) ($it['weight'] ?? $it['bobot'] ?? 0);
                 if (($secType === 'SCORE' || $secType === 'WEIGHTED_CHECKLIST') && $w <= 0 && $autoWeight !== null) {
@@ -691,12 +717,24 @@ class AppraisalTemplateServices extends BaseServices
             return $data;
         }
 
-        $sections = [];
-        $items    = [];
-        $tplId    = $template ? (int) $template->md_appraisal_template_id : (int) ($data['template']['md_appraisal_template_id'] ?? 0);
+        $sections    = [];
+        $items       = [];
+        $usedSecIds  = [];
+        $usedItemIds = [];
+        $nextSecId   = 1;
+        $nextItemId  = 101;
+        $tplId       = $template ? (int) $template->md_appraisal_template_id : (int) ($data['template']['md_appraisal_template_id'] ?? 0);
 
         foreach ($data['sections'] ?? [] as $sIdx => $sec) {
             $secId   = (int) ($sec['id'] ?? ($sIdx + 1));
+            if ($secId <= 0 || isset($usedSecIds[$secId])) {
+                while (isset($usedSecIds[$nextSecId])) {
+                    $nextSecId++;
+                }
+                $secId = $nextSecId++;
+            }
+            $usedSecIds[$secId] = true;
+
             $secType = strtoupper((string) ($sec['type'] ?? 'SCORE'));
             $scale   = $sec['scale'] ?? ($secType === 'SCORE' ? [0, 4] : ($secType === 'WEIGHTED_CHECKLIST' ? [1, 3] : [0, 1]));
             $minS    = (int) ($scale[0] ?? 0);
@@ -707,6 +745,13 @@ class AppraisalTemplateServices extends BaseServices
 
             foreach ($secItems as $iIdx => $it) {
                 $itemId = (int) ($it['id'] ?? (($sIdx + 1) * 100 + $iIdx + 1));
+                if ($itemId <= 0 || isset($usedItemIds[$itemId])) {
+                    while (isset($usedItemIds[$nextItemId])) {
+                        $nextItemId++;
+                    }
+                    $itemId = $nextItemId++;
+                }
+                $usedItemIds[$itemId] = true;
                 $bobot  = (float) ($it['bobot'] ?? 0);
                 $secWeight += $bobot;
 
