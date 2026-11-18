@@ -86,7 +86,7 @@
             <div class="ap-info-item">
                 <div class="ap-info-label">Status Penilaian</div>
                 <div class="ap-info-value">
-                    <span class="<?= $isDraftSt ? 'text-danger font-weight-bold' : 'font-weight-bold' ?>">
+                    <span class="<?= $isDraftSt ? 'font-weight-bold' : 'font-weight-bold' ?>">
                         <?= esc($statusLabel) ?>
                     </span>
                 </div>

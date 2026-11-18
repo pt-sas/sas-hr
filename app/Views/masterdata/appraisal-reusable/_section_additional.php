@@ -86,7 +86,7 @@
                     <tr>
                         <th style="width: 50px; text-align: center;">NO</th>
                         <th style="width: 20%;">KOMPETENSI</th>
-                        <th style="width: 45%;">KEY ACTIONS (INDIKATOR PERILAKU)</th>
+                        <th style="width: 45%;">INDIKATOR PERILAKU</th>
                         <th style="width: 15%; text-align: center;">PENILAI</th>
                         <th style="width: 15%; text-align: center;">PENINJAU</th>
                     </tr>
@@ -197,7 +197,7 @@
                     <tr>
                         <th style="width: 24%;">Kompetensi</th>
                         <th style="width: 30%;">Definisi</th>
-                        <th style="width: 32%;">Key Actions (Indikator Perilaku)</th>
+                        <th style="width: 32%;">Indikator Perilaku</th>
                         <th class="text-center" style="width: 14%;">Ya / Tidak</th>
                     </tr>
                 </thead>

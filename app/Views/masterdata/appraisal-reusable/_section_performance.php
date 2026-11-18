@@ -138,7 +138,7 @@
                     <tr>
                         <th style="width: 50px; text-align: center;">NO</th>
                         <th style="width: 20%;">KOMPETENSI</th>
-                        <th style="width: 45%;">KEY ACTIONS (INDIKATOR PERILAKU)</th>
+                        <th style="width: 45%;">INDIKATOR PERILAKU</th>
                         <th style="width: 15%; text-align: center;">SKOR PENILAI</th>
                         <th style="width: 15%; text-align: center;">SKOR PENINJAU</th>
                     </tr>
@@ -275,7 +275,7 @@
                     <tr>
                         <th style="width: 20%;">Kompetensi</th>
                         <th style="width: 25%;">Definisi</th>
-                        <th style="width: 30%;">Key Actions (Indikator Perilaku)</th>
+                        <th style="width: 30%;">Indikator Perilaku</th>
                         <th style="width: 25%;<?= $displayMode === 'readonly' ? ' text-align: center;' : '' ?>">Skor Penilaian</th>
                     </tr>
                 </thead>

@@ -417,6 +417,68 @@
 .card-header .new_form {
         display: none !important;
     }
+
+/* ==========================================================================
+   READABILITY PASS (older users) -- typography & color ONLY.
+   No layout properties (grid, width, padding, margin, position) below.
+   ========================================================================== */
+
+.apd-wrap .apd-panel-title { font-size: 17px; color: #1c2040; }
+.apd-wrap .apd-panel-sub,
+.apd-wrap .apd-cycle-meta { font-size: 14px; color: #44475a; }
+.apd-wrap .apd-field label { font-size: 14px; color: #1c2040; }
+.apd-wrap .apd-stat-label { font-size: 14.5px; font-weight: 700; color: #33364d; }
+.apd-wrap .apd-stat-num { font-size: 2.25rem; color: #1c2040; }
+.apd-wrap .apd-stat-unit { font-size: 15px; color: #44475a; }
+.apd-wrap .apd-stat-note { font-size: 14px; color: #44475a; }
+
+.apd-wrap .apd-grade-row { font-size: 14.5px; }
+.apd-wrap .apd-grade-name { color: #1c2040; }
+.apd-wrap .apd-grade-range { font-size: 13.5px; color: #44475a; }
+.apd-wrap .apd-grade-count { color: #1c2040; }
+.apd-wrap .apd-grade-count small { font-size: 13.5px; font-weight: 600; }
+.apd-wrap .apd-grade-footer { font-size: 14px; color: #44475a; }
+.apd-wrap .apd-type-btn { font-size: 13.5px; color: #33364d; }
+.apd-wrap .apd-type-btn.is-active { color: #ffffff; background: #0b57c0; }
+
+/* NOTE: the data grid (.tb_display) below is intentionally untouched. */
+
+/* Progres per Divisi table (.apd-table) */
+.apd-wrap .apd-table th { font-size: 13.5px !important; color: #1c2040 !important; }
+.apd-wrap .apd-table td,
+.apd-wrap .apd-table tfoot td { font-size: 14.5px; color: #1c2040; }
+.apd-wrap .apd-table .apd-tone-ok,   .apd-wrap .apd-table .text-success { color: #166534 !important; }
+.apd-wrap .apd-table .text-warning { color: #8a4506 !important; }
+.apd-wrap .apd-table .apd-tone-pri,  .apd-wrap .apd-table .text-primary { color: #0b57c0 !important; }
+.apd-wrap .apd-table .text-info { color: #0a5a78 !important; }
+.apd-wrap .apd-table td.text-muted,
+.apd-wrap .apd-table th.text-muted { color: #5a5d70 !important; }
+.apd-wrap .apd-div-row:focus-visible { outline: 3px solid #0b57c0; outline-offset: 2px; }
+
+/* Darker semantic text colors for non-table elements only */
+.apd-wrap .apd-stat-num.apd-tone-ok   { color: #166534 !important; }
+.apd-wrap .apd-stat-unit.apd-tone-ok  { color: #166534 !important; }
+.apd-wrap .apd-stat-num.apd-tone-warn { color: #8a4506 !important; }
+.apd-wrap .apd-stat-num.apd-tone-pri  { color: #0b57c0 !important; }
+.apd-wrap .apd-panel .text-muted:not(td):not(th) { color: #4a4d5e !important; }
+
+/* Keyboard focus */
+.apd-wrap .apd-type-btn:focus-visible {
+    outline: 3px solid #0b57c0;
+    outline-offset: 2px;
+}
+
+/* Filter bar (outside .apd-wrap) */
+#filter_appraisal_dashboard label { font-size: 14px; color: #1c2040 !important; }
+#filter_appraisal_dashboard .select2-selection__rendered,
+#filter_appraisal_dashboard .btn { font-size: 14px; }
+
+/* Audit trail modal (outside .apd-wrap) */
+#modal_audit_log .modal-title { font-size: 18px !important; color: #1c2040; }
+#modal_audit_log small,
+#modal_audit_log .small { font-size: 14px; }
+#modal_audit_log .text-muted { color: #44475a !important; }
+#modal_audit_log .text-dark { color: #1c2040 !important; }
 </style>
 
 <div class="<?= $inCard ? 'card-body card-main' : 'page-inner pt-0' ?> apd-wrap">
@@ -442,7 +504,7 @@
             <!-- Final / Selesai -->
             <div class="apd-ledger-cell">
                 <div class="apd-stat-label">
-                    <span>Evaluasi Selesai (Final)</span>
+                    <span>Evaluasi Selesai</span>
                     <span class="apd-stat-dot" style="background: #15803d;"></span>
                 </div>
                 <div class="apd-stat-main">
@@ -505,7 +567,7 @@
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center small mb-1">
                                 <span class="text-muted font-weight-bold">Proporsi Keseluruhan</span>
-                                <span class="text-muted" style="font-size: 11px;">Form Selesai (Final)</span>
+                                <span class="text-muted" style="font-size: 13.5px;">Form Selesai (Final)</span>
                             </div>
                             <div class="apd-ribbon-track" id="ribbon_track">
                                 <div id="ribbon_sb" class="apd-ribbon-segment" style="background:#15803d; width: 0%;" data-toggle="tooltip" title="Sangat Baik"></div>
@@ -556,7 +618,7 @@
                             <i class="fas fa-chart-pie"></i>
                         </div>
                         <h6 class="font-weight-bold text-dark mb-1">Belum Ada Rapor Final</h6>
-                        <p class="text-muted small mb-0" style="max-width: 280px; margin: 0 auto; line-height: 1.45;">
+                        <p class="text-muted mb-0" style="max-width: 280px; margin: 0 auto; line-height: 1.45; font-size: 14px;">
                             Distribusi predikat akan terbentuk otomatis setelah form evaluasi selesai ditandatangani.
                         </p>
                     </div>
@@ -573,13 +635,6 @@
         <!-- Right Column: Division Performance Breakdown -->
         <div class="col-lg-7 d-flex">
             <div class="apd-panel w-100 d-flex flex-column" style="min-width: 0;">
-                <div class="apd-panel-head py-2">
-                    <div class="d-flex align-items-center">
-                        <h2 class="apd-panel-title">Progres per Divisi</h2>
-                        <span class="badge badge-light border text-muted ml-2 font-weight-bold" id="txt_div_count">0 Divisi</span>
-                    </div>
-                    <span class="small text-muted font-weight-bold"><i class="fas fa-circle text-success mr-1" style="font-size: 8px;"></i>Live Status</span>
-                </div>
 
                 <div class="table-responsive flex-grow-1" style="overflow-y: auto; overflow-x: auto; max-height: 380px;">
                     <table class="table apd-table mb-0 table-hover">
@@ -602,7 +657,7 @@
                         </thead>
                         <tbody id="tbody_division_progress">
                             <tr>
-                                <td colspan="9" class="text-center py-4 text-muted" style="font-size: 11.5px;">
+                                <td colspan="9" class="text-center py-4 text-muted" style="font-size: 14px;">
                                     <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data divisi...
                                 </td>
                             </tr>
@@ -949,7 +1004,7 @@ function initAppraisalDashboard() {
                                         '<div class="apd-prog-fill-ok" style="width:' + pVal + '%;"></div>' +
                                         '<div class="apd-prog-fill-wip" style="width:' + wipBarPct.toFixed(1) + '%;"></div>' +
                                     '</div>' +
-                                    '<span class="font-weight-bold text-dark" style="font-size: 11px; width: 32px; text-align: right; white-space: nowrap;">' + pVal.toFixed(0) + '%</span>' +
+                                    '<span class="font-weight-bold text-dark" style="font-size: 13.5px; width: 32px; text-align: right; white-space: nowrap;">' + pVal.toFixed(0) + '%</span>' +
                                 '</div>' +
                             '</td>' +
                             '<td class="text-center px-1 py-1 ' + avgColor + '">' + avgDivScore + '</td>' +
@@ -980,7 +1035,7 @@ function initAppraisalDashboard() {
                                     '<div class="apd-prog-fill-ok" style="width: ' + overallPct + '%;"></div>' +
                                     '<div class="apd-prog-fill-wip" style="width: ' + overallWipPct.toFixed(1) + '%;"></div>' +
                                 '</div>' +
-                                '<span class="font-weight-bold text-dark" style="font-size: 11px; width: 32px; text-align: right; white-space: nowrap;">' + overallPct.toFixed(0) + '%</span>' +
+                                '<span class="font-weight-bold text-dark" style="font-size: 13.5px; width: 32px; text-align: right; white-space: nowrap;">' + overallPct.toFixed(0) + '%</span>' +
                             '</div>' +
                         '</td>' +
                         '<td class="text-center font-weight-bold px-1 py-1 ' + overallAvgColor + '">' + overallAvg + '</td>' +

@@ -603,12 +603,17 @@ class AppraisalTemplateServices extends BaseServices
                 }
                 $actions = is_array($actions) ? array_values(array_filter(array_map('trim', $actions))) : [];
 
+                $desc = trim((string) ($it['desc'] ?? $it['description'] ?? $it['definition'] ?? $cfg['description'] ?? $cfg['definition'] ?? ''));
+
                 if ($secType === 'SCORE') {
                     $entry = [
                         'id'         => $itemId,
                         'kompetensi' => trim((string) ($it['kompetensi'] ?? ($cfg['competency'] ?? ($it['title'] ?? '')))),
                         'bobot'      => $bobotVal,
                     ];
+                    if ($desc !== '') {
+                        $entry['desc'] = $desc;
+                    }
                     if (!empty($actions)) {
                         $entry['indikator'] = $actions;
                     }
@@ -618,6 +623,9 @@ class AppraisalTemplateServices extends BaseServices
                         'id'         => $itemId,
                         'kompetensi' => trim((string) ($it['kompetensi'] ?? ($cfg['competency'] ?? ($it['title'] ?? '')))),
                     ];
+                    if ($desc !== '') {
+                        $entry['desc'] = $desc;
+                    }
                     if (!empty($actions)) {
                         $entry['indikator'] = $actions;
                     }
@@ -628,7 +636,6 @@ class AppraisalTemplateServices extends BaseServices
                         'aspek' => trim((string) ($it['aspek'] ?? ($it['title'] ?? ($cfg['aspect'] ?? '')))),
                         'bobot' => $bobotVal,
                     ];
-                    $desc = trim((string) ($it['desc'] ?? $it['description'] ?? $cfg['description'] ?? ''));
                     if ($desc !== '') {
                         $entry['desc'] = $desc;
                     }

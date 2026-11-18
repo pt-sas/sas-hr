@@ -1198,9 +1198,9 @@ tr:has(input[type="radio"]:checked) .font-weight-600 {
     letter-spacing: 0.3px;
 }
 
-.ap-hide-page-toolbar .card-header .float-right,
-.ap-hide-page-toolbar .card-header .new_form,
-.ap-hide-page-toolbar .card-header .btn_requery {
+.card:has(.ap-hide-page-toolbar) .card-header .float-right,
+.card:has(.ap-hide-page-toolbar) .card-header .new_form,
+.card:has(.ap-hide-page-toolbar) .card-header .btn_requery {
     display: none !important;
 }
 

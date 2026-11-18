@@ -159,6 +159,10 @@
 
 </div>
 
+<div class="card-action">
+    <a href="<?= $backUrl ?>" class="btn btn-outline-danger btn-round">Close</a>
+</div>
+
 <?= $this->include('Views/masterdata/appraisal-reusable/modal_audit_log') ?>
 
 <script>
@@ -167,9 +171,12 @@
     if (mp) mp.classList.remove('is-loading');
 })();
 
-$(document).ready(function () {
-    $('.main-panel').removeClass('is-loading');
-    $('.new_form, .btn_requery, .card-header .float-right').hide();
+document.addEventListener('DOMContentLoaded', function () {
+    var mp = document.querySelector('.main-panel');
+    if (mp) mp.classList.remove('is-loading');
+    document.querySelectorAll('.card-header .new_form, .card-header .btn_requery, .card-header .float-right').forEach(function (el) {
+        el.style.display = 'none';
+    });
 });
 </script>
 

@@ -715,6 +715,8 @@
                 '<div class="row">' +
                     '<div class="col-12">' + fieldHtml('Nama Kompetensi',
                         inputHtml('competency[]', data.competency, isChecklist ? 'Contoh: Kepatuhan Regulasi & Standar Operasional' : 'Contoh: Job Knowledge / Problem Solving'), true) + '</div>' +
+                    '<div class="col-12">' + fieldHtml('Definisi Kompetensi',
+                        '<textarea name="definition[]" class="form-control form-control-sm line" rows="2" placeholder="Jelaskan secara singkat deskripsi atau ekspektasi dari kompetensi ini...">' + esc(data.definition) + '</textarea>') + '</div>' +
                 '</div>' +
                 '<div class="tpl-actions">' +
                     '<div class="tpl-actions-head">' +
