@@ -111,11 +111,11 @@ class AppraisalCycle extends BaseController
                     $dlOverrideFormatted = !empty($dlOverride) ? date('d/m/Y', strtotime($dlOverride)) : '-';
 
                     if ($status === M_AppraisalCycle::STATUS_OPEN) {
-                        $statusBadge = '<center><span class="badge badge-success px-2 py-1"><i class="fas fa-play-circle mr-1"></i>OPEN</span></center>';
+                        $statusBadge = '<center><span class="badge badge-success px-2 py-1">OPEN</span></center>';
                     } elseif ($status === M_AppraisalCycle::STATUS_CLOSED) {
-                        $statusBadge = '<center><span class="badge badge-secondary px-2 py-1"><i class="fas fa-lock mr-1"></i>CLOSED</span></center>';
+                        $statusBadge = '<center><span class="badge badge-secondary px-2 py-1">CLOSED</span></center>';
                     } else {
-                        $statusBadge = '<center><span class="badge badge-warning px-2 py-1"><i class="fas fa-edit mr-1"></i>DRAFT</span></center>';
+                        $statusBadge = '<center><span class="badge badge-warning px-2 py-1">DRAFT</span></center>';
                     }
 
                     $actions = $this->template->appraisalTableButton('cycle', $id, [

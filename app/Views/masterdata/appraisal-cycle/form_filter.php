@@ -54,9 +54,6 @@
                                 <button type="button" class="btn btn-primary btn-sm btn-round btn_filter" title="Terapkan Filter">
                                     <i class="fas fa-search fa-fw"></i> Filter
                                 </button>
-                                <button type="button" class="btn btn-danger btn-sm btn-round btn_reset ml-2" id="btn_reset_filter" title="Reset Semua Filter">
-                                    <i class="fas fa-undo fa-fw"></i> Reset
-                                </button>
                             </div>
                         </div>
                     </div>

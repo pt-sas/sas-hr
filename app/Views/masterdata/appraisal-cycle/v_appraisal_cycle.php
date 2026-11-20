@@ -476,17 +476,17 @@
                                 render: function (d, t, r) {
                                     var note = r.status_note ? ' data-toggle="tooltip" data-placement="left" title="' + esc(r.status_note) + '"' : '';
                                     if (d === 'READY') {
-                                        return '<span class="badge badge-success px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-check-circle mr-1"></i>Siap Rilis</span>';
+                                        return '<span class="badge badge-success px-2 py-1 font-weight-bold"' + note + '>Siap Rilis</span>';
                                     } else if (d === 'TEMPLATE_DRAFT') {
-                                        return '<span class="badge badge-secondary px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-edit mr-1"></i>Template Draft</span>';
+                                        return '<span class="badge badge-secondary px-2 py-1 font-weight-bold"' + note + '>Template Draft</span>';
                                     } else if (d === 'ALREADY_GENERATED') {
-                                        return '<span class="badge badge-info px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-file-alt mr-1"></i>Form Aktif</span>';
+                                        return '<span class="badge badge-info px-2 py-1 font-weight-bold"' + note + '>Form Aktif</span>';
                                     } else if (d === 'MISSING_TEMPLATE') {
-                                        return '<span class="badge badge-warning px-2 py-1 font-weight-bold text-dark"' + note + '><i class="fas fa-exclamation-triangle mr-1"></i>Tanpa Template</span>';
+                                        return '<span class="badge badge-warning px-2 py-1 font-weight-bold text-dark"' + note + '>Tanpa Template</span>';
                                     } else if (d === 'INCOMPLETE') {
-                                        return '<span class="badge badge-danger px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-times-circle mr-1"></i>Belum Lengkap</span>';
+                                        return '<span class="badge badge-danger px-2 py-1 font-weight-bold"' + note + '></i>Belum Lengkap</span>';
                                     } else {
-                                        return '<span class="badge badge-danger px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-user-slash mr-1"></i>Tanpa Atasan</span>';
+                                        return '<span class="badge badge-danger px-2 py-1 font-weight-bold"' + note + '>Tanpa Atasan</span>';
                                     }
                                 }
                             }
