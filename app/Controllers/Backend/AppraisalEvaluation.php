@@ -224,20 +224,21 @@ class AppraisalEvaluation extends BaseController
                                         ->countAllResults();
         }
 
-        // Count all appraisals (for Admin / Super HRD overview)
+        // Count all appraisals (for Admin / Super HRD overview, scoped strictly to active cycle)
         $countAll = 0;
-        if ($isAdmin) {
-            $countAllQuery = $this->model->where('isactive', 'Y');
-            if ($activeCycle) {
-                $countAllQuery->where('md_appraisal_cycle_id', (int) $activeCycle->md_appraisal_cycle_id);
-            }
-            $countAll = $countAllQuery->countAllResults();
+        if ($isAdmin && $activeCycle) {
+            $countAll = $this->model->where('isactive', 'Y')
+                ->where('md_appraisal_cycle_id', (int) $activeCycle->md_appraisal_cycle_id)
+                ->countAllResults();
         }
 
         $totalActiveTasks = $countEvaluator + $countReviewer;
 
-        // If no cycle and no active tasks and no employee appraisals and no history, render empty state
-        if (! $activeCycle && $totalActiveTasks === 0 && $countEmp === 0 && $countHistory === 0 && ! $isAdmin) {
+        // Render empty state when there is no active cycle for Admin, or no cycle/tasks/history for non-Admin
+        $showAdminEmpty    = $isAdmin && ! $activeCycle;
+        $showEmployeeEmpty = ! $isAdmin && ! $activeCycle && $totalActiveTasks === 0 && $countEmp === 0 && $countHistory === 0;
+
+        if ($showAdminEmpty || $showEmployeeEmpty) {
             return $this->template->render('masterdata/appraisal-filling/v_appraisal_empty');
         }
 
@@ -1277,16 +1278,8 @@ class AppraisalEvaluation extends BaseController
             $delta                = null;
         }
 
-        $getRating = function ($score): array {
-            if ($score === null) return ['label' => 'Belum Dinilai', 'class' => 'r-muted'];
-            if ($score >= 3.50) return ['label' => 'Sangat Baik', 'class' => 'r-great'];
-            if ($score >= 2.75) return ['label' => 'Baik', 'class' => 'r-good'];
-            if ($score >= 2.00) return ['label' => 'Cukup', 'class' => 'r-fair'];
-            return ['label' => 'Kurang', 'class' => 'r-low'];
-        };
-
-        $evalRating     = $getRating($evalFinalOverall);
-        $reviewerRating = $getRating($reviewerFinalOverall);
+        $evalRating     = appraisal_rating_meta($evalFinalOverall, false);
+        $reviewerRating = appraisal_rating_meta($reviewerFinalOverall, false);
 
         $scoreSections   = [];
         $booleanSections = [];
@@ -1641,9 +1634,6 @@ class AppraisalEvaluation extends BaseController
                 }
 
                 if ($actionType === 'submit') {
-                    if (empty($evaluatorComment)) {
-                        throw new \RuntimeException('Catatan & Feedback Evaluator wajib diisi sebelum melakukan submit.');
-                    }
                     $this->workflowService->submitByEvaluator($appraisalId, $userId, $evaluatorComment, $developmentPlan);
                 }
 
@@ -1853,10 +1843,6 @@ class AppraisalEvaluation extends BaseController
             $evaluatorComment = $post['evaluator_comment'] ?? $appraisal->evaluator_comment;
             $developmentPlan  = $post['development_plan'] ?? $appraisal->development_plan;
 
-            if (empty(trim($evaluatorComment ?? ''))) {
-                return $this->response->setJSON(message('error', false, 'Catatan & feedback evaluasi wajib diisi sebelum melakukan submit!'));
-            }
-
             // Transition status via workflow service
             $this->workflowService->submitByEvaluator($appraisalId, $userId, $evaluatorComment, $developmentPlan);
 
@@ -1868,49 +1854,9 @@ class AppraisalEvaluation extends BaseController
 
     protected function renderStageProgress(string $status, array $row = []): string
     {
-        // Resolve cycle stage if row provides cycle info
-        $cycleStage = null;
-        if (! empty($row['start_date']) || ! empty($row['deadline_filling'])) {
-            $today = time();
-            $fill  = ! empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
-            $rev   = ! empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
-            $read  = ! empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
-            $over  = ! empty($row['deadline_override']) ? strtotime($row['deadline_override']) : null;
-            $end   = ! empty($row['end_date']) ? strtotime($row['end_date']) : null;
+        $cycleStage = M_Appraisal::resolveCycleStageFromRow($row);
 
-            if ($fill && $today <= $fill) {
-                $cycleStage = 2;
-            } elseif ($rev && $today <= $rev) {
-                $cycleStage = 3;
-            } elseif ($read && $today <= $read) {
-                $cycleStage = 4;
-            } elseif ($over && $today <= $over) {
-                $cycleStage = 5;
-            } elseif ($end && $today > $end) {
-                $cycleStage = 6;
-            }
-        }
-
-        switch ($status) {
-            case M_Appraisal::STATUS_DRAFT_EVALUATOR:
-                $label = 'Pengisian';
-                break;
-            case M_Appraisal::STATUS_SUBMITTED_EVALUATOR:
-            case M_Appraisal::STATUS_REVIEW:
-                $label = 'Peninjauan';
-                break;
-            case M_Appraisal::STATUS_PENDING_ACK:
-                $label = ($cycleStage === 5) ? 'Intervensi HR' : 'Pembacaan';
-                break;
-            case M_Appraisal::STATUS_FINALIZED:
-                $label = 'Final';
-                break;
-            default:
-                $label = $status;
-                break;
-        }
-
-        return esc($label);
+        return esc(M_Appraisal::getStageDisplayLabel($status, $cycleStage));
     }
 
     protected function renderStatusBadge(string $status): string

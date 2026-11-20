@@ -17,9 +17,6 @@
             <div class="form-group mb-3">
                 <label class="font-weight-bold" for="evaluator_comment">
                     1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?
-                    <?php if ($userMode === 'EVALUATOR'): ?>
-                        <span class="text-danger">*</span>
-                    <?php endif; ?>
                 </label>
                 <textarea class="form-control ap-textarea"
                           name="evaluator_comment"

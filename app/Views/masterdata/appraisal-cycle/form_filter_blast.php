@@ -5,14 +5,15 @@
                 <!-- Status Kesiapan -->
                 <div class="col-md-2 col-sm-6">
                     <div class="form-group mb-0">
-                        <label for="blast_filter_readiness" class="font-weight-bold text-muted small mb-1">Status Kesiapan</label>
                         <div class="select2-input select2-primary">
                             <select class="form-control select2-blast" id="blast_filter_readiness" name="readiness_status" style="width: 100%;">
                                 <option value="">Semua Status Kesiapan</option>
-                                <option value="READY">Siap (Lengkap)</option>
+                                <option value="READY">Siap Rilis</option>
+                                <option value="TEMPLATE_DRAFT">Template Draft</option>
                                 <option value="ALREADY_GENERATED">Sudah Digenerate</option>
                                 <option value="MISSING_TEMPLATE">Tanpa Template</option>
                                 <option value="MISSING_EVALUATOR">Tanpa Atasan</option>
+                                <option value="INCOMPLETE">Belum Lengkap</option>
                             </select>
                         </div>
                     </div>
@@ -21,7 +22,6 @@
                 <!-- Cabang -->
                 <div class="col-md-2 col-sm-6">
                     <div class="form-group mb-0">
-                        <label for="blast_filter_branch" class="font-weight-bold text-muted small mb-1">Cabang</label>
                         <div class="select2-input select2-primary">
                             <select class="form-control select2-blast" id="blast_filter_branch" name="branch" style="width: 100%;">
                                 <option value="">Semua Cabang</option>
@@ -33,7 +33,6 @@
                 <!-- Divisi -->
                 <div class="col-md-2 col-sm-6">
                     <div class="form-group mb-0">
-                        <label for="blast_filter_division" class="font-weight-bold text-muted small mb-1">Divisi</label>
                         <div class="select2-input select2-primary">
                             <select class="form-control select2-blast" id="blast_filter_division" name="division" style="width: 100%;">
                                 <option value="">Semua Divisi</option>
@@ -45,7 +44,6 @@
                 <!-- Level Jabatan -->
                 <div class="col-md-2 col-sm-6">
                     <div class="form-group mb-0">
-                        <label for="blast_filter_level" class="font-weight-bold text-muted small mb-1">Level Jabatan</label>
                         <div class="select2-input select2-primary">
                             <select class="form-control select2-blast" id="blast_filter_level" name="level" style="width: 100%;">
                                 <option value="">Semua Level</option>
@@ -54,16 +52,12 @@
                     </div>
                 </div>
 
-                <!-- Status Template -->
+                <!-- Posisi -->
                 <div class="col-md-2 col-sm-6">
                     <div class="form-group mb-0">
-                        <label for="blast_filter_template_status" class="font-weight-bold text-muted small mb-1">Status Template</label>
                         <div class="select2-input select2-primary">
-                            <select class="form-control select2-blast" id="blast_filter_template_status" name="template_status" style="width: 100%;">
-                                <option value="">Semua Status Template</option>
-                                <option value="PUBLISHED">PUBLISHED</option>
-                                <option value="DRAFT">DRAFT</option>
-                                <option value="NONE">Belum Ditugaskan</option>
+                            <select class="form-control select2-blast" id="blast_filter_position" name="position" style="width: 100%;">
+                                <option value="">Semua Posisi</option>
                             </select>
                         </div>
                     </div>

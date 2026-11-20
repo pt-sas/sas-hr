@@ -86,7 +86,7 @@
                         </span>
                         <span class="flex-grow-1">
                             <strong class="d-block font-weight-bold mb-1 tpl-type-title text-dark" style="font-size: 13.5px; letter-spacing: -0.2px;">
-                                Operator  (Khusus level Operator)
+                                Operator  (Khusus Operator)
                             </strong>
                             <small class="d-block tpl-type-desc text-muted" style="font-size: 11.5px; line-height: 1.35;">
                                 Checklist Tunggal &amp; Checklist Berbobot
@@ -325,7 +325,7 @@
                     <div class="tpl-pane-head">
                         <div>
                             <h6 class="mb-0 font-weight-bold">Checklist Berbobot (Matrix Rating Scale)</h6>
-                            <small class="text-muted">Daftar aspek penilaian berbobot (tepat 5 butir aspek sesuai sistem predikat operator).</small>
+                            <small class="text-muted">Daftar aspek penilaian berbobot (tepat 5 butir aspek dengan bobot dikunci ke 1 sesuai sistem predikat 5–15 operator).</small>
                         </div>
                     </div>
 
@@ -357,7 +357,7 @@
                     <div class="tpl-empty" id="empty_weighted">
                         <i class="fas fa-balance-scale fa-2x mb-2 text-muted"></i>
                         <div class="font-weight-bold">Belum ada aspek checklist berbobot</div>
-                        <small class="d-block mb-3">Membutuhkan tepat 5 aspek penilaian checklist berbobot.</small>
+                        <small class="d-block mb-3">Membutuhkan tepat 5 aspek penilaian checklist berbobot (bobot 1 per aspek).</small>
                         <button type="button" class="btn btn-secondary btn-sm btn-round btn-add-weighted" onclick="window.tplAddFiveWeightedRows();">
                             <i class="fas fa-plus fa-fw"></i> Tambah 5 Aspek Berbobot
                         </button>
@@ -924,7 +924,7 @@
 
         // =========================================================================
         // HANDLER TAB 4: CHECKLIST BERBOBOT (FLAT)
-        // Hardcoded to exactly 5 items for the operator predicate system
+        // Locked to exactly 5 items with weight = 1 for the 5-15 operator predicate system
         // =========================================================================
         window.tplRefreshWeighted = function () {
             var $rows = $('#tbody_weighted_items tr');
@@ -933,7 +933,7 @@
 
             $rows.each(function (i) {
                 $(this).find('.weighted-row-no').text(i + 1);
-                var pts = parseFloat($(this).find('input[name="weighted_point[]"]').val()) || 0;
+                var pts = parseFloat($(this).find('input[name="weighted_point[]"]').val()) || 1;
                 totalPoints += pts;
             });
 
@@ -970,7 +970,7 @@
             data = data || {};
             var valId = esc(data.md_appraisal_template_item_id || '');
             var valTitle = esc(data.title || data.statement || '');
-            var valWeight = data.weight !== undefined && data.weight !== null ? data.weight : 1;
+            var valWeight = 1;
 
             var trHtml = '<tr>' +
                 '<td class="text-center align-middle font-weight-bold weighted-row-no text-muted"></td>' +
@@ -980,7 +980,7 @@
                 '</td>' +
                 '<td class="align-middle">' +
                     '<div class="input-group input-group-sm">' +
-                        '<input type="number" name="weighted_point[]" class="form-control text-center font-weight-bold line" min="1" step="1" value="' + valWeight + '" required>' +
+                        '<input type="number" name="weighted_point[]" class="form-control text-center font-weight-bold line bg-light" min="1" max="1" step="1" value="' + valWeight + '" readonly tabindex="-1" title="Bobot dikunci ke 1 agar sesuai rentang predikat 5-15">' +
                     '</div>' +
                 '</td>' +
                 '<td class="text-center align-middle">' +
@@ -1405,7 +1405,7 @@
                 return fail('Silakan pilih Tipe Template Penilaian (Staff atau Operator) terlebih dahulu.', $('#type_staff'));
             }
 
-            // Periksa butir checklist berbobot untuk template OPERATOR (wajib tepat 5 butir)
+            // Periksa butir checklist berbobot untuk template OPERATOR (wajib tepat 5 butir, bobot 1)
             if (currentTplType === 'OPERATOR') {
                 var weightedRows = $('#tbody_weighted_items tr');
                 if (weightedRows.length !== 5) {

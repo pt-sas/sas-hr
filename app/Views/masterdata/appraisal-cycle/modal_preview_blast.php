@@ -2,12 +2,12 @@
     <div class="modal-dialog modal-xl modal-dialog-centered" role="document" style="max-width: 95%;">
         <div class="modal-content border-0 shadow-sm" style="border-radius: 12px; overflow: hidden; position: relative;">
             
-            <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close" style="position: absolute; top: 12px; right: 16px; z-index: 1050; outline: none; opacity: 0.7; font-size: 26px; line-height: 1;">
+            <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close" style="position: absolute; top: 8px; right: 14px; z-index: 1050; outline: none; opacity: 0.7; font-size: 20px; line-height: 1; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                 <span aria-hidden="true">&times;</span>
             </button>
 
             <!-- Modal Body -->
-            <div class="modal-body p-4 bg-light-soft" style="background-color: #fafbfc;">
+            <div class="modal-body bg-light-soft" style="background-color: #fafbfc; padding: 38px 20px 18px; max-height: calc(100vh - 2rem); overflow-y: auto;">
 
                 <!-- Unified Metric Ribbon (Replaces individual bulky cards) -->
                 <div class="card border mb-3 shadow-none" style="border-radius: 10px; border-color: #e2e8f0 !important; background: #ffffff;">
@@ -50,6 +50,7 @@
                                 <div class="d-flex align-items-baseline">
                                     <span class="h3 font-weight-bold text-warning mb-0" id="blast_kpi_missing_tpl">0</span>
                                     <small class="text-muted ml-1" style="font-size: 11px;">butuh mapping</small>
+                                    <small class="badge badge-danger ml-2 kpi-sub-filter d-none" id="blast_kpi_incomplete_badge" data-kpi-filter="INCOMPLETE" title="Filter karyawan tanpa template & atasan" style="font-size: 10px; cursor: pointer;"></small>
                                 </div>
                             </div>
 
@@ -96,15 +97,6 @@
                             <!-- Populated dynamically via JavaScript -->
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="modal-footer bg-light border-top d-flex justify-content-between">
-                <div id="blast_action_container">
-                    <button type="button" class="btn btn-primary btn-sm" id="btn_blast_open_cycle" style="display: none;">
-                        Buka Siklus &amp; Generate Form Sekarang
-                    </button>
                 </div>
             </div>
         </div>

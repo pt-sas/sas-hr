@@ -197,12 +197,19 @@
                 $('#blast_kpi_missing_tpl').text(summary.missing_template || 0);
                 $('#blast_kpi_missing_eval').text(summary.missing_evaluator || 0);
 
+                var $incompleteBadge = $('#blast_kpi_incomplete_badge');
+                if ((summary.incomplete || 0) > 0) {
+                    $incompleteBadge.text('+' + summary.incomplete + ' belum lengkap').removeClass('d-none');
+                } else {
+                    $incompleteBadge.addClass('d-none');
+                }
+
                 // Alert Banner Status
                 var $alert = $('#blast_alert_status');
                 var $alertText = $('#blast_alert_text');
-                if (summary.missing_template > 0 || summary.missing_evaluator > 0) {
+                if (summary.missing_template > 0 || summary.missing_evaluator > 0 || summary.incomplete > 0) {
                     $alert.removeClass('alert-info alert-success').addClass('alert-warning');
-                    $alertText.html('<b>Perhatian:</b> Terdapat <b>' + (summary.missing_template || 0) + '</b> karyawan tanpa template dan <b>' + (summary.missing_evaluator || 0) + '</b> karyawan tanpa atasan langsung. Karyawan yang belum siap akan dilewati saat generate form.');
+                    $alertText.html('<b>Perhatian:</b> Terdapat <b>' + (summary.missing_template || 0) + '</b> karyawan tanpa template, <b>' + (summary.missing_evaluator || 0) + '</b> tanpa atasan langsung, dan <b>' + (summary.incomplete || 0) + '</b> belum lengkap. Karyawan yang belum siap akan dilewati saat generate form.');
                 } else if (summary.draft_template > 0) {
                     $alert.removeClass('alert-info alert-success').addClass('alert-warning');
                     $alertText.html('<b>Simulasi Template DRAFT:</b> Ditemukan <b>' + (summary.draft_template || 0) + '</b> karyawan cocok dengan template berstatus DRAFT. Terbitkan (publish) template tersebut terlebih dahulu agar form dapat dibuat saat siklus dibuka.');
@@ -230,10 +237,11 @@
                     $('#filter_preview_blast')[0].reset();
                 }
 
-                // Populate dynamic options for Branch, Division, Level (single index, split combinations like "Glodok, Kalimalang")
+                // Populate dynamic options for Branch, Division, Level, Position
                 var branches  = {};
                 var divisions = {};
                 var levels    = {};
+                var positions = {};
 
                 rows.forEach(function (r) {
                     if (r.branch) {
@@ -254,6 +262,10 @@
                             if (trimmed && trimmed !== '-') levels[trimmed] = true;
                         });
                     }
+                    if (r.position) {
+                        var trimmedPos = String(r.position).trim();
+                        if (trimmedPos && trimmedPos !== '-') positions[trimmedPos] = true;
+                    }
                 });
 
                 var populateSelect = function ($sel, items, defaultLabel) {
@@ -270,6 +282,7 @@
                 populateSelect($('#blast_filter_branch'), branches, 'Semua Cabang');
                 populateSelect($('#blast_filter_division'), divisions, 'Semua Divisi');
                 populateSelect($('#blast_filter_level'), levels, 'Semua Level');
+                populateSelect($('#blast_filter_position'), positions, 'Semua Posisi');
 
                 // Initialize Select2 on blast filters if plugin is present
                 if ($.fn.select2) {
@@ -295,7 +308,7 @@
                         var fBranch    = $('#blast_filter_branch').val();
                         var fDivision  = $('#blast_filter_division').val();
                         var fLevel     = $('#blast_filter_level').val();
-                        var fTemplate  = $('#blast_filter_template_status').val();
+                        var fPosition  = $('#blast_filter_position').val();
 
                         if (fReadiness && rowData.readiness_status !== fReadiness) {
                             return false;
@@ -318,11 +331,9 @@
                                 return false;
                             }
                         }
-                        if (fTemplate) {
-                            var tplStatus = rowData.template_status || 'NONE';
-                            if (tplStatus === 'CO') tplStatus = 'PUBLISHED';
-                            if (tplStatus === 'DR') tplStatus = 'DRAFT';
-                            if (tplStatus !== fTemplate) {
+                        if (fPosition) {
+                            var rowPosition = (rowData.position || '').trim();
+                            if (rowPosition !== fPosition) {
                                 return false;
                             }
                         }
@@ -347,7 +358,16 @@
                     }
                 });
 
-                // Clicking KPI ribbon cards acts as instant quick-filter
+                // Clicking KPI ribbon cards or sub-badges acts as instant quick-filter
+                $('.kpi-sub-filter').off('click').on('click', function (e) {
+                    e.stopPropagation();
+                    var status = $(this).attr('data-kpi-filter') || '';
+                    $('#blast_filter_readiness').val(status).trigger('change');
+                    if (dtBlast) {
+                        dtBlast.draw();
+                    }
+                });
+
                 $('.kpi-card-clickable').off('click').on('click', function () {
                     var status = $(this).attr('data-kpi-filter') || '';
                     $('#blast_filter_readiness').val(status).trigger('change');
@@ -369,7 +389,7 @@
                         searching: true,
                         lengthChange: true,
                         pageLength: 10,
-                        scrollY: '58vh',
+                        scrollY: '52vh',
                         scrollCollapse: true,
                         autoWidth: false,
                         data: rows,
@@ -457,10 +477,14 @@
                                     var note = r.status_note ? ' data-toggle="tooltip" data-placement="left" title="' + esc(r.status_note) + '"' : '';
                                     if (d === 'READY') {
                                         return '<span class="badge badge-success px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-check-circle mr-1"></i>Siap Rilis</span>';
+                                    } else if (d === 'TEMPLATE_DRAFT') {
+                                        return '<span class="badge badge-secondary px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-edit mr-1"></i>Template Draft</span>';
                                     } else if (d === 'ALREADY_GENERATED') {
                                         return '<span class="badge badge-info px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-file-alt mr-1"></i>Form Aktif</span>';
                                     } else if (d === 'MISSING_TEMPLATE') {
                                         return '<span class="badge badge-warning px-2 py-1 font-weight-bold text-dark"' + note + '><i class="fas fa-exclamation-triangle mr-1"></i>Tanpa Template</span>';
+                                    } else if (d === 'INCOMPLETE') {
+                                        return '<span class="badge badge-danger px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-times-circle mr-1"></i>Belum Lengkap</span>';
                                     } else {
                                         return '<span class="badge badge-danger px-2 py-1 font-weight-bold"' + note + '><i class="fas fa-user-slash mr-1"></i>Tanpa Atasan</span>';
                                     }

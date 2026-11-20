@@ -155,10 +155,10 @@ class AppraisalCycle extends Entity
 
         $stages = [
             1 => ['name' => 'Penugasan & Perencanaan', 'sub' => 'HR memulai siklus',           'key' => 'start_date',        'date' => $start],
-            2 => ['name' => 'Pengisian Evaluasi',      'sub' => 'Penilai mengisi form',         'key' => 'deadline_filling',  'date' => $fill],
-            3 => ['name' => 'Pemeriksaan Atasan',      'sub' => 'Atasan meninjau & menilai',    'key' => 'deadline_review',   'date' => $review],
-            4 => ['name' => 'Persetujuan Karyawan',    'sub' => 'Karyawan membaca & menyetujui','key' => 'deadline_reading',  'date' => $reading],
-            5 => ['name' => 'Masa Tenggang HR',        'sub' => 'Intervensi & override HR',     'key' => 'deadline_override', 'date' => $override],
+            2 => ['name' => 'Pengisian Evaluasi',      'sub' => 'Pengisian penilaian',         'key' => 'deadline_filling',  'date' => $fill],
+            3 => ['name' => 'Pemeriksaan Atasan',      'sub' => 'Peninjauan atasan',    'key' => 'deadline_review',   'date' => $review],
+            4 => ['name' => 'Persetujuan Karyawan',    'sub' => 'Pembacaan & konfirmasi karyawan','key' => 'deadline_reading',  'date' => $reading],
+            5 => ['name' => 'Masa Tenggang HR',        'sub' => 'Intervensi & penyesuaian HR',     'key' => 'deadline_override', 'date' => $override],
             6 => ['name' => 'Finalisasi',              'sub' => 'Penetapan hasil akhir',        'key' => 'end_date',          'date' => $end],
         ];
 

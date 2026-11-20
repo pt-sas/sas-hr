@@ -48,10 +48,10 @@
     } else {
         $stages = [
             1 => ['name' => 'Penugasan & Perencanaan', 'sub' => 'HR memulai siklus',           'date' => null, 'date_fmt' => '-'],
-            2 => ['name' => 'Pengisian Evaluasi',      'sub' => 'Penilai mengisi form',         'date' => null, 'date_fmt' => '-'],
-            3 => ['name' => 'Pemeriksaan Atasan',      'sub' => 'Atasan meninjau & menilai',    'date' => null, 'date_fmt' => '-'],
+            2 => ['name' => 'Pengisian Evaluasi',      'sub' => 'Penilaian form',         'date' => null, 'date_fmt' => '-'],
+            3 => ['name' => 'Pemeriksaan Atasan',      'sub' => 'Peninjauan form',    'date' => null, 'date_fmt' => '-'],
             4 => ['name' => 'Persetujuan Karyawan',    'sub' => 'Karyawan membaca & menyetujui','date' => null, 'date_fmt' => '-'],
-            5 => ['name' => 'Masa Tenggang HR',        'sub' => 'Intervensi & override HR',     'date' => null, 'date_fmt' => '-'],
+            5 => ['name' => 'Masa Tenggang HR',        'sub' => 'Intervensi HR',     'date' => null, 'date_fmt' => '-'],
             6 => ['name' => 'Finalisasi',              'sub' => 'Penetapan hasil akhir',        'date' => null, 'date_fmt' => '-'],
         ];
     }
@@ -430,6 +430,7 @@
     </div>
 </div>
 
+<script src="<?= base_url('custom/js/appraisal-filling.js') ?>"></script>
 <script>
 (function () {
     function initTaskList() {
@@ -441,6 +442,20 @@
         var activeRole = $('#filter_role_tab').val() || 'EVALUATOR';
         var currentStage = <?= (int) $currentStage ?>;
         var auditTrigger = null;
+
+        if (window.AppraisalForm) {
+            window.AppraisalForm.bindHostActions({
+                formSelector: '#card_form_container #form_appraisal_evaluation',
+                isStandalone: false,
+                saveUrl: '<?= site_url("sas/penilaian/create") ?>',
+                redirectUrl: '<?= site_url("sas/penilaian") ?>',
+                onClose: function () {
+                    setTimeout(function () {
+                        $('#card_form_container').empty();
+                    }, 0);
+                }
+            });
+        }
 
         function esc(v) {
             return String(v === null || v === undefined ? '' : v)
@@ -456,6 +471,10 @@
                     var r = Array.isArray(res) ? res[0] : res;
                     if (r && r.success && r.message && r.message.html) {
                         $('#card_form_container').html(r.message.html);
+                        var evalForm = document.querySelector('#card_form_container [data-appraisal-form]');
+                        if (evalForm && window.AppraisalForm) {
+                            window.AppraisalForm.mount(evalForm);
+                        }
                         // Ensure save button in card header is enabled and accessible
                         $('.save_form').removeAttr('disabled').prop('disabled', false);
                     }

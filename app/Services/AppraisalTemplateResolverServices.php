@@ -77,9 +77,20 @@ class AppraisalTemplateResolverServices extends BaseServices
             }
         }
 
+        // $scopesByTpl = [
+        //     10 => [
+        //         'department' => [3, 7],
+        //         'role'       => [12],
+        //     ],
+        //     25 => [
+        //         'branch'     => [1, 2],
+        //     ],
+        // ];
+
         $bestMatch = null;
         $bestScore = -1;
 
+        // Find the most specific match for candidates by scoring against all of the possible template
         foreach ($candidates as $tpl) {
             $tplId         = (int) $tpl['md_appraisal_template_id'];
             $tplScopes     = $scopesByTpl[$tplId] ?? [];

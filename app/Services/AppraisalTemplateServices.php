@@ -62,11 +62,26 @@ class AppraisalTemplateServices extends BaseServices
         }
 
         if ($hasOperator) {
-            foreach ($sections as $sec) {
+            $weightedItemCount = 0;
+            foreach ($sections as &$sec) {
                 $secType = $sec['section_type'] ?? '';
                 if (in_array($secType, ['SCORE', 'BOOLEAN'], true)) {
                     throw new ValidationException('Template Operator hanya boleh menggunakan Single Checklist dan Weighted Checklist.');
                 }
+                if ($secType === 'WEIGHTED_CHECKLIST') {
+                    foreach ($sec['items'] as &$item) {
+                        $weightedItemCount++;
+                        // Lock Operator weight to 1 to preserve the 5-15 predicate range
+                        $item['weight'] = 1;
+                    }
+                    unset($item);
+                    $sec['weight'] = (float) count($sec['items']);
+                }
+            }
+            unset($sec);
+
+            if ($weightedItemCount !== 5) {
+                throw new ValidationException('Template Operator wajib memiliki tepat 5 butir Checklist Berbobot (bobot 1 per butir). Saat ini: ' . $weightedItemCount . ' butir.');
             }
         } elseif ($hasNonOperator) {
             foreach ($sections as $sec) {

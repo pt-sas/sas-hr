@@ -524,7 +524,8 @@
                     <span class="apd-stat-num apd-tone-warn" id="kpi_in_progress">0</span>
                     <span class="apd-stat-unit">form</span>
                 </div>
-                <p class="apd-stat-note" id="kpi_in_progress_detail" title="Rincian tahapan berjalan">0 Draft · 0 Review · 0 TTD</p>
+                <?php $kpiStLabels = $status_labels ?? \App\Models\M_Appraisal::getStatusLabels(); ?>
+                <p class="apd-stat-note" id="kpi_in_progress_detail" title="Rincian tahapan berjalan">0 <?= esc($kpiStLabels[\App\Models\M_Appraisal::STATUS_PENILAIAN] ?? 'Penilaian') ?> · 0 <?= esc($kpiStLabels[\App\Models\M_Appraisal::STATUS_REVIEW] ?? 'Peninjauan') ?> · 0 <?= esc($kpiStLabels[\App\Models\M_Appraisal::STATUS_SUBMIT_REVIEW] ?? 'Ditinjau') ?></p>
             </div>
 
             <!-- Rata-Rata Skor Akhir -->
@@ -552,10 +553,6 @@
                 <div class="apd-panel-head">
                     <h2 class="apd-panel-title">Distribusi Predikat</h2>
                     <div class="d-flex align-items-center" style="gap: 0.5rem;">
-                        <div class="apd-type-switch" role="tablist" aria-label="Pilih Tipe Form Distribusi Predikat">
-                            <button type="button" class="apd-type-btn is-active" data-target-group="PERMANENT" aria-pressed="true">Permanent</button>
-                            <button type="button" class="apd-type-btn" data-target-group="OPERATOR" aria-pressed="false">Operator</button>
-                        </div>
                         <span class="badge badge-light border font-weight-bold text-dark" id="badge_final_total">0 Form Final</span>
                     </div>
                 </div>
@@ -636,7 +633,7 @@
         <div class="col-lg-7 d-flex">
             <div class="apd-panel w-100 d-flex flex-column" style="min-width: 0;">
 
-                <div class="table-responsive flex-grow-1" style="overflow-y: auto; overflow-x: auto; max-height: 380px;">
+                <div class="table-responsive flex-grow-1" style="overflow-y: auto; overflow-x: auto; max-height: 420px;">
                     <table class="table apd-table mb-0 table-hover">
                         <thead style="position: sticky; top: 0; z-index: 2;">
                             <?php $stLabels = $status_labels ?? \App\Models\M_Appraisal::getStatusLabels(); ?>
@@ -748,7 +745,8 @@ function initAppraisalDashboard() {
     // =========================================================================
     // 1. FETCH SUMMARY METRICS & DIVISION PROGRESS
     // =========================================================================
-    var activeGradeGroup = 'PERMANENT';
+    var defaultTargetGroup = '<?= esc($default_target_group ?? 'PERMANENT') ?>';
+    var activeGradeGroup = ($('#filter_target_group').val() || defaultTargetGroup) === 'OPERATOR' ? 'OPERATOR' : 'PERMANENT';
     var latestRatingByGroup = null;
     var latestFallbackCounts = null;
     var latestFallbackFinal = 0;
@@ -763,17 +761,15 @@ function initAppraisalDashboard() {
 
     function syncGradeSwitcherUI(group) {
         activeGradeGroup = (group === 'OPERATOR') ? 'OPERATOR' : 'PERMANENT';
-        $('.apd-type-btn').each(function () {
-            var isMatch = $(this).data('target-group') === activeGradeGroup;
-            $(this).toggleClass('is-active', isMatch).attr('aria-pressed', isMatch ? 'true' : 'false');
-        });
         if (activeGradeGroup === 'OPERATOR') {
+            $('#kpi_avg_scale').text('/ 15');
             $('#txt_grade_scale').text('Skala 5 – 15');
             $('#range_rating_sb').text('13 – 15');
             $('#range_rating_b').text('8 – 12');
             $('#range_rating_k').text('5 – 7');
             $('#row_rating_c, #ribbon_c').hide();
         } else {
+            $('#kpi_avg_scale').text('/ 4.00');
             $('#txt_grade_scale').text('Skala 1.00 – 4.00');
             $('#range_rating_sb').html('&ge; 3.50');
             $('#range_rating_b').text('2.75 – 3.49');
@@ -855,8 +851,9 @@ function initAppraisalDashboard() {
         var divisionId  = $('#filter_division').val() || $filterForm.find('[name="division_id"]').val() || '';
         var year        = $('#filter_year').val() || $filterForm.find('[name="year"]').val() || '';
         var status      = $('#filter_status').val() || $filterForm.find('[name="status"]').val() || '';
+        var targetGroup = $('#filter_target_group').val() || activeGradeGroup || 'PERMANENT';
 
-        syncGradeSwitcherUI(activeGradeGroup);
+        syncGradeSwitcherUI(targetGroup);
 
         $.ajax({
             url: '<?= base_url('sas/monitoring-penilaian/getSummary') ?>',
@@ -865,7 +862,8 @@ function initAppraisalDashboard() {
                 cycle_id: cycleId,
                 division_id: divisionId,
                 year: year,
-                status: status
+                status: status,
+                target_group: targetGroup
             },
             dataType: 'JSON',
             success: function (res) {
@@ -911,9 +909,10 @@ function initAppraisalDashboard() {
                 var totalCount = parseInt(metrics.total, 10) || 0;
                 var finalCount = parseInt(metrics.finalized, 10) || 0;
                 var inProgCount = parseInt(metrics.in_progress, 10) || 0;
-                var draftCount    = (parseInt(metrics.draft_evaluator, 10) || 0) + (parseInt(metrics.submitted_evaluator, 10) || 0);
-                var reviewerCount = parseInt(metrics.review_reviewer, 10) || 0;
-                var ackCount      = parseInt(metrics.pending_ack, 10) || 0;
+                var penilaianCount    = parseInt(metrics.draft_evaluator, 10) || 0;
+                var dinilaiCount      = parseInt(metrics.submitted_evaluator, 10) || 0;
+                var peninjauanCount   = parseInt(metrics.review_reviewer, 10) || 0;
+                var ditinjauCount     = parseInt(metrics.pending_ack, 10) || 0;
 
                 $('#kpi_total').text(totalCount);
                 $('#kpi_finalized').text(finalCount);
@@ -923,7 +922,15 @@ function initAppraisalDashboard() {
                 $('#kpi_completion_badge').text('(' + compPct.toFixed(1) + '%)');
 
                 $('#kpi_in_progress').text(inProgCount);
-                var inProgDetail = draftCount + ' Evaluasi · ' + reviewerCount + ' Review · ' + ackCount + ' Pembacaan';
+                var inProgParts = [
+                    penilaianCount + ' ' + <?= json_encode($kpiStLabels[\App\Models\M_Appraisal::STATUS_PENILAIAN] ?? 'Penilaian') ?>,
+                    peninjauanCount + ' ' + <?= json_encode($kpiStLabels[\App\Models\M_Appraisal::STATUS_REVIEW] ?? 'Peninjauan') ?>,
+                    ditinjauCount + ' ' + <?= json_encode($kpiStLabels[\App\Models\M_Appraisal::STATUS_SUBMIT_REVIEW] ?? 'Ditinjau') ?>
+                ];
+                if (dinilaiCount > 0) {
+                    inProgParts.splice(1, 0, dinilaiCount + ' ' + <?= json_encode($kpiStLabels[\App\Models\M_Appraisal::STATUS_SUBMIT_PENILAIAN] ?? 'Dinilai') ?>);
+                }
+                var inProgDetail = inProgParts.join(' · ');
                 $('#kpi_in_progress_detail').text(inProgDetail).attr('title', inProgDetail);
 
                 var avgScore = metrics.avg_final_score !== null && metrics.avg_final_score !== undefined
@@ -933,7 +940,12 @@ function initAppraisalDashboard() {
 
                 if (avgScore !== '-') {
                     var sVal = parseFloat(avgScore);
-                    var gTxt = sVal >= 3.50 ? 'Predikat: Sangat Baik' : (sVal >= 2.75 ? 'Predikat: Baik' : (sVal >= 2.00 ? 'Predikat: Cukup' : 'Predikat: Kurang'));
+                    var gTxt;
+                    if (activeGradeGroup === 'OPERATOR') {
+                        gTxt = sVal >= 13 ? 'Predikat: Sangat Baik' : (sVal >= 8 ? 'Predikat: Baik' : 'Predikat: Kurang');
+                    } else {
+                        gTxt = sVal >= 3.50 ? 'Predikat: Sangat Baik' : (sVal >= 2.75 ? 'Predikat: Baik' : (sVal >= 2.00 ? 'Predikat: Cukup' : 'Predikat: Kurang'));
+                    }
                     $('#kpi_avg_grade').text(gTxt);
                 } else {
                     $('#kpi_avg_grade').text('Belum ada form selesai');
@@ -1055,7 +1067,7 @@ function initAppraisalDashboard() {
     // =========================================================================
     loadSummaryMetrics();
 
-    $('#filter_cycle, #filter_division, #filter_status, #filter_year').on('change', function () {
+    $('#filter_cycle, #filter_division, #filter_status, #filter_year, #filter_target_group').on('change', function () {
         reloadDataTable();
         loadSummaryMetrics();
     });
@@ -1076,16 +1088,6 @@ function initAppraisalDashboard() {
         setTimeout(function () {
             $icon.removeClass('fa-spin');
         }, 500);
-    });
-
-    // Distribusi Predikat Switcher (PERMANENT vs OPERATOR)
-    $('.apd-type-btn').on('click', function () {
-        var tg = $(this).data('target-group');
-        if (!tg || tg === activeGradeGroup) {
-            return;
-        }
-        syncGradeSwitcherUI(tg);
-        renderGradeDistribution();
     });
 
     // Click-to-drill-down on Progres per Divisi rows & status cells
@@ -1112,6 +1114,8 @@ function initAppraisalDashboard() {
         $('#filter_cycle').val('<?= (int) $default_cycle_id ?>').trigger('change.select2');
         $('#filter_division').val('0').trigger('change.select2');
         $('#filter_status').val('ALL').trigger('change.select2');
+        $('#filter_target_group').val(defaultTargetGroup).trigger('change.select2');
+        syncGradeSwitcherUI(defaultTargetGroup);
         reloadDataTable();
         loadSummaryMetrics();
     });

@@ -87,6 +87,51 @@ class PerformanceAppraisal extends BaseController
     }
 
     /**
+     * Filter appraisal query by template target_group (PERMANENT vs OPERATOR).
+     */
+    protected function applyTargetGroupFilter($builder, string $templateAlias, ?string $targetGroup): void
+    {
+        $group = strtoupper(trim((string) $targetGroup));
+        if ($group === 'OPERATOR') {
+            $builder->where("UPPER({$templateAlias}.target_group)", 'OPERATOR');
+        } elseif ($group === 'PERMANENT') {
+            $builder->groupStart()
+                ->where("{$templateAlias}.target_group IS NULL", null, false)
+                ->orWhere("UPPER({$templateAlias}.target_group) !=", 'OPERATOR')
+                ->groupEnd();
+        }
+    }
+
+    /**
+     * Resolve default target_group: PERMANENT if both or neither have records;
+     * otherwise the group that has records.
+     */
+    protected function resolveDefaultTargetGroup(int $empId, bool $isAdmin, int $cycleId = 0): string
+    {
+        $builder = $this->db->table('md_appraisal a')
+            ->select("SUM(CASE WHEN UPPER(COALESCE(t.target_group, 'PERMANENT')) = 'OPERATOR' THEN 1 ELSE 0 END) AS operator_count", false)
+            ->select("SUM(CASE WHEN UPPER(COALESCE(t.target_group, 'PERMANENT')) != 'OPERATOR' THEN 1 ELSE 0 END) AS permanent_count", false)
+            ->join('md_appraisal_template t', 't.md_appraisal_template_id = a.md_appraisal_template_id', 'left')
+            ->where('a.isactive', 'Y');
+
+        $this->applyAppraisalScope($builder, 'a', $empId, $isAdmin);
+
+        if ($cycleId > 0) {
+            $builder->where('a.md_appraisal_cycle_id', $cycleId);
+        }
+
+        $row = $builder->get()->getRowArray();
+        $permanentCount = (int) ($row['permanent_count'] ?? 0);
+        $operatorCount  = (int) ($row['operator_count'] ?? 0);
+
+        if ($permanentCount === 0 && $operatorCount > 0) {
+            return 'OPERATOR';
+        }
+
+        return 'PERMANENT';
+    }
+
+    /**
      * Render Appraisal History & Monitoring Dashboard View
      */
     public function index()
@@ -94,11 +139,13 @@ class PerformanceAppraisal extends BaseController
         $empId   = $this->getCurrentEmployeeId();
         $isAdmin = $this->isAppraisalAdmin($empId);
 
-        // Fetch all cycles sorted by start date desc
+        // Fetch non-draft cycles sorted by start date desc
         $cycles = $this->db->table('md_appraisal_cycle')
-            ->select('md_appraisal_cycle_id, title, start_date, end_date, deadline_filling, deadline_review, deadline_reading, status')
+            ->select('md_appraisal_cycle_id, title, semester, start_date, end_date, deadline_filling, deadline_review, deadline_reading, status')
             ->where('isactive', 'Y')
-            ->orderBy('start_date', 'DESC')
+            ->where('status !=', M_AppraisalCycle::STATUS_DRAFT)
+            // ->orderBy('start_date', 'DESC')
+            ->orderBy('md_appraisal_cycle_id', 'DESC')
             ->get()
             ->getResultArray();
 
@@ -134,12 +181,15 @@ class PerformanceAppraisal extends BaseController
             $defaultCycleId = (int) $cycles[0]['md_appraisal_cycle_id'];
         }
 
+        $defaultTargetGroup = $this->resolveDefaultTargetGroup($empId, $isAdmin, $defaultCycleId);
+
         $data = [
-            'cycles'           => $cycles,
-            'divisions'        => $divisions,
-            'default_cycle_id' => $defaultCycleId,
-            'is_admin'         => $isAdmin,
-            'status_labels'    => M_Appraisal::getStatusLabels(),
+            'cycles'               => $cycles,
+            'divisions'            => $divisions,
+            'default_cycle_id'     => $defaultCycleId,
+            'default_target_group' => $defaultTargetGroup,
+            'is_admin'             => $isAdmin,
+            'status_labels'        => M_Appraisal::getStatusLabels(),
         ];
 
         return $this->template->render('masterdata/appraisal-dashboard/v_appraisal_dashboard', $data);
@@ -155,6 +205,7 @@ class PerformanceAppraisal extends BaseController
             $divisionId  = (int) ($this->request->getVar('division_id') ?? 0);
             $year        = $this->request->getVar('year') ?? null;
             $status      = $this->request->getVar('status') ?? null;
+            $targetGroup = $this->request->getVar('target_group') ?? null;
 
             $empId   = $this->getCurrentEmployeeId();
             $isAdmin = $this->isAppraisalAdmin($empId);
@@ -165,6 +216,7 @@ class PerformanceAppraisal extends BaseController
                 ->where('a.isactive', 'Y');
 
             $this->applyAppraisalScope($builder, 'a', $empId, $isAdmin);
+            $this->applyTargetGroupFilter($builder, 't', $targetGroup);
 
             if ($cycleId > 0) {
                 $builder->where('a.md_appraisal_cycle_id', $cycleId);
@@ -271,28 +323,13 @@ class PerformanceAppraisal extends BaseController
                         $divisionGroups[$div]['score_sum'] += $score;
                         $divisionGroups[$div]['score_count']++;
 
-                        if ($rowGroup === 'OPERATOR') {
-                            $scoreInt = (int) $score;
-                            if ($scoreInt >= 13) {
-                                $ratingByGroup['OPERATOR']['counts']['sangat_baik']++;
-                            } elseif ($scoreInt >= 8) {
-                                $ratingByGroup['OPERATOR']['counts']['baik']++;
-                            } else {
-                                $ratingByGroup['OPERATOR']['counts']['kurang']++;
-                            }
-                        } else {
-                            if ($score >= 3.50) {
-                                $ratingCounts['sangat_baik']++;
-                                $ratingByGroup['PERMANENT']['counts']['sangat_baik']++;
-                            } elseif ($score >= 2.75) {
-                                $ratingCounts['baik']++;
-                                $ratingByGroup['PERMANENT']['counts']['baik']++;
-                            } elseif ($score >= 2.00) {
-                                $ratingCounts['cukup']++;
-                                $ratingByGroup['PERMANENT']['counts']['cukup']++;
-                            } else {
-                                $ratingCounts['kurang']++;
-                                $ratingByGroup['PERMANENT']['counts']['kurang']++;
+                        helper('appraisal_view');
+                        $isOpGroup = ($rowGroup === 'OPERATOR');
+                        $bucketKey = appraisal_rating_meta((float) $score, $isOpGroup)['key'];
+                        if ($bucketKey !== null && isset($ratingByGroup[$rowGroup]['counts'][$bucketKey])) {
+                            $ratingByGroup[$rowGroup]['counts'][$bucketKey]++;
+                            if (! $isOpGroup && isset($ratingCounts[$bucketKey])) {
+                                $ratingCounts[$bucketKey]++;
                             }
                         }
                     }
@@ -408,6 +445,7 @@ class PerformanceAppraisal extends BaseController
             $divisionId  = (int) ($this->request->getPost('division_id') ?? 0);
             $status      = $this->request->getPost('status') ?? null;
             $year        = $this->request->getPost('year') ?? null;
+            $targetGroup = $this->request->getPost('target_group') ?? null;
             $cycleStatus = null;
 
             foreach ($formFilter as $row) {
@@ -426,6 +464,9 @@ class PerformanceAppraisal extends BaseController
                 if ($name === 'year') {
                     $year = (int) $value;
                 }
+                if ($name === 'target_group') {
+                    $targetGroup = (string) $value;
+                }
                 if ($name === 'status') {
                     if (in_array($value, ['DRAFT', 'OPEN', 'CLOSED'], true)) {
                         $cycleStatus = $value;
@@ -434,6 +475,8 @@ class PerformanceAppraisal extends BaseController
                     }
                 }
             }
+
+            $this->applyTargetGroupFilter($builder, 't', $targetGroup);
 
             if ($cycleId > 0) {
                 $builder->where("{$table}.md_appraisal_cycle_id", $cycleId);
@@ -523,13 +566,10 @@ class PerformanceAppraisal extends BaseController
                 // Score & Grade Badge (Single Line with hyphen)
                 $scoreCol = '<div class="text-center">';
                 if ($score !== '-') {
-                    $numScore = (float) $val['final_score'];
-                    $rowGroup = strtoupper((string) ($val['template_target_group'] ?? 'PERMANENT'));
-                    if ($rowGroup === 'OPERATOR') {
-                        $scoreColor = ($numScore >= 13) ? 'text-success' : (($numScore >= 8) ? 'text-primary' : 'text-danger');
-                    } else {
-                        $scoreColor = ($numScore >= 3.50) ? 'text-success' : (($numScore >= 2.75) ? 'text-primary' : (($numScore >= 2.00) ? 'text-warning' : 'text-danger'));
-                    }
+                    helper('appraisal_view');
+                    $numScore   = (float) $val['final_score'];
+                    $rowGroup   = strtoupper((string) ($val['template_target_group'] ?? 'PERMANENT'));
+                    $scoreColor = appraisal_rating_meta($numScore, $rowGroup === 'OPERATOR')['text_class'];
                     $scoreCol .= '<span class="font-weight-bold ' . $scoreColor . '">' . $score . '</span>';
                     if (!empty($rating) && $rating !== '-') {
                         $shortRating = esc(explode('(', $rating)[0]);
@@ -541,7 +581,7 @@ class PerformanceAppraisal extends BaseController
                 $scoreCol .= '</div>';
 
                 // Status Badge
-                $statusBadge = $this->renderStatusBadge($appStatus);
+                $statusBadge = $this->renderStatusBadge($appStatus, $val);
 
                 // Action Buttons
                 $actions = $this->template->appraisalTableButton('dashboard', $id, [
@@ -593,9 +633,10 @@ class PerformanceAppraisal extends BaseController
     /**
      * Helper to render standardized workflow status badge
      */
-    protected function renderStatusBadge(string $status): string
+    protected function renderStatusBadge(string $status, array $row = []): string
     {
-        $label = M_Appraisal::getStatusLabel($status);
+        $cycleStage = M_Appraisal::resolveCycleStageFromRow($row);
+        $label      = M_Appraisal::getStageDisplayLabel($status, $cycleStage);
         return '<center>' . esc($label) . '</center>';
     }
 

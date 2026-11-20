@@ -3,7 +3,7 @@
 
     $snapshot    = appraisal_normalize_snapshot($template_snapshot ?? []);
     $is_operator = isset($is_operator) ? (bool) $is_operator : appraisal_is_operator($snapshot);
-    $isStandalone = ! empty($is_standalone);
+    $formMode    = ! empty($is_preview) ? 'preview' : strtolower((string) ($user_mode ?? 'view'));
 
     $this->setVar('template_snapshot', $snapshot);
     $this->setVar('is_operator', $is_operator);
@@ -14,7 +14,11 @@
 <link rel="stylesheet" href="<?= base_url('form_appraisal_filling_style.css') ?>">
 
 <div class="ap-wrap pb-3">
-    <form id="form_appraisal_evaluation">
+    <form id="form_appraisal_evaluation"
+          data-appraisal-form
+          data-mode="<?= esc($formMode) ?>"
+          data-is-operator="<?= $is_operator ? '1' : '0' ?>"
+          data-appraisal-id="<?= (int) $appraisal_id ?>">
         <?= csrf_field(); ?>
         <div class="row">
             <div class="col-md-12">
@@ -49,15 +53,3 @@
         </div>
     </form>
 </div>
-
-<script src="<?= base_url('custom/js/appraisal-filling.js') ?>"></script>
-<script>
-    window.AppraisalForm.init({
-        isOperator: <?= $is_operator ? 'true' : 'false' ?>,
-        isStandalone: <?= $isStandalone ? 'true' : 'false' ?>,
-        appraisalId: <?= (int) $appraisal_id ?>,
-        saveUrl: '<?= site_url("sas/penilaian/create") ?>',
-        redirectUrl: '<?= site_url("sas/penilaian") ?>',
-        auditLogsUrl: '<?= base_url('sas/penilaian/auditLogs') ?>'
-    });
-</script>

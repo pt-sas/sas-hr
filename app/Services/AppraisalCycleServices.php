@@ -129,19 +129,21 @@ class AppraisalCycleServices extends BaseServices
             return null;
         }
 
-        $nowStr  = $currentDate ?: date('Y-m-d');
-        $endDate = is_object($cycle) ? ($cycle->end_date ?? null) : ($cycle['end_date'] ?? null);
+        
+        # NOTE: Temporarily disable the lazy close
+        // $nowStr  = $currentDate ?: date('Y-m-d');
+        // $endDate = is_object($cycle) ? ($cycle->end_date ?? null) : ($cycle['end_date'] ?? null);
 
-        if (! empty($endDate) && $nowStr > $endDate) {
-            $cycleId = is_object($cycle) ? (int) $cycle->md_appraisal_cycle_id : (int) ($cycle['md_appraisal_cycle_id'] ?? 0);
-            try {
-                $this->closeCycle($cycleId, 1);
-                log_message('info', "[AppraisalCycleServices::getActiveCycle] Auto-closed expired cycle #{$cycleId} (end_date: {$endDate})");
-            } catch (Exception $e) {
-                log_message('error', "[AppraisalCycleServices::getActiveCycle] Failed to auto-close cycle #{$cycleId}: " . $e->getMessage());
-            }
-            return null;
-        }
+        // if (! empty($endDate) && $nowStr > $endDate) {
+        //     $cycleId = is_object($cycle) ? (int) $cycle->md_appraisal_cycle_id : (int) ($cycle['md_appraisal_cycle_id'] ?? 0);
+        //     try {
+        //         $this->closeCycle($cycleId, 1);
+        //         log_message('info', "[AppraisalCycleServices::getActiveCycle] Auto-closed expired cycle #{$cycleId} (end_date: {$endDate})");
+        //     } catch (Exception $e) {
+        //         log_message('error', "[AppraisalCycleServices::getActiveCycle] Failed to auto-close cycle #{$cycleId}: " . $e->getMessage());
+        //     }
+        //     return null;
+        // }
 
         return $cycle;
     }

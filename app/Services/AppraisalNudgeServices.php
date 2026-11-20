@@ -378,13 +378,14 @@ class AppraisalNudgeServices extends BaseServices
         $closedCyclesCount = 0;
 
         try {
+            # NOTE: Temporary disable the auto close cycle
             // 1. Auto-close expired cycles whose end_date has passed
-            try {
-                $cycleService      = new AppraisalCycleServices();
-                $closedCyclesCount = $cycleService->closeExpiredCycles(1);
-            } catch (Throwable $ce) {
-                log_message('error', '[AppraisalNudgeServices::runDailyNudge] Auto-close cycles error: ' . $ce->getMessage());
-            }
+            // try {
+            //     $cycleService      = new AppraisalCycleServices();
+            //     $closedCyclesCount = $cycleService->closeExpiredCycles(1);
+            // } catch (Throwable $ce) {
+            //     log_message('error', '[AppraisalNudgeServices::runDailyNudge] Auto-close cycles error: ' . $ce->getMessage());
+            // }
 
             // 2. Check active appraisals in open cycles
             $appraisals = $this->db->table('md_appraisal a')

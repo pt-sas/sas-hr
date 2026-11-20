@@ -459,41 +459,8 @@ class AppraisalScoringServices extends BaseServices
 
     public function determineRatingLabel(float $score, ?array $ratingScale = null, bool $isOperator = false): string
     {
-        if (! $isOperator && ! empty($ratingScale) && is_array($ratingScale)) {
-            foreach ($ratingScale as $tier) {
-                $min   = isset($tier['min']) ? (float) $tier['min'] : 0.00;
-                $max   = isset($tier['max']) ? (float) $tier['max'] : 4.00;
-                $label = $tier['label'] ?? '';
-
-                if ($score >= $min && $score <= $max) {
-                    return $label;
-                }
-            }
-        }
-
-        if ($isOperator) {
-            $finalScoreInt = (int) $score;
-            if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
-                return 'Sangat Baik';
-            }
-            if ($finalScoreInt >= 8 && $finalScoreInt <= 12) {
-                return 'Baik';
-            }
-            if ($finalScoreInt >= 5 && $finalScoreInt <= 7) {
-                return 'Kurang';
-            }
-            return '-';
-        }
-
-        if ($score >= 3.50) {
-            return 'Sangat Baik';
-        }
-        if ($score >= 2.75) {
-            return 'Baik';
-        }
-        if ($score >= 2.00) {
-            return 'Cukup';
-        }
-        return 'Kurang';
+        helper('appraisal_view');
+        $meta = appraisal_rating_meta($score, $isOperator, $ratingScale);
+        return (string) ($meta['label'] ?? '-');
     }
 }

@@ -50,6 +50,7 @@
 </style>
 
 <!-- SCRIPT: OVERVIEW ACTIONS & MODAL PREVIEWS -->
+<script src="<?= base_url('custom/js/appraisal-filling.js') ?>"></script>
 <script>
 (function () {
     function initTemplateActions() {
@@ -60,6 +61,11 @@
 
         // Move preview modals out of container so Process.js does not mistake them for the main edit modal
         $('#modal_preview_participants, #modal_preview_form').appendTo('body');
+
+        // Dispose preview form DOM on close so preview elements never linger in the page
+        $('#modal_preview_form').on('hidden.bs.modal', function () {
+            $('#preview_form_content').empty().hide();
+        });
 
         // -------------------------------------------------------------
         // PREVIEW PESERTA (SIMULASI TARGET KARYAWAN)
@@ -162,6 +168,10 @@
                     if (res && res.status && res.html) {
                         $('#preview_form_tpl_name').text('Template: ' + (res.title || params.title || '-'));
                         $('#preview_form_content').html(res.html).show();
+                        var previewForm = document.querySelector('#preview_form_content [data-appraisal-form]');
+                        if (previewForm && window.AppraisalForm) {
+                            window.AppraisalForm.mount(previewForm);
+                        }
                     } else {
                         var errMsg = res && res.message ? res.message : 'Gagal memuat pratinjau form.';
                         $('#preview_form_content').html('<div class="alert alert-danger m-3"><i class="fas fa-exclamation-circle mr-2"></i>' + errMsg + '</div>').show();

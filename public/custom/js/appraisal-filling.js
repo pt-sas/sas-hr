@@ -1,6 +1,9 @@
 (function (window, document) {
     'use strict';
 
+    var activeHostConfig = null;
+    var hostClickBound = false;
+
     function parseNum(val, fallback) {
         if (val === null || val === undefined || val === '') return fallback;
         var s = String(val).trim().replace(',', '.');
@@ -8,8 +11,18 @@
         return isNaN(n) ? fallback : n;
     }
 
-    function updateRatingBadge(score, isOperator) {
-        var badge = document.getElementById('badge_overall_rating');
+    function byId(root, id) {
+        return root ? root.querySelector('[id="' + id + '"]') : null;
+    }
+
+    function formatOperatorSuffix(checkedCount) {
+        if (!checkedCount || checkedCount <= 0) return '';
+        if (checkedCount <= 3) return 'A'.repeat(checkedCount);
+        return ' (+' + checkedCount + 'A)';
+    }
+
+    function updateRatingBadge(formEl, score, isOperator) {
+        var badge = byId(formEl, 'badge_overall_rating');
         if (!badge) return;
 
         if (score === null || score === undefined || isNaN(score)) {
@@ -22,7 +35,7 @@
         var badgeCls = 'r-low';
 
         if (isOperator) {
-            var finalScoreInt = parseInt(score, 10);
+            var finalScoreInt = Math.round(score);
             if (finalScoreInt >= 13 && finalScoreInt <= 15) {
                 label = 'Sangat Baik';
                 badgeCls = 'r-great';
@@ -53,13 +66,13 @@
         badge.textContent = label;
     }
 
-    function initOperatorForm() {
+    function initOperatorForm(formEl) {
         function syncOperatorPayload() {
             var payloadArr = [];
             var totalWeightedScore = 0;
             var totalWeight = 0;
 
-            document.querySelectorAll('.operator-aspect-row').forEach(function (row) {
+            formEl.querySelectorAll('.operator-aspect-row').forEach(function (row) {
                 var itemId = row.dataset.itemId;
                 var weight = parseNum(row.dataset.weight, 1.0);
                 var checkedRadio = row.querySelector('.operator-score-radio:checked');
@@ -77,7 +90,7 @@
             });
 
             var checkedCount = 0;
-            document.querySelectorAll('.operator-kriteria-row').forEach(function (row) {
+            formEl.querySelectorAll('.operator-kriteria-row').forEach(function (row) {
                 var itemId = row.dataset.itemId;
                 var cb = row.querySelector('.operator-kriteria-checkbox');
                 var isChecked = cb ? cb.checked : false;
@@ -99,49 +112,57 @@
 
             var hasScoredItem = totalWeight > 0;
             var totNilai = hasScoredItem ? totalWeightedScore : null;
-            var suffixA = 'A'.repeat(checkedCount);
-            var displaySkorAkhir = totNilai !== null ? (String(parseInt(totNilai, 10)) + suffixA) : '—';
+            var suffixA = formatOperatorSuffix(checkedCount);
+            var displaySkorAkhir = totNilai !== null ? (String(Math.round(totNilai)) + suffixA) : '—';
 
-            var badgeOverall = document.getElementById('badge_total_overall_score');
+            var badgeOverall = byId(formEl, 'badge_total_overall_score');
             if (badgeOverall) {
                 badgeOverall.textContent = displaySkorAkhir;
             }
-            var finalScoreInput = document.getElementById('final_score');
+            var finalScoreInput = byId(formEl, 'final_score');
             if (finalScoreInput) {
                 finalScoreInput.value = totNilai !== null ? totNilai.toFixed(2) : '';
             }
 
-            updateRatingBadge(totNilai, true);
+            updateRatingBadge(formEl, totNilai, true);
 
-            var payloadEl = document.getElementById('hidden_responses_payload');
+            var payloadEl = byId(formEl, 'hidden_responses_payload');
             if (payloadEl) {
                 payloadEl.value = JSON.stringify(payloadArr);
             }
         }
 
-        document.querySelectorAll('.operator-score-radio').forEach(function (el) {
-            el.addEventListener('change', syncOperatorPayload);
+        formEl.addEventListener('change', function (e) {
+            if (!e.target) return;
+            if (
+                e.target.classList.contains('operator-score-radio') ||
+                e.target.classList.contains('operator-kriteria-checkbox') ||
+                e.target.classList.contains('operator-other-input')
+            ) {
+                syncOperatorPayload();
+            }
         });
-        document.querySelectorAll('.operator-kriteria-checkbox').forEach(function (el) {
-            el.addEventListener('change', syncOperatorPayload);
-        });
-        document.querySelectorAll('.operator-other-input').forEach(function (el) {
-            el.addEventListener('input', syncOperatorPayload);
-            el.addEventListener('change', syncOperatorPayload);
+
+        formEl.addEventListener('input', function (e) {
+            if (e.target && e.target.classList.contains('operator-other-input')) {
+                syncOperatorPayload();
+            }
         });
 
         syncOperatorPayload();
     }
 
-    function initStaffForm() {
+    function initStaffForm(formEl) {
         function syncPayload(itemsData) {
             var payloadArr = [];
             for (var itemId in itemsData) {
-                payloadArr.push(itemsData[itemId]);
+                if (Object.prototype.hasOwnProperty.call(itemsData, itemId)) {
+                    payloadArr.push(itemsData[itemId]);
+                }
             }
 
             var additionalItems = {};
-            document.querySelectorAll('.ka-item-checkbox').forEach(function (cb) {
+            formEl.querySelectorAll('.ka-item-checkbox').forEach(function (cb) {
                 var pId = cb.dataset.parentId;
                 if (!additionalItems[pId]) {
                     additionalItems[pId] = {
@@ -157,8 +178,9 @@
                 }
             });
 
-            document.querySelectorAll('.boolean-item-checkbox').forEach(function (cb) {
-                var pId = cb.dataset.parentId || (cb.name && cb.name.match(/\[(\d+)\]/) ? cb.name.match(/\[(\d+)\]/)[1] : null);
+            formEl.querySelectorAll('.boolean-item-checkbox').forEach(function (cb) {
+                var match = cb.name ? cb.name.match(/\[(\d+)\]/) : null;
+                var pId = cb.dataset.parentId || (match ? match[1] : null);
                 if (pId) {
                     additionalItems[pId] = {
                         md_appraisal_template_item_id: pId,
@@ -168,10 +190,12 @@
             });
 
             for (var addId in additionalItems) {
-                payloadArr.push(additionalItems[addId]);
+                if (Object.prototype.hasOwnProperty.call(additionalItems, addId)) {
+                    payloadArr.push(additionalItems[addId]);
+                }
             }
 
-            var payloadEl = document.getElementById('hidden_responses_payload');
+            var payloadEl = byId(formEl, 'hidden_responses_payload');
             if (payloadEl) {
                 payloadEl.value = JSON.stringify(payloadArr);
             }
@@ -198,23 +222,23 @@
         }
 
         function syncActionInputs(itemId, actionIdx, val) {
-            var numInput = document.getElementById('badge_val_' + itemId + '_' + actionIdx);
+            var numInput = byId(formEl, 'badge_val_' + itemId + '_' + actionIdx);
             if (numInput && 'value' in numInput) {
                 numInput.value = val.toFixed(2);
                 numInput.classList.add('has-score');
             }
-            var hidden = document.getElementById('action_score_hidden_' + itemId + '_' + actionIdx);
+            var hidden = byId(formEl, 'action_score_hidden_' + itemId + '_' + actionIdx);
             if (hidden) {
                 hidden.value = val.toFixed(2);
             }
         }
 
         function recalcTotals() {
-            var sliders = document.querySelectorAll('.action-slider');
+            var sliders = formEl.querySelectorAll('.action-slider');
             if (sliders.length === 0) {
-                var scoreInput = document.getElementById('final_score');
+                var scoreInput = byId(formEl, 'final_score');
                 var initialScore = parseNum(scoreInput ? scoreInput.value : null, null);
-                updateRatingBadge(initialScore, false);
+                updateRatingBadge(formEl, initialScore, false);
                 return;
             }
 
@@ -226,7 +250,7 @@
                 var actionIdx = slider.dataset.actionIdx;
                 var val = parseNum(slider.value, 3.0);
 
-                var badgeVal = document.getElementById('badge_val_' + itemId + '_' + actionIdx);
+                var badgeVal = byId(formEl, 'badge_val_' + itemId + '_' + actionIdx);
                 if (badgeVal) {
                     if ('value' in badgeVal) {
                         if (document.activeElement !== badgeVal) {
@@ -236,7 +260,7 @@
                         badgeVal.textContent = val.toFixed(2);
                     }
                 }
-                var hiddenActionInput = document.getElementById('action_score_hidden_' + itemId + '_' + actionIdx);
+                var hiddenActionInput = byId(formEl, 'action_score_hidden_' + itemId + '_' + actionIdx);
                 if (hiddenActionInput) {
                     hiddenActionInput.value = val.toFixed(2);
                 }
@@ -258,6 +282,7 @@
             var itemCount = 0;
 
             for (var itemId in items) {
+                if (!Object.prototype.hasOwnProperty.call(items, itemId)) continue;
                 var scores = items[itemId];
                 var itemAvg = 0;
                 if (scores.length > 0) {
@@ -268,16 +293,16 @@
                     itemAvg = sum / scores.length;
                 }
 
-                var avgDisplay = document.getElementById('avg_display_' + itemId);
+                var avgDisplay = byId(formEl, 'avg_display_' + itemId);
                 if (avgDisplay) {
                     avgDisplay.textContent = itemAvg.toFixed(2);
                 }
-                var itemScoreInput = document.getElementById('item_score_' + itemId);
+                var itemScoreInput = byId(formEl, 'item_score_' + itemId);
                 if (itemScoreInput) {
                     itemScoreInput.value = itemAvg.toFixed(2);
                 }
 
-                var blockEl = document.getElementById('competency_block_' + itemId);
+                var blockEl = byId(formEl, 'competency_block_' + itemId);
                 var weight = blockEl ? parseNum(blockEl.dataset.weight, 1.0) : 1.0;
                 if (weight <= 0) weight = 1.0;
 
@@ -294,177 +319,332 @@
                 overallScore = totalUnweightedScore / itemCount;
             }
 
-            var badgeOverall = document.getElementById('badge_total_overall_score');
+            var badgeOverall = byId(formEl, 'badge_total_overall_score');
             if (badgeOverall) {
                 badgeOverall.textContent = overallScore.toFixed(2);
             }
-            var finalScoreInput = document.getElementById('final_score');
+            var finalScoreInput = byId(formEl, 'final_score');
             if (finalScoreInput) {
                 finalScoreInput.value = overallScore.toFixed(2);
             }
 
-            updateRatingBadge(overallScore, false);
+            updateRatingBadge(formEl, overallScore, false);
             syncPayload(itemsPayload);
         }
 
-        document.querySelectorAll('.action-slider').forEach(function (el) {
+        formEl.querySelectorAll('.action-slider').forEach(function (el) {
             updateSliderVisual(el, parseNum(el.value, 3.0));
-            el.addEventListener('input', function () {
-                var val = parseNum(this.value, 3.0);
-                updateSliderVisual(this, val);
-                syncActionInputs(this.dataset.itemId, this.dataset.actionIdx, val);
+        });
+
+        formEl.addEventListener('input', function (e) {
+            var target = e.target;
+            if (!target) return;
+
+            if (target.classList.contains('action-slider')) {
+                var sliderVal = parseNum(target.value, 3.0);
+                updateSliderVisual(target, sliderVal);
+                syncActionInputs(target.dataset.itemId, target.dataset.actionIdx, sliderVal);
                 recalcTotals();
-            });
-            el.addEventListener('change', recalcTotals);
-        });
+                return;
+            }
 
-        document.querySelectorAll('.ap-ticks span').forEach(function (tick) {
-            tick.addEventListener('click', function () {
-                var targetVal = parseFloat(this.dataset.val);
-                if (isNaN(targetVal)) return;
-
-                var col = this.closest('.ap-slider-col');
-                var slider = col ? col.querySelector('.action-slider') : null;
-                if (slider && !slider.disabled) {
-                    slider.value = targetVal;
-                    updateSliderVisual(slider, targetVal);
-                    syncActionInputs(slider.dataset.itemId, slider.dataset.actionIdx, targetVal);
-                    recalcTotals();
-                }
-            });
-        });
-
-        document.addEventListener('input', function (e) {
-            if (e.target && e.target.classList.contains('action-score-input')) {
-                var input = e.target;
-                var val = parseFloat(input.value);
+            if (target.classList.contains('action-score-input')) {
+                var val = parseFloat(target.value);
                 if (!isNaN(val)) {
-                    var slider = document.querySelector('.action-slider[data-item-id="' + input.dataset.itemId + '"][data-action-idx="' + input.dataset.actionIdx + '"]');
+                    var slider = formEl.querySelector(
+                        '.action-slider[data-item-id="' + target.dataset.itemId + '"][data-action-idx="' + target.dataset.actionIdx + '"]'
+                    );
                     if (slider) {
                         slider.value = val;
                         updateSliderVisual(slider, val);
                     }
-                    input.classList.add('has-score');
-                    var hidden = document.getElementById('action_score_hidden_' + input.dataset.itemId + '_' + input.dataset.actionIdx);
+                    target.classList.add('has-score');
+                    var hidden = byId(formEl, 'action_score_hidden_' + target.dataset.itemId + '_' + target.dataset.actionIdx);
                     if (hidden) hidden.value = val.toFixed(2);
                     recalcTotals();
                 }
             }
         });
 
-        document.addEventListener('change', function (e) {
-            if (e.target && e.target.classList.contains('action-score-input')) {
-                var input = e.target;
-                var val = parseFloat(input.value);
+        formEl.addEventListener('change', function (e) {
+            var target = e.target;
+            if (!target) return;
+
+            if (
+                target.classList.contains('action-slider') ||
+                target.classList.contains('ka-item-checkbox') ||
+                target.classList.contains('boolean-item-checkbox')
+            ) {
+                recalcTotals();
+                return;
+            }
+
+            if (target.classList.contains('action-score-input')) {
+                var val = parseFloat(target.value);
                 if (isNaN(val)) val = 3.00;
                 val = Math.max(0.00, Math.min(4.00, Math.round(val / 0.05) * 0.05));
-                input.value = val.toFixed(2);
-                input.classList.add('has-score');
+                target.value = val.toFixed(2);
+                target.classList.add('has-score');
 
-                var slider = document.querySelector('.action-slider[data-item-id="' + input.dataset.itemId + '"][data-action-idx="' + input.dataset.actionIdx + '"]');
+                var slider = formEl.querySelector(
+                    '.action-slider[data-item-id="' + target.dataset.itemId + '"][data-action-idx="' + target.dataset.actionIdx + '"]'
+                );
                 if (slider) {
                     slider.value = val;
                     updateSliderVisual(slider, val);
                 }
-                var hidden = document.getElementById('action_score_hidden_' + input.dataset.itemId + '_' + input.dataset.actionIdx);
+                var hidden = byId(formEl, 'action_score_hidden_' + target.dataset.itemId + '_' + target.dataset.actionIdx);
                 if (hidden) hidden.value = val.toFixed(2);
                 recalcTotals();
             }
         });
 
-        document.querySelectorAll('.ka-item-checkbox, .boolean-item-checkbox').forEach(function (el) {
-            el.addEventListener('change', recalcTotals);
+        formEl.addEventListener('click', function (e) {
+            var tick = e.target ? e.target.closest('.ap-ticks span') : null;
+            if (!tick || !formEl.contains(tick)) return;
+
+            var targetVal = parseFloat(tick.dataset.val);
+            if (isNaN(targetVal)) return;
+
+            var col = tick.closest('.ap-slider-col');
+            var slider = col ? col.querySelector('.action-slider') : null;
+            if (slider && !slider.disabled) {
+                slider.value = targetVal;
+                updateSliderVisual(slider, targetVal);
+                syncActionInputs(slider.dataset.itemId, slider.dataset.actionIdx, targetVal);
+                recalcTotals();
+            }
         });
 
         recalcTotals();
     }
 
-    function initPageShellActions(config) {
-        if (!config || !config.saveUrl) return;
+    function initConfirmationToggle(formEl) {
+        formEl.querySelectorAll('[data-ap-confirm-callout]').forEach(function (box) {
+            var chk = box.querySelector('[data-ap-confirm-checkbox]');
+            var scope = box.parentElement || formEl;
+            var act = scope.querySelector('[data-ap-confirm-action]');
+            var hintDraft = box.querySelector('[data-ap-confirm-hint-draft]');
+            var hintSubmit = box.querySelector('[data-ap-confirm-hint-submit]');
 
-        function executeSave(btn) {
+            if (!chk || !act) return;
+
+            function updateSubmitState() {
+                if (chk.checked) {
+                    act.value = 'submit';
+                    box.classList.add('is-ready');
+                    if (hintDraft) hintDraft.classList.add('d-none');
+                    if (hintSubmit) hintSubmit.classList.remove('d-none');
+                } else {
+                    act.value = 'save_draft';
+                    box.classList.remove('is-ready');
+                    if (hintDraft) hintDraft.classList.remove('d-none');
+                    if (hintSubmit) hintSubmit.classList.add('d-none');
+                }
+            }
+
+            chk.addEventListener('change', updateSubmitState);
+            updateSubmitState();
+        });
+    }
+
+    function resolveHostForm(config) {
+        if (!config) return null;
+        var selector = config.formSelector || '#form_appraisal_evaluation';
+        var formEl = document.querySelector(selector);
+        if (!formEl || formEl.dataset.mode === 'preview') {
+            return null;
+        }
+        return formEl;
+    }
+
+    function executeSave(btn, formEl, config) {
+        if (typeof window.jQuery === 'undefined') {
+            alert('Memuat dependensi sistem, silakan coba sesaat lagi...');
+            return;
+        }
+        var $ = window.jQuery;
+        var $btn = $(btn);
+        var oriHtml = $btn.html();
+        var formData = new FormData(formEl);
+
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-1"></span> Menyimpan...');
+
+        $.ajax({
+            url: config.saveUrl,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'JSON',
+            success: function (res) {
+                $btn.prop('disabled', false).html(oriHtml);
+                var r = Array.isArray(res) ? res[0] : res;
+                var isOk = !!(r && (r.success === true || r.success === 'true'));
+                var msg = (r && r.message) || 'Data penilaian berhasil disimpan.';
+
+                if (isOk) {
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: msg,
+                        type: 'success',
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+                    if (config.redirectUrl) {
+                        setTimeout(function () {
+                            window.location.href = config.redirectUrl;
+                        }, 1200);
+                    }
+                } else {
+                    Swal.fire('Gagal Menyimpan', msg, 'error');
+                }
+            },
+            error: function (xhr, status, err) {
+                $btn.prop('disabled', false).html(oriHtml);
+                var resp = xhr.responseJSON;
+                var r = Array.isArray(resp) ? resp[0] : resp;
+                var errMsg = (r && r.message) ? r.message : 'Terjadi kesalahan sistem (' + err + ').';
+                Swal.fire('Error', errMsg, 'error');
+            }
+        });
+    }
+
+    function bindAuditLogModal(config) {
+        window.showAuditLogModal = function (id) {
+            var formEl = resolveHostForm(activeHostConfig || config);
+            var targetId = id || (formEl ? formEl.dataset.appraisalId : null) || (activeHostConfig && activeHostConfig.appraisalId);
+            if (!targetId) return;
+
             if (typeof window.jQuery === 'undefined') {
                 alert('Memuat dependensi sistem, silakan coba sesaat lagi...');
                 return;
             }
             var $ = window.jQuery;
-            var $btn = $(btn);
-            var oriHtml = $btn.html();
-            var formEl = document.getElementById('form_appraisal_evaluation');
-            var formData = new FormData(formEl);
+            var baseUrl = ((activeHostConfig && activeHostConfig.auditLogsUrl) || config.auditLogsUrl || '').replace(/\/+$/, '');
+            if (!baseUrl) return;
 
-            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-1"></span> Menyimpan...');
+            $('#modal_audit_log').modal('show');
+            $('#audit_timeline_container').html(
+                '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2 mb-0">Memuat riwayat log...</p></div>'
+            );
 
             $.ajax({
-                url: config.saveUrl,
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
+                url: baseUrl + '/' + targetId,
+                type: 'GET',
                 dataType: 'JSON',
                 success: function (res) {
-                    $btn.prop('disabled', false).html(oriHtml);
-                    var r = Array.isArray(res) ? res[0] : res;
-                    var isOk = !!(r && (r.success === true || r.success === 'true'));
-                    var msg = (r && r.message) || 'Data penilaian berhasil disimpan.';
-
-                    if (isOk) {
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: msg,
-                            type: 'success',
-                            timer: 1200,
-                            showConfirmButton: false
-                        });
-                        setTimeout(function () {
-                            window.location.href = config.redirectUrl;
-                        }, 1200);
-                    } else {
-                        Swal.fire('Gagal Menyimpan', msg, 'error');
+                    var logs = (res && res[0] && res[0].data) ? res[0].data : (res && res.data ? res.data : []);
+                    if (!logs || logs.length === 0) {
+                        $('#audit_timeline_container').html(
+                            '<div class="text-center py-4 text-muted"><i class="fas fa-info-circle fa-2x mb-2 d-block"></i><p class="mb-0">Belum ada riwayat aktivitas untuk form penilaian ini.</p></div>'
+                        );
+                        return;
                     }
+
+                    var html = '<ul class="ap-timeline">';
+                    $.each(logs, function (i, log) {
+                        var actionTitle = log.action || '-';
+                        var timeStr = log.created_at ? log.created_at : '-';
+                        var actor = log.actor_name
+                            ? (log.actor_name + (log.actor_username ? ' (' + log.actor_username + ')' : ''))
+                            : ('User ID: ' + (log.actor_id || '-'));
+                        var notes = log.notes || '-';
+
+                        var badgeClass = '';
+                        if (actionTitle === 'KICKBACK_REVIEWER' || actionTitle === 'KICKBACK_GM') badgeClass = 'is-danger';
+                        else if (actionTitle === 'REVIEWER_OVERRIDE_ITEM' || actionTitle === 'GM_OVERRIDE_ITEM') badgeClass = 'is-warning';
+                        else if (actionTitle === 'UPDATE_ITEM_SCORE') badgeClass = 'is-info';
+                        else if (actionTitle === 'ACKNOWLEDGE_EMPLOYEE') badgeClass = 'is-success';
+
+                        html += '<li class="ap-timeline-item">' +
+                            '<div class="ap-timeline-head">' +
+                                '<span class="ap-log-badge ' + badgeClass + '">' + $('<div>').text(actionTitle).html() + '</span>' +
+                                '<span class="ap-timeline-time"><i class="far fa-clock mr-1"></i>' + $('<div>').text(timeStr).html() + '</span>' +
+                            '</div>' +
+                            '<div class="ap-timeline-actor"><strong>Aktor:</strong> ' + $('<div>').text(actor).html() + '</div>' +
+                            '<div class="ap-timeline-note">' + $('<div>').text(notes).html() + '</div>' +
+                        '</li>';
+                    });
+                    html += '</ul>';
+                    $('#audit_timeline_container').html(html);
                 },
-                error: function (xhr, status, err) {
-                    $btn.prop('disabled', false).html(oriHtml);
-                    var resp = xhr.responseJSON;
-                    var r = Array.isArray(resp) ? resp[0] : resp;
-                    var errMsg = (r && r.message) ? r.message : 'Terjadi kesalahan sistem (' + err + ').';
-                    Swal.fire('Error', errMsg, 'error');
+                error: function () {
+                    $('#audit_timeline_container').html(
+                        '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i><p class="mb-0">Gagal memuat log riwayat aktivitas.</p></div>'
+                    );
                 }
             });
+        };
+    }
+
+    function mount(formOrSelector) {
+        var formEl = typeof formOrSelector === 'string'
+            ? document.querySelector(formOrSelector)
+            : formOrSelector;
+
+        if (!formEl || formEl.dataset.apMounted === '1') {
+            return;
+        }
+        formEl.dataset.apMounted = '1';
+
+        var isOperator = formEl.dataset.isOperator === '1';
+        if (isOperator) {
+            initOperatorForm(formEl);
+        } else {
+            initStaffForm(formEl);
         }
 
-        if (!window.__apFormShellBound) {
-            window.__apFormShellBound = true;
+        initConfirmationToggle(formEl);
+    }
+
+    function bindHostActions(config) {
+        if (!config || !config.saveUrl) return;
+        activeHostConfig = config;
+
+        if (!hostClickBound) {
+            hostClickBound = true;
             document.addEventListener('click', function (e) {
-                var saveBtn = e.target.closest('.save_form');
-                if (saveBtn && document.getElementById('form_appraisal_evaluation')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    executeSave(saveBtn);
-                    return false;
+                if (!activeHostConfig) return;
+
+                var saveBtn = e.target ? e.target.closest('.save_form') : null;
+                if (saveBtn) {
+                    var saveFormEl = resolveHostForm(activeHostConfig);
+                    if (saveFormEl) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        executeSave(saveBtn, saveFormEl, activeHostConfig);
+                        return false;
+                    }
                 }
 
-                var closeBtn = e.target.closest('.close_form');
-                if (closeBtn && document.getElementById('form_appraisal_evaluation') && config.isStandalone) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    window.location.href = config.redirectUrl;
-                    return false;
+                var closeBtn = e.target ? e.target.closest('.close_form') : null;
+                if (closeBtn) {
+                    var closeFormEl = resolveHostForm(activeHostConfig);
+                    if (closeFormEl && activeHostConfig.isStandalone && activeHostConfig.redirectUrl) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        window.location.href = activeHostConfig.redirectUrl;
+                        return false;
+                    }
+                    if (closeFormEl && typeof activeHostConfig.onClose === 'function') {
+                        activeHostConfig.onClose(closeFormEl);
+                    }
                 }
             }, true);
         }
 
-        function initFormActions() {
+        function syncHostShellWithJQuery() {
             if (typeof window.jQuery === 'undefined') {
-                setTimeout(initFormActions, 30);
+                setTimeout(syncHostShellWithJQuery, 30);
                 return;
             }
             var $ = window.jQuery;
             $('.main-panel').removeClass('is-loading');
             $('.save_form').off('click');
-            if (config.isStandalone) {
+            if (activeHostConfig && activeHostConfig.isStandalone) {
                 $('.close_form').off('click');
             }
             window.clearErrorForm = function () {
@@ -474,78 +654,15 @@
                 }
             };
         }
-        initFormActions();
+        syncHostShellWithJQuery();
 
         if (config.auditLogsUrl) {
-            window.showAuditLogModal = function (id) {
-                var targetId = id || config.appraisalId;
-                if (typeof window.jQuery === 'undefined') {
-                    alert('Memuat dependensi sistem, silakan coba sesaat lagi...');
-                    return;
-                }
-                var $ = window.jQuery;
-                $('#modal_audit_log').modal('show');
-                $('#audit_timeline_container').html(
-                    '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2 mb-0">Memuat riwayat log...</p></div>'
-                );
-
-                $.ajax({
-                    url: config.auditLogsUrl.replace(/\/+$/, '') + '/' + targetId,
-                    type: 'GET',
-                    dataType: 'JSON',
-                    success: function (res) {
-                        var logs = (res && res[0] && res[0].data) ? res[0].data : (res && res.data ? res.data : []);
-                        if (!logs || logs.length === 0) {
-                            $('#audit_timeline_container').html(
-                                '<div class="text-center py-4 text-muted"><i class="fas fa-info-circle fa-2x mb-2 d-block"></i><p class="mb-0">Belum ada riwayat aktivitas untuk form penilaian ini.</p></div>'
-                            );
-                            return;
-                        }
-
-                        var html = '<ul class="ap-timeline">';
-                        $.each(logs, function (i, log) {
-                            var actionTitle = log.action || '-';
-                            var timeStr = log.created_at ? log.created_at : '-';
-                            var actor = log.actor_name ? (log.actor_name + (log.actor_username ? ' (' + log.actor_username + ')' : '')) : ('User ID: ' + (log.actor_id || '-'));
-                            var notes = log.notes || '-';
-
-                            var badgeClass = '';
-                            if (actionTitle === 'KICKBACK_REVIEWER' || actionTitle === 'KICKBACK_GM') badgeClass = 'is-danger';
-                            else if (actionTitle === 'REVIEWER_OVERRIDE_ITEM' || actionTitle === 'GM_OVERRIDE_ITEM') badgeClass = 'is-warning';
-                            else if (actionTitle === 'UPDATE_ITEM_SCORE') badgeClass = 'is-info';
-                            else if (actionTitle === 'ACKNOWLEDGE_EMPLOYEE') badgeClass = 'is-success';
-
-                            html += '<li class="ap-timeline-item">' +
-                                '<div class="ap-timeline-head">' +
-                                    '<span class="ap-log-badge ' + badgeClass + '">' + $('<div>').text(actionTitle).html() + '</span>' +
-                                    '<span class="ap-timeline-time"><i class="far fa-clock mr-1"></i>' + $('<div>').text(timeStr).html() + '</span>' +
-                                '</div>' +
-                                '<div class="ap-timeline-actor"><strong>Aktor:</strong> ' + $('<div>').text(actor).html() + '</div>' +
-                                '<div class="ap-timeline-note">' + $('<div>').text(notes).html() + '</div>' +
-                            '</li>';
-                        });
-                        html += '</ul>';
-                        $('#audit_timeline_container').html(html);
-                    },
-                    error: function () {
-                        $('#audit_timeline_container').html(
-                            '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i><p class="mb-0">Gagal memuat log riwayat aktivitas.</p></div>'
-                        );
-                    }
-                });
-            };
+            bindAuditLogModal(config);
         }
     }
 
     window.AppraisalForm = {
-        init: function (config) {
-            config = config || {};
-            if (config.isOperator) {
-                initOperatorForm();
-            } else {
-                initStaffForm();
-            }
-            initPageShellActions(config);
-        }
+        mount: mount,
+        bindHostActions: bindHostActions
     };
 })(window, document);

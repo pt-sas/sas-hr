@@ -44,6 +44,7 @@ class AppraisalGeneratorServices extends BaseServices
 
         $db = \Config\Database::connect();
 
+        // NOTE: Edit to exclude the DIREKSI
         // Query all active employees with current org structure (deduplicated by employee)
         $employees = $db->table('md_employee e')
             ->select('
@@ -56,7 +57,9 @@ class AppraisalGeneratorServices extends BaseServices
             ')
             ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
             ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_levelling l', 'l.md_levelling_id = e.md_employee_id', 'left')
             ->where('e.isactive', 'Y')
+            ->where('(l.name IS NULL OR UPPER(l.name) != "DIREKSI")')
             ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")')
             ->groupBy('e.md_employee_id, e.md_levelling_id, e.md_position_id, e.superior_id')
             ->get()
@@ -241,6 +244,7 @@ class AppraisalGeneratorServices extends BaseServices
                 ->join('md_employee rev', 'rev.md_employee_id = a.snapshot_reviewer_id', 'left')
                 ->where('a.md_appraisal_cycle_id', (int) $cycleIdVal)
                 ->where('a.isactive', 'Y')
+                ->where('(l.name IS NULL OR UPPER(l.name) != "DIREKSI")')
                 ->orderBy('e.fullname', 'ASC')
                 ->get()
                 ->getResultArray();
@@ -277,6 +281,7 @@ class AppraisalGeneratorServices extends BaseServices
                 'ready'             => count($rows),
                 'missing_template'  => 0,
                 'missing_evaluator' => 0,
+                'incomplete'        => 0,
                 'draft_template'    => 0,
                 'already_generated' => count($rows),
                 'can_blast'         => false,
@@ -360,6 +365,7 @@ class AppraisalGeneratorServices extends BaseServices
         $readyCount       = 0;
         $missingTplCount  = 0;
         $missingEvalCount = 0;
+        $incompleteCount  = 0;
         $draftTplCount    = 0;
         $generatedCount   = 0;
 
@@ -424,7 +430,11 @@ class AppraisalGeneratorServices extends BaseServices
                 $readiness  = 'READY';
                 $statusNote = 'Siap didistribusikan';
 
-                if ($resolvedTplId <= 0) {
+                if ($resolvedTplId <= 0 && $evaluatorId <= 0) {
+                    $readiness  = 'INCOMPLETE';
+                    $statusNote = 'Template belum terhubung dan atasan langsung belum terdata';
+                    $incompleteCount++;
+                } elseif ($resolvedTplId <= 0) {
                     $readiness  = 'MISSING_TEMPLATE';
                     $statusNote = 'Tidak ada master template yang cocok';
                     $missingTplCount++;
@@ -432,11 +442,11 @@ class AppraisalGeneratorServices extends BaseServices
                     $readiness  = 'MISSING_EVALUATOR';
                     $statusNote = 'Atasan langsung (evaluator) belum terdata';
                     $missingEvalCount++;
+                } elseif ($resolvedTplStatus === 'DRAFT') {
+                    $readiness  = 'TEMPLATE_DRAFT';
+                    $statusNote = 'Template masih DRAFT (perlu dipublish sebelum rilis)';
+                    $draftTplCount++;
                 } else {
-                    if ($resolvedTplStatus === 'DRAFT') {
-                        $draftTplCount++;
-                        $statusNote = 'Template masih DRAFT (perlu dipublish sebelum rilis)';
-                    }
                     $readyCount++;
                 }
             }
@@ -467,6 +477,7 @@ class AppraisalGeneratorServices extends BaseServices
             'ready'             => $readyCount,
             'missing_template'  => $missingTplCount,
             'missing_evaluator' => $missingEvalCount,
+            'incomplete'        => $incompleteCount,
             'draft_template'    => $draftTplCount,
             'already_generated' => $generatedCount,
             'can_blast'         => (!$isCycleOpen && $readyCount > 0 && $draftTplCount === 0),

@@ -137,46 +137,100 @@ if (! function_exists('appraisal_is_operator')) {
     }
 }
 
+if (! function_exists('appraisal_format_operator_suffix')) {
+    /**
+     * Format Operator SINGLE_CHECKLIST competency suffix.
+     * Shows A / AA / AAA for 1-3 checked items, and compact " (+NA)" for 4+ items.
+     */
+    function appraisal_format_operator_suffix(int $checkedCount): string
+    {
+        if ($checkedCount <= 0) {
+            return '';
+        }
+        if ($checkedCount <= 3) {
+            return str_repeat('A', $checkedCount);
+        }
+        return ' (+' . $checkedCount . 'A)';
+    }
+}
+
+if (! function_exists('appraisal_format_operator_score')) {
+    /**
+     * Format Operator raw total score (5-15) with optional A suffix.
+     */
+    function appraisal_format_operator_score(?float $totNilai, int $checkedCount = 0): string
+    {
+        if ($totNilai === null) {
+            return '—';
+        }
+        return ((int) round($totNilai)) . appraisal_format_operator_suffix($checkedCount);
+    }
+}
+
 if (! function_exists('appraisal_rating_meta')) {
     /**
-     * Resolve rating label and CSS class for Staff (0-4) or Operator (totNilai 5-15) overall scores.
+     * Single source of truth for resolving rating label, badge class, text class, and bucket key.
+     * - Permanent/Staff (0.00-4.00): >=3.50 Sangat Baik, >=2.75 Baik, >=2.00 Cukup, <2.00 Kurang.
+     * - Operator (5-15, locked to 5 aspects x weight 1): 13-15 Sangat Baik, 8-12 Baik, 5-7 Kurang.
      */
-    function appraisal_rating_meta(?float $score, bool $isOperator = false): array
+    function appraisal_rating_meta(?float $score, bool $isOperator = false, ?array $ratingScale = null): array
     {
         if ($score === null) {
-            return ['label' => 'Belum Dinilai', 'class' => 'r-muted'];
+            return ['label' => 'Belum Dinilai', 'class' => 'r-muted', 'text_class' => 'text-muted', 'key' => null];
+        }
+
+        if (! $isOperator && ! empty($ratingScale) && is_array($ratingScale)) {
+            foreach ($ratingScale as $tier) {
+                $min   = isset($tier['min']) ? (float) $tier['min'] : 0.00;
+                $max   = isset($tier['max']) ? (float) $tier['max'] : 4.00;
+                $label = (string) ($tier['label'] ?? '');
+
+                if ($score >= $min && $score <= $max && $label !== '') {
+                    $norm = strtolower($label);
+                    if (strpos($norm, 'sangat') !== false) {
+                        return ['label' => $label, 'class' => 'r-great', 'text_class' => 'text-success', 'key' => 'sangat_baik'];
+                    }
+                    if (strpos($norm, 'baik') !== false) {
+                        return ['label' => $label, 'class' => 'r-good', 'text_class' => 'text-primary', 'key' => 'baik'];
+                    }
+                    if (strpos($norm, 'cukup') !== false) {
+                        return ['label' => $label, 'class' => 'r-fair', 'text_class' => 'text-warning', 'key' => 'cukup'];
+                    }
+                    return ['label' => $label, 'class' => 'r-low', 'text_class' => 'text-danger', 'key' => 'kurang'];
+                }
+            }
         }
 
         if ($isOperator) {
-            $finalScoreInt = (int) $score;
+            $finalScoreInt = (int) round($score);
             if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
-                return ['label' => 'Sangat Baik', 'class' => 'r-great'];
+                return ['label' => 'Sangat Baik', 'class' => 'r-great', 'text_class' => 'text-success', 'key' => 'sangat_baik'];
             }
             if ($finalScoreInt >= 8 && $finalScoreInt <= 12) {
-                return ['label' => 'Baik', 'class' => 'r-good'];
+                return ['label' => 'Baik', 'class' => 'r-good', 'text_class' => 'text-primary', 'key' => 'baik'];
             }
             if ($finalScoreInt >= 5 && $finalScoreInt <= 7) {
-                return ['label' => 'Kurang', 'class' => 'r-low'];
+                return ['label' => 'Kurang', 'class' => 'r-low', 'text_class' => 'text-danger', 'key' => 'kurang'];
             }
-            return ['label' => '-', 'class' => 'r-muted'];
+            return ['label' => '-', 'class' => 'r-muted', 'text_class' => 'text-muted', 'key' => null];
         }
 
         if ($score >= 3.50) {
-            return ['label' => 'Sangat Baik', 'class' => 'r-great'];
+            return ['label' => 'Sangat Baik', 'class' => 'r-great', 'text_class' => 'text-success', 'key' => 'sangat_baik'];
         }
         if ($score >= 2.75) {
-            return ['label' => 'Baik', 'class' => 'r-good'];
+            return ['label' => 'Baik', 'class' => 'r-good', 'text_class' => 'text-primary', 'key' => 'baik'];
         }
         if ($score >= 2.00) {
-            return ['label' => 'Cukup', 'class' => 'r-fair'];
+            return ['label' => 'Cukup', 'class' => 'r-fair', 'text_class' => 'text-warning', 'key' => 'cukup'];
         }
-        return ['label' => 'Kurang', 'class' => 'r-low'];
+        return ['label' => 'Kurang', 'class' => 'r-low', 'text_class' => 'text-danger', 'key' => 'kurang'];
     }
 }
 
 if (! function_exists('appraisal_extract_complete_summary')) {
     /**
-     * Compute summary lists (Nilai 4, Nilai 1, Kompetensi Tambahan) or Operator total nilai
+     * Compute summary lists (Nilai 4, Nilai 1, Kompetensi Tambahan) or Operator weighted average
      * for the Complete Appraisal report view.
      */
     function appraisal_extract_complete_summary(array $snapshot, array $responsesByItemId, bool $isOperator): array
@@ -185,8 +239,15 @@ if (! function_exists('appraisal_extract_complete_summary')) {
         $items    = $snapshot['items'] ?? [];
 
         if ($isOperator) {
-            $totNilai     = 0.0;
-            $checkedCount = 0;
+            $totNilai                = 0.0;
+            $totBobot                = 0.0;
+            $checkedCount            = 0;
+            $itemsNilai3             = [];
+            $itemsNilai1             = [];
+            $itemsKompetensiTambahan = [];
+            $cleanText               = static function (string $t): string {
+                return preg_replace('/^[a-z0-9][\.\)]\s*/i', '', trim($t));
+            };
             foreach ($items as $item) {
                 $inputType = strtoupper($item['input_type'] ?? '');
                 $itemId    = (int) ($item['md_appraisal_template_item_id'] ?? $item['template_item_id'] ?? 0);
@@ -210,8 +271,19 @@ if (! function_exists('appraisal_extract_complete_summary')) {
                             $score = (float) $resp->score;
                         }
                     }
+
+                    $itemText = $cleanText((string) ($item['description'] ?? $item['title'] ?? ''));
+                    if ($score !== null && $itemText !== '') {
+                        if ((int) round($score) === 3) {
+                            $itemsNilai3[] = $itemText;
+                        } elseif ((int) round($score) === 1) {
+                            $itemsNilai1[] = $itemText;
+                        }
+                    }
+                    
                     if ($score !== null) {
                         $totNilai += ($bobot * $score);
+                        $totBobot += $bobot;
                     }
                 } elseif ($inputType === 'SINGLE_CHECKLIST' && $resp) {
                     $p = [];
@@ -220,25 +292,35 @@ if (! function_exists('appraisal_extract_complete_summary')) {
                     } elseif (! empty($resp->evaluator_response)) {
                         $p = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : $resp->evaluator_response;
                     }
-                    if (isset($p['boolean_value']) && in_array(strtoupper((string) $p['boolean_value']), ['Y', '1', 'TRUE'], true)) {
+                    $isChecked = (isset($p['boolean_value']) && in_array(strtoupper((string) $p['boolean_value']), ['Y', '1', 'TRUE'], true))
+                        || ! empty($p['checked_actions']);
+                    if ($isChecked) {
                         $checkedCount++;
-                    } elseif (! empty($p['checked_actions'])) {
-                        $checkedCount++;
+                        $itemText = $cleanText((string) ($item['description'] ?? $item['title'] ?? ''));
+                        if ($itemText !== '') {
+                            $itemsKompetensiTambahan[] = $itemText;
+                        }
                     }
                 }
             }
-            $suffixA          = str_repeat('A', $checkedCount);
-            $displaySkorAkhir = ((int) $totNilai) . $suffixA;
+            $hasScored        = $totBobot > 0;
+            $suffixA          = appraisal_format_operator_suffix($checkedCount);
+            $displaySkorAkhir = $hasScored ? appraisal_format_operator_score($totNilai, $checkedCount) : '—';
 
             return [
-                'totNilai'         => $totNilai,
-                'checkedCount'     => $checkedCount,
-                'suffixA'          => $suffixA,
-                'displaySkorAkhir' => $displaySkorAkhir,
+                'totNilai'                => $totNilai,
+                'totBobot'                => $totBobot,
+                'checkedCount'            => $checkedCount,
+                'suffixA'                 => $suffixA,
+                'displaySkorAkhir'        => $displaySkorAkhir,
+                'itemsNilai3'             => $itemsNilai3,
+                'itemsNilai1'             => $itemsNilai1,
+                'itemsKompetensiTambahan' => $itemsKompetensiTambahan,
             ];
         }
 
         $itemsNilai4             = [];
+        $itemsNIlai3             = [];
         $itemsNilai1             = [];
         $itemsKompetensiTambahan = [];
         $cleanText               = static function (string $t): string {

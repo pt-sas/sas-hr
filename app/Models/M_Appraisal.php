@@ -96,6 +96,55 @@ class M_Appraisal extends Model
         return $labels[$status] ?? ($status ?: '-');
     }
 
+    /**
+     * Resolve cycle stage (2..6) from a joined appraisal+cycle row using date-only (Y-m-d) comparison,
+     * matching AppraisalCycle::getCurrentStage() semantics.
+     */
+    public static function resolveCycleStageFromRow(array $row, ?string $currentDate = null): ?int
+    {
+        if (empty($row['start_date']) && empty($row['deadline_filling'])) {
+            return null;
+        }
+
+        $today = strtotime($currentDate ?: date('Y-m-d'));
+        $fill  = !empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
+        $rev   = !empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
+        $read  = !empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
+        $over  = !empty($row['deadline_override']) ? strtotime($row['deadline_override']) : null;
+        $end   = !empty($row['end_date']) ? strtotime($row['end_date']) : null;
+
+        if ($fill && $today <= $fill) {
+            return 2;
+        }
+        if ($rev && $today <= $rev) {
+            return 3;
+        }
+        if ($read && $today <= $read) {
+            return 4;
+        }
+        if ($over && $today <= $over) {
+            return 5;
+        }
+        if ($end && $today > $end) {
+            return 6;
+        }
+
+        return null;
+    }
+
+    /**
+     * Standardized workflow stage display label shared across Penilaian and Monitoring.
+     */
+    public static function getStageDisplayLabel(?string $status, ?int $cycleStage = null): string
+    {
+        $label = self::getStatusLabel($status);
+        if ($status === self::STATUS_SUBMIT_REVIEW && $cycleStage === 5) {
+            return $label . ' (Intervensi HR)';
+        }
+
+        return $label;
+    }
+
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';

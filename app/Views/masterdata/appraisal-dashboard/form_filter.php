@@ -1,3 +1,4 @@
+<?php $defaultTargetGroup = strtoupper((string) ($default_target_group ?? 'PERMANENT')) === 'OPERATOR' ? 'OPERATOR' : 'PERMANENT'; ?>
 <div class="row filter_page">
     <div class="col-md-12">
         <div class="card">
@@ -5,9 +6,8 @@
                 <form class="form-horizontal" id="filter_appraisal_dashboard">
                     <div class="row align-items-end">
                         <!-- Siklus Penilaian -->
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="form-group mb-0">
-                                <label for="filter_cycle" class="font-weight-bold text-muted small mb-1">Siklus Penilaian</label>
                                 <div class="select2-input select2-primary">
                                     <select class="form-control select2" id="filter_cycle" name="cycle_id" style="width: 100%;">
                                         <option value="0">Semua Siklus (Semua Periode)</option>
@@ -16,14 +16,11 @@
                                                 <?php
                                                     $cId      = (int) $c['md_appraisal_cycle_id'];
                                                     $status   = $c['status'] ?? 'OPEN';
-                                                    $tag      = ($status === 'OPEN') ? '[OPEN]' : '[' . $status . ']';
-                                                    $dates    = (!empty($c['start_date']) && !empty($c['end_date']))
-                                                                ? ' (' . date('d/m/Y', strtotime($c['start_date'])) . ' - ' . date('d/m/Y', strtotime($c['end_date'])) . ')'
-                                                                : '';
+                                                    $semester = !empty($c['semester']) ? ' Sem ' . $c['semester'] : '';
                                                     $selected = ($cId === (int) ($default_cycle_id ?? 0)) ? 'selected' : '';
                                                 ?>
                                                 <option value="<?= $cId ?>" <?= $selected ?>>
-                                                    <?= $tag ?> <?= esc($c['title']) ?><?= $dates ?>
+                                                    <?= $status ?> - <?= esc($c['title']) ?> - <?= $semester ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
@@ -35,7 +32,6 @@
                         <!-- Divisi -->
                         <div class="col-md-3">
                             <div class="form-group mb-0">
-                                <label for="filter_division" class="font-weight-bold text-muted small mb-1">Divisi</label>
                                 <div class="select2-input select2-primary">
                                     <select class="form-control select2" id="filter_division" name="division_id" style="width: 100%;">
                                         <option value="0">Semua Divisi</option>
@@ -50,15 +46,26 @@
                         </div>
 
                         <!-- Status Form Penilaian -->
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="form-group mb-0">
-                                <label for="filter_status" class="font-weight-bold text-muted small mb-1">Status Form</label>
                                 <div class="select2-input select2-primary">
                                     <select class="form-control select2" id="filter_status" name="status" style="width: 100%;">
                                         <option value="ALL">Semua Status</option>
                                         <?php foreach (($status_labels ?? \App\Models\M_Appraisal::getStatusLabels()) as $statusCode => $statusName) : ?>
                                             <option value="<?= esc($statusCode) ?>"><?= esc($statusName) ?></option>
                                         <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tipe Form (Global Permanent / Operator Filter) -->
+                        <div class="col-md-2">
+                            <div class="form-group mb-0">
+                                <div class="select2-input select2-primary">
+                                    <select class="form-control select2" id="filter_target_group" name="target_group" style="width: 100%;">
+                                        <option value="PERMANENT" <?= $defaultTargetGroup === 'PERMANENT' ? 'selected' : '' ?>>Permanent</option>
+                                        <option value="OPERATOR" <?= $defaultTargetGroup === 'OPERATOR' ? 'selected' : '' ?>>Operator</option>
                                     </select>
                                 </div>
                             </div>

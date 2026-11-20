@@ -506,6 +506,7 @@ class AppraisalTemplate extends BaseController
                 ->join('md_employee sup', 'sup.md_employee_id = e.superior_id', 'left')
                 ->join('md_employee rev', 'rev.md_employee_id = sup.superior_id', 'left')
                 ->where('e.isactive', 'Y')
+                ->where('(l.name IS NULL OR UPPER(l.name) != "DIREKSI")')
                 ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")');
 
             if (!empty($branchIds)) {

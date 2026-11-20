@@ -120,9 +120,10 @@ $totNilai = 0;
 <?php
 // Hitung data dan total sebelum render HTML agar skor total langsung siap di banner atas
 $renderedRows = [];
-$totBobot = 0;
-$totSkor  = 0;
-$totNilai = 0;
+$totBobot     = 0;
+$scoredBobot  = 0;
+$totSkor      = 0;
+$totNilai     = 0;
 
 if (!empty($weightedItems)) {
     foreach ($weightedItems as $idx => $it) {
@@ -157,8 +158,9 @@ if (!empty($weightedItems)) {
         $subtotal = ($score !== null) ? ($bobot * $score) : null;
         $totBobot += $bobot;
         if ($score !== null) {
-            $totSkor  += $score;
-            $totNilai += $subtotal;
+            $scoredBobot += $bobot;
+            $totSkor     += $score;
+            $totNilai    += $subtotal;
 
             $cleanedTitle = $cleanActionText($title);
             if ($score >= 3) {
@@ -219,20 +221,10 @@ if (!empty($singleItems)) {
     }
 }
 
-// Generate string A (contoh: 2 checklist = 'AA')
-$suffixA = str_repeat('A', $checkedCount);
-$displaySkorAkhir = ((int) $totNilai) . $suffixA;
-
-$finalScoreInt = (int) $totNilai;
-if ($finalScoreInt >= 13 && $finalScoreInt <= 15) {
-    $officialRating = 'Sangat Baik';
-} elseif ($finalScoreInt >= 8 && $finalScoreInt <= 12) {
-    $officialRating = 'Baik';
-} elseif ($finalScoreInt >= 5 && $finalScoreInt <= 7) {
-    $officialRating = 'Kurang';
-} else {
-    $officialRating = '-';
-}
+// Format skor akhir (5-15) & suffix A (A/AA/AAA untuk 1-3, (+NA) untuk 4+)
+$suffixA          = appraisal_format_operator_suffix($checkedCount);
+$displaySkorAkhir = $scoredBobot > 0 ? appraisal_format_operator_score((float) $totNilai, $checkedCount) : '-';
+$officialRating   = appraisal_rating_meta($scoredBobot > 0 ? (float) $totNilai : null, true)['label'];
 ?>
 
 <!-- II. PENILAIAN KINERJA -->
