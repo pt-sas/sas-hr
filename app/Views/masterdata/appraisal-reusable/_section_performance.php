@@ -48,7 +48,7 @@
             }
         }
 
-        $canEditScores       = ($displayMode === 'edit') && in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true);
+        $canEditScores       = ($displayMode === 'edit') && (in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true) || ! empty($is_preview));
         $initialOverallScore = $appraisal->final_score !== null ? (float) $appraisal->final_score : null;
         $initialRating       = appraisal_rating_meta($initialOverallScore, false);
 

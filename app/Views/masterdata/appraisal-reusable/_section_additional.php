@@ -48,7 +48,7 @@
             }
         }
 
-        $canEditScores = ($displayMode === 'edit') && in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true);
+        $canEditScores = ($displayMode === 'edit') && (in_array($userMode, ['EVALUATOR', 'REVIEWER', 'HR'], true) || ! empty($is_preview));
 
         if ($displayMode === 'readonly') {
             $itemsKompetensiTambahan = $itemsKompetensiTambahan ?? [];
