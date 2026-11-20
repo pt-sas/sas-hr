@@ -14,7 +14,7 @@ class Dashboard extends BaseController
     public array $rangeQueryStats = [];
 
     // Configurable engine thresholds
-    private int $lateToleranceMinutes = 0;  // 5-minute late grace period
+    private int $lateToleranceMinutes = 1;  // 5-minute late grace period
     private int $tapDeduplicationSec  = 60; // Ignore rapid biometric taps within 60 seconds
 
     // Super user role IDs (System Admins, HR Super Users, Management Executives)
