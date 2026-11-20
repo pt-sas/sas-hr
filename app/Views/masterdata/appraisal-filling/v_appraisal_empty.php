@@ -3,9 +3,8 @@
 <?= $this->section('content'); ?>
 
 <style>
-    .card-header .new_form {
-        display: none !important;
-    }
+    /* Hide template Add New button since appraisals are cycle-generated */
+    .card-header .new_form { display: none !important; }
 </style>
 
 <div class="card-body card-main py-5">
@@ -20,6 +19,9 @@
             Saat ini tidak ada siklus evaluasi kinerja yang aktif, atau semua form penilaian yang ditugaskan kepada Anda sebagai Penilai, Peninjau, maupun Karyawan telah selesai diproses.
         </p>
         <div class="mt-4">
+            <a href="<?= base_url('sas/penilaian') ?>" class="btn btn-outline-primary btn-round mr-2">
+                <i class="fas fa-sync-alt mr-1"></i> Muat Ulang
+            </a>
             <a href="<?= base_url('sas') ?>" class="btn btn-primary btn-round">
                 <i class="fas fa-home mr-1"></i> Kembali ke Dashboard
             </a>
