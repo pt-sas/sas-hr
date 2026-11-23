@@ -438,41 +438,40 @@ $itemsKompetensiTambahan = [];
 <table width="100%" cellpadding="4.5" cellspacing="0" border="0.5">
     <thead>
         <tr style="background-color: #e2e8f0;">
-            <th colspan="2" class="sec-title">V. CATATAN PENILAIAN</th>
+            <th class="sec-title">V. CATATAN PENILAIAN</th>
         </tr>
     </thead>
     <tbody>
         <tr nobr="true">
-            <td colspan="2" style="line-height: 1.5;">
-                <b>1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?</b><br>
-                <span style="color: #334155;">
-                    <?php if (!empty($appraisal->evaluator_comment)): ?>
-                        <?= nl2br(esc($appraisal->evaluator_comment)) ?>
-                    <?php else: ?>
-                        <span style="color: #94a3b8; font-style: italic;">Tidak ada catatan khusus</span>
-                    <?php endif; ?>
-                </span>
+            <td style="line-height: 1.5;">
+                <table width="100%" cellpadding="1" cellspacing="0" border="0">
+                    <tr>
+                        <td width="3%" style="vertical-align: top;"><b>1.</b></td><td width="97%" style="vertical-align: top;"><b>Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?</b><br><span style="color: #334155;"><?= !empty($appraisal->evaluator_comment) ? nl2br(esc(trim($appraisal->evaluator_comment))) : '<span style="color: #94a3b8; font-style: italic;">Tidak ada catatan khusus</span>' ?></span></td>
+                    </tr>
+                </table>
             </td>
         </tr>
         <tr nobr="true">
-            <td colspan="2" style="line-height: 1.5;">
-                <b>2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?</b><br>
-                <span style="color: #334155;">
-                    <?php if (!empty($appraisal->development_plan)): ?>
-                        <?= nl2br(esc($appraisal->development_plan)) ?>
-                    <?php else: ?>
-                        <span style="color: #94a3b8; font-style: italic;">Tidak ada catatan khusus</span>
-                    <?php endif; ?>
-                </span>
+            <td style="line-height: 1.5;">
+                <table width="100%" cellpadding="1" cellspacing="0" border="0">
+                    <tr>
+                        <td width="3%" style="vertical-align: top;"><b>2.</b></td><td width="97%" style="vertical-align: top;"><b>Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?</b><br><span style="color: #334155;"><?= !empty($appraisal->development_plan) ? nl2br(esc(trim($appraisal->development_plan))) : '<span style="color: #94a3b8; font-style: italic;">Tidak ada catatan khusus</span>' ?></span></td>
+                    </tr>
+                </table>
             </td>
         </tr>
         <?php if (!empty($appraisal->employee_comment)): ?>
         <tr nobr="true">
-            <td colspan="2" style="line-height: 1.5;">
-                <b>Tanggapan / Catatan Karyawan:</b><br>
-                <span style="color: #334155;">
-                    <?= nl2br(esc($appraisal->employee_comment)) ?>
-                </span>
+            <td style="line-height: 1.5;">
+                <table width="100%" cellpadding="1" cellspacing="0" border="0">
+                    <tr>
+                        <td colspan="2" style="vertical-align: top;"><b>Tanggapan / Catatan Karyawan:</b></td>
+                    </tr>
+                    <tr>
+                        <td width="3%" style="vertical-align: top;">&nbsp;</td>
+                        <td width="97%" style="vertical-align: top; color: #334155;"><?= nl2br(esc(trim($appraisal->employee_comment))) ?></td>
+                    </tr>
+                </table>
             </td>
         </tr>
         <?php endif; ?>

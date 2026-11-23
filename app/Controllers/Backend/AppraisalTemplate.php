@@ -92,9 +92,47 @@ class AppraisalTemplate extends BaseController
                 }
 
                 $data   = [];
-                $number = (int) ($this->request->getPost('start') ?? 0);
+                $start  = (int) ($this->request->getPost('start') ?? 0);
+                $length = (int) ($this->request->getPost('length') ?? 10);
+                $number = $start;
 
-                $list = $this->datatable->getDatatables($table, $select, $order, $sort, $search, $join, $where);
+                $builder = $this->db->table($table)->select($select);
+                foreach ($join as $j) {
+                    $builder->join($j['tableJoin'], $j['columnJoin'], $j['typeJoin']);
+                }
+
+                foreach ($where as $key => $val) {
+                    if (is_numeric($key)) {
+                        $builder->where($val);
+                    } elseif (is_array($val)) {
+                        $builder->whereIn($key, $val);
+                    } else {
+                        $builder->where($key, $val);
+                    }
+                }
+
+                $recordsTotal = (clone $builder)->countAllResults(false);
+
+                $searchValue = $this->request->getPost('search')['value'] ?? null;
+                M_AppraisalTemplate::applyDatatableSearch($builder, $this->db, $table, $searchValue);
+
+                $recordsFiltered = (clone $builder)->countAllResults(false);
+
+                $postOrder = $this->request->getPost('order');
+                if (! empty($postOrder) && isset($order[$postOrder[0]['column']]) && $order[$postOrder[0]['column']] !== null) {
+                    $dir = strtolower((string) ($postOrder[0]['dir'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
+                    $builder->orderBy($order[$postOrder[0]['column']], $dir);
+                } else {
+                    foreach ($sort as $col => $dir) {
+                        $builder->orderBy($col, $dir);
+                    }
+                }
+
+                if ($length > 0) {
+                    $builder->limit($length, $start);
+                }
+
+                $list = $builder->get()->getResult();
 
                 foreach ($list as $value) {
                     $row = [];
@@ -166,8 +204,8 @@ class AppraisalTemplate extends BaseController
 
                 $result = [
                     'draw'            => (int) ($this->request->getPost('draw') ?? 1),
-                    'recordsTotal'    => $this->datatable->countAll($table, $select, $order, $sort, $search, $join, $where),
-                    'recordsFiltered' => $this->datatable->countFiltered($table, $select, $order, $sort, $search, $join, $where),
+                    'recordsTotal'    => $recordsTotal,
+                    'recordsFiltered' => $recordsFiltered,
                     'data'            => $data,
                 ];
 

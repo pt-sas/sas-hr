@@ -186,8 +186,11 @@
                                                 </td>
                                             <?php endif; ?>
                                             <td>
+                                                <?php $hasLetterPrefix = preg_match('/^[a-z0-9][\.\)]\s*/i', (string) ($act['text'] ?? '')); ?>
                                                 <div class="ap-action-text">
-                                                    <span class="ap-action-letter"><?= esc($act['letter']) ?>.</span>
+                                                    <?php if (! $hasLetterPrefix): ?>
+                                                        <span class="ap-action-letter"><?= esc($act['letter']) ?>.</span>
+                                                    <?php endif; ?>
                                                     <?= esc($act['text']) ?>
                                                 </div>
                                             </td>
@@ -503,7 +506,6 @@
                                 <td colspan="3" class="ap-subtotal-label">Rata-rata <?= esc($compTitle) ?></td>
                                 <td class="<?= $displayMode === 'readonly' ? 'text-center' : '' ?>">
                                     <span class="ap-avg-chip">
-                                        Rata-rata
                                         <span class="ap-avg-num" id="avg_display_<?= $itemId ?>"><?= number_format($compAvg, 2) ?></span>
                                     </span>
                                     <?php if ($displayMode === 'edit'): ?>

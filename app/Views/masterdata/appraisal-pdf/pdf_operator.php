@@ -240,10 +240,10 @@ $officialRating   = appraisal_rating_meta($scoredBobot > 0 ? (float) $totNilai :
         </tr>
         <tr align="center" style="background-color: #f8fafc; font-weight: bold; font-size: 7.5pt;">
             <th width="5%">NO</th>
-            <th width="50%">ASPEK PEKERJAAN / TUGAS RUTIN</th>
+            <th width="50%">ASPEK PENILAIAN</th>
             <th width="15%">BOBOT</th>
             <th width="15%">SKOR</th>
-            <th width="15%">SUB-TOTAL</th>
+            <th width="15%">TOTAL</th>
         </tr>
     </thead>
     <tbody>
@@ -253,7 +253,7 @@ $officialRating   = appraisal_rating_meta($scoredBobot > 0 ? (float) $totNilai :
             <tr nobr="true">
                 <td width="5%" align="center"><?= $row['no'] ?></td>
                 <td width="50%">
-                    <b><?= esc($row['title']) ?></b>
+                    <?= esc($row['title']) ?>
                     <?php if (!empty($row['desc'])): ?>
                         <br><span style="color:#64748b; font-size:7pt;"><?= esc($row['desc']) ?></span>
                     <?php endif; ?>
@@ -264,7 +264,7 @@ $officialRating   = appraisal_rating_meta($scoredBobot > 0 ? (float) $totNilai :
             </tr>
         <?php endforeach; ?>
         <tr nobr="true" style="background-color: #f8fafc; font-weight: bold;">
-            <td colspan="2" width="55%" align="right">TOTAL BOBOT &amp; NILAI :</td>
+            <td colspan="2" width="55%" align="right">TOTAL BOBOT &amp; SKOR :</td>
             <td width="15%" align="center"><?= number_format((int) $totBobot, 0) ?></td>
             <td width="15%" align="center"><b><?= number_format((int) $totSkor, 0) ?></b></td>
             <td width="15%" align="center"><b><?= number_format((int) $totNilai, 0) ?></b></td>
@@ -287,8 +287,8 @@ $officialRating   = appraisal_rating_meta($scoredBobot > 0 ? (float) $totNilai :
         </tr>
         <tr align="center" style="background-color: #f8fafc; font-weight: bold; font-size: 7.5pt;">
             <th width="5%">NO</th>
-            <th width="75%">PARAMETER PEMERIKSAAN</th>
-            <th width="20%">STATUS</th>
+            <th width="75%">KRITERIA</th>
+            <th width="20%">YA / TIDAK</th>
         </tr>
     </thead>
     <tbody>
@@ -332,7 +332,7 @@ $officialRating   = appraisal_rating_meta($scoredBobot > 0 ? (float) $totNilai :
             ?>
             <tr nobr="true">
                 <td width="5%" align="center"><?= ($sIdx + 1) ?></td>
-                <td width="75%"><b><?= esc($sTitle) ?></b></td>
+                <td width="75%"><?= esc($sTitle) ?></td>
                 <td width="20%" align="center"><b><?= ($isProven ? '[X]' : '[ &nbsp; ]') ?></b></td>
             </tr>
         <?php endif; ?>
@@ -390,7 +390,7 @@ $officialRating   = appraisal_rating_meta($scoredBobot > 0 ? (float) $totNilai :
         </tr>
         <tr nobr="true">
             <td width="28%" class="lbl-cell" style="vertical-align: top;">
-                <b>KOMPETENSI TAMBAHAN</b>
+                <b>PENILAIAN TAMBAHAN</b>
             </td>
             <td width="72%" style="vertical-align: top; line-height: 1.5;">
                 <?php if (!empty($itemsKompetensiTambahan)): ?>
@@ -415,41 +415,40 @@ $officialRating   = appraisal_rating_meta($scoredBobot > 0 ? (float) $totNilai :
 <table width="100%" cellpadding="4.5" cellspacing="0" border="0.5">
     <thead>
         <tr style="background-color: #e2e8f0;">
-            <th colspan="2" class="sec-title">V. CATATAN PENILAIAN</th>
+            <th class="sec-title">V. CATATAN PENILAIAN</th>
         </tr>
     </thead>
     <tbody>
         <tr nobr="true">
-            <td colspan="2" style="line-height: 1.5;">
-                <b>1. Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?</b><br>
-                <span style="color: #334155;">
-                    <?php if (!empty($appraisal->evaluator_comment)): ?>
-                        <?= nl2br(esc($appraisal->evaluator_comment)) ?>
-                    <?php else: ?>
-                        <span style="color: #94a3b8; font-style: italic;">Tidak ada catatan khusus</span>
-                    <?php endif; ?>
-                </span>
+            <td style="line-height: 1.5;">
+                <table width="100%" cellpadding="1" cellspacing="0" border="0">
+                    <tr>
+                        <td width="3%" style="vertical-align: top;"><b>1.</b></td><td width="97%" style="vertical-align: top;"><b>Apakah kompetensi yang paling menonjol dan sudah baik dari karyawan yang bersangkutan?</b><br><span style="color: #334155;"><?= !empty($appraisal->evaluator_comment) ? nl2br(esc(trim($appraisal->evaluator_comment))) : '<span style="color: #94a3b8; font-style: italic;">Tidak ada catatan khusus</span>' ?></span></td>
+                    </tr>
+                </table>
             </td>
         </tr>
         <tr nobr="true">
-            <td colspan="2" style="line-height: 1.5;">
-                <b>2. Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?</b><br>
-                <span style="color: #334155;">
-                    <?php if (!empty($appraisal->development_plan)): ?>
-                        <?= nl2br(esc($appraisal->development_plan)) ?>
-                    <?php else: ?>
-                        <span style="color: #94a3b8; font-style: italic;">Tidak ada catatan khusus</span>
-                    <?php endif; ?>
-                </span>
+            <td style="line-height: 1.5;">
+                <table width="100%" cellpadding="1" cellspacing="0" border="0">
+                    <tr>
+                        <td width="3%" style="vertical-align: top;"><b>2.</b></td><td width="97%" style="vertical-align: top;"><b>Apakah kompetensi yang masih perlu ditingkatkan dari karyawan yang bersangkutan?</b><br><span style="color: #334155;"><?= !empty($appraisal->development_plan) ? nl2br(esc(trim($appraisal->development_plan))) : '<span style="color: #94a3b8; font-style: italic;">Tidak ada catatan khusus</span>' ?></span></td>
+                    </tr>
+                </table>
             </td>
         </tr>
         <?php if (!empty($appraisal->employee_comment)): ?>
         <tr nobr="true">
-            <td colspan="2" style="line-height: 1.5;">
-                <b>Tanggapan / Catatan Karyawan:</b><br>
-                <span style="color: #334155;">
-                    <?= nl2br(esc($appraisal->employee_comment)) ?>
-                </span>
+            <td style="line-height: 1.5;">
+                <table width="100%" cellpadding="1" cellspacing="0" border="0">
+                    <tr>
+                        <td colspan="2" style="vertical-align: top;"><b>Tanggapan / Catatan Karyawan:</b></td>
+                    </tr>
+                    <tr>
+                        <td width="3%" style="vertical-align: top;">&nbsp;</td>
+                        <td width="97%" style="vertical-align: top; color: #334155;"><?= nl2br(esc(trim($appraisal->employee_comment))) ?></td>
+                    </tr>
+                </table>
             </td>
         </tr>
         <?php endif; ?>

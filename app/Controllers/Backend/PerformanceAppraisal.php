@@ -495,18 +495,7 @@ class PerformanceAppraisal extends BaseController
             }
 
             // Global Search Filter
-            $search = $this->request->getPost('search')['value'] ?? null;
-            if (!empty(trim($search))) {
-                $s = trim($search);
-                $builder->groupStart()
-                    ->like('e.fullname', $s)
-                    ->orLike('e.nik', $s)
-                    ->orLike('c.title', $s)
-                    ->orLike('b.name', $s)
-                    ->orLike('d.name', $s)
-                    ->orLike('p.name', $s)
-                    ->groupEnd();
-            }
+            M_Appraisal::applyDatatableSearch($builder, $table, $this->request->getPost('search')['value'] ?? null, true);
 
             $totalFiltered = (clone $builder)->countAllResults(false);
 

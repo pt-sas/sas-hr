@@ -174,7 +174,52 @@ class M_Appraisal extends Model
         'b.name',
         'd.name',
         'p.name',
+        'l.name',
     ];
+
+    /**
+     * Apply global DataTable search across joined appraisal record columns,
+     * localized workflow status labels, and optionally score/rating.
+     */
+    public static function applyDatatableSearch($builder, string $table, ?string $search, bool $includeScore = false): void
+    {
+        $s = trim((string) $search);
+        if ($s === '') {
+            return;
+        }
+
+        $matchedStatuses = [];
+        foreach (self::getStatusLabels() as $code => $label) {
+            if (mb_stripos((string) $label, $s, 0, 'UTF-8') !== false) {
+                $matchedStatuses[] = $code;
+            }
+        }
+        if (mb_stripos('Intervensi HR', $s, 0, 'UTF-8') !== false) {
+            $matchedStatuses[] = self::STATUS_SUBMIT_REVIEW;
+        }
+        $matchedStatuses = array_values(array_unique($matchedStatuses));
+
+        $builder->groupStart()
+            ->like('e.fullname', $s)
+            ->orLike('e.nik', $s)
+            ->orLike('p.name', $s)
+            ->orLike('l.name', $s)
+            ->orLike('b.name', $s)
+            ->orLike('d.name', $s)
+            ->orLike('c.title', $s)
+            ->orLike("{$table}.status", $s);
+
+        if (! empty($matchedStatuses)) {
+            $builder->orWhereIn("{$table}.status", $matchedStatuses);
+        }
+
+        if ($includeScore) {
+            $builder->orLike("{$table}.rating", $s)
+                ->orLike("CAST({$table}.final_score AS CHAR)", $s);
+        }
+
+        $builder->groupEnd();
+    }
 
     public $order = ['md_appraisal.md_appraisal_id' => 'DESC'];
 

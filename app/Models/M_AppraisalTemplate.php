@@ -87,7 +87,77 @@ class M_AppraisalTemplate extends Model
     public array $column_search = [
         'md_appraisal_template.template_code',
         'md_appraisal_template.title',
+        'md_appraisal_template.version',
+        'md_appraisal_template.status',
     ];
+
+    /**
+     * Apply global DataTable search across template metadata, version, localized status labels,
+     * and the 4 target-scope mapping tables (Cabang, Divisi, Level, Jabatan).
+     */
+    public static function applyDatatableSearch($builder, $db, string $table, ?string $search): void
+    {
+        $s = trim((string) $search);
+        if ($s === '') {
+            return;
+        }
+
+        $escapedLike = $db->escapeLikeString($s);
+        $versionTerm = preg_replace('/^v(?=\d)/i', '', $s);
+
+        $statusKeywords = [
+            self::STATUS_DRAFT     => ['draft', 'sedang disusun'],
+            self::STATUS_PUBLISHED => ['published', 'terkunci', 'aktif'],
+            self::STATUS_ARCHIVED  => ['archived', 'tergantikan', 'versi lalu', 'arsip', 'belum terpakai'],
+        ];
+        $matchedStatuses = [];
+        foreach ($statusKeywords as $code => $keywords) {
+            foreach ($keywords as $kw) {
+                if (mb_stripos($kw, $s, 0, 'UTF-8') !== false || mb_stripos($s, $kw, 0, 'UTF-8') !== false) {
+                    $matchedStatuses[] = $code;
+                    break;
+                }
+            }
+        }
+        $matchedStatuses = array_values(array_unique($matchedStatuses));
+
+        $scopeConfigs = [
+            ['md_template_branch',    'md_branch',    'md_branch_id',    'semua cabang'],
+            ['md_template_division',  'md_division',  'md_division_id',  'semua divisi'],
+            ['md_template_levelling', 'md_levelling', 'md_levelling_id', 'semua level'],
+            ['md_template_position',  'md_position',  'md_position_id',  'semua jabatan'],
+        ];
+
+        $builder->groupStart()
+            ->like("{$table}.template_code", $s)
+            ->orLike("{$table}.title", $s)
+            ->orLike("{$table}.status", $s)
+            ->orLike("CAST({$table}.version AS CHAR)", $versionTerm);
+
+        if (! empty($matchedStatuses)) {
+            $builder->orWhereIn("{$table}.status", $matchedStatuses);
+        }
+
+        foreach ($scopeConfigs as [$scopeTable, $masterTable, $fk, $allLabel]) {
+            $builder->orWhere(
+                "EXISTS (SELECT 1 FROM {$scopeTable} sx JOIN {$masterTable} sm ON sm.{$fk} = sx.{$fk} " .
+                "WHERE sx.md_appraisal_template_id = {$table}.md_appraisal_template_id AND sx.isactive = 'Y' " .
+                "AND sm.name LIKE '%{$escapedLike}%' ESCAPE '!')",
+                null,
+                false
+            );
+
+            if (mb_stripos($allLabel, $s, 0, 'UTF-8') !== false) {
+                $builder->orWhere(
+                    "NOT EXISTS (SELECT 1 FROM {$scopeTable} sx WHERE sx.md_appraisal_template_id = {$table}.md_appraisal_template_id AND sx.isactive = 'Y')",
+                    null,
+                    false
+                );
+            }
+        }
+
+        $builder->groupEnd();
+    }
 
     public array $order = [
         'md_appraisal_template.md_appraisal_template_id' => 'DESC',

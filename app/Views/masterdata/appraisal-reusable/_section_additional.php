@@ -120,8 +120,11 @@
                                                 </td>
                                             <?php endif; ?>
                                             <td>
+                                                <?php $hasLetterPrefix = preg_match('/^[a-z0-9][\.\)]\s*/i', (string) ($bAct['text'] ?? '')); ?>
                                                 <div class="ap-action-text">
-                                                    <span class="ap-action-letter"><?= esc($bAct['letter']) ?>.</span>
+                                                    <?php if (! $hasLetterPrefix): ?>
+                                                        <span class="ap-action-letter"><?= esc($bAct['letter']) ?>.</span>
+                                                    <?php endif; ?>
                                                     <?= esc($bAct['text']) ?>
                                                 </div>
                                             </td>

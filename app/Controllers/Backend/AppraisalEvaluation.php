@@ -431,17 +431,7 @@ class AppraisalEvaluation extends BaseController
                 }
 
                 // Filter search
-                $search = $this->request->getPost('search')['value'] ?? null;
-                if (!empty(trim($search))) {
-                    $builder->groupStart()
-                        ->like('e.fullname', trim($search))
-                        ->orLike('e.nik', trim($search))
-                        ->orLike('b.name', trim($search))
-                        ->orLike('d.name', trim($search))
-                        ->orLike('p.name', trim($search))
-                        ->orLike('c.title', trim($search))
-                        ->groupEnd();
-                }
+                M_Appraisal::applyDatatableSearch($builder, $table, $this->request->getPost('search')['value'] ?? null, false);
 
                 // Form Filters (Status, Cycle ID, etc.)
                 if (isset($formValues['status'])) {
