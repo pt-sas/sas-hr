@@ -16,31 +16,7 @@
     $cycDlOver  = is_object($active_cycle) ? ($active_cycle->deadline_override ?? '') : ($active_cycle['deadline_override'] ?? '');
     $cycStatus  = is_object($active_cycle) ? ($active_cycle->status ?? 'OPEN') : ($active_cycle['status'] ?? 'OPEN');
 
-    $cycCode     = $cycId !== '' ? '#' . $cycId : '-';
-    $deadlineRaw = !empty($cycDlFill) ? $cycDlFill : (!empty($cycEnd) ? $cycEnd : '');
-    $deadlineTs  = $deadlineRaw !== '' ? strtotime($deadlineRaw) : false;
-    $deadlineStr = $deadlineTs ? date('d M Y', $deadlineTs) : '-';
-    $periodStr   = (!empty($cycStart) && !empty($cycEnd))
-        ? date('d M Y', strtotime($cycStart)) . ' – ' . date('d M Y', strtotime($cycEnd))
-        : '';
-
     $activeDate = !empty($current_date) ? $current_date : date('Y-m-d');
-
-    // Deadline state: ok / soon (<= 3 days) / late / none
-    $daysLeft = $deadlineTs ? (int) floor(($deadlineTs - strtotime($activeDate)) / 86400) : null;
-    if ($daysLeft === null) {
-        $dlState = 'none';
-        $dlText  = 'Tanpa batas waktu';
-    } elseif ($daysLeft < 0) {
-        $dlState = 'late';
-        $dlText  = 'Terlambat ' . abs($daysLeft) . ' hari';
-    } elseif ($daysLeft === 0) {
-        $dlState = 'soon';
-        $dlText  = 'Berakhir hari ini';
-    } else {
-        $dlState = $daysLeft <= 3 ? 'soon' : 'ok';
-        $dlText  = $daysLeft . ' hari lagi';
-    }
 
     // Workflow stages
     if (!empty($active_cycle) && (method_exists($active_cycle, 'getStageDeadlines') || method_exists($active_cycle, 'getStagedDeadlines') || method_exists($active_cycle, 'getStagedDeadline'))) {
@@ -57,9 +33,77 @@
     }
 
     // Active stage resolution based on active date
-    $currentStage = isset($current_stage) 
-        ? (int) $current_stage 
+    $currentStage = isset($current_stage)
+        ? (int) $current_stage
         : (($active_cycle && method_exists($active_cycle, 'getCurrentStage')) ? $active_cycle->getCurrentStage($activeDate) : 2);
+
+    // Global hero status based purely on the active cycle's current stage
+    $cycCode       = $cycId !== '' ? '#' . $cycId : '-';
+    $cycStatusNorm = strtoupper((string) $cycStatus);
+    $periodStr     = (!empty($cycStart) && !empty($cycEnd))
+        ? date('d M Y', strtotime($cycStart)) . ' – ' . date('d M Y', strtotime($cycEnd))
+        : '';
+
+    $heroLabel   = 'Deadline Siklus';
+    $heroRawDate = '';
+    $dlState     = 'none';
+    $dlText      = 'Tanpa batas waktu';
+    $dlIcon      = 'far fa-clock';
+    $deadlineStr = '-';
+
+    if ($cycStatusNorm === 'CLOSED' || $currentStage >= 6) {
+        $heroLabel   = 'Status Siklus';
+        $deadlineStr = !empty($cycEnd) ? date('d M Y', strtotime($cycEnd)) : 'Finalisasi';
+        $dlState     = 'ok';
+        $dlText      = 'Siklus Selesai';
+        $dlIcon      = 'fas fa-check-circle text-success';
+    } elseif ($currentStage === 1) {
+        $heroLabel   = 'Mulai Siklus';
+        $heroRawDate = $cycStart;
+        $ts          = $heroRawDate !== '' ? strtotime($heroRawDate) : false;
+        $deadlineStr = $ts ? date('d M Y', $ts) : '-';
+        if ($ts) {
+            $daysLeft = (int) floor(($ts - strtotime($activeDate)) / 86400);
+            if ($daysLeft > 0) {
+                $dlState = 'ok';
+                $dlText  = 'Dimulai ' . $daysLeft . ' hari lagi';
+            } elseif ($daysLeft === 0) {
+                $dlState = 'soon';
+                $dlText  = 'Dimulai hari ini';
+                $dlIcon  = 'fas fa-hourglass-half';
+            } else {
+                $dlState = 'none';
+                $dlText  = 'Menunggu mulai';
+            }
+        }
+    } else {
+        $stageMap = [
+            2 => [$cycDlFill ?: $cycEnd, 'Deadline Pengisian'],
+            3 => [$cycDlRev  ?: $cycEnd, 'Deadline Peninjauan'],
+            4 => [$cycDlRead ?: $cycEnd, 'Deadline Pembacaan'],
+            5 => [$cycDlOver ?: $cycEnd, 'Batas Intervensi HR'],
+        ];
+        [$heroRawDate, $heroLabel] = $stageMap[$currentStage] ?? [$cycEnd, 'Deadline Siklus'];
+
+        $ts          = $heroRawDate !== '' ? strtotime($heroRawDate) : false;
+        $deadlineStr = $ts ? date('d M Y', $ts) : '-';
+        if ($ts) {
+            $daysLeft = (int) floor(($ts - strtotime($activeDate)) / 86400);
+            if ($daysLeft < 0) {
+                $dlState = 'late';
+                $dlText  = 'Terlambat ' . abs($daysLeft) . ' hari';
+                $dlIcon  = 'fas fa-exclamation-circle';
+            } elseif ($daysLeft === 0) {
+                $dlState = 'soon';
+                $dlText  = 'Berakhir hari ini';
+                $dlIcon  = 'fas fa-hourglass-half';
+            } else {
+                $dlState = $daysLeft <= 3 ? 'soon' : 'ok';
+                $dlText  = $daysLeft . ' hari lagi';
+                $dlIcon  = $daysLeft <= 3 ? 'fas fa-hourglass-half' : 'far fa-clock';
+            }
+        }
+    }
 ?>
 
 <link rel="stylesheet" href="<?= base_url('form_appraisal_filling_style.css') ?>">
@@ -236,11 +280,11 @@
             </div>
         </div>
         <div class="atl-hero-side">
-            <div id="hero_deadline_box" class="atl-deadline atl-deadline--<?= $dlState ?>" data-fill="<?= esc($cycDlFill) ?>" data-review="<?= esc($cycDlRev) ?>" data-reading="<?= esc($cycDlRead) ?>" data-override="<?= esc($cycDlOver) ?>" data-end="<?= esc($cycEnd) ?>">
-                <small id="hero_deadline_label">Deadline Pengisian</small>
+            <div id="hero_deadline_box" class="atl-deadline atl-deadline--<?= $dlState ?>">
+                <small id="hero_deadline_label"><?= esc($heroLabel) ?></small>
                 <strong id="hero_deadline_date"><?= esc($deadlineStr) ?></strong>
                 <span id="hero_deadline_desc">
-                    <i class="<?= $dlState === 'late' ? 'fas fa-exclamation-circle' : ($dlState === 'soon' ? 'fas fa-hourglass-half' : 'far fa-clock') ?> mr-1" aria-hidden="true"></i><?= esc($dlText) ?>
+                    <i class="<?= esc($dlIcon) ?> mr-1" aria-hidden="true"></i><?= esc($dlText) ?>
                 </span>
             </div>
             <div class="d-flex align-items-start">
@@ -487,7 +531,6 @@
             $('#appraisal_role_tabs .atl-tab').attr({ 'aria-selected': 'false', tabindex: '-1' });
             $tab.attr({ 'aria-selected': 'true', tabindex: '0' });
             activeRole = $tab.data('role') || 'EVALUATOR';
-            updateHeroDeadline(activeRole);
             $('#filter_role_tab').val(activeRole);
             if (activeRole === 'EMPLOYEE' && currentStage < 4) {
                 $('#notice_reading_not_started').addClass('is-visible');
@@ -501,82 +544,6 @@
             }
         }
 
-        function updateHeroDeadline(role) {
-            var $box = $('#hero_deadline_box');
-            if (!$box.length) return;
-
-            if (role === 'HISTORY') {
-                $('#hero_deadline_label').text('Status Arsip');
-                $box.attr('class', 'atl-deadline atl-deadline--ok');
-                $('#hero_deadline_date').text('Arsip Selesai');
-                $('#hero_deadline_desc').html('<i class="fas fa-check-circle mr-1 text-success"></i>Penilaian Final');
-                return;
-            }
-
-            var rawDate = '';
-            var label = 'Deadline';
-            if (role === 'REVIEWER') {
-                rawDate = $box.data('review') || $box.data('end') || '';
-                label = 'Deadline Review';
-            } else if (role === 'EMPLOYEE') {
-                rawDate = $box.data('reading') || $box.data('end') || '';
-                label = 'Deadline Pembacaan';
-            } else if (role === 'ALL') {
-                rawDate = $box.data('override') || $box.data('end') || '';
-                label = 'Batas Waktu HR Override';
-            } else {
-                rawDate = $box.data('fill') || $box.data('end') || '';
-                label = 'Deadline Pengisian';
-            }
-
-            $('#hero_deadline_label').text(label);
-
-            if (!rawDate) {
-                $box.attr('class', 'atl-deadline atl-deadline--none');
-                $('#hero_deadline_date').text('-');
-                $('#hero_deadline_desc').html('<i class="far fa-clock mr-1"></i>Tanpa batas waktu');
-                return;
-            }
-
-            var today = new Date();
-            today.setHours(0, 0, 0, 0);
-            var target = new Date(rawDate);
-            target.setHours(0, 0, 0, 0);
-            var daysLeft = Math.floor((target - today) / (1000 * 60 * 60 * 24));
-
-            var state = 'ok';
-            var desc = daysLeft + ' hari lagi';
-            var icon = 'far fa-clock';
-
-            if (daysLeft < 0) {
-                state = 'late';
-                desc = 'Terlambat ' + Math.abs(daysLeft) + ' hari';
-                icon = 'fas fa-exclamation-circle';
-            } else if (daysLeft === 0) {
-                state = 'soon';
-                desc = 'Berakhir hari ini';
-                icon = 'fas fa-hourglass-half';
-            } else if (daysLeft <= 3) {
-                state = 'soon';
-                desc = daysLeft + ' hari lagi';
-                icon = 'fas fa-hourglass-half';
-            }
-
-            var parts = rawDate.split('-');
-            var formattedStr = rawDate;
-            if (parts.length === 3) {
-                var months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-                var mIdx = parseInt(parts[1], 10) - 1;
-                formattedStr = parts[2] + ' ' + (months[mIdx] || parts[1]) + ' ' + parts[0];
-            }
-
-            $box.attr('class', 'atl-deadline atl-deadline--' + state);
-            $('#hero_deadline_date').text(formattedStr);
-            $('#hero_deadline_desc').html('<i class="' + icon + ' mr-1"></i>' + desc);
-        }
-
-        // Initialize hero deadline based on active role
-        updateHeroDeadline(activeRole);
         if (activeRole === 'EMPLOYEE' && currentStage < 4) {
             $('#notice_reading_not_started').addClass('is-visible');
         } else {

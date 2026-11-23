@@ -106,9 +106,9 @@ class M_AppraisalTemplate extends Model
         $versionTerm = preg_replace('/^v(?=\d)/i', '', $s);
 
         $statusKeywords = [
-            self::STATUS_DRAFT     => ['draft', 'sedang disusun'],
-            self::STATUS_PUBLISHED => ['published', 'terkunci', 'aktif'],
-            self::STATUS_ARCHIVED  => ['archived', 'tergantikan', 'versi lalu', 'arsip', 'belum terpakai'],
+            self::STATUS_DRAFT     => ['draft'],
+            self::STATUS_PUBLISHED => ['published'],
+            self::STATUS_ARCHIVED  => ['archived'],
         ];
         $matchedStatuses = [];
         foreach ($statusKeywords as $code => $keywords) {

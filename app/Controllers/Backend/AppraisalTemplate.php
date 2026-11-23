@@ -158,30 +158,22 @@ class AppraisalTemplate extends BaseController
                     $isPublished = ($status === M_AppraisalTemplate::STATUS_PUBLISHED);
                     $isArchived  = ($status === M_AppraisalTemplate::STATUS_ARCHIVED);
 
-                    // Descriptive 2-line Status Display
+                    // Pure single-line Status badge (matching filter & AppraisalCycle style)
                     if ($isDraft) {
-                        $primaryText = 'Draft';
-                        $subText     = '<small class="text-muted">Sedang Disusun</small>';
+                        $statusCol = '<center><span class="badge badge-warning px-2 py-1">Draft</span></center>';
                     } elseif ($isPublished) {
-                        $primaryText = 'Published';
-                        if ($inUse) {
-                            $subText = '<small class="text-muted">Terkunci (' . $usageCount . ' Penilaian)</small>';
-                        } else {
-                            $subText = '<small class="text-muted">Aktif (0 Penilaian)</small>';
-                        }
+                        $statusCol = '<center><span class="badge badge-success px-2 py-1">Published</span></center>';
                     } elseif ($isArchived) {
-                        $primaryText = ($latestPubVer > $version) ? ('Tergantikan (v' . $latestPubVer . ')') : ('Versi Lalu (v' . $version . ')');
-                        if ($inUse) {
-                            $subText = '<small class="text-muted">Arsip Siklus Lalu (' . $usageCount . ' Penilaian)</small>';
-                        } else {
-                            $subText = '<small class="text-muted">Belum Terpakai</small>';
-                        }
+                        $statusCol = '<center><span class="badge badge-secondary px-2 py-1">Archived</span></center>';
                     } else {
-                        $primaryText = ucfirst(strtolower((string) $status));
-                        $subText     = '';
+                        $statusCol = '<center><span class="badge badge-light px-2 py-1">' . esc(ucfirst(strtolower((string) $status))) . '</span></center>';
                     }
 
-                    $statusCol = '<div><p class="mb-0 font-weight-bold">' . $primaryText . '</p>' . $subText . '</div>';
+                    // Version column with lock indicator when referenced by appraisals
+                    $versionCol = 'v' . esc($version);
+                    if ($inUse) {
+                        $versionCol .= ' <i class="fas fa-lock text-muted ml-1" data-toggle="tooltip" title="Terkunci (' . $usageCount . ' Penilaian)"></i>';
+                    }
 
                     $row[] = $ID;
                     $row[] = $number;
@@ -190,7 +182,7 @@ class AppraisalTemplate extends BaseController
                     $row[] = $levelName;
                     $row[] = $positionName;
                     $row[] = $templateCode;
-                    $row[] = 'v' . $version;
+                    $row[] = $versionCol;
                     $row[] = $statusCol;
 
                     // Contextual Action Buttons based on Template Status & Usage

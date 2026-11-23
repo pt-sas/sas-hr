@@ -498,39 +498,24 @@ class Template
         $status  = $row['status'] ?? ($options['status'] ?? '');
         $actions = '';
 
-        $cycleStage = null;
-        if (!empty($row['start_date']) || !empty($row['deadline_filling'])) {
-            $today = time();
-            $fill  = !empty($row['deadline_filling']) ? strtotime($row['deadline_filling']) : null;
-            $rev   = !empty($row['deadline_review']) ? strtotime($row['deadline_review']) : null;
-            $read  = !empty($row['deadline_reading']) ? strtotime($row['deadline_reading']) : null;
-            $over  = !empty($row['deadline_override']) ? strtotime($row['deadline_override']) : null;
-            $end   = !empty($row['end_date']) ? strtotime($row['end_date']) : null;
-
-            if ($fill && $today <= $fill) {
-                $cycleStage = 2;
-            } elseif ($rev && $today <= $rev) {
-                $cycleStage = 3;
-            } elseif ($read && $today <= $read) {
-                $cycleStage = 4;
-            } elseif ($over && $today <= $over) {
-                $cycleStage = 5;
-            } elseif ($end && $today > $end) {
-                $cycleStage = 6;
-            }
-        }
+        $cycleStage  = M_Appraisal::resolveCycleStageFromRow($row);
+        $cycleStatus = strtoupper((string) ($row['cycle_status'] ?? 'OPEN'));
+        $isCycleOpen = ($cycleStatus !== 'CLOSED');
 
         $uri       = $this->request->uri->getSegment(2);
         $canUpdate = $this->access->checkCrud($uri, $this->isUpdate) === 'Y';
 
-        if ($canUpdate && $status === M_Appraisal::STATUS_DRAFT_EVALUATOR && ($roleTab === 'EVALUATOR' || (int) ($row['snapshot_evaluator_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
+        $isDirectEmployee = ((int) ($row['md_employee_id'] ?? 0) === $empId);
+        $canAcknowledge   = $isDirectEmployee || $isDuta;
+        $canHrOverride    = $isAdmin && !$isDirectEmployee && !$isDuta && $cycleStage === 5;
+
+        if ($isCycleOpen && $canUpdate && $status === M_Appraisal::STATUS_DRAFT_EVALUATOR && ($roleTab === 'EVALUATOR' || (int) ($row['snapshot_evaluator_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
             $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Isi Penilaian"><i class="fas fa-edit text-primary"></i></a>';
-        } elseif ($canUpdate && $status === M_Appraisal::STATUS_REVIEW && ($roleTab === 'REVIEWER' || (int) ($row['snapshot_reviewer_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
+        } elseif ($isCycleOpen && $canUpdate && $status === M_Appraisal::STATUS_REVIEW && ($roleTab === 'REVIEWER' || (int) ($row['snapshot_reviewer_id'] ?? 0) === $empId || ($isAdmin && $roleTab !== 'EMPLOYEE'))) {
             $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Review Peninjau"><i class="fas fa-user-check text-info"></i></a>';
-        } elseif ($canUpdate && $status === M_Appraisal::STATUS_PENDING_ACK && ((int) ($row['md_employee_id'] ?? 0) === $empId || $isDuta || $isAdmin)) {
-            $isDirectEmployee = ((int) ($row['md_employee_id'] ?? 0) === $empId);
+        } elseif ($isCycleOpen && $canUpdate && $status === M_Appraisal::STATUS_PENDING_ACK && ($canAcknowledge || $canHrOverride)) {
             // Intervensi HR is strictly AFTER pembacaan (Stage 5)
-            if ($isAdmin && !$isDirectEmployee && !$isDuta && $cycleStage === 5) {
+            if ($canHrOverride) {
                 $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\')" title="Edit Penilaian"><i class="fas fa-edit text-primary"></i></a>';
             } else {
                 $ttdTitle = 'Konfirmasi TTD';
@@ -545,22 +530,47 @@ class Template
             $actions .= '<a class="btn btn-sm" onclick="Edit(\'' . $id . '\', \'VIEW\')" title="Lihat Detail"><i class="fas fa-eye text-info"></i></a>';
         }
 
-        // Score Comparison & History Action Button
-        $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat & Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
+        // Score Comparison & History Action Button (only after Penilaian has been scored)
+        $hasScore          = ($row['final_score'] ?? null) !== null;
+        $canViewComparison = $hasScore && $status !== M_Appraisal::STATUS_PENILAIAN;
+        if ($roleTab === 'EMPLOYEE') {
+            $canViewComparison = $hasScore && in_array($status, [
+                M_Appraisal::STATUS_SUBMIT_REVIEW,
+                M_Appraisal::STATUS_FINAL,
+            ], true);
+        }
+        if ($canViewComparison) {
+            $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat & Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
+        }
 
         return $actions;
     }
 
     private function appraisalDashboardButton($id, array $options): string
     {
+        $row          = $options['row'] ?? [];
         $appStatus    = (string) ($options['status'] ?? '');
         $employeeName = (string) ($options['employee_name'] ?? 'Karyawan');
         $isAdmin      = !empty($options['is_admin']);
+        $cycleStatus  = strtoupper((string) ($row['cycle_status'] ?? 'OPEN'));
+        $cycleStage   = M_Appraisal::resolveCycleStageFromRow($row);
+
+        $nudgeTargetMap = [
+            M_Appraisal::STATUS_PENILAIAN      => (int) ($row['snapshot_evaluator_id'] ?? 0),
+            M_Appraisal::STATUS_REVIEW         => (int) ($row['snapshot_reviewer_id'] ?? 0),
+            M_Appraisal::STATUS_SUBMIT_REVIEW  => (int) ($row['md_employee_id'] ?? 0),
+        ];
+        $nudgeTargetId = $nudgeTargetMap[$appStatus] ?? 0;
+        $canNudge      = $isAdmin
+            && $cycleStatus !== 'CLOSED'
+            && isset($nudgeTargetMap[$appStatus])
+            && !in_array($cycleStage, [5, 6], true)
+            && $nudgeTargetId > 0;
 
         $actions = '<div class="d-flex align-items-center justify-content-center" style="gap: 4px;">';
         if ($appStatus !== M_Appraisal::STATUS_FINALIZED) {
-            // Pending / Active: Nudge (HR/Admin only) + Preview Form
-            if ($isAdmin) {
+            // Pending / Active: Nudge (HR/Admin only, actionable stages) + Preview Form
+            if ($canNudge) {
                 $actions .= '<button type="button" class="btn btn-sm" onclick="window.nudgeAppraisal(' . $id . ', \'' . esc(addslashes($employeeName)) . '\')" data-toggle="tooltip" title="Kirim Pengingat (Nudge)"><i class="fas fa-bell text-warning"></i></button>';
             }
             $actions .= '<a href="' . base_url('sas/penilaian/complete/' . $id) . '" class="btn btn-sm" data-toggle="tooltip" title="Pratinjau Form"><i class="fas fa-eye text-info"></i></a>';
@@ -569,8 +579,10 @@ class Template
             $actions .= '<a href="' . base_url('sas/penilaian/complete/' . $id) . '" class="btn btn-sm" data-toggle="tooltip" title="Lihat Rapor Lengkap"><i class="fas fa-file-alt text-success"></i></a>';
             $actions .= '<a href="' . base_url('sas/penilaian/exportPDF/' . $id) . '" target="_blank" class="btn btn-sm" data-toggle="tooltip" title="Cetak Rapor (PDF)"><i class="fas fa-print text-danger"></i></a>';
         }
-        // Riwayat & Komparasi Skor Historis
-        $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat &amp; Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
+        // Riwayat & Komparasi Skor Historis (only after Penilaian has been scored)
+        if ($appStatus !== M_Appraisal::STATUS_PENILAIAN && ($row['final_score'] ?? null) !== null) {
+            $actions .= '<button type="button" class="btn btn-sm" onclick="showScoreComparisonModal(\'' . $id . '\')" title="Riwayat &amp; Komparasi Skor"><i class="fas fa-history text-primary"></i></button>';
+        }
         $actions .= '</div>';
 
         return $actions;

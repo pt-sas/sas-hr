@@ -574,6 +574,7 @@ class PerformanceAppraisal extends BaseController
 
                 // Action Buttons
                 $actions = $this->template->appraisalTableButton('dashboard', $id, [
+                    'row'           => $val,
                     'status'        => $appStatus,
                     'employee_name' => $val['employee_name'] ?? 'Karyawan',
                     'is_admin'      => $isAdmin,
