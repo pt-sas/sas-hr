@@ -192,25 +192,21 @@
         <div class="mt-4 tpl-wrap" id="tpl_questionnaire_wrap" style="display: none;">
             <div class="tpl-tabs-bar">
                 <ul class="nav nav-line nav-color-primary tpl-tabs" role="tablist">
+
                     <li class="nav-item">
-                        <a class="nav-link active" id="tab-checklist" data-toggle="pill" href="#checklist_pane" data-target="#checklist_pane" role="tab" aria-controls="checklist_pane" aria-selected="true">
-                            Grouped Checklist
-                            <span class="badge badge-info tpl-count" data-tpl-count="BOOLEAN">0</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="tab-slider" data-toggle="pill" href="#slider_pane" data-target="#slider_pane" role="tab" aria-controls="slider_pane" aria-selected="false">
+                        <a class="nav-link active" id="tab-slider" data-toggle="pill" href="#slider_pane" data-target="#slider_pane" role="tab" aria-controls="slider_pane" aria-selected="true">
                             Grouped Kompetensi
                             <span class="badge badge-primary tpl-count" data-tpl-count="SCORE">0</span>
                         </a>
                     </li>
-                    <!-- TAB 3: CHECKLIST TUNGGAL -->
+
                     <li class="nav-item">
-                        <a class="nav-link" id="tab-single" data-toggle="pill" href="#single_pane" data-target="#single_pane" role="tab" aria-controls="single_pane" aria-selected="false">
-                            Checklist Tunggal
-                            <span class="badge badge-secondary tpl-count" id="badge_count_single">0</span>
+                        <a class="nav-link" id="tab-checklist" data-toggle="pill" href="#checklist_pane" data-target="#checklist_pane" role="tab" aria-controls="checklist_pane" aria-selected="false">
+                            Grouped Checklist
+                            <span class="badge badge-info tpl-count" data-tpl-count="BOOLEAN">0</span>
                         </a>
                     </li>
+
 
                     <!-- TAB 4: CHECKLIST BERBOBOT -->
                     <li class="nav-item">
@@ -219,6 +215,15 @@
                             <span class="badge badge-success tpl-count" id="badge_count_weighted">0</span>
                         </a>
                     </li>
+
+                    <!-- TAB 3: CHECKLIST TUNGGAL -->
+                    <li class="nav-item">
+                        <a class="nav-link" id="tab-single" data-toggle="pill" href="#single_pane" data-target="#single_pane" role="tab" aria-controls="single_pane" aria-selected="false">
+                            Checklist Tunggal
+                            <span class="badge badge-secondary tpl-count" id="badge_count_single">0</span>
+                        </a>
+                    </li>
+
                 </ul>
                 <div class="tpl-tabs-actions">
                     <a href="javascript:void(0)" role="button" class="tpl-collapse-all" onclick="window.tplToggleAll(false);" title="Tutup Semua Kelompok">
@@ -234,22 +239,24 @@
             <div class="tab-content pt-3">
 
                 <!-- TAB 1: CHECKLIST -->
-                <div class="tab-pane fade show active" id="checklist_pane" role="tabpanel" aria-labelledby="tab-checklist">
+                <div class="tab-pane" id="checklist_pane" role="tabpanel" aria-labelledby="tab-checklist">
                     <div class="tpl-pane-head">
                         <div>
                             <h6 class="mb-0 font-weight-bold">Kriteria Kepatuhan (Ya / Tidak)</h6>
-                            <small class="text-muted">Evaluasi biner Ya / Tidak tanpa bobot persentase</small>
+                            <small class="text-muted">Evaluasi Ya / Tidak per kelompok tanpa bobot persentase.</small>
                         </div>
                     </div>
 
                     <div id="tpl_container_checklist"></div>
 
                     <div class="tpl-empty" data-tpl-empty="BOOLEAN">
-                        <i class="fas fa-clipboard-check fa-2x mb-2 text-muted"></i>
-                        <div class="font-weight-bold">Belum ada kelompok checklist</div>
-                        <small class="d-block mb-3">Contoh: K3, Security Audit, Kerahasiaan Data.</small>
-                        <button type="button" class="btn btn-secondary btn-sm btn-round" onclick="window.tplAddCard('BOOLEAN');">
-                            <i class="fas fa-plus fa-fw"></i> Tambah Kelompok Checklist
+                        <div class="tpl-empty-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="tpl-empty-title">Belum ada kelompok checklist</div>
+                        <p class="tpl-empty-desc">Contoh: Kepatuhan SOP Gudang &amp; Distribusi, K3, Keamanan Aset.</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-round" onclick="window.tplAddCard('BOOLEAN');">
+                            <i class="fas fa-plus fa-fw mr-1"></i>Tambah Kelompok Checklist
                         </button>
                     </div>
 
@@ -259,22 +266,24 @@
                 </div>
 
                 <!-- TAB 2: GROUPED KOMPETENSI -->
-                <div class="tab-pane fade" id="slider_pane" role="tabpanel" aria-labelledby="tab-slider">
+                <div class="tab-pane active" id="slider_pane" role="tabpanel" aria-labelledby="tab-slider">
                     <div class="tpl-pane-head">
                         <div>
                             <h6 class="mb-0 font-weight-bold">Kompetensi &amp; Performa Kerja (Skor 0&ndash;4)</h6>
-                            <small class="text-muted">Evaluasi performa kerja dengan skala skor 0.00 &ndash; 4.00 per butir indikator.</small>
+                            <small class="text-muted">Penilaian indikator per kelompok menggunakan skala 0.00 &ndash; 4.00.</small>
                         </div>
                     </div>
 
                     <div id="tpl_container_slider"></div>
 
                     <div class="tpl-empty" data-tpl-empty="SCORE">
-                        <i class="fas fa-chart-line fa-2x mb-2 text-muted"></i>
-                        <div class="font-weight-bold">Belum ada kelompok kompetensi</div>
-                        <small class="d-block mb-3">Contoh: Job Knowledge, Problem Solving, Leadership.</small>
-                        <button type="button" class="btn btn-secondary btn-sm btn-round" onclick="window.tplAddCard('SCORE');">
-                            <i class="fas fa-plus fa-fw"></i> Tambah Kelompok Kompetensi
+                        <div class="tpl-empty-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="tpl-empty-title">Belum ada kelompok kompetensi</div>
+                        <p class="tpl-empty-desc">Contoh: Manajemen Stok &amp; Pengiriman, Koordinasi Tim, Pemecahan Masalah.</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-round" onclick="window.tplAddCard('SCORE');">
+                            <i class="fas fa-plus fa-fw mr-1"></i>Tambah Kelompok Kompetensi
                         </button>
                     </div>
 
@@ -284,11 +293,11 @@
                 </div>
 
                 <!-- TAB 3: CHECKLIST TUNGGAL (FLAT / UNGROUPED) -->
-                <div class="tab-pane fade" id="single_pane" role="tabpanel" aria-labelledby="tab-single">
+                <div class="tab-pane" id="single_pane" role="tabpanel" aria-labelledby="tab-single">
                     <div class="tpl-pane-head">
                         <div>
-                            <h6 class="mb-0 font-weight-bold">Checklist Tunggal (Verifikasi Biner)</h6>
-                            <small class="text-muted">Daftar verifikasi langsung per baris pernyataan tanpa pembobotan.</small>
+                            <h6 class="mb-0 font-weight-bold">Checklist Tunggal (Ya / Tidak)</h6>
+                            <small class="text-muted">Daftar pernyataan Ya / Tidak langsung per baris tanpa kelompok dan bobot.</small>
                         </div>
                     </div>
 
@@ -311,21 +320,23 @@
 
                     <!-- Empty State -->
                     <div class="tpl-empty" id="empty_single">
-                        <i class="fas fa-clipboard-check fa-2x mb-2 text-muted"></i>
-                        <div class="font-weight-bold">Belum ada butir checklist tunggal</div>
-                        <small class="d-block mb-3">Tambahkan kriteria verifikasi atau tata tertib langsung per baris.</small>
-                        <button type="button" class="btn btn-secondary btn-sm btn-round btn-add-single" onclick="window.tplAddSingleRow();">
-                            <i class="fas fa-plus fa-fw"></i> Tambah Butir Pernyataan
+                        <div class="tpl-empty-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="tpl-empty-title">Belum ada pernyataan checklist</div>
+                        <p class="tpl-empty-desc">Contoh: Penggunaan APD Gudang, Pengecekan Armada &amp; Barang, Ketepatan Waktu Muat.</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-round btn-add-single" onclick="window.tplAddSingleRow();">
+                            <i class="fas fa-plus fa-fw mr-1"></i>Tambah Pernyataan
                         </button>
                     </div>
                 </div>
 
                 <!-- TAB 4: CHECKLIST BERBOBOT (FLAT / UNGROUPED - 2 COLUMNS) -->
-                <div class="tab-pane fade" id="weighted_pane" role="tabpanel" aria-labelledby="tab-weighted">
+                <div class="tab-pane" id="weighted_pane" role="tabpanel" aria-labelledby="tab-weighted">
                     <div class="tpl-pane-head">
                         <div>
-                            <h6 class="mb-0 font-weight-bold">Checklist Berbobot (Matrix Rating Scale)</h6>
-                            <small class="text-muted">Daftar aspek penilaian berbobot (tepat 5 butir aspek dengan bobot dikunci ke 1 sesuai sistem predikat 5–15 operator).</small>
+                            <h6 class="mb-0 font-weight-bold">Aspek Penilaian Berbobot (Skor 5&ndash;15)</h6>
+                            <small class="text-muted">Wajib berisi tepat 5 aspek penilaian dengan bobot masing-masing 1.</small>
                         </div>
                     </div>
 
@@ -355,11 +366,13 @@
 
                     <!-- Empty State -->
                     <div class="tpl-empty" id="empty_weighted">
-                        <i class="fas fa-balance-scale fa-2x mb-2 text-muted"></i>
-                        <div class="font-weight-bold">Belum ada aspek checklist berbobot</div>
-                        <small class="d-block mb-3">Membutuhkan tepat 5 aspek penilaian checklist berbobot (bobot 1 per aspek).</small>
-                        <button type="button" class="btn btn-secondary btn-sm btn-round btn-add-weighted" onclick="window.tplAddFiveWeightedRows();">
-                            <i class="fas fa-plus fa-fw"></i> Tambah 5 Aspek Berbobot
+                        <div class="tpl-empty-icon">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <div class="tpl-empty-title">Belum ada aspek penilaian</div>
+                        <p class="tpl-empty-desc">Contoh: Ketepatan Pengiriman, Akurasi Bongkar Muat, Disiplin, Kerja Sama, K3.</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-round btn-add-weighted" onclick="window.tplAddFiveWeightedRows();">
+                            <i class="fas fa-plus fa-fw mr-1"></i>Tambah 5 Aspek
                         </button>
                     </div>
                 </div>
@@ -374,14 +387,14 @@
 /* Colored Block Radio Selector */
 .selectgroup-input:checked + .tpl-type-staff-card {
     border-color: #1572e8 !important;
-    background: rgba(21, 114, 232, 0.08) !important;
-    box-shadow: 0 0 0 2px rgba(21, 114, 232, 0.25) !important;
+    background: linear-gradient(135deg, rgba(21, 114, 232, 0.11) 0%, rgba(72, 171, 247, 0.04) 100%) !important;
+    box-shadow: 0 0 0 2px rgba(21, 114, 232, 0.22) !important;
 }
 .selectgroup-input:checked + .tpl-type-staff-card .tpl-type-title {
     color: #1572e8 !important;
 }
 .selectgroup-input:checked + .tpl-type-staff-card .tpl-type-icon-box {
-    background: #1572e8 !important;
+    background: linear-gradient(135deg, #1572e8 0%, #0d5bd3 100%) !important;
 }
 .selectgroup-input:checked + .tpl-type-staff-card .tpl-type-icon-box i {
     color: #ffffff !important;
@@ -389,17 +402,74 @@
 
 .selectgroup-input:checked + .tpl-type-operator-card {
     border-color: #f59e0b !important;
-    background: rgba(245, 158, 11, 0.1) !important;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3) !important;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.13) 0%, rgba(217, 119, 6, 0.04) 100%) !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
 }
 .selectgroup-input:checked + .tpl-type-operator-card .tpl-type-title {
-    color: #d97706 !important;
+    color: #b45309 !important;
 }
 .selectgroup-input:checked + .tpl-type-operator-card .tpl-type-icon-box {
-    background: #f59e0b !important;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
 }
 .selectgroup-input:checked + .tpl-type-operator-card .tpl-type-icon-box i {
     color: #ffffff !important;
+}
+
+/* Mode-specific accent under Karyawan Tetap (blue) & Operator (amber) */
+#tpl_questionnaire_wrap[data-tpl-mode="STAFF"] .tpl-tabs .nav-link .badge {
+    background: #ebedf2;
+    color: #575962;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="STAFF"] .tpl-tabs .nav-link.active .badge {
+    background: #1572e8;
+    color: #ffffff;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="STAFF"] .tpl-empty-icon {
+    background: rgba(21, 114, 232, 0.1);
+    color: #1572e8;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-tabs .nav-link:hover,
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-tabs .nav-link:focus,
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-tabs .nav-link.active {
+    color: #d97706 !important;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-tabs .nav-link.active {
+    border-color: #f59e0b !important;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-tabs .nav-link .badge {
+    background: #ebedf2;
+    color: #575962;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-tabs .nav-link.active .badge {
+    background: #f59e0b;
+    color: #ffffff;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-tabs-actions {
+    display: none;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-collapse-all:hover {
+    color: #d97706;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-empty-icon {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-empty .btn-outline-primary {
+    color: #d97706;
+    border-color: #f59e0b;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-empty .btn-outline-primary:hover,
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-empty .btn-outline-primary:focus {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #ffffff;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-add-bottom {
+    color: #d97706;
+}
+#tpl_questionnaire_wrap[data-tpl-mode="OPERATOR"] .tpl-add-bottom:hover {
+    background: rgba(245, 158, 11, 0.06);
+    color: #b45309;
 }
 
 .tpl-wrap { width: 100%; max-width: 100%; overflow-x: hidden; }
@@ -418,9 +488,11 @@
 
 /* Weight meter */
 /* Empty state & bottom add */
-.tpl-empty { padding: 2rem 1rem; border: 1px dashed #ebedf2; border-radius: 4px; text-align: center; color: #8d9498; }
-.tpl-empty i { color: #c9ced6; }
-.tpl-add-bottom { display: block; padding: .6rem; border: 1px dashed #ebedf2; border-radius: 4px; text-align: center; font-size: 13px; font-weight: 600; color: #1572e8; text-decoration: none !important; }
+.tpl-empty { padding: 2rem 1.25rem; background: #ffffff; border: 2px dashed #cbd5e1; border-radius: 6px; text-align: center; color: #575962; }
+.tpl-empty-icon { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: rgba(108, 117, 125, 0.08); color: #6c757d; font-size: 1.35rem; margin-bottom: .75rem; }
+.tpl-empty-title { font-size: 14px; font-weight: 700; color: #2a2f5b; margin-bottom: .25rem; }
+.tpl-empty-desc { font-size: 12.5px; color: #8d9498; max-width: 540px; margin: 0 auto 1rem; line-height: 1.45; }
+.tpl-add-bottom { display: block; padding: .6rem; border: 1px dashed #cbd5e1; border-radius: 4px; text-align: center; font-size: 13px; font-weight: 600; color: #1572e8; background: #ffffff; text-decoration: none !important; }
 .tpl-add-bottom:hover { background: #f8f9fa; color: #1572e8; }
 
 /* Competency card */
@@ -497,16 +569,13 @@
                 currentTplType = null;
                 $('#type_staff, #type_operator').prop('checked', false);
                 $('#tpl_type_unselected_empty').show();
-                $('#tpl_questionnaire_wrap').hide();
+                $('#tpl_questionnaire_wrap').removeAttr('data-tpl-mode').hide();
                 return;
             }
 
             type = (type === 'OPERATOR') ? 'OPERATOR' : 'STAFF';
             currentTplType = type;
-
-            // Show questionnaire and hide empty guide
-            $('#tpl_type_unselected_empty').hide();
-            $('#tpl_questionnaire_wrap').show();
+            $('#tpl_questionnaire_wrap').attr('data-tpl-mode', type);
 
             // Update radio buttons state
             if (type === 'OPERATOR') {
@@ -531,9 +600,9 @@
                 $tabSingle.show();
                 $tabWeighted.show();
 
-                // If currently on a staff tab, switch to Operator tab
+                // If currently on a staff tab, switch to Operator tab before revealing
                 if ($('#tab-checklist').hasClass('active') || $('#tab-slider').hasClass('active')) {
-                    $('#tab-single').tab('show');
+                    $('#tab-weighted').tab('show');
                 }
 
                 // If user clicked this manually, auto-select OPERATOR level if available
@@ -567,7 +636,7 @@
 
                 // If currently on an operator tab, switch to Staff tab
                 if ($('#tab-single').hasClass('active') || $('#tab-weighted').hasClass('active')) {
-                    $('#tab-checklist').tab('show');
+                    $('#tab-slider').tab('show');
                 }
 
                 // If user switched to Staff manually, remove operator selection if present
@@ -586,6 +655,10 @@
             window.tplRefresh();
             window.tplRefreshSingle();
             window.tplRefreshWeighted();
+
+            // Show questionnaire after tab visibility, active tab, and empty states are settled
+            $('#tpl_type_unselected_empty').hide();
+            $('#tpl_questionnaire_wrap').show();
         };
 
         function hasFilledItems(type) {
@@ -1466,8 +1539,8 @@
             window.renderTemplateItems([]);
             window.tplRenderScoping({});
 
-            // Reset tab navigasi aktif ke Tab 1 (Checklist Kriteria Kepatuhan)
-            $('a#tab-checklist[data-toggle="pill"]').tab('show');
+            // Reset tab navigasi aktif ke Tab 1 (Grouped Kompetensi)
+            $('a#tab-slider[data-toggle="pill"]').tab('show');
 
             $f.find('#version').val('1').prop('readonly', true);
             $f.find('.is-invalid').removeClass('is-invalid');
