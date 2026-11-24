@@ -32,7 +32,7 @@
                         <div class="col-md-3">
                             <div class="form-group">
                                 <div class="select2-input select2-primary">
-                                    <select class="form-control select2" id="filter_status" name="status">
+                                    <select class="form-control select2" id="filter_status" name="status" data-placeholder="Pilih opsi status">
                                         <option value="">Semua Status</option>
                                         <option value="DRAFT">Draft</option>
                                         <option value="PUBLISHED">Published</option>

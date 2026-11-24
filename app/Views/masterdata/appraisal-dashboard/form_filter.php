@@ -9,7 +9,7 @@
                         <div class="col-md-3">
                             <div class="form-group mb-0">
                                 <div class="select2-input select2-primary">
-                                    <select class="form-control select2" id="filter_cycle" name="cycle_id" style="width: 100%;">
+                                    <select class="form-control select2" id="filter_cycle" name="cycle_id" style="width: 100%;" data-placeholder="Pilih opsi siklus">
                                         <option value="0">Semua Siklus (Semua Periode)</option>
                                         <?php if (!empty($cycles)) : ?>
                                             <?php foreach ($cycles as $c) : ?>
@@ -33,7 +33,7 @@
                         <div class="col-md-3">
                             <div class="form-group mb-0">
                                 <div class="select2-input select2-primary">
-                                    <select class="form-control select2" id="filter_division" name="division_id" style="width: 100%;">
+                                    <select class="form-control select2" id="filter_division" name="division_id" style="width: 100%;" data-placeholder="Pilih opsi divisi">
                                         <option value="0">Semua Divisi</option>
                                         <?php if (!empty($divisions)) : ?>
                                             <?php foreach ($divisions as $d) : ?>
@@ -49,7 +49,7 @@
                         <div class="col-md-2">
                             <div class="form-group mb-0">
                                 <div class="select2-input select2-primary">
-                                    <select class="form-control select2" id="filter_status" name="status" style="width: 100%;">
+                                    <select class="form-control select2" id="filter_status" name="status" style="width: 100%;" data-placeholder="Pilih opsi status">
                                         <option value="ALL">Semua Status</option>
                                         <?php foreach (($status_labels ?? \App\Models\M_Appraisal::getStatusLabels()) as $statusCode => $statusName) : ?>
                                             <option value="<?= esc($statusCode) ?>"><?= esc($statusName) ?></option>
@@ -63,8 +63,8 @@
                         <div class="col-md-2">
                             <div class="form-group mb-0">
                                 <div class="select2-input select2-primary">
-                                    <select class="form-control select2" id="filter_target_group" name="target_group" style="width: 100%;">
-                                        <option value="PERMANENT" <?= $defaultTargetGroup === 'PERMANENT' ? 'selected' : '' ?>>Permanent</option>
+                                    <select class="form-control select2" id="filter_target_group" name="target_group" style="width: 100%;" data-placeholder="Pilih opsi tipe form">
+                                        <option value="PERMANENT" <?= $defaultTargetGroup === 'PERMANENT' ? 'selected' : '' ?>>Karyawan Tetap</option>
                                         <option value="OPERATOR" <?= $defaultTargetGroup === 'OPERATOR' ? 'selected' : '' ?>>Operator</option>
                                     </select>
                                 </div>
@@ -76,9 +76,6 @@
                             <div class="form-group mb-0 d-flex align-items-center">
                                 <button type="button" class="btn btn-primary btn-sm btn-round btn_filter" title="Terapkan Filter">
                                     <i class="fas fa-search fa-fw"></i> Filter
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm btn-round ml-2 btn_reset" id="btn_reset_filter" title="Reset Semua Filter">
-                                    <i class="fas fa-undo fa-fw"></i> Reset
                                 </button>
                             </div>
                         </div>

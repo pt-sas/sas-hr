@@ -42,11 +42,13 @@ class AppraisalGeneratorServices extends BaseServices
             throw new ValidationException('Appraisals can only be generated for OPEN cycles.');
         }
 
-        $db = \Config\Database::connect();
+        $db              = \Config\Database::connect();
+        $minTenureMonths = 6;
+        $cutoffDate      = date('Y-m-d', strtotime("-{$minTenureMonths} months"));
 
         // NOTE: Edit to exclude the DIREKSI
         // Query all active employees with current org structure (deduplicated by employee)
-        $employees = $db->table('md_employee e')
+        $empQuery = $db->table('md_employee e')
             ->select('
                 e.md_employee_id, 
                 e.md_levelling_id, 
@@ -57,10 +59,21 @@ class AppraisalGeneratorServices extends BaseServices
             ')
             ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
             ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
-            ->join('md_levelling l', 'l.md_levelling_id = e.md_employee_id', 'left')
+            ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+            ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
             ->where('e.isactive', 'Y')
+            // Only include md.status_id of PERMANENT and KONTRAK
+            ->whereIn('UPPER(s.name)', ['PERMANENT', 'KONTRAK'])
             ->where('(l.name IS NULL OR UPPER(l.name) != "DIREKSI")')
-            ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")')
+            ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")');
+
+        if ($minTenureMonths > 0) {
+            $empQuery->where('e.registerdate IS NOT NULL')
+                ->where("CAST(e.registerdate AS CHAR) != '0000-00-00'")
+                ->where('e.registerdate <=', $cutoffDate);
+        }
+
+        $employees = $empQuery
             ->groupBy('e.md_employee_id, e.md_levelling_id, e.md_position_id, e.superior_id')
             ->get()
             ->getResultArray();
@@ -299,7 +312,10 @@ class AppraisalGeneratorServices extends BaseServices
         }
 
         // CASE 2: DRAFT CYCLE OR GENERAL SIMULATION
-        $employees = $db->table('md_employee e')
+        $minTenureMonths = 6;
+        $cutoffDate      = date('Y-m-d', strtotime("-{$minTenureMonths} months"));
+
+        $empQuery = $db->table('md_employee e')
             ->select("
                 e.md_employee_id, 
                 e.nik as nik, 
@@ -320,8 +336,20 @@ class AppraisalGeneratorServices extends BaseServices
             ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
             ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
             ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
+            ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
             ->where('e.isactive', 'Y')
-            ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")')
+            // Only include md.status_id of PERMANENT and KONTRAK
+            ->whereIn('UPPER(s.name)', ['PERMANENT', 'KONTRAK'])
+            ->where('(l.name IS NULL OR UPPER(l.name) != "DIREKSI")')
+            ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")');
+
+        if ($minTenureMonths > 0) {
+            $empQuery->where('e.registerdate IS NOT NULL')
+                ->where("CAST(e.registerdate AS CHAR) != '0000-00-00'")
+                ->where('e.registerdate <=', $cutoffDate);
+        }
+
+        $employees = $empQuery
             ->groupBy('e.md_employee_id, e.nik, e.fullname, e.md_levelling_id, l.name, e.md_position_id, p.name, e.superior_id')
             ->orderBy('e.fullname', 'ASC')
             ->get()

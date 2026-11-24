@@ -86,7 +86,7 @@
                         </span>
                         <span class="flex-grow-1">
                             <strong class="d-block font-weight-bold mb-1 tpl-type-title text-dark" style="font-size: 13.5px; letter-spacing: -0.2px;">
-                                Operator  (Khusus Operator)
+                                Operator
                             </strong>
                             <small class="d-block tpl-type-desc text-muted" style="font-size: 11.5px; line-height: 1.35;">
                                 Checklist Tunggal &amp; Checklist Berbobot

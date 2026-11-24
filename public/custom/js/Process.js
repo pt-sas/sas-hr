@@ -107,11 +107,14 @@ $(document).ready(function (e) {
 
   const holidayDate = getHolidayDate();
 
-  $(".select2").select2({
-    placeholder: "Select an option",
-    width: "100%",
-    theme: "bootstrap",
-    allowClear: true,
+  // Change to respect the set placeholder first, then the default
+  $(".select2").each(function () {
+    $(this).select2({
+      placeholder: $(this).data("placeholder") || "Select an option",
+      width: "100%",
+      theme: "bootstrap",
+      allowClear: true,
+    });
   });
 
   $(".multiple-select").select2({
