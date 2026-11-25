@@ -22,8 +22,8 @@ class Dashboard extends BaseController
     // Super user role IDs (awn Admin & Role_Super_HRD)
     protected array $superRoleIds = [1, 90];
 
-    // Managerial levellings (Direksi, GM, Manager — excludes SPV and below)
-    protected array $managerialLevellings = [100001, 100002, 100003];
+    // Managerial levellings (Direksi, GM, Manager, SPV)
+    protected array $managerialLevellings = [100001, 100002, 100003, 100004];
 
     // Submission document statuses
     protected array $pendingDocStatuses   = ['DR', 'RQ', 'IP', 'RE', 'RO', 'XL'];
