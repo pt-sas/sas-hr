@@ -22,8 +22,11 @@ class Dashboard extends BaseController
     // Super user role IDs (awn Admin & Role_Super_HRD)
     protected array $superRoleIds = [1, 90];
 
-    // Managerial levellings (Direksi, GM, Manager, SPV)
-    protected array $managerialLevellings = [100001, 100002, 100003, 100004];
+    // Managerial levellings (Direksi, GM, Manager — full submission & card inspection access)
+    protected array $managerialLevellings = [100001, 100002, 100003];
+
+    // Team Attendance card visibility (includes SPV for aggregate team counts)
+    protected array $teamCardLevellings = [100001, 100002, 100003, 100004];
 
     // Submission document statuses
     protected array $pendingDocStatuses   = ['DR', 'RQ', 'IP', 'RE', 'RO', 'XL'];
@@ -831,6 +834,8 @@ class Dashboard extends BaseController
         $levellingId = $this->resolveEmployeeLevellingId();
 
         $canViewTeamCard = in_array($roleId, $this->superRoleIds, true) 
+            || in_array($levellingId, $this->teamCardLevellings, true);
+        $canViewTeamNames = in_array($roleId, $this->superRoleIds, true)
             || in_array($levellingId, $this->managerialLevellings, true);
 
         if (!$canViewTeamCard) {
@@ -1100,9 +1105,9 @@ class Dashboard extends BaseController
                 $teamRate          = $isTargetFuture ? null : $stats['rate'];
                 $teamOnLeave       = $stats['on_leave'];
 
-                // Query names of subordinates on approved leave on $today
+                // Query names of subordinates on approved leave on $today (Manager+ & Super Roles only)
                 $teamLeaveNames = [];
-                if (!empty($subordinateIds)) {
+                if ($canViewTeamNames && !empty($subordinateIds)) {
                     $leaveRows = $this->db->table('v_all_submission s')
                         ->select('e.fullname')
                         ->join('md_employee e', 'e.md_employee_id = s.md_employee_id', 'inner')
@@ -1117,7 +1122,7 @@ class Dashboard extends BaseController
                 }
 
                 $teamAbsentNames = [];
-                if (!$isTargetFuture) {
+                if ($canViewTeamNames && !$isTargetFuture) {
                     $dayOfWeek = (int) (new \DateTime($today))->format('N');
                     $isHoliday = isset($offDaysMap[$today]);
                     foreach ($subordinateIds as $empId) {
