@@ -12,15 +12,17 @@ class Dashboard extends BaseController
 
     private array $debugLog = [];
     public array $rangeQueryStats = [];
+    private ?int $resolvedLevellingId = null;
+    private ?string $resolvedRoleName = null;
 
     // Configurable engine thresholds
     private int $lateToleranceMinutes = 1;  // 5-minute late grace period
     private int $tapDeduplicationSec  = 60; // Ignore rapid biometric taps within 60 seconds
 
-    // Super user role IDs (System Admins, HR Super Users, Management Executives)
-    protected array $superRoleIds = [1, 4, 5, 6, 21, 70, 71, 74, 79, 80, 90];
+    // Super user role IDs (awn Admin & Role_Super_HRD)
+    protected array $superRoleIds = [1, 90];
 
-    // Managerial levellings (Managers & Supervisors)
+    // Managerial levellings (Direksi, GM, Manager, SPV)
     protected array $managerialLevellings = [100001, 100002, 100003, 100004];
 
     // Submission document statuses
@@ -87,7 +89,7 @@ class Dashboard extends BaseController
         // 2. Employee Identity
         $employeeName = $this->access->getUser('name') ?? $this->access->getUser('username');
         $employeeId   = session()->get('md_employee_id');
-        $levellingId  = (int) (session()->get('md_levelling_id') ?? 0);
+        $levellingId  = $this->resolveEmployeeLevellingId($employeeId ? (int) $employeeId : null);
         $nik          = $this->resolveEmployeeNik($employeeId ? (int) $employeeId : null);
 
         // Pre-fetch shared holidays & mass leaves
@@ -395,6 +397,63 @@ class Dashboard extends BaseController
             $nik = $empRow->nik ?? null;
         }
         return $nik;
+    }
+
+    /**
+     * Resolves employee levelling ID from session, employee master, or user record.
+     */
+    private function resolveEmployeeLevellingId(?int $employeeId = null): int
+    {
+        if ($this->resolvedLevellingId !== null) {
+            return $this->resolvedLevellingId;
+        }
+
+        $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
+        $empId = $employeeId ?? (int) (session()->get('md_employee_id') ?? 0);
+
+        if ($levellingId === 0 && $empId > 0) {
+            $empRow = $this->db->table('md_employee')
+                ->select('md_levelling_id')
+                ->where('md_employee_id', $empId)
+                ->get()->getRow();
+            $levellingId = (int) ($empRow->md_levelling_id ?? 0);
+        }
+
+        if ($levellingId === 0) {
+            $userId = (int) (session()->get('sys_user_id') ?? 0);
+            if ($userId > 0) {
+                $userRow = $this->db->table('sys_user')
+                    ->select('md_levelling_id')
+                    ->where('sys_user_id', $userId)
+                    ->get()->getRow();
+                $levellingId = (int) ($userRow->md_levelling_id ?? 0);
+            }
+        }
+
+        $this->resolvedLevellingId = $levellingId;
+        return $levellingId;
+    }
+
+    /**
+     * Resolves uppercase role name from session or sys_role table.
+     */
+    private function resolveRoleName(int $roleId): string
+    {
+        if ($this->resolvedRoleName !== null) {
+            return $this->resolvedRoleName;
+        }
+
+        $roleName = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
+        if ($roleName === '' && $roleId > 0) {
+            $roleRow = $this->db->table('sys_role')
+                ->select('name')
+                ->where('sys_role_id', $roleId)
+                ->get()->getRow();
+            $roleName = strtoupper((string) ($roleRow->name ?? ''));
+        }
+
+        $this->resolvedRoleName = $roleName;
+        return $roleName;
     }
 
     /**
@@ -769,7 +828,7 @@ class Dashboard extends BaseController
         array $massLeaveRows
     ): array {
         $roleId      = (int) (session()->get('sys_role_id') ?? 0);
-        $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
+        $levellingId = $this->resolveEmployeeLevellingId();
 
         $canViewTeamCard = in_array($roleId, $this->superRoleIds, true) 
             || in_array($levellingId, $this->managerialLevellings, true);
@@ -1208,7 +1267,7 @@ class Dashboard extends BaseController
     private function getPendingApprovalsData(int $employeeId, string $rangeEnd): array
     {
         $roleId   = (int) (session()->get('sys_role_id') ?? 0);
-        $roleName = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
+        $roleName = $this->resolveRoleName($roleId);
         $isSuper  = in_array($roleId, $this->superRoleIds, true) || (strpos($roleName, 'HRD') !== false);
 
         $cacheKey = "dash_pending_{$employeeId}_{$roleId}_{$rangeEnd}";
@@ -1268,7 +1327,7 @@ class Dashboard extends BaseController
         }
 
         $roleId      = (int) (session()->get('sys_role_id') ?? 0);
-        $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
+        $levellingId = $this->resolveEmployeeLevellingId();
 
         // Executives/GM, Super Admins, HR, and Managers (100001, 100002)
         $canViewSubmissions = in_array($roleId, $this->superRoleIds, true) 
@@ -1456,8 +1515,8 @@ class Dashboard extends BaseController
     private function resolveDashboardScope(int $employeeId, array $subordinateIds): array
     {
         $roleId      = (int) (session()->get('sys_role_id') ?? 0);
-        $roleName    = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
-        $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
+        $roleName    = $this->resolveRoleName($roleId);
+        $levellingId = $this->resolveEmployeeLevellingId($employeeId ?: null);
 
         $levels = ['me' => 'Saya'];
         $isManagerialRole = (bool) preg_match('/(MGR|SPV|GM|KACAB|DIREKTUR|OM)/i', $roleName);
@@ -1506,8 +1565,8 @@ class Dashboard extends BaseController
 
             $employeeId  = session()->get('md_employee_id');
             $roleId      = (int) (session()->get('sys_role_id') ?? 0);
-            $roleName    = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
-            $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
+            $roleName    = $this->resolveRoleName($roleId);
+            $levellingId = $this->resolveEmployeeLevellingId($employeeId ? (int) $employeeId : null);
 
             // Calendar cache layer: 15 minutes for active periods, 6 hours for past
             $catHash  = md5(implode(',', $categories));
@@ -1867,11 +1926,10 @@ class Dashboard extends BaseController
 
         // IDOR Check: Non-privileged users can only view their own attendance card
         if ($sessionNik !== '' && $targetNik !== $sessionNik) {
-            $roleId            = (int) (session()->get('sys_role_id') ?? 0);
-            $levellingId       = (int) (session()->get('md_levelling_id') ?? 0);
-            $allowedLevellings = [100001, 100002, 100003, 100004];
+            $roleId      = (int) (session()->get('sys_role_id') ?? 0);
+            $levellingId = $this->resolveEmployeeLevellingId();
 
-            $canInspect = in_array($roleId, $this->superRoleIds, true) || in_array($levellingId, $allowedLevellings, true);
+            $canInspect = in_array($roleId, $this->superRoleIds, true) || in_array($levellingId, $this->managerialLevellings, true);
 
             if (!$canInspect) {
                 return $this->response->setStatusCode(403)->setJSON([
