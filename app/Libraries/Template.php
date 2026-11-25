@@ -553,18 +553,17 @@ class Template
         $employeeName = (string) ($options['employee_name'] ?? 'Karyawan');
         $isAdmin      = !empty($options['is_admin']);
         $cycleStatus  = strtoupper((string) ($row['cycle_status'] ?? 'OPEN'));
-        $cycleStage   = M_Appraisal::resolveCycleStageFromRow($row);
 
         $nudgeTargetMap = [
-            M_Appraisal::STATUS_PENILAIAN      => (int) ($row['snapshot_evaluator_id'] ?? 0),
-            M_Appraisal::STATUS_REVIEW         => (int) ($row['snapshot_reviewer_id'] ?? 0),
-            M_Appraisal::STATUS_SUBMIT_REVIEW  => (int) ($row['md_employee_id'] ?? 0),
+            M_Appraisal::STATUS_PENILAIAN        => (int) ($row['snapshot_evaluator_id'] ?? 0),
+            M_Appraisal::STATUS_SUBMIT_PENILAIAN => (int) ($row['snapshot_evaluator_id'] ?? 0),
+            M_Appraisal::STATUS_REVIEW           => (int) ($row['snapshot_reviewer_id'] ?? 0),
+            M_Appraisal::STATUS_SUBMIT_REVIEW    => (int) ($row['md_employee_id'] ?? 0),
         ];
         $nudgeTargetId = $nudgeTargetMap[$appStatus] ?? 0;
         $canNudge      = $isAdmin
             && $cycleStatus !== 'CLOSED'
-            && isset($nudgeTargetMap[$appStatus])
-            && !in_array($cycleStage, [5, 6], true)
+            && $appStatus !== M_Appraisal::STATUS_FINALIZED
             && $nudgeTargetId > 0;
 
         $actions = '<div class="d-flex align-items-center justify-content-center" style="gap: 4px;">';
