@@ -1139,10 +1139,10 @@ function initAppraisalDashboard() {
             dataType: 'JSON',
             success: function (res) {
                 var logs = [];
-                if (res && res[0] && (res[0].message || res[0].data)) {
-                    logs = res[0].message || res[0].data;
-                } else if (res && (res.message || res.data)) {
-                    logs = res.message || res.data;
+                if (res && res[0] && res[0].data) {
+                    logs = res[0].data;
+                } else if (res && res.data) {
+                    logs = res.data;
                 }
 
                 if (!logs || logs.length === 0) {

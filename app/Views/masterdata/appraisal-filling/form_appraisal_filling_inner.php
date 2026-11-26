@@ -1,14 +1,28 @@
 <?php
     helper('appraisal_view');
 
-    $snapshot    = appraisal_normalize_snapshot($template_snapshot ?? []);
-    $is_operator = isset($is_operator) ? (bool) $is_operator : appraisal_is_operator($snapshot);
-    $formMode    = ! empty($is_preview) ? 'preview' : strtolower((string) ($user_mode ?? 'view'));
+    $snapshot          = appraisal_normalize_snapshot($template_snapshot ?? []);
+    $is_operator       = isset($is_operator) ? (bool) $is_operator : appraisal_is_operator($snapshot);
+    $formMode          = ! empty($is_preview) ? 'preview' : strtolower((string) ($user_mode ?? 'view'));
+    $isEmployeeReading = ($formMode === 'employee');
 
     $this->setVar('template_snapshot', $snapshot);
     $this->setVar('is_operator', $is_operator);
-    $this->setVar('display_mode', 'edit');
-    $this->setVar('section_number', 'IV');
+    $this->setVar('display_mode', $isEmployeeReading ? 'readonly' : 'edit');
+    $this->setVar('section_number', $isEmployeeReading ? 'V' : 'IV');
+
+    if ($isEmployeeReading) {
+        $summary       = appraisal_extract_complete_summary($snapshot, $responses_by_item_id ?? [], $is_operator);
+        $finalScoreVal = (float) ($appraisal->final_score ?? 0);
+        $ratingMeta    = $is_operator
+            ? appraisal_rating_meta((float) ($summary['totNilai'] ?? 0), true)
+            : appraisal_rating_meta(($appraisal->final_score ?? null) !== null ? $finalScoreVal : null, false);
+
+        $this->setVar('summary', $summary);
+        $this->setVar('finalScoreVal', $finalScoreVal);
+        $this->setVar('ratingMeta', $ratingMeta);
+        $this->setVar('confirm_section_number', 'VII');
+    }
 ?>
 
 <link rel="stylesheet" href="<?= base_url('form_appraisal_filling_style.css') ?>">
@@ -44,10 +58,20 @@
                     <?= $this->include('Views/masterdata/appraisal-reusable/_section_additional'); ?>
                 <?php endif; ?>
 
-                <!-- 4. CATATAN & FEEDBACK EVALUATOR -->
+                <?php if ($isEmployeeReading): ?>
+                    <!-- 4. REKAP PENILAIAN (Final Report layout) -->
+                    <?= $this->include('Views/masterdata/appraisal-reusable/_section_rekap'); ?>
+                <?php endif; ?>
+
+                <!-- 4 / 5. CATATAN & FEEDBACK EVALUATOR -->
                 <?= $this->include('Views/masterdata/appraisal-reusable/_section_feedback'); ?>
 
-                <!-- 5. KONFIRMASI & PENGAJUAN -->
+                <?php if ($isEmployeeReading): ?>
+                    <!-- 6. RINGKASAN SKOR AKHIR (Final Report layout) -->
+                    <?= $this->include('Views/masterdata/appraisal-reusable/_section_final_score'); ?>
+                <?php endif; ?>
+
+                <!-- 5 / 7. KONFIRMASI & PENGAJUAN -->
                 <?= $this->include('Views/masterdata/appraisal-filling/fill_confirmation'); ?>
             </div>
         </div>

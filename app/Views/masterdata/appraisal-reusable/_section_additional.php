@@ -86,9 +86,10 @@
                     <tr>
                         <th style="width: 50px; text-align: center;">NO</th>
                         <th style="width: 20%;">KOMPETENSI</th>
-                        <th style="width: 45%;">INDIKATOR PERILAKU</th>
-                        <th style="width: 15%; text-align: center;">PENILAI</th>
-                        <th style="width: 15%; text-align: center;">PENINJAU</th>
+                        <th style="width: 36%;">INDIKATOR PERILAKU</th>
+                        <th style="width: 13%; text-align: center;">PENILAI</th>
+                        <th style="width: 13%; text-align: center;">PENINJAU</th>
+                        <th style="width: 13%; text-align: center;">HR</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -148,6 +149,17 @@
                                                     <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
                                                 <?php endif; ?>
                                             </td>
+                                            <td class="text-center align-middle">
+                                                <?php if (isset($bAct['hr_checked']) && $bAct['hr_checked'] !== null): ?>
+                                                    <?php if (! empty($bAct['hr_checked'])): ?>
+                                                        <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">&check;</span>
+                                                    <?php else: ?>
+                                                        <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
+                                                <?php endif; ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
@@ -181,13 +193,24 @@
                                                 <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
                                             <?php endif; ?>
                                         </td>
+                                        <td class="text-center align-middle">
+                                            <?php if (isset($singleAct['hr_checked']) && $singleAct['hr_checked'] !== null): ?>
+                                                <?php if (! empty($singleAct['hr_checked'])): ?>
+                                                    <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">&check;</span>
+                                                <?php else: ?>
+                                                    <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endif; ?>
                             <?php endforeach; ?>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
+                            <td colspan="6" class="text-center py-4 text-muted">
                                 Tidak ada butir kriteria tambahan dalam template penilaian ini.
                             </td>
                         </tr>

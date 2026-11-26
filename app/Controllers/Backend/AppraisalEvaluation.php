@@ -5,6 +5,7 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Entities\Appraisal;
 use App\Models\M_Appraisal;
+use App\Models\M_AppraisalAuditLog;
 use App\Models\M_AppraisalCycle;
 use App\Models\M_AppraisalResponse;
 use App\Models\M_Employee;
@@ -868,13 +869,16 @@ class AppraisalEvaluation extends BaseController
             ->select('l.*, u.name as actor_name')
             ->join('sys_user u', 'u.sys_user_id = l.actor_id', 'left')
             ->where('l.md_appraisal_id', $appraisal->md_appraisal_id)
-            ->where('l.action', 'ACKNOWLEDGE_EMPLOYEE')
+            ->whereIn('l.action', [
+                M_AppraisalAuditLog::ACTION_ACKNOWLEDGE_DUTA,
+                M_AppraisalAuditLog::ACTION_ACKNOWLEDGE_EMPLOYEE,
+            ])
             ->orderBy('l.created_at', 'DESC')
             ->get()
             ->getRow();
 
         $dutaAckName = null;
-        if ($ackLog && strpos($ackLog->notes ?? '', 'Duta') !== false) {
+        if ($ackLog && ($ackLog->action === M_AppraisalAuditLog::ACTION_ACKNOWLEDGE_DUTA || strpos($ackLog->notes ?? '', 'Duta') !== false)) {
             $dutaAckName = $ackLog->actor_name ?? 'Duta';
         }
 
@@ -931,10 +935,13 @@ class AppraisalEvaluation extends BaseController
         }
 
         $isReviewerReviewed = ! empty($appraisal->reviewer_reviewed_at) || ! empty($appraisal->reviewer_comment);
+        $isHrIntervened     = false;
         foreach ($responsesByItemId as $r) {
             if (! empty($r->reviewer_response)) {
                 $isReviewerReviewed = true;
-                break;
+            }
+            if (! empty($r->hr_response)) {
+                $isHrIntervened = true;
             }
         }
 
@@ -959,6 +966,9 @@ class AppraisalEvaluation extends BaseController
                 $reviewerPayload = ($resp && ! empty($resp->reviewer_response))
                     ? (is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : $resp->reviewer_response)
                     : [];
+                $hrPayload = ($resp && ! empty($resp->hr_response))
+                    ? (is_string($resp->hr_response) ? json_decode($resp->hr_response, true) : $resp->hr_response)
+                    : [];
 
                 if ($inputType === 'WEIGHTED_CHECKLIST') {
                     $bobot = (float) ($item['weight'] ?? $cfg['bobot'] ?? 1.0);
@@ -980,6 +990,17 @@ class AppraisalEvaluation extends BaseController
                         }
                     }
 
+                    $hrScore = null;
+                    if ($isHrIntervened) {
+                        if (isset($hrPayload['score']) && $hrPayload['score'] !== '') {
+                            $hrScore = (float) $hrPayload['score'];
+                        } elseif ($reviewerScore !== null) {
+                            $hrScore = $reviewerScore;
+                        } elseif ($evalScore !== null) {
+                            $hrScore = $evalScore;
+                        }
+                    }
+
                     $weightedItems[] = [
                         'item_id'        => $itemId,
                         'title'          => $title,
@@ -988,6 +1009,8 @@ class AppraisalEvaluation extends BaseController
                         'eval_nilai'     => $evalScore !== null ? ($bobot * $evalScore) : null,
                         'reviewer_score' => $reviewerScore,
                         'reviewer_nilai' => $reviewerScore !== null ? ($bobot * $reviewerScore) : null,
+                        'hr_score'       => $hrScore,
+                        'hr_nilai'       => $hrScore !== null ? ($bobot * $hrScore) : null,
                     ];
                 } elseif ($inputType === 'SINGLE_CHECKLIST') {
                     $evalChecked = false;
@@ -1008,6 +1031,17 @@ class AppraisalEvaluation extends BaseController
                         }
                     }
 
+                    $hrChecked = false;
+                    if ($isHrIntervened) {
+                        if (isset($hrPayload['boolean_value'])) {
+                            $hrChecked = in_array(strtoupper((string) $hrPayload['boolean_value']), ['Y', '1', 'TRUE'], true);
+                        } elseif (! empty($hrPayload['checked_actions'])) {
+                            $hrChecked = true;
+                        } else {
+                            $hrChecked = $isReviewerReviewed ? $reviewerChecked : $evalChecked;
+                        }
+                    }
+
                     $isOther = (stripos(trim($title), 'lainnya') === 0 || stripos(trim($title), 'lain-lain') === 0);
 
                     $singleItems[] = [
@@ -1018,6 +1052,8 @@ class AppraisalEvaluation extends BaseController
                         'eval_other_text'     => $evalPayload['other_text'] ?? '',
                         'reviewer_checked'    => $reviewerChecked,
                         'reviewer_other_text' => $reviewerPayload['other_text'] ?? ($evalPayload['other_text'] ?? ''),
+                        'hr_checked'          => $hrChecked,
+                        'hr_other_text'       => $hrPayload['other_text'] ?? ($reviewerPayload['other_text'] ?? ($evalPayload['other_text'] ?? '')),
                     ];
                 }
             }
@@ -1034,6 +1070,7 @@ class AppraisalEvaluation extends BaseController
                 'weighted_items'       => $weightedItems,
                 'single_items'         => $singleItems,
                 'is_reviewer_reviewed' => $isReviewerReviewed,
+                'is_hr_intervened'     => $isHrIntervened,
                 'evaluator_comment'    => $appraisal->evaluator_comment ?? '',
                 'development_plan'     => $appraisal->development_plan ?? '',
                 'reviewer_comment'     => $appraisal->reviewer_comment ?? '',
@@ -1042,12 +1079,14 @@ class AppraisalEvaluation extends BaseController
             return view('masterdata/appraisal-reusable/modal_score_comparison_content', $opViewData);
         }
 
-        $comparisonSections     = [];
+        $comparisonSections         = [];
         $evalTotalWeightedScore     = 0.0;
         $evalTotalWeight            = 0.0;
         $reviewerTotalWeightedScore = 0.0;
         $reviewerTotalWeight        = 0.0;
-        $hasOverride            = false;
+        $hrTotalWeightedScore       = 0.0;
+        $hrTotalWeight              = 0.0;
+        $hasOverride                = false;
 
         foreach ($sections as $sec) {
             $secId    = (int) $sec['md_appraisal_section_id'];
@@ -1081,12 +1120,19 @@ class AppraisalEvaluation extends BaseController
                 $reviewerActionScores   = $reviewerPayload['action_scores'] ?? [];
                 $reviewerCheckedActions = $reviewerPayload['checked_actions'] ?? [];
 
+                $hrPayload = ($resp && !empty($resp->hr_response))
+                    ? (is_string($resp->hr_response) ? json_decode($resp->hr_response, true) : $resp->hr_response)
+                    : [];
+                $hrActionScores   = $hrPayload['action_scores'] ?? [];
+                $hrCheckedActions = $hrPayload['checked_actions'] ?? [];
+
                 if ($inputType === 'SCORE') {
                     $hasKeyActions = !empty($actions);
                     $totalActions  = $hasKeyActions ? count($actions) : 1;
 
                     $evalActionSum     = 0.0;
                     $reviewerActionSum = 0.0;
+                    $hrActionSum       = 0.0;
                     $actionRows        = [];
 
                     if ($hasKeyActions) {
@@ -1120,12 +1166,23 @@ class AppraisalEvaluation extends BaseController
                             }
                             $reviewerActionSum += $reviewerActScore;
 
+                            $hrActScore = $isReviewerReviewed ? $reviewerActScore : $evalActScore;
+                            if ($isHrIntervened) {
+                                if (isset($hrActionScores[$aIdx]) && $hrActionScores[$aIdx] !== '') {
+                                    $hrActScore = (float) $hrActionScores[$aIdx];
+                                } elseif (isset($hrActionScores[(string) $aIdx]) && $hrActionScores[(string) $aIdx] !== '') {
+                                    $hrActScore = (float) $hrActionScores[(string) $aIdx];
+                                }
+                            }
+                            $hrActionSum += $hrActScore;
+
                             $actionRows[] = [
                                 'index'          => $aIdx,
                                 'letter'         => chr(97 + $aIdx),
                                 'text'           => $actionText,
                                 'eval_score'     => $evalActScore,
                                 'reviewer_score' => $isReviewerReviewed ? $reviewerActScore : null,
+                                'hr_score'       => $isHrIntervened ? $hrActScore : null,
                                 'is_overridden'  => $isOverridden,
                                 'delta'          => $isReviewerReviewed ? round($reviewerActScore - $evalActScore, 2) : 0,
                             ];
@@ -1133,6 +1190,7 @@ class AppraisalEvaluation extends BaseController
 
                         $evalAvg     = $totalActions > 0 ? ($evalActionSum / $totalActions) : 3.00;
                         $reviewerAvg = $totalActions > 0 ? ($reviewerActionSum / $totalActions) : 3.00;
+                        $hrAvg       = $totalActions > 0 ? ($hrActionSum / $totalActions) : 3.00;
                     } else {
                         $evalAvg      = ($resp && $resp->score !== null) ? (float) $resp->score : 3.00;
                         $reviewerAvg  = $evalAvg;
@@ -1145,12 +1203,18 @@ class AppraisalEvaluation extends BaseController
                             }
                         }
 
+                        $hrAvg = $isReviewerReviewed ? $reviewerAvg : $evalAvg;
+                        if ($isHrIntervened && isset($hrPayload['score']) && $hrPayload['score'] !== '') {
+                            $hrAvg = (float) $hrPayload['score'];
+                        }
+
                         $actionRows[] = [
                             'index'          => 0,
                             'letter'         => 'a',
                             'text'           => 'Indikator umum',
                             'eval_score'     => $evalAvg,
                             'reviewer_score' => $isReviewerReviewed ? $reviewerAvg : null,
+                            'hr_score'       => $isHrIntervened ? $hrAvg : null,
                             'is_overridden'  => $isOverridden,
                             'delta'          => $isReviewerReviewed ? round($reviewerAvg - $evalAvg, 2) : 0,
                         ];
@@ -1158,12 +1222,15 @@ class AppraisalEvaluation extends BaseController
 
                     $evalAvg     = round($evalAvg, 2);
                     $reviewerAvg = round($reviewerAvg, 2);
+                    $hrAvg       = round($hrAvg, 2);
 
                     $effectiveWeight = $weight > 0 ? $weight : 1.0;
                     $evalTotalWeightedScore     += ($evalAvg * $effectiveWeight);
                     $evalTotalWeight            += $effectiveWeight;
                     $reviewerTotalWeightedScore += ($reviewerAvg * $effectiveWeight);
                     $reviewerTotalWeight        += $effectiveWeight;
+                    $hrTotalWeightedScore       += ($hrAvg * $effectiveWeight);
+                    $hrTotalWeight              += $effectiveWeight;
 
                     $processedItems[] = [
                         'item_id'       => $itemId,
@@ -1174,6 +1241,7 @@ class AppraisalEvaluation extends BaseController
                         'actions'       => $actionRows,
                         'eval_avg'      => $evalAvg,
                         'reviewer_avg'  => $isReviewerReviewed ? $reviewerAvg : null,
+                        'hr_avg'        => $isHrIntervened ? $hrAvg : null,
                         'is_overridden' => $isReviewerReviewed && (round($reviewerAvg, 2) !== round($evalAvg, 2)),
                     ];
                 } else {
@@ -1198,12 +1266,22 @@ class AppraisalEvaluation extends BaseController
                                 }
                             }
 
+                            $hrChecked = null;
+                            if ($isHrIntervened) {
+                                if (isset($hrPayload['checked_actions'])) {
+                                    $hrChecked = is_array($hrCheckedActions) && appraisal_parse_checked((int) $aIdx, $hrCheckedActions);
+                                } else {
+                                    $hrChecked = $isReviewerReviewed ? $reviewerChecked : $evalChecked;
+                                }
+                            }
+
                             $actionRows[] = [
                                 'index'            => $aIdx,
                                 'letter'           => chr(97 + $aIdx),
                                 'text'             => $actionText,
                                 'eval_checked'     => $evalChecked,
                                 'reviewer_checked' => $isReviewerReviewed ? $reviewerChecked : null,
+                                'hr_checked'       => $isHrIntervened ? $hrChecked : null,
                                 'is_overridden'    => $isOverridden,
                             ];
                         }
@@ -1224,12 +1302,22 @@ class AppraisalEvaluation extends BaseController
                             }
                         }
 
+                        $hrChecked = null;
+                        if ($isHrIntervened) {
+                            if (isset($hrPayload['boolean_value'])) {
+                                $hrChecked = in_array(strtoupper((string) $hrPayload['boolean_value']), ['Y', '1', 'TRUE'], true);
+                            } else {
+                                $hrChecked = $isReviewerReviewed ? $reviewerChecked : $evalChecked;
+                            }
+                        }
+
                         $actionRows[] = [
                             'index'            => 0,
                             'letter'           => 'a',
                             'text'             => $compTitle,
                             'eval_checked'     => $evalChecked,
                             'reviewer_checked' => $isReviewerReviewed ? $reviewerChecked : null,
+                            'hr_checked'       => $isHrIntervened ? $hrChecked : null,
                             'is_overridden'    => $isOverridden,
                         ];
                     }
@@ -1268,8 +1356,19 @@ class AppraisalEvaluation extends BaseController
             $delta                = null;
         }
 
+        if ($isHrIntervened) {
+            $hrFinalOverall = $hrTotalWeight > 0 ? ($hrTotalWeightedScore / $hrTotalWeight) : 3.00;
+            if ($appraisal->final_score !== null && (float) $appraisal->final_score > 0) {
+                $hrFinalOverall = (float) $appraisal->final_score;
+            }
+            $hrFinalOverall = max(0.00, min(4.00, round($hrFinalOverall, 2)));
+        } else {
+            $hrFinalOverall = null;
+        }
+
         $evalRating     = appraisal_rating_meta($evalFinalOverall, false);
         $reviewerRating = appraisal_rating_meta($reviewerFinalOverall, false);
+        $hrRating       = appraisal_rating_meta($hrFinalOverall, false);
 
         $scoreSections   = [];
         $booleanSections = [];
@@ -1297,8 +1396,11 @@ class AppraisalEvaluation extends BaseController
             'eval_rating'            => $evalRating,
             'reviewer_overall_score' => $reviewerFinalOverall,
             'reviewer_rating'        => $reviewerRating,
+            'hr_overall_score'       => $hrFinalOverall,
+            'hr_rating'              => $hrRating,
             'delta'                  => $delta,
             'is_reviewer_reviewed'   => $isReviewerReviewed,
+            'is_hr_intervened'       => $isHrIntervened,
             'has_override'           => $hasOverride,
             'evaluator_comment'      => $appraisal->evaluator_comment ?? '',
             'development_plan'       => $appraisal->development_plan ?? '',
@@ -1642,13 +1744,7 @@ class AppraisalEvaluation extends BaseController
                     $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'REVIEWER');
                 }
 
-                if ($actionType === 'kickback') {
-                    $reason = trim($post['kickback_reason'] ?? $reviewerComment ?? '');
-                    if (empty($reason)) {
-                        throw new \RuntimeException('Alasan revisi wajib diisi jika mengembalikan form.');
-                    }
-                    $this->workflowService->kickbackByReviewer($appraisalId, $userId, $reason);
-                } elseif ($actionType === 'submit') {
+                if ($actionType === 'submit') {
                     $this->workflowService->reviewByReviewer($appraisalId, $userId, $reviewerComment);
                 }
 
@@ -1680,7 +1776,7 @@ class AppraisalEvaluation extends BaseController
                 $this->model->save($appraisal);
 
                 if (! empty($responseList)) {
-                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'REVIEWER');
+                    $this->scoringService->saveResponses($appraisalId, $responseList, $userId, 'HR');
                 } else {
                     $this->scoringService->calculateAndUpdateScores($appraisalId, $userId);
                 }
@@ -1688,6 +1784,15 @@ class AppraisalEvaluation extends BaseController
                 if ($actionType === 'submit') {
                     // HR finalizes / acknowledges on behalf of reading completion
                     $this->workflowService->acknowledgeByEmployee($appraisalId, $userId, $employeeComment);
+                } else {
+                    (new M_AppraisalAuditLog())->logEvent(
+                        $appraisalId,
+                        $userId,
+                        M_AppraisalAuditLog::ACTION_HR_INTERVENTION,
+                        $appraisal->status,
+                        $appraisal->status,
+                        'HR melakukan intervensi/penyesuaian pada penilaian.'
+                    );
                 }
             }
 
@@ -1700,8 +1805,6 @@ class AppraisalEvaluation extends BaseController
 
             if ($actionType === 'submit') {
                 $msg = ($userMode === 'EMPLOYEE') ? 'Penilaian berhasil dikonfirmasi dan difinalisasi.' : 'Penilaian berhasil disubmit.';
-            } elseif ($actionType === 'kickback') {
-                $msg = 'Form berhasil dikembalikan untuk revisi.';
             } else {
                 $msg = ($userMode === 'EMPLOYEE') ? 'Form tersimpan. Centang konfirmasi untuk menyelesaikan tahap pembacaan.' : 'Data penilaian berhasil disimpan.';
             }

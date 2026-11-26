@@ -449,7 +449,7 @@
 <!-- AUDIT LOG MODAL                                                     -->
 <!-- =================================================================== -->
 <div class="modal fade" id="modal_audit_log" modal-type="not-main" tabindex="-1" role="dialog" aria-labelledby="modal_audit_title" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title font-weight-bold" id="modal_audit_title">
@@ -459,7 +459,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                 <div id="audit_timeline_container" aria-live="polite">
                     <div class="text-center py-4 text-muted">
                         <i class="fas fa-spinner fa-spin fa-2x" aria-hidden="true"></i>
@@ -571,7 +571,7 @@
             `);
 
             $.ajax({
-                url: '<?= base_url('penilaian/auditLogs') ?>/' + appraisalId,
+                url: '<?= base_url('sas/penilaian/auditLogs') ?>/' + appraisalId,
                 type: 'GET',
                 dataType: 'JSON',
                 success: function (res) {
@@ -600,17 +600,9 @@
                         var notes = log.notes || '-';
 
                         var pillTone = 'primary';
-                        if (actionTitle === 'KICKBACK_REVIEWER' || actionTitle === 'KICKBACK_GM') pillTone = 'danger';
-                        else if (actionTitle === 'REVIEWER_OVERRIDE_ITEM' || actionTitle === 'GM_OVERRIDE_ITEM') pillTone = 'warning';
-                        else if (actionTitle === 'UPDATE_ITEM_SCORE') pillTone = 'info';
-                        else if (actionTitle === 'ACKNOWLEDGE_EMPLOYEE') pillTone = 'ok';
-
-                        var prevVal = null;
-                        var newVal  = null;
-                        try {
-                            prevVal = typeof log.previous_value === 'string' ? JSON.parse(log.previous_value) : log.previous_value;
-                            newVal  = typeof log.new_value === 'string' ? JSON.parse(log.new_value) : log.new_value;
-                        } catch (e) {}
+                        if (actionTitle === 'HR_INTERVENTION') pillTone = 'warning';
+                        else if (actionTitle === 'SUBMIT_EVALUATOR' || actionTitle === 'REVIEW') pillTone = 'info';
+                        else if (actionTitle === 'ACKNOWLEDGE_EMPLOYEE' || actionTitle === 'ACKNOWLEDGE_DUTA') pillTone = 'ok';
 
                         var detailsHtml = '';
                         if (log.from_status || log.to_status) {
@@ -619,42 +611,6 @@
                                     <span class="atl-pill atl-pill--muted">${esc(log.from_status || '-')}</span>
                                     <i class="fas fa-long-arrow-alt-right mx-1" aria-hidden="true"></i>
                                     <span class="atl-pill atl-pill--info">${esc(log.to_status || '-')}</span>
-                                </div>
-                            `;
-                        }
-
-                        if (log.md_appraisal_template_item_id) {
-                            var extractLogScore = function (val) {
-                                if (!val) return '-';
-                                var src = (val.payload && typeof val.payload === 'object') ? val.payload : val;
-                                if (src.score !== null && src.score !== undefined && src.score !== '') {
-                                    return Number(src.score).toFixed(2);
-                                }
-                                if (val.score !== null && val.score !== undefined && val.score !== '') {
-                                    return Number(val.score).toFixed(2);
-                                }
-                                if (Array.isArray(src.action_scores) && src.action_scores.length > 0) {
-                                    var sum = 0, cnt = 0;
-                                    for (var idx = 0; idx < src.action_scores.length; idx++) {
-                                        var num = Number(src.action_scores[idx]);
-                                        if (!isNaN(num)) {
-                                            sum += num;
-                                            cnt++;
-                                        }
-                                    }
-                                    if (cnt > 0) return (sum / cnt).toFixed(2);
-                                }
-                                return '-';
-                            };
-                            var prevScore = extractLogScore(prevVal);
-                            var newScore  = extractLogScore(newVal);
-                            detailsHtml += `
-                                <div class="atl-tl-line">
-                                    <strong>Butir Item ID:</strong> #${esc(log.md_appraisal_template_item_id)} |
-                                    <strong>Revisi Skor:</strong>
-                                    <span class="atl-pill atl-pill--muted">${esc(prevScore)}</span>
-                                    <i class="fas fa-long-arrow-alt-right mx-1" aria-hidden="true"></i>
-                                    <span class="atl-pill atl-pill--ok">${esc(newScore)}</span>
                                 </div>
                             `;
                         }

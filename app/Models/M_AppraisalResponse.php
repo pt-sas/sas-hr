@@ -17,6 +17,7 @@ class M_AppraisalResponse extends Model
         'score',
         'evaluator_response',
         'reviewer_response',
+        'hr_response',
         'isactive',
         'created_by',
         'updated_by',

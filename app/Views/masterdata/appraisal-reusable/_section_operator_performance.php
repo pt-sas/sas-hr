@@ -6,12 +6,15 @@
 
     if ($displayMode === 'compare') {
         $isReviewed    = ! empty($is_reviewer_reviewed);
+        $isHr          = ! empty($is_hr_intervened);
         $weightedItems = $weighted_items ?? [];
         $totBobot      = 0.0;
         $totEvalSkor   = 0.0;
         $totEvalNilai  = 0.0;
         $totGmSkor     = 0.0;
         $totGmNilai    = 0.0;
+        $totHrSkor     = 0.0;
+        $totHrNilai    = 0.0;
 
         foreach ($weightedItems as $w) {
             $b  = (float) ($w['bobot'] ?? 1.0);
@@ -26,6 +29,13 @@
                 $gn = (float) ($w['reviewer_nilai'] ?? ($b * $gs));
                 $totGmSkor  += $gs;
                 $totGmNilai += $gn;
+            }
+
+            if ($isHr && isset($w['hr_score']) && $w['hr_score'] !== null) {
+                $hs = (float) $w['hr_score'];
+                $hn = (float) ($w['hr_nilai'] ?? ($b * $hs));
+                $totHrSkor  += $hs;
+                $totHrNilai += $hn;
             }
         }
     } else {
@@ -114,16 +124,19 @@
                 <thead>
                     <tr>
                         <th rowspan="2" style="width: 50px; text-align: center; vertical-align: middle;">No</th>
-                        <th rowspan="2" style="width: 35%; vertical-align: middle;">Aspek Penilaian</th>
+                        <th rowspan="2" style="width: 30%; vertical-align: middle;">Aspek Penilaian</th>
                         <th rowspan="2" style="width: 10%; text-align: center; vertical-align: middle;">Bobot</th>
                         <th colspan="2" style="text-align: center; background: #eff6ff; border-left: 1px solid #bfdbfe;">PENILAI</th>
                         <th colspan="2" style="text-align: center; background: #f0fdf4; border-left: 1px solid #bbf7d0;">REVIEWER</th>
+                        <th colspan="2" style="text-align: center; background: #fffbeb; border-left: 1px solid #fde68a;">HR</th>
                     </tr>
                     <tr>
-                        <th style="width: 12.5%; text-align: center; background: #eff6ff; border-left: 1px solid #bfdbfe;">Skor</th>
-                        <th style="width: 12.5%; text-align: center; background: #eff6ff;">Nilai</th>
-                        <th style="width: 12.5%; text-align: center; background: #f0fdf4; border-left: 1px solid #bbf7d0;">Skor</th>
-                        <th style="width: 12.5%; text-align: center; background: #f0fdf4;">Nilai</th>
+                        <th style="width: 10%; text-align: center; background: #eff6ff; border-left: 1px solid #bfdbfe;">Skor</th>
+                        <th style="width: 10%; text-align: center; background: #eff6ff;">Nilai</th>
+                        <th style="width: 10%; text-align: center; background: #f0fdf4; border-left: 1px solid #bbf7d0;">Skor</th>
+                        <th style="width: 10%; text-align: center; background: #f0fdf4;">Nilai</th>
+                        <th style="width: 10%; text-align: center; background: #fffbeb; border-left: 1px solid #fde68a;">Skor</th>
+                        <th style="width: 10%; text-align: center; background: #fffbeb;">Nilai</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -135,6 +148,8 @@
                                 $en = isset($row['eval_nilai']) && $row['eval_nilai'] !== null ? (float) $row['eval_nilai'] : ($es !== null ? ($b * $es) : null);
                                 $gs = isset($row['reviewer_score']) && $row['reviewer_score'] !== null ? (float) $row['reviewer_score'] : null;
                                 $gn = isset($row['reviewer_nilai']) && $row['reviewer_nilai'] !== null ? (float) $row['reviewer_nilai'] : ($gs !== null ? ($b * $gs) : null);
+                                $hs = isset($row['hr_score']) && $row['hr_score'] !== null ? (float) $row['hr_score'] : null;
+                                $hn = isset($row['hr_nilai']) && $row['hr_nilai'] !== null ? (float) $row['hr_nilai'] : ($hs !== null ? ($b * $hs) : null);
                             ?>
                             <tr>
                                 <td class="text-center align-middle font-weight-bold" style="background: var(--ap-surface);"><?= $idx + 1 ?></td>
@@ -160,6 +175,20 @@
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
+                                <td class="text-center align-middle font-weight-bold" style="background: #fffdf5; border-left: 1px solid var(--ap-line-soft);">
+                                    <?php if ($isHr && $hs !== null): ?>
+                                        <?= round($hs) == $hs ? (int) $hs : number_format($hs, 1) ?>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center align-middle font-weight-bold text-warning" style="background: #fffdf5;">
+                                    <?php if ($isHr && $hn !== null): ?>
+                                        <?= round($hn) == $hn ? (int) $hn : number_format($hn, 1) ?>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         <tr style="background: #f1f5f9; font-weight: 700; border-top: 2px solid #cbd5e1;">
@@ -169,9 +198,11 @@
                             <td class="text-center align-middle text-primary"><?= round($totEvalNilai) == $totEvalNilai ? (int) $totEvalNilai : number_format($totEvalNilai, 1) ?></td>
                             <td class="text-center align-middle" style="border-left: 1px solid #cbd5e1;"><?= $isReviewed ? (round($totGmSkor) == $totGmSkor ? (int) $totGmSkor : number_format($totGmSkor, 1)) : '-' ?></td>
                             <td class="text-center align-middle text-success"><?= $isReviewed ? (round($totGmNilai) == $totGmNilai ? (int) $totGmNilai : number_format($totGmNilai, 1)) : '-' ?></td>
+                            <td class="text-center align-middle" style="border-left: 1px solid #cbd5e1;"><?= $isHr ? (round($totHrSkor) == $totHrSkor ? (int) $totHrSkor : number_format($totHrSkor, 1)) : '-' ?></td>
+                            <td class="text-center align-middle text-warning"><?= $isHr ? (round($totHrNilai) == $totHrNilai ? (int) $totHrNilai : number_format($totHrNilai, 1)) : '-' ?></td>
                         </tr>
                     <?php else: ?>
-                        <tr><td colspan="7" class="text-center py-4 text-muted">Tidak ada data aspek penilaian.</td></tr>
+                        <tr><td colspan="9" class="text-center py-4 text-muted">Tidak ada data aspek penilaian.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>

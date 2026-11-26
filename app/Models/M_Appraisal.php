@@ -137,12 +137,7 @@ class M_Appraisal extends Model
      */
     public static function getStageDisplayLabel(?string $status, ?int $cycleStage = null): string
     {
-        $label = self::getStatusLabel($status);
-        if ($status === self::STATUS_SUBMIT_REVIEW && $cycleStage === 5) {
-            return $label . ' (Intervensi HR)';
-        }
-
-        return $label;
+        return self::getStatusLabel($status);
     }
 
     protected $useTimestamps = true;
@@ -193,9 +188,6 @@ class M_Appraisal extends Model
             if (mb_stripos((string) $label, $s, 0, 'UTF-8') !== false) {
                 $matchedStatuses[] = $code;
             }
-        }
-        if (mb_stripos('Intervensi HR', $s, 0, 'UTF-8') !== false) {
-            $matchedStatuses[] = self::STATUS_SUBMIT_REVIEW;
         }
         $matchedStatuses = array_values(array_unique($matchedStatuses));
 

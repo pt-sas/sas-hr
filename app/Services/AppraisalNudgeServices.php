@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\M_Appraisal;
+use App\Models\M_AppraisalAuditLog;
 use Config\Database;
 use Throwable;
 
@@ -345,16 +346,15 @@ class AppraisalNudgeServices extends BaseServices
             $ok = $this->enqueueBroadcast($targetId, $title, $html, $actorUserId);
 
             if ($ok) {
-                // Record in audit log if available
-                $this->db->table('md_appraisal_audit_log')->insert([
-                    'md_appraisal_id' => $appraisalId,
-                    'actor_id'        => $actorUserId,
-                    'action'          => 'NUDGED',
-                    'from_status'     => $status,
-                    'to_status'       => $status,
-                    'notes'           => "Pengingat manual dikirim oleh HR ke ID Karyawan #{$targetId} ({$roleLabel}).",
-                    'created_at'      => date('Y-m-d H:i:s'),
-                ]);
+                $auditLogModel = new M_AppraisalAuditLog();
+                $auditLogModel->logEvent(
+                    $appraisalId,
+                    $actorUserId,
+                    M_AppraisalAuditLog::ACTION_NUDGED,
+                    $status,
+                    $status,
+                    "Pengingat manual dikirim oleh HR ke ID Karyawan #{$targetId} ({$roleLabel})."
+                );
 
                 return ['success' => true, 'message' => "Pengingat berhasil dimasukkan ke antrean broadcast untuk {$roleLabel}."];
             }

@@ -81,7 +81,7 @@ class AppraisalWorkflowServices extends BaseServices
             $this->recordAuditLog(
                 $appraisalId,
                 $actorId,
-                'SUBMIT_EVALUATOR',
+                M_AppraisalAuditLog::ACTION_SUBMIT_EVALUATOR,
                 $previousStatus,
                 $nextStatus,
                 $auditNote
@@ -152,7 +152,7 @@ class AppraisalWorkflowServices extends BaseServices
             $this->recordAuditLog(
                 $appraisalId,
                 $actorId,
-                'REVIEW',
+                M_AppraisalAuditLog::ACTION_REVIEW,
                 $previousStatus,
                 $nextStatus,
                 'Peninjau menyelesaikan review evaluasi kinerja.'
@@ -175,77 +175,6 @@ class AppraisalWorkflowServices extends BaseServices
             $nudgeService->notifyWorkflowTransition($appraisalId, 'APPROVE_REVIEWER', $actorId);
         } catch (\Throwable $ne) {
             log_message('error', '[AppraisalWorkflowServices] Nudge approve reviewer error: ' . $ne->getMessage());
-        }
-
-        return $this->appraisalModel->find($appraisalId);
-    }
-
-    /**
-     * Reviewer kicks back appraisal form to Evaluator for revision.
-     * Transitions: REVIEW -> PENILAIAN.
-     *
-     * @param int $appraisalId
-     * @param int $actorId
-     * @param string $kickbackReason
-     * @return Appraisal
-     * @throws Exception
-     */
-    public function kickbackByReviewer(int $appraisalId, int $actorId, string $kickbackReason): Appraisal
-    {
-        $appraisal = $this->getAppraisalOrFail($appraisalId);
-
-        // 1. Cycle & Stage 6 Guard
-        $this->cycleService->assertCycleModifiable((int) $appraisal->md_appraisal_cycle_id);
-
-        // 2. Status Guard
-        if ($appraisal->status !== M_Appraisal::STATUS_REVIEW) {
-            throw new ValidationException("Form penilaian tidak dapat dikembalikan dari status '{$appraisal->status}'.");
-        }
-
-        $kickbackReason = trim($kickbackReason);
-        if (empty($kickbackReason)) {
-            throw new ValidationException('Alasan revisi pengembalian form harus diisi oleh Peninjau.');
-        }
-
-        $previousStatus = $appraisal->status;
-        $nextStatus     = M_Appraisal::STATUS_DRAFT_EVALUATOR;
-
-        $db = \Config\Database::connect();
-        $db->transBegin();
-
-        try {
-            $appraisal->status           = $nextStatus;
-            $appraisal->reviewer_comment = $kickbackReason;
-            $appraisal->updated_by       = $actorId;
-            $this->appraisalModel->save($appraisal);
-
-            // 2. Record Audit Log
-            $this->recordAuditLog(
-                $appraisalId,
-                $actorId,
-                'KICKBACK_REVIEWER',
-                $previousStatus,
-                $nextStatus,
-                'Peninjau mengembalikan form evaluasi ke Penilai untuk direvisi: ' . $kickbackReason
-            );
-
-            if ($db->transStatus() === false) {
-                $db->transRollback();
-                throw new DatabaseException('Gagal memproses pengembalian form oleh Peninjau.');
-            }
-
-            $db->transCommit();
-        } catch (\Throwable $e) {
-            $db->transRollback();
-            throw $e;
-        }
-
-        // Trigger Nudge: Notify Evaluator that form was kicked back for revision
-        try {
-            $nudgeService = new AppraisalNudgeServices();
-            $nudgeService->notifyWorkflowTransition($appraisalId, 'RETURN_REVIEWER', $actorId);
-        } catch (\Throwable $ne) {
-            log_message('error', '[AppraisalWorkflowServices] Nudge return reviewer error: ' . $ne->getMessage());
         }
 
         return $this->appraisalModel->find($appraisalId);
@@ -303,20 +232,23 @@ class AppraisalWorkflowServices extends BaseServices
             $isDuta       = (! $isDirectEmp && $this->isDutaForEmployeeWithoutUser($actorId, $targetEmpId));
 
             if ($isDirectEmp) {
+                $ackAction      = M_AppraisalAuditLog::ACTION_ACKNOWLEDGE_EMPLOYEE;
                 $logDescription = 'Karyawan mengonfirmasi dan menandatangani hasil evaluasi kinerja.';
             } elseif ($isDuta) {
                 $targetEmpRow = $db->table('md_employee')->select('fullname')->where('md_employee_id', $targetEmpId)->get()->getRow();
                 $targetName   = $targetEmpRow->fullname ?? "ID #{$targetEmpId}";
                 $dutaName     = $userRow->name ?? "User #{$actorId}";
+                $ackAction      = M_AppraisalAuditLog::ACTION_ACKNOWLEDGE_DUTA;
                 $logDescription = "Duta ({$dutaName}) mengonfirmasi dan menandatangani evaluasi kinerja mewakili karyawan ({$targetName}).";
             } else {
+                $ackAction      = M_AppraisalAuditLog::ACTION_HR_INTERVENTION;
                 $logDescription = 'HR/Admin mengonfirmasi dan menandatangani evaluasi kinerja atas nama karyawan.';
             }
 
             $this->recordAuditLog(
                 $appraisalId,
                 $actorId,
-                'ACKNOWLEDGE_EMPLOYEE',
+                $ackAction,
                 $previousStatus,
                 $nextStatus,
                 $logDescription
@@ -440,14 +372,13 @@ class AppraisalWorkflowServices extends BaseServices
         string $newStatus,
         ?string $notes = null
     ): void {
-        $this->auditLogModel->insert([
-            'md_appraisal_id' => $appraisalId,
-            'actor_id'        => $actorId,
-            'action'          => $action,
-            'from_status'     => $prevStatus,
-            'to_status'       => $newStatus,
-            'notes'           => $notes,
-            'created_at'      => date('Y-m-d H:i:s'),
-        ]);
+        $this->auditLogModel->logEvent(
+            $appraisalId,
+            $actorId,
+            $action,
+            $prevStatus,
+            $newStatus,
+            $notes
+        );
     }
 }

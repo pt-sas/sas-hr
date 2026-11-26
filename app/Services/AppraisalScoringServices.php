@@ -3,24 +3,22 @@
 namespace App\Services;
 
 use App\Entities\Appraisal;
+use App\Entities\AppraisalResponse;
 use App\Exceptions\NotFoundException;
 use App\Models\M_Appraisal;
 use App\Models\M_AppraisalResponse;
-use App\Models\M_AppraisalAuditLog;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 
 class AppraisalScoringServices extends BaseServices
 {
     protected M_Appraisal $appraisalModel;
     protected M_AppraisalResponse $responseModel;
-    protected M_AppraisalAuditLog $auditLogModel;
 
     public function __construct()
     {
         parent::__construct();
         $this->appraisalModel = new M_Appraisal();
         $this->responseModel  = new M_AppraisalResponse();
-        $this->auditLogModel  = new M_AppraisalAuditLog();
     }
 
     /**
@@ -44,6 +42,14 @@ class AppraisalScoringServices extends BaseServices
                                          ->findAll();
 
         if (empty($responses)) {
+            if ($appraisal->final_score !== null || $appraisal->rating !== null) {
+                $appraisal->final_score = null;
+                $appraisal->rating      = null;
+                $appraisal->updated_by  = $userId;
+                $this->appraisalModel->save($appraisal);
+                return $this->appraisalModel->find($appraisalId);
+            }
+
             return $appraisal;
         }
 
@@ -198,6 +204,18 @@ class AppraisalScoringServices extends BaseServices
             }
         }
 
+        if ($unweightedScoresCount === 0) {
+            if ($appraisal->final_score !== null || $appraisal->rating !== null) {
+                $appraisal->final_score = null;
+                $appraisal->rating      = null;
+                $appraisal->updated_by  = $userId;
+                $this->appraisalModel->save($appraisal);
+                return $this->appraisalModel->find($appraisalId);
+            }
+
+            return $appraisal;
+        }
+
         helper('appraisal_view');
         $isOperator = appraisal_is_operator($snapshot);
 
@@ -226,12 +244,11 @@ class AppraisalScoringServices extends BaseServices
 
     /**
      * Save/batch update responses for an evaluation form.
-     * Records granular item-level score and response delta audit logs.
      *
      * @param int $appraisalId
      * @param array $responseList List of items to save
      * @param int $userId
-     * @param string $actorRole 'EVALUATOR' or 'GM'
+     * @param string $actorRole 'EVALUATOR', 'REVIEWER', or 'HR'
      * @throws Exception
      */
     public function saveResponses(int $appraisalId, array $responseList, int $userId, string $actorRole = 'EVALUATOR'): void
@@ -262,7 +279,7 @@ class AppraisalScoringServices extends BaseServices
             $itemId     = (int) ($row['md_appraisal_template_item_id'] ?? $row['template_item_id'] ?? 0);
             $responseId = (int) ($row['md_appraisal_response_id'] ?? $row['appraisal_response_id'] ?? 0);
 
-            // Locate response row
+            // Locate existing response row
             $resp = null;
             if ($responseId > 0) {
                 $resp = $this->responseModel->find($responseId);
@@ -273,12 +290,18 @@ class AppraisalScoringServices extends BaseServices
                     ->first();
             }
 
-            if (! $resp || (int) $resp->md_appraisal_id !== $appraisalId) {
+            if ($resp && (int) $resp->md_appraisal_id !== $appraisalId) {
                 continue;
             }
 
-            $actualItemId = (int) $resp->md_appraisal_template_item_id;
+            $actualItemId = $resp ? (int) $resp->md_appraisal_template_item_id : $itemId;
             $itemDef      = $itemsDefById[$actualItemId] ?? null;
+
+            // Only allow items that exist in this appraisal's frozen template snapshot
+            if ($actualItemId <= 0 || ! $itemDef) {
+                continue;
+            }
+
             $inputType    = strtoupper($itemDef['input_type'] ?? 'SCORE');
             $isBoolean    = ($inputType === 'BOOLEAN' || $inputType === 'SINGLE_CHECKLIST' || isset($row['boolean_value']) || isset($row['checked_actions']));
 
@@ -297,87 +320,43 @@ class AppraisalScoringServices extends BaseServices
                 }
             }
 
-            $prevScore = $resp->score !== null ? (float) $resp->score : null;
+            $isNew = ($resp === null);
 
-            // Assemble payload using unified normalization
-            $isPeninjau = in_array(strtoupper((string) $actorRole), ['PENINJAU', 'REVIEWER'], true);
+            $roleUpper  = strtoupper((string) $actorRole);
+            $isHr       = ($roleUpper === 'HR');
+            $isPeninjau = in_array($roleUpper, ['PENINJAU', 'REVIEWER'], true);
 
-            $formatAuditValue = static function (array $payload, ?float $colScore): ?string {
-                $data = $payload;
-                if ($colScore !== null && ! isset($data['score']) && empty($data['action_scores'])) {
-                    $data['score'] = round($colScore, 2);
-                }
-                return ! empty($data) ? json_encode($data, JSON_UNESCAPED_UNICODE) : null;
-            };
+            $responseField = $isHr ? 'hr_response' : ($isPeninjau ? 'reviewer_response' : 'evaluator_response');
+            $rawInput      = $row[$responseField] ?? $row;
 
-            if ($isPeninjau) {
-                $existingReviewer = is_string($resp->reviewer_response) ? json_decode($resp->reviewer_response, true) : ($resp->reviewer_response ?? []);
-                $existingReviewer = is_array($existingReviewer) ? $existingReviewer : [];
-                $newReviewer      = $this->prepareResponsePayload($existingReviewer, $row['reviewer_response'] ?? $row, $score, $isBoolean);
+            $existingPayload = (! $isNew && $resp->{$responseField} !== null)
+                ? (is_string($resp->{$responseField}) ? json_decode($resp->{$responseField}, true) : $resp->{$responseField})
+                : [];
+            $existingPayload = is_array($existingPayload) ? $existingPayload : [];
+            $newPayload      = $this->prepareResponsePayload($existingPayload, $rawInput, $score, $isBoolean);
 
-                if ($isBoolean) {
-                    $resp->score = null;
-                } elseif ($score !== null) {
-                    $resp->score = $score;
-                }
-                $resp->reviewer_response = $newReviewer;
-                $effectiveScore          = $resp->score !== null ? (float) $resp->score : null;
-
-                // Check delta
-                $scoreChanged   = ($score !== null && ($prevScore === null || round($score, 2) !== round($prevScore, 2)));
-                $payloadChanged = (json_encode($existingReviewer) !== json_encode($newReviewer));
-
-                if ($scoreChanged || $payloadChanged) {
-                    $auditDeltas[] = [
-                        'md_appraisal_id'               => $appraisalId,
-                        'actor_id'                      => $userId,
-                        'action'                        => 'PENINJAU_OVERRIDE_ITEM',
-                        'md_appraisal_template_item_id' => $actualItemId,
-                        'previous_value'                => $formatAuditValue($existingReviewer, $prevScore),
-                        'new_value'                     => $formatAuditValue($newReviewer, $effectiveScore),
-                        'notes'                         => 'Peninjau memperbarui nilai/catatan butir penilaian.',
-                        'created_at'                    => date('Y-m-d H:i:s'),
-                    ];
-                }
-            } else {
-                $existingEval = is_string($resp->evaluator_response) ? json_decode($resp->evaluator_response, true) : ($resp->evaluator_response ?? []);
-                $existingEval = is_array($existingEval) ? $existingEval : [];
-                $newEval      = $this->prepareResponsePayload($existingEval, $row['evaluator_response'] ?? $row, $score, $isBoolean);
-
-                if ($isBoolean) {
-                    $resp->score = null;
-                } elseif ($score !== null) {
-                    $resp->score = $score;
-                }
-                $resp->evaluator_response = $newEval;
-                $effectiveScore           = $resp->score !== null ? (float) $resp->score : null;
-
-                // Check delta
-                $scoreChanged   = ($score !== null && ($prevScore === null || round($score, 2) !== round($prevScore, 2)));
-                $payloadChanged = (json_encode($existingEval) !== json_encode($newEval));
-
-                if ($scoreChanged || $payloadChanged) {
-                    $auditDeltas[] = [
-                        'md_appraisal_id'               => $appraisalId,
-                        'actor_id'                      => $userId,
-                        'action'                        => 'UPDATE_ITEM_SCORE',
-                        'md_appraisal_template_item_id' => $actualItemId,
-                        'previous_value'                => $formatAuditValue($existingEval, $prevScore),
-                        'new_value'                     => $formatAuditValue($newEval, $effectiveScore),
-                        'notes'                         => 'Penilai memperbarui nilai/catatan butir penilaian.',
-                        'created_at'                    => date('Y-m-d H:i:s'),
-                    ];
-                }
+            if ($isNew && $this->isResponsePayloadEmpty($newPayload, $score, $isBoolean)) {
+                continue;
             }
+
+            if ($isNew) {
+                $resp                                = new AppraisalResponse();
+                $resp->md_appraisal_id               = $appraisalId;
+                $resp->md_appraisal_template_item_id = $actualItemId;
+                $resp->isactive                      = 'Y';
+                $resp->created_by                    = $userId;
+            }
+
+            if ($isBoolean) {
+                $resp->score = null;
+            } elseif ($score !== null) {
+                $resp->score = $score;
+            }
+            $resp->{$responseField} = $newPayload;
 
             $resp->updated_by = $userId;
             $this->responseModel->save($resp);
         }
-
-            // Insert granular audit deltas batch if any
-            if (! empty($auditDeltas)) {
-                $db->table('md_appraisal_audit_log')->insertBatch($auditDeltas);
-            }
 
             if ($db->transStatus() === false) {
                 $db->transRollback();
@@ -455,6 +434,38 @@ class AppraisalScoringServices extends BaseServices
         }
 
         return $payload;
+    }
+
+    /**
+     * Determine whether a normalized response payload has no meaningful user input.
+     * Used on lazy insert so untouched/empty items (including unchecked default checkboxes)
+     * do not create blank rows in md_appraisal_response.
+     */
+    public function isResponsePayloadEmpty(array $payload, ?float $score, bool $isBoolean): bool
+    {
+        if (! $isBoolean && $score !== null) {
+            return false;
+        }
+
+        if (! empty($payload['action_scores']) && is_array($payload['action_scores'])) {
+            return false;
+        }
+
+        if (! empty($payload['checked_actions']) && is_array($payload['checked_actions'])) {
+            return false;
+        }
+
+        if (isset($payload['boolean_value']) && in_array(strtoupper((string) $payload['boolean_value']), ['Y', '1', 'TRUE'], true)) {
+            return false;
+        }
+
+        foreach (['other_text', 'comment', 'note', 'notes', 'text', 'value'] as $textKey) {
+            if (isset($payload[$textKey]) && is_string($payload[$textKey]) && trim($payload[$textKey]) !== '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function determineRatingLabel(float $score, ?array $ratingScale = null, bool $isOperator = false): string

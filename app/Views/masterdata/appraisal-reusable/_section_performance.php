@@ -138,9 +138,10 @@
                     <tr>
                         <th style="width: 50px; text-align: center;">NO</th>
                         <th style="width: 20%;">KOMPETENSI</th>
-                        <th style="width: 45%;">INDIKATOR PERILAKU</th>
-                        <th style="width: 15%; text-align: center;">SKOR PENILAI</th>
-                        <th style="width: 15%; text-align: center;">SKOR PENINJAU</th>
+                        <th style="width: 36%;">INDIKATOR PERILAKU</th>
+                        <th style="width: 13%; text-align: center;">SKOR PENILAI</th>
+                        <th style="width: 13%; text-align: center;">SKOR PENINJAU</th>
+                        <th style="width: 13%; text-align: center;">SKOR INTERVENSI HR</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -157,6 +158,7 @@
                                     $itemDef      = esc($item['definition'] ?? '-');
                                     $evalSubtotal = $item['eval_avg'] ?? 3.00;
                                     $gmSubtotal   = $item['reviewer_avg'] ?? null;
+                                    $hrSubtotal   = $item['hr_avg'] ?? null;
                                     $totalRowSpan = $hasActions ? $actionCount : 1;
                                 ?>
                                 <?php if ($hasActions): ?>
@@ -204,6 +206,25 @@
                                                     <span class="text-muted font-weight-normal">-</span>
                                                 <?php endif; ?>
                                             </td>
+                                            <td class="text-center align-middle font-weight-bold">
+                                                <?php
+                                                    $hrScore = $act['hr_score'] ?? null;
+                                                    $hrBase  = $gmScore !== null ? $gmScore : $evalScore;
+                                                    $hrStyle = 'color: #334155; font-weight: 700;';
+                                                    if ($hrScore !== null) {
+                                                        if (round($hrScore, 2) > round($hrBase, 2)) {
+                                                            $hrStyle = 'color: #059669; font-weight: 800; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;';
+                                                        } elseif (round($hrScore, 2) < round($hrBase, 2)) {
+                                                            $hrStyle = 'color: #dc2626; font-weight: 800; background: #fef2f2; padding: 2px 8px; border-radius: 4px;';
+                                                        }
+                                                    }
+                                                ?>
+                                                <?php if ($hrScore !== null): ?>
+                                                    <span style="<?= $hrStyle ?>"><?= number_format((float) $hrScore, 2) ?></span>
+                                                <?php else: ?>
+                                                    <span class="text-muted font-weight-normal">-</span>
+                                                <?php endif; ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
@@ -228,6 +249,22 @@
                                                     }
                                                 ?>
                                                 <span style="<?= $singleColor ?>"><?= number_format((float) $gmSubtotal, 2) ?></span>
+                                            <?php else: ?>
+                                                <span class="text-muted font-weight-normal">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-center align-middle font-weight-bold">
+                                            <?php if ($hrSubtotal !== null): ?>
+                                                <?php
+                                                    $hrBaseSub   = $gmSubtotal !== null ? $gmSubtotal : $evalSubtotal;
+                                                    $hrSingleClr = '';
+                                                    if (round($hrSubtotal, 2) > round($hrBaseSub, 2)) {
+                                                        $hrSingleClr = 'color: #059669; font-weight: 800; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;';
+                                                    } elseif (round($hrSubtotal, 2) < round($hrBaseSub, 2)) {
+                                                        $hrSingleClr = 'color: #dc2626; font-weight: 800; background: #fef2f2; padding: 2px 8px; border-radius: 4px;';
+                                                    }
+                                                ?>
+                                                <span style="<?= $hrSingleClr ?>"><?= number_format((float) $hrSubtotal, 2) ?></span>
                                             <?php else: ?>
                                                 <span class="text-muted font-weight-normal">-</span>
                                             <?php endif; ?>
@@ -260,12 +297,33 @@
                                             <span class="text-muted font-weight-normal">-</span>
                                         <?php endif; ?>
                                     </td>
+                                    <td class="text-center">
+                                        <?php if ($hrSubtotal !== null): ?>
+                                            <?php
+                                                $hrBaseChip  = $gmSubtotal !== null ? $gmSubtotal : $evalSubtotal;
+                                                $hrChipStyle = '';
+                                                $hrNumStyle  = 'color: var(--ap-ink); font-weight: 800;';
+                                                if (round($hrSubtotal, 2) > round($hrBaseChip, 2)) {
+                                                    $hrChipStyle = 'background: #ecfdf5; border-color: #a7f3d0;';
+                                                    $hrNumStyle  = 'color: #059669; font-weight: 800;';
+                                                } elseif (round($hrSubtotal, 2) < round($hrBaseChip, 2)) {
+                                                    $hrChipStyle = 'background: #fef2f2; border-color: #fecaca;';
+                                                    $hrNumStyle  = 'color: #dc2626; font-weight: 800;';
+                                                }
+                                            ?>
+                                            <span class="ap-avg-chip" style="<?= $hrChipStyle ?>">
+                                                <span class="ap-avg-num" style="<?= $hrNumStyle ?>"><?= number_format((float) $hrSubtotal, 2) ?></span>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted font-weight-normal">-</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
+                            <td colspan="6" class="text-center py-4 text-muted">
                                 Tidak ada butir indikator performa dalam template penilaian ini.
                             </td>
                         </tr>

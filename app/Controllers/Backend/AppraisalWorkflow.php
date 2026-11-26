@@ -130,38 +130,6 @@ class AppraisalWorkflow extends BaseController
     }
 
     /**
-     * POST /penilaian/kickbackReviewer/(:num)
-     * POST /performance-appraisal/workflow/kickbackReviewer/(:any)
-     * Reviewer kicks back form to evaluator with revision notes.
-     */
-    public function kickbackReviewer($id = null)
-    {
-        if (strpos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false) {
-            $json = $this->request->getJSON(true);
-            if (is_array($json)) {
-                $_POST = $json;
-            }
-        }
-
-        $post           = $this->request->getPost();
-        $kickbackReason = $post['kickback_reason'] ?? $post['reviewer_comment'] ?? $post['notes'] ?? $this->request->getVar('kickback_reason');
-
-        try {
-            $appraisal = $this->model->find((int) $id);
-            if (! $appraisal) {
-                return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
-            }
-
-            $userId    = $this->assertWorkflowActor($appraisal, 'REVIEWER');
-            $appraisal = $this->workflowService->kickbackByReviewer((int) $id, $userId, (string) $kickbackReason);
-
-            return $this->response->setJSON(message('success', true, 'Form penilaian berhasil dikembalikan ke Penilai untuk direvisi.', $appraisal));
-        } catch (\Throwable $e) {
-            return $this->response->setJSON(message('error', false, $e->getMessage()));
-        }
-    }
-
-    /**
      * POST /sas/performance-appraisal/workflow/acknowledgeEmployee/(:num)
      * Employee acknowledges form to finalize workflow.
      */
@@ -199,9 +167,44 @@ class AppraisalWorkflow extends BaseController
     public function auditLogs($id = null)
     {
         try {
+            $appraisal = $this->model->find((int) $id);
+            if (! $appraisal) {
+                return $this->response->setJSON(message('error', false, 'Form penilaian tidak ditemukan.'));
+            }
+
+            $userId       = (int) ($this->access->getSessionUser() ?? $this->session->get('sys_user_id') ?? 0);
+            $currentEmpId = (int) ($this->session->get('md_employee_id') ?? 0);
+            if ($currentEmpId <= 0 && $userId > 0) {
+                $userRow = \Config\Database::connect()->table('sys_user')
+                    ->select('md_employee_id')
+                    ->where('sys_user_id', $userId)
+                    ->get()
+                    ->getRowArray();
+                $currentEmpId = (int) ($userRow['md_employee_id'] ?? 0);
+            }
+            $role         = $this->access->getRole();
+            $roleName     = $role ? $role->getName() : '';
+            $isAdmin      = (bool) $this->access->getUserRoleName($userId, 'W_Emp_All_Data')
+                || (bool) $this->access->getUserRoleName($userId, 'W_Emp_Admin')
+                || in_array($roleName, ['Admin', 'Super HRD', 'DEVELOPER', 'ADMINISTRATOR'], true);
+
+            $isParticipant = $currentEmpId > 0 && in_array($currentEmpId, [
+                (int) $appraisal->md_employee_id,
+                (int) $appraisal->snapshot_evaluator_id,
+                (int) $appraisal->snapshot_reviewer_id,
+            ], true);
+            $isDuta = ! $isParticipant && $this->workflowService->isDutaForEmployeeWithoutUser($userId, (int) $appraisal->md_employee_id);
+
+            if (! $isAdmin && ! $isParticipant && ! $isDuta) {
+                throw new UnAuthorizedException('Anda tidak memiliki hak akses untuk melihat riwayat log penilaian ini.');
+            }
+
             $logs = $this->workflowService->getAuditLogs((int) $id);
 
-            return $this->response->setJSON(message('success', true, 'Audit log berhasil dimuat.', $logs));
+            $res = message('success', true, 'Audit log berhasil dimuat.');
+            $res[0]['data'] = $logs;
+
+            return $this->response->setJSON($res);
         } catch (\Throwable $e) {
             return $this->response->setJSON(message('error', false, $e->getMessage()));
         }

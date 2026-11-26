@@ -8,7 +8,6 @@ use App\Exceptions\ValidationException;
 use App\Models\M_Appraisal;
 use App\Models\M_AppraisalCycle;
 use App\Models\M_AppraisalTemplate;
-use App\Models\M_AppraisalResponse;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 
 class AppraisalGeneratorServices extends BaseServices
@@ -16,7 +15,6 @@ class AppraisalGeneratorServices extends BaseServices
     protected M_AppraisalCycle $cycleModel;
     protected M_Appraisal $appraisalModel;
     protected M_AppraisalTemplate $templateModel;
-    protected M_AppraisalResponse $responseModel;
     protected AppraisalTemplateResolverServices $resolverService;
     protected \App\Models\M_Employee $employeeModel;
 
@@ -26,7 +24,6 @@ class AppraisalGeneratorServices extends BaseServices
         $this->cycleModel      = new M_AppraisalCycle();
         $this->appraisalModel  = new M_Appraisal();
         $this->templateModel   = new M_AppraisalTemplate();
-        $this->responseModel   = new M_AppraisalResponse();
         $this->resolverService = new AppraisalTemplateResolverServices();
         $this->employeeModel   = new \App\Models\M_Employee();
     }
@@ -177,26 +174,7 @@ class AppraisalGeneratorServices extends BaseServices
                 $appraisal->created_by            = $userId;
                 $appraisal->updated_by            = $userId;
 
-                $appraisalId = $this->appraisalModel->insert($appraisal, true);
-
-                // 5. Pre-seed Appraisal Detail Responses
-                $responseBatch = [];
-                foreach ($cachedData['items'] as $item) {
-                    $itemId = $item['md_appraisal_template_item_id'] ?? $item['template_item_id'] ?? null;
-                    if ($itemId) {
-                        $responseBatch[] = [
-                            'md_appraisal_id'               => $appraisalId,
-                            'md_appraisal_template_item_id' => $itemId,
-                            'isactive'                      => 'Y',
-                            'created_by'                    => $userId,
-                            'updated_by'                    => $userId,
-                        ];
-                    }
-                }
-
-                if (! empty($responseBatch)) {
-                    $db->table('md_appraisal_response')->insertBatch($responseBatch);
-                }
+                $this->appraisalModel->insert($appraisal, true);
 
                 if ($db->transStatus() === false) {
                     $db->transRollback();

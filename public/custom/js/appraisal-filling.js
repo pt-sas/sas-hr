@@ -552,10 +552,13 @@
                         var notes = log.notes || '-';
 
                         var badgeClass = '';
-                        if (actionTitle === 'KICKBACK_REVIEWER' || actionTitle === 'KICKBACK_GM') badgeClass = 'is-danger';
-                        else if (actionTitle === 'REVIEWER_OVERRIDE_ITEM' || actionTitle === 'GM_OVERRIDE_ITEM') badgeClass = 'is-warning';
-                        else if (actionTitle === 'UPDATE_ITEM_SCORE') badgeClass = 'is-info';
-                        else if (actionTitle === 'ACKNOWLEDGE_EMPLOYEE') badgeClass = 'is-success';
+                        if (actionTitle === 'HR_INTERVENTION') badgeClass = 'is-warning';
+                        else if (actionTitle === 'SUBMIT_EVALUATOR' || actionTitle === 'REVIEW') badgeClass = 'is-info';
+                        else if (actionTitle === 'ACKNOWLEDGE_EMPLOYEE' || actionTitle === 'ACKNOWLEDGE_DUTA') badgeClass = 'is-success';
+
+                        var statusHtml = (log.from_status || log.to_status)
+                            ? '<div class="ap-timeline-actor"><strong>Status:</strong> ' + $('<div>').text((log.from_status || '-') + ' → ' + (log.to_status || '-')).html() + '</div>'
+                            : '';
 
                         html += '<li class="ap-timeline-item">' +
                             '<div class="ap-timeline-head">' +
@@ -563,6 +566,7 @@
                                 '<span class="ap-timeline-time"><i class="far fa-clock mr-1"></i>' + $('<div>').text(timeStr).html() + '</span>' +
                             '</div>' +
                             '<div class="ap-timeline-actor"><strong>Aktor:</strong> ' + $('<div>').text(actor).html() + '</div>' +
+                            statusHtml +
                             '<div class="ap-timeline-note">' + $('<div>').text(notes).html() + '</div>' +
                         '</li>';
                     });

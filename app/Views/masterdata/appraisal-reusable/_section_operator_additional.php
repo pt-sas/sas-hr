@@ -4,6 +4,7 @@
 
     if ($displayMode === 'compare') {
         $isReviewed  = ! empty($is_reviewer_reviewed);
+        $isHr        = ! empty($is_hr_intervened);
         $singleItems = $single_items ?? [];
     } else {
         $sections = $template_snapshot['sections'] ?? [];
@@ -71,9 +72,10 @@
                 <thead>
                     <tr>
                         <th style="width: 50px; text-align: center;">NO</th>
-                        <th style="width: 65%;">KRITERIA</th>
-                        <th style="width: 15%; text-align: center;">PENILAI</th>
-                        <th style="width: 15%; text-align: center;">PENINJAU</th>
+                        <th style="width: 56%;">KRITERIA</th>
+                        <th style="width: 13%; text-align: center;">PENILAI</th>
+                        <th style="width: 13%; text-align: center;">PENINJAU</th>
+                        <th style="width: 13%; text-align: center;">HR</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -83,8 +85,10 @@
                                 $isOtherRow      = ! empty($row['is_other']);
                                 $evalChecked     = ! empty($row['eval_checked']);
                                 $reviewerChecked = ! empty($row['reviewer_checked']);
+                                $hrChecked       = ! empty($row['hr_checked']);
                                 $evalOther       = $row['eval_other_text'] ?? '';
                                 $reviewerOther   = $row['reviewer_other_text'] ?? '';
+                                $hrOther         = $row['hr_other_text'] ?? '';
                             ?>
                             <tr>
                                 <td class="text-center font-weight-bold align-middle" style="width: 50px; background: var(--ap-surface);"><?= $idx + 1 ?>.</td>
@@ -93,7 +97,7 @@
                                         <div class="ap-action-text">
                                             <span class="font-weight-bold">Lainnya :</span>
                                             <span class="font-italic text-muted">
-                                                <?= ! empty($reviewerOther ?: $evalOther) ? esc($reviewerOther ?: $evalOther) : '-' ?>
+                                                <?= ! empty($hrOther ?: $reviewerOther ?: $evalOther) ? esc($hrOther ?: $reviewerOther ?: $evalOther) : '-' ?>
                                             </span>
                                         </div>
                                     <?php else: ?>
@@ -120,11 +124,22 @@
                                         <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
                                     <?php endif; ?>
                                 </td>
+                                <td class="text-center align-middle">
+                                    <?php if ($isHr): ?>
+                                        <?php if ($hrChecked): ?>
+                                            <span style="color: #16a34a; font-weight: 800; font-size: 14px; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">&check;</span>
+                                        <?php else: ?>
+                                            <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <span class="text-muted" style="font-size: 13px; font-weight: 600;">&mdash;</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="4" class="text-center py-4 text-muted">
+                            <td colspan="5" class="text-center py-4 text-muted">
                                 Tidak ada butir kriteria tambahan dalam template penilaian ini.
                             </td>
                         </tr>

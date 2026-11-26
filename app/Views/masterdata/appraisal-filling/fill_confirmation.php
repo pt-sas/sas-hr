@@ -2,7 +2,7 @@
 <div class="ap-card" id="card_section_confirmation">
     <div class="ap-card-head">
         <h5 class="ap-card-title">
-            V. Pernyataan Konfirmasi &amp; Pengajuan
+            <?= esc($confirm_section_number ?? 'V') ?>. Pernyataan Konfirmasi &amp; Pengajuan
         </h5>
     </div>
 

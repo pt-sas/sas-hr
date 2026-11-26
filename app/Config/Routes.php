@@ -983,7 +983,6 @@ $routes->group('sas', ['filter' => 'auth'], function ($routes) {
     $routes->post('penilaian/saveDraft/(:num)', 'Backend\AppraisalEvaluation::saveDraft/$1');
     $routes->post('penilaian/submit/(:num)', 'Backend\AppraisalEvaluation::submit/$1');
     $routes->post('penilaian/reviewReviewer/(:num)', 'Backend\AppraisalWorkflow::reviewReviewer/$1');
-    $routes->post('penilaian/kickbackReviewer/(:num)', 'Backend\AppraisalWorkflow::kickbackReviewer/$1');
     $routes->post('penilaian/acknowledgeEmployee/(:num)', 'Backend\AppraisalWorkflow::acknowledgeEmployee/$1');
     $routes->match(['get', 'post'], 'penilaian/auditLogs/(:num)', 'Backend\AppraisalWorkflow::auditLogs/$1');
 });
