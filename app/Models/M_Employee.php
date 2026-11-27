@@ -108,11 +108,11 @@ class M_Employee extends Model
 	protected $db;
 	protected $builder;
 
-	public function __construct(RequestInterface $request)
+	public function __construct(?RequestInterface $request = null)
 	{
 		parent::__construct();
 		$this->db = db_connect();
-		$this->request = $request;
+		$this->request = $request ?? \Config\Services::request();
 		$this->builder = $this->db->table($this->table);
 	}
 
@@ -413,4 +413,31 @@ class M_Employee extends Model
 
 		return $result;
 	}
+
+	public function getAppraisalHierarchy($employeeId)
+	{
+		$employee = $this->where('md_employee_id', $employeeId)->first();
+		if (!$employee) {
+			return ['manager_id' => 0, 'reviewer_id' => 0];
+		}
+
+		$managerId = $this->getEmployeeManagerID($employeeId);
+		if (!$managerId && !empty($employee->superior_id)) {
+			$managerId = $employee->superior_id;
+		}
+
+		$reviewerId = 0;
+		if ($managerId) {
+			$manager = $this->where('md_employee_id', $managerId)->first();
+			if ($manager && !empty($manager->superior_id)) {
+				$reviewerId = $manager->superior_id;
+			}
+		}
+
+		return [
+			'manager_id'  => $managerId ?: 0,
+			'reviewer_id' => $reviewerId ?: 0,
+		];
+	}
+
 }

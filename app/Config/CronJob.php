@@ -152,5 +152,8 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
 
         // Promosi/Demosi
         $schedule->url(env("app.baseURL") . "/cron-update-promodemo")->named("CronUpdatePromoDemo")->daily("00:30");
+
+        // Appraisal Daily Nudge (H-3, H-1, Overdue)
+        $schedule->url(env("app.baseURL") . "cron-appraisal-nudge")->named("CronAppraisalNudge")->daily("08:30 am");
     }
 }
