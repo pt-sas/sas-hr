@@ -22,8 +22,11 @@ class Dashboard extends BaseController
     // Super user role IDs (awn Admin & Role_Super_HRD)
     protected array $superRoleIds = [1, 90];
 
-    // Managerial levellings (Direksi, GM, Manager, SPV)
-    protected array $managerialLevellings = [100001, 100002, 100003, 100004];
+    // Managerial levellings (Direksi, GM, Manager — full submission & card inspection access)
+    protected array $managerialLevellings = [100001, 100002, 100003];
+
+    // Team Attendance card visibility (includes SPV for aggregate team counts)
+    protected array $teamCardLevellings = [100001, 100002, 100003, 100004];
 
     // Submission document statuses
     protected array $pendingDocStatuses   = ['DR', 'RQ', 'IP', 'RE', 'RO', 'XL'];
@@ -831,6 +834,8 @@ class Dashboard extends BaseController
         $levellingId = $this->resolveEmployeeLevellingId();
 
         $canViewTeamCard = in_array($roleId, $this->superRoleIds, true) 
+            || in_array($levellingId, $this->teamCardLevellings, true);
+        $canViewTeamNames = in_array($roleId, $this->superRoleIds, true)
             || in_array($levellingId, $this->managerialLevellings, true);
 
         if (!$canViewTeamCard) {
@@ -1100,9 +1105,9 @@ class Dashboard extends BaseController
                 $teamRate          = $isTargetFuture ? null : $stats['rate'];
                 $teamOnLeave       = $stats['on_leave'];
 
-                // Query names of subordinates on approved leave on $today
+                // Query names of subordinates on approved leave on $today (Manager+ & Super Roles only)
                 $teamLeaveNames = [];
-                if (!empty($subordinateIds)) {
+                if ($canViewTeamNames && !empty($subordinateIds)) {
                     $leaveRows = $this->db->table('v_all_submission s')
                         ->select('e.fullname')
                         ->join('md_employee e', 'e.md_employee_id = s.md_employee_id', 'inner')
@@ -1117,7 +1122,7 @@ class Dashboard extends BaseController
                 }
 
                 $teamAbsentNames = [];
-                if (!$isTargetFuture) {
+                if ($canViewTeamNames && !$isTargetFuture) {
                     $dayOfWeek = (int) (new \DateTime($today))->format('N');
                     $isHoliday = isset($offDaysMap[$today]);
                     foreach ($subordinateIds as $empId) {
@@ -1267,8 +1272,7 @@ class Dashboard extends BaseController
     private function getPendingApprovalsData(int $employeeId, string $rangeEnd): array
     {
         $roleId   = (int) (session()->get('sys_role_id') ?? 0);
-        $roleName = $this->resolveRoleName($roleId);
-        $isSuper  = in_array($roleId, $this->superRoleIds, true) || (strpos($roleName, 'HRD') !== false);
+        $isSuper  = in_array($roleId, $this->superRoleIds, true);
 
         $cacheKey = "dash_pending_{$employeeId}_{$roleId}_{$rangeEnd}";
         $isBypass = !empty($this->request->getGet('refresh'));
@@ -1525,7 +1529,7 @@ class Dashboard extends BaseController
             $levels['team'] = 'Tim Saya';
         }
 
-        if (in_array($roleId, $this->superRoleIds, true) || $levellingId === 100001 || strpos($roleName, 'HRD') !== false) {
+        if (in_array($roleId, $this->superRoleIds, true) || $levellingId === 100001) {
             $levels['all'] = 'Semua';
         }
 
@@ -1534,9 +1538,17 @@ class Dashboard extends BaseController
             $currentLevel = array_key_first($levels);
         }
 
-        $access    = $this->resolveEmployeeAccess((string) $employeeId);
-        $branches  = $access['branches'];
-        $divisions = $access['divisions'];
+        $hasScopeAccess = in_array($roleId, $this->superRoleIds, true)
+            || in_array($levellingId, $this->managerialLevellings, true);
+
+        if ($hasScopeAccess) {
+            $access    = $this->resolveEmployeeAccess((string) $employeeId);
+            $branches  = $access['branches'];
+            $divisions = $access['divisions'];
+        } else {
+            $branches  = [];
+            $divisions = [];
+        }
 
         return [
             'levels'        => $levels,
@@ -1577,10 +1589,12 @@ class Dashboard extends BaseController
                 return $this->response->setJSON($cached);
             }
 
-            $isHrd          = (strpos($roleName, 'HRD') !== false);
-            $hasSuperAccess = in_array($roleId, $this->superRoleIds, true) || $levellingId === 100001 || $isHrd;
+            $hasSuperAccess             = in_array($roleId, $this->superRoleIds, true) || $levellingId === 100001;
+            $hasManagerialCalendarScope = $hasSuperAccess || in_array($levellingId, $this->managerialLevellings, true);
 
-            $myAccess    = $this->resolveEmployeeAccess((string) $employeeId);
+            $myAccess    = $hasManagerialCalendarScope
+                ? $this->resolveEmployeeAccess((string) $employeeId)
+                : $this->resolveEmployeeHomeScope((int) $employeeId);
             $myBranchIds = array_map('strval', array_column($myAccess['branches'], 'id'));
             $myDivIds    = array_map('strval', array_column($myAccess['divisions'], 'id'));
 
@@ -1593,8 +1607,8 @@ class Dashboard extends BaseController
                 $allTeamIds = [$employeeId];
             }
 
-            $selectedBranch = (!empty($branchId) && $branchId !== 'all') ? (string) $branchId : null;
-            $selectedDiv    = (!empty($divisionId) && $divisionId !== 'all') ? (string) $divisionId : null;
+            $selectedBranch = ($hasManagerialCalendarScope && !empty($branchId) && $branchId !== 'all') ? (string) $branchId : null;
+            $selectedDiv    = ($hasManagerialCalendarScope && !empty($divisionId) && $divisionId !== 'all') ? (string) $divisionId : null;
             $isFiltering    = ($selectedBranch !== null) || ($selectedDiv !== null);
 
             if ($hasSuperAccess && !$isFiltering && ($scope === 'all' || empty($scope) || empty($employeeId))) {
@@ -1661,8 +1675,7 @@ class Dashboard extends BaseController
 
             $subCats = array_intersect($categories, ['leave', 'team']);
             $canViewSubmissions = in_array($roleId, $this->superRoleIds, true) 
-                || in_array($levellingId, $this->managerialLevellings, true)
-                || $isHrd;
+                || in_array($levellingId, $this->managerialLevellings, true);
 
             if (!empty($subCats)) {
                 $builder = $this->db->table('v_all_submission s')
@@ -2582,5 +2595,33 @@ class Dashboard extends BaseController
             ->where('m.isactive', 'Y')
             ->orderBy('m.name', 'ASC')
             ->get()->getResultArray();
+    }
+
+    /**
+     * Resolves an employee's own home branch & division (ignoring sys_user_*access).
+     */
+    private function resolveEmployeeHomeScope(int $employeeId): array
+    {
+        if ($employeeId <= 0) {
+            return ['branches' => [], 'divisions' => []];
+        }
+
+        $branches = $this->db->table('md_branch b')
+            ->select('b.md_branch_id as id, b.name')
+            ->join('md_employee_branch eb', 'eb.md_branch_id = b.md_branch_id AND eb.isactive = "Y"', 'inner')
+            ->where('eb.md_employee_id', $employeeId)
+            ->where('b.isactive', 'Y')
+            ->orderBy('b.name', 'ASC')
+            ->get()->getResultArray();
+
+        $divisions = $this->db->table('md_division d')
+            ->select('d.md_division_id as id, d.name')
+            ->join('md_employee_division ed', 'ed.md_division_id = d.md_division_id AND ed.isactive = "Y"', 'inner')
+            ->where('ed.md_employee_id', $employeeId)
+            ->where('d.isactive', 'Y')
+            ->orderBy('d.name', 'ASC')
+            ->get()->getResultArray();
+
+        return ['branches' => $branches, 'divisions' => $divisions];
     }
 }
