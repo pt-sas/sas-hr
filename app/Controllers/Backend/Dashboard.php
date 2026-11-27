@@ -5,11 +5,30 @@ namespace App\Controllers\Backend;
 use App\Controllers\BaseController;
 use App\Models\M_Employee;
 use App\Models\M_LeaveBalance;
-use App\Controllers\Backend\DashboardHelper;
 
 class Dashboard extends BaseController
 {
     protected $db;
+
+    private array $debugLog = [];
+    public array $rangeQueryStats = [];
+    private ?int $resolvedLevellingId = null;
+    private ?string $resolvedRoleName = null;
+
+    // Configurable engine thresholds
+    private int $lateToleranceMinutes = 1;  // 5-minute late grace period
+    private int $tapDeduplicationSec  = 60; // Ignore rapid biometric taps within 60 seconds
+
+    // Super user role IDs (awn Admin & Role_Super_HRD)
+    protected array $superRoleIds = [1, 90];
+
+    // Managerial levellings (Direksi, GM, Manager, SPV)
+    protected array $managerialLevellings = [100001, 100002, 100003, 100004];
+
+    // Submission document statuses
+    protected array $pendingDocStatuses   = ['DR', 'RQ', 'IP', 'RE', 'RO', 'XL'];
+    protected array $completedDocStatuses = ['AP', 'CO'];
+    protected array $closedDocStatuses    = ['NA', 'VO', 'IN', 'OS', 'AB'];
 
     // TODO : Define this
     protected array $submissionTypes = [
@@ -28,11 +47,271 @@ class Dashboard extends BaseController
     public function index()
     {
         // ---------------------------------------------------------
-        // Date & Mode Parameter Processing
+        // Query Tracking via CI4 native DBQuery event
         // ---------------------------------------------------------
+        $totalQueries = 0;
+        \CodeIgniter\Events\Events::on('DBQuery', static function () use (&$totalQueries) {
+            $totalQueries++;
+        });
+
+        $reqStartTime  = microtime(true);
+        $sectionTimers = [];
+        $lastTime      = $reqStartTime;
+        $lastQ         = 0;
+
+        $checkpoint = function (string $sectionName) use (&$sectionTimers, &$lastTime, &$lastQ, &$totalQueries) {
+            $nowTime = microtime(true);
+            $nowQ    = $totalQueries;
+
+            $sectionTimers[$sectionName] = [
+                'time_ms' => round(($nowTime - $lastTime) * 1000, 2),
+                'queries' => $nowQ - $lastQ,
+            ];
+
+            $lastTime = $nowTime;
+            $lastQ    = $nowQ;
+        };
+
+        // 1. Date & Mode Parameter Processing
+        $dateParams   = $this->resolveDateParameters();
+        $mode         = $dateParams['mode'];
+        $dt           = $dateParams['dt'];
+        $today        = $dateParams['today'];
+        $currentMonth = $dateParams['currentMonth'];
+        $currentYear  = $dateParams['currentYear'];
+        $prevDate     = $dateParams['prevDate'];
+        $nextDate     = $dateParams['nextDate'];
+        $rangeStart   = $dateParams['rangeStart'];
+        $rangeEnd     = $dateParams['rangeEnd'];
+        $dateLabel    = $dateParams['dateLabel'];
+        $wStart       = $dateParams['wStart'];
+
+        // 2. Employee Identity
+        $employeeName = $this->access->getUser('name') ?? $this->access->getUser('username');
+        $employeeId   = session()->get('md_employee_id');
+        $levellingId  = $this->resolveEmployeeLevellingId($employeeId ? (int) $employeeId : null);
+        $nik          = $this->resolveEmployeeNik($employeeId ? (int) $employeeId : null);
+
+        // Pre-fetch shared holidays & mass leaves
+        $holidayRows   = $this->fetchHolidayRows($rangeEnd);
+        $massLeaveRows = $this->fetchMassLeaveRows($rangeEnd);
+
+        // Component Data Containers (Hardened Defaults)
+        $personalAtt   = [];
+        $teamStats     = [];
+        $leaveData     = ['balance' => 0, 'available_leave' => 0];
+        $pendingData   = [
+            'pending_approvals' => 0,
+            'pending_summary'   => 'Tidak ada pengajuan berjalan',
+            'pending_full'      => 'Tidak ada pengajuan berjalan',
+            'pending_breakdown' => []
+        ];
+        $calEvents     = [];
+        $announcements = [];
+        $greetingData  = [];
+        $scopeData     = [
+            'levels'        => ['me' => 'Saya'],
+            'current_level' => 'me',
+            'branches'      => [],
+            'divisions'     => []
+        ];
+
+        if (!empty($employeeId) && !empty($nik)) {
+            // 3. Personal Attendance Calculation
+            $personalAtt = $this->calculatePersonalAttendance(
+                (int) $employeeId,
+                (string) $nik,
+                $today,
+                $rangeStart,
+                $rangeEnd,
+                $holidayRows,
+                $massLeaveRows
+            );
+            $checkpoint('1_attendance_engine');
+
+            // 5. Leave Balance Calculation
+            $leaveData = $this->getLeaveBalanceData((int) $employeeId, $today, $currentYear);
+            $checkpoint('3_leave_balance');
+        }
+
+        // 4. Team / Company Attendance Stats (Accessible for Managers & Super Admins)
+        $teamStats = $this->calculateTeamAttendanceStats(
+            (int) ($employeeId ?? 0),
+            $mode,
+            $today,
+            $currentYear,
+            $currentMonth,
+            $wStart,
+            $holidayRows,
+            $massLeaveRows
+        );
+        $checkpoint('2_team_stats');
+
+        // 6. Pending Approvals (Own submissions for employees, Company-wide for Super Admins)
+        $pendingData = $this->getPendingApprovalsData((int) ($employeeId ?? 0), $rangeEnd);
+        $checkpoint('4_pending_approvals');
+
+        // 7. Calendar Subordinates & Birthday Events
+        // $calSubordinateIds = $teamStats['subordinate_ids'] ?? [];
+        // if ($employeeId && !in_array((int) $employeeId, array_map('intval', $calSubordinateIds), true)) {
+        //     $calSubordinateIds[] = (int) $employeeId;
+        // }
+        // $calEvents = $this->getSubordinateCalendarEvents($calSubordinateIds, $currentYear);
+        $checkpoint('5_calendar_birthdays');
+
+        // 8. Announcements
+        $announcements = $this->getUnreadAnnouncements((int) ($employeeId ?? 0), 25);
+        $checkpoint('6_announcements');
+
+        // 9. Greetings & Personalization
+        $greetingData = $this->getEmployeeGreetingData((int) ($employeeId ?? 0));
+        $checkpoint('7_greetings');
+
+        // 10. Scope Levels & Access Lookup
+        $scopeData = $this->resolveDashboardScope((int) ($employeeId ?? 0), $teamStats['subordinate_ids'] ?? []);
+        $checkpoint('8_access_resolution');
+
+        $todayDate = $today ?? date('Y-m-d');
+
+        $rawDisplayName = $greetingData['greeting_row']['fullname'] ?? ($employeeName ?? 'Karyawan');
+        $normalizedEmployeeName = !empty($rawDisplayName) ? ucwords(strtolower(trim($rawDisplayName))) : 'Karyawan';
+
+        $data = [
+            // Employee Profile & Greeting Header
+            'employee_id'       => $employeeId ? (int) $employeeId : 0,
+            'levelling_id'      => $levellingId,
+            'nik'               => $nik,
+            'employee_name'     => $normalizedEmployeeName,
+            'employee_nickname' => $greetingData['employee_nickname'] ?? $normalizedEmployeeName,
+            'employee_photo'    => $greetingData['employee_photo'] ?? null,
+            'employee_position' => $greetingData['employee_position'] ?? '-',
+            'salutation'        => $greetingData['salutation'] ?? null,
+            'is_birthday'       => $greetingData['is_birthday'] ?? false,
+            'work_anniversary'  => $greetingData['work_anniversary'] ?? null,
+            'tenure_text'       => $greetingData['tenure_text'] ?? null,
+            'supervisor_name'   => $greetingData['supervisor_name'] ?? '-',
+            'checkin_url'       => site_url('attendance/checkin'),
+            'leave_remaining'   => $leaveData['available_leave'] ?? 0,
+            'leave_total'       => $leaveData['balance'] ?? 0,
+            'calendar_events'   => $calEvents,
+            'announcements'     => $announcements,
+
+            // Attendance Raw Data & Summary
+            'have_clock_in'     => $personalAtt['have_clock_in'] ?? false,
+            'have_clock_out'    => $personalAtt['have_clock_out'] ?? false,
+            'clock_in_time'     => $personalAtt['clock_in_time'] ?? null,
+            'clock_out_time'    => $personalAtt['clock_out_time'] ?? null,
+            'today_checkin'     => (!empty($personalAtt['have_clock_in']) && !empty($personalAtt['clock_in_time'])) ? $personalAtt['clock_in_time'] : null,
+            'today_checkout'    => (!empty($personalAtt['have_clock_out']) && !empty($personalAtt['clock_out_time'])) ? $personalAtt['clock_out_time'] : null,
+            'schedule_range'    => $personalAtt['schedule_range'] ?? '-',
+            'branch_name'       => $personalAtt['branch_name'] ?? '-',
+            'attendance_status' => $personalAtt['attendance_status'] ?? '-',
+            'tkh_allowance'     => $personalAtt['tkh_allowance'] ?? 0,
+
+            // Personal Attendance Card (box_attendance.php)
+            'mode'              => $mode ?? 'day',
+            'label'             => $dateLabel ?? ('Hari ini, ' . date('d M Y', strtotime($todayDate))),
+            'attendance_days'   => $personalAtt['attendance_days'] ?? 0,     // x in x/y (Hadir)
+            'work_days'         => $personalAtt['target_work_days'] ?? 0,    // y in x/y (Total target kerja)
+            'work_days_elapsed'   => $personalAtt['elapsed_work_days'] ?? 0,   // Hari kerja berlalu
+            'my_rate'             => $personalAtt['my_rate'] ?? null,                  // Attendance % (null for future period)
+            'my_is_future'        => $personalAtt['is_future'] ?? false,
+            'my_is_future_period' => $personalAtt['is_future_period'] ?? false,
+            'my_leave_count'      => $personalAtt['my_leave_count'] ?? 0,       // Total Izin / Cuti
+            'my_absent_count'     => $personalAtt['my_absent_count'] ?? 0,      // Total Alpa / Tidak Hadir
+            'my_is_alpa'          => $personalAtt['my_is_alpa'] ?? false,
+            'my_absent_label'     => $personalAtt['my_absent_label'] ?? 'tidak hadir',
+            'my_absent_tone'      => $personalAtt['my_absent_tone'] ?? 'secondary',
+            'late_count'          => $personalAtt['total_late'] ?? 0,          // Total Terlambat + Tidak Lengkap
+            'incomplete_count'    => $personalAtt['incomplete_count'] ?? 0,    // Tanpa Absen Masuk / Pulang
+            'overtime_count'      => $personalAtt['overtime_count'] ?? 0,      // Total Hari Lembur
+            'my_streak'           => 0,                                        // Streak beruntun
+
+            // Text & UI Theme Keys for box_attendance.php
+            'my_status_text'      => $personalAtt['my_status_text'] ?? '-',
+            'my_clock_in_text'    => $personalAtt['my_clock_in_text'] ?? '--:--',
+            'my_clock_out_text'   => $personalAtt['my_clock_out_text'] ?? '--:--',
+            'my_punctuality_text' => $personalAtt['my_punctuality_text'] ?? '-',
+            'my_tone'             => $personalAtt['my_tone'] ?? 'neutral',
+            'my_shift_start'      => $personalAtt['my_shift_start'] ?? null,
+            'my_shift_end'        => $personalAtt['my_shift_end'] ?? null,
+            'my_clock_in_raw'     => $personalAtt['my_clock_in_raw'] ?? null,
+            'my_clock_out_raw'    => $personalAtt['my_clock_out_raw'] ?? null,
+            'my_days'             => [],
+            'my_ontime_count'     => $personalAtt['ontime_count'] ?? 0,
+
+            // Team Attendance Stats
+            'team_total'          => $teamStats['team_total'] ?? 0,
+            'team_present'        => $teamStats['team_present'] ?? 0,
+            'team_on_leave'       => $teamStats['team_on_leave'] ?? 0,
+            'team_rate'           => isset($teamStats['team_rate']) && $teamStats['team_rate'] !== null ? min(100, (float)$teamStats['team_rate']) : null,
+            'team_trend'          => is_array($teamStats['team_trend'] ?? null) ? $teamStats['team_trend'] : [],
+            'team_is_future'      => $teamStats['team_is_future'] ?? false,
+            'team_leave_names'    => $teamStats['team_leave_names'] ?? [],
+            'team_absent_names'   => $teamStats['team_absent_names'] ?? [],
+            'show_team_card'      => $teamStats['can_view_team_card'] ?? false,
+
+            // Filters & Scope
+            'levels'            => $scopeData['levels'] ?? ['me' => 'Saya'],
+            'level'             => $scopeData['current_level'] ?? 'me',
+            'divisions'         => $scopeData['divisions'] ?? [],
+            'branches'          => $scopeData['branches'] ?? [],
+
+            'selected_branch'   => null,
+            'selected_division' => null,
+
+            // Date Picker (date_picker.php)
+            'date'              => (isset($dt) && $dt instanceof \DateTimeInterface) ? $dt->format('Y-m-d') : $todayDate,
+            'today'             => $todayDate,
+            'todayDate'         => $todayDate,
+            'dateLabel'         => $dateLabel ?? date('F Y', strtotime($todayDate)),
+            'prevDate'          => $prevDate ?? date('Y-m-d', strtotime('-1 day', strtotime($todayDate))),
+            'nextDate'          => $nextDate ?? date('Y-m-d', strtotime('+1 day', strtotime($todayDate))),
+            'rangeStart'        => $rangeStart ?? date('Y-m-01', strtotime($todayDate)),
+            'rangeEnd'          => $rangeEnd ?? date('Y-m-t', strtotime($todayDate)),
+
+            // Pending Approvals Summary
+            'pending_approvals' => $pendingData['pending_approvals'] ?? 0,
+            'pending_summary'   => $pendingData['pending_summary'] ?? 'Tidak ada pengajuan berjalan',
+            'pending_full'      => $pendingData['pending_full'] ?? 'Tidak ada pengajuan berjalan',
+            'pending_breakdown' => $pendingData['pending_breakdown'] ?? [],
+        ];
+
+        // Debug Output
+        if ($this->request->getGet('debug') === '1') {
+            $checkpoint('9_data_assembly');
+
+            $data['baseline_metrics'] = [
+                'mode'               => $mode,
+                'total_time_ms'      => round((microtime(true) - $reqStartTime) * 1000, 2),
+                'total_queries'      => $totalQueries,
+                'sections'           => $sectionTimers,
+                'engine_loop_daily'  => $this->rangeQueryStats,
+            ];
+
+            return $this->response->setJSON($data);
+        }
+
+        // Ajax Refresh
+        if ($this->request->isAJAX() || $this->request->getGet('ajax') === '1') {
+            return $this->response->setJSON($data);
+        }
+
+        return $this->template->render('dashboard/v_dashboard', $data);
+    }
+
+    // -------------------------------------------------------------------------
+    // Index Decomposed Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Resolves date & period parameters for day, week, and month modes.
+     */
+    private function resolveDateParameters(): array
+    {
         $mode = $this->request->getGet('mode');
         if (!in_array($mode, ['day', 'week', 'month'], true)) {
-            $mode = 'month';
+            $mode = 'day';
         }
 
         $rawDate = $this->request->getGet('date') ?? $this->request->getGet('period') ?? date('Y-m-d');
@@ -54,6 +333,7 @@ class Dashboard extends BaseController
         $months = ['01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr','05'=>'Mei','06'=>'Jun','07'=>'Jul','08'=>'Agu','09'=>'Sep','10'=>'Okt','11'=>'Nov','12'=>'Des'];
         $days   = ['Sun'=>'Ming','Mon'=>'Sen','Tue'=>'Sel','Wed'=>'Rab','Thu'=>'Kam','Fri'=>'Jum','Sat'=>'Sab'];
 
+        $wStart = null;
         if ($mode === 'day') {
             $prevDate   = (clone $dt)->modify('-1 day')->format('Y-m-d');
             $nextDate   = (clone $dt)->modify('+1 day')->format('Y-m-d');
@@ -76,7 +356,7 @@ class Dashboard extends BaseController
                 $dateLabel = $wStart->format('j') . ' ' . ($months[$wStart->format('m')] ?? $wStart->format('M'))
                            . ' – ' . $wEnd->format('j') . ' ' . ($months[$wEnd->format('m')] ?? $wEnd->format('M')) . ' ' . $wEnd->format('Y');
             } else {
-                $dateLabel = $wStart->format('j') . ' – ' . $wEnd->format('j') . ' ' . ($months[$wEnd->format('m')] ?? $wEnd->format('M')) . ' ' . $wEnd->format('Y');
+                $dateLabel = $wStart->format('j') . ' – ' . $wEnd->format('j') . ' ' . ($months[$wEnd->format('m')] ?? $wStart->format('M')) . ' ' . $wEnd->format('Y');
             }
 
         } else {
@@ -87,14 +367,28 @@ class Dashboard extends BaseController
             $rangeEnd     = (clone $firstOfMonth)->modify('last day of this month')->format('Y-m-d');
             $dateLabel    = ($months[$dt->format('m')] ?? $dt->format('M')) . ' ' . $dt->format('Y');
         }
-        
-        // ---------------------------------------------------------
-        // 1. Employee Name & IDs
-        // ---------------------------------------------------------
-        $employeeName = $this->access->getUser('name') ?? $this->access->getUser('username');
-        $employeeId   = session()->get('md_employee_id');
-        $nik          = session()->get('nik');
 
+        return [
+            'mode'         => $mode,
+            'dt'           => $dt,
+            'today'        => $today,
+            'currentMonth' => $currentMonth,
+            'currentYear'  => $currentYear,
+            'prevDate'     => $prevDate,
+            'nextDate'     => $nextDate,
+            'rangeStart'   => $rangeStart,
+            'rangeEnd'     => $rangeEnd,
+            'dateLabel'    => $dateLabel,
+            'wStart'       => $wStart,
+        ];
+    }
+
+    /**
+     * Resolves employee NIK from session or employee master table.
+     */
+    private function resolveEmployeeNik(?int $employeeId): ?string
+    {
+        $nik = session()->get('nik');
         if (empty($nik) && !empty($employeeId)) {
             $empRow = $this->db->table('md_employee')
                 ->select('nik')
@@ -102,957 +396,1154 @@ class Dashboard extends BaseController
                 ->get()->getRow();
             $nik = $empRow->nik ?? null;
         }
+        return $nik;
+    }
 
-        // Attendance stats initializers
-        $attendanceDays   = 0;
-        $lateCount        = 0;
-        $teamTotal        = 0;
-        $teamPresent      = 0;
-        $teamOnLeave      = 0;
-        $haveClockIn      = false;
-        $haveClockOut     = false;
-        $clockInTime      = 'Belum absen';
-        $clockOutTime     = 'Belum absen';
-        $scheduleRange    = '-';
-        $branchName       = '-';
-        $attendanceStatus = 'ABSENT';
-        $tkhAllowance     = 1.0;
+    /**
+     * Resolves employee levelling ID from session, employee master, or user record.
+     */
+    private function resolveEmployeeLevellingId(?int $employeeId = null): int
+    {
+        if ($this->resolvedLevellingId !== null) {
+            return $this->resolvedLevellingId;
+        }
 
-        $balance          = 0;
-        $availableLeave   = 0;
-        $pendingApprovals = 0;
-        $pendingFull      = 'Tidak ada pengajuan berjalan';
-        $pendingSummary   = 'Tidak ada pengajuan berjalan';
-        $calendarEvents   = [];
-        $announcements    = [];
-        $divisions        = [];
-        $branches         = [];
+        $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
+        $empId = $employeeId ?? (int) (session()->get('md_employee_id') ?? 0);
 
-        // TODO : Define this [x]
-        // $superRoleIds    = [1, 5, 6, 7, 21, 79, 80, 90];
-        // 1. System / IT Super Admins (Full platform access)
-        $masterAdminRoleIds = [1, 4];
-        // 2. HR Super Users (Full HR, Salary, & Employee Master Data access)
-        $hrSuperRoleIds = [5, 6, 79, 90]; 
-        // 3. Executive / Management Super Users (Company-wide approval & view access)
-        $executiveRoleIds = [21, 70, 71, 74];
-        // Combined array if your codebase specifically requires a single array:
-        $superRoleIds = array_unique(array_merge(
-            $masterAdminRoleIds, 
-            $hrSuperRoleIds, 
-            $executiveRoleIds
-        ));
+        if ($levellingId === 0 && $empId > 0) {
+            $empRow = $this->db->table('md_employee')
+                ->select('md_levelling_id')
+                ->where('md_employee_id', $empId)
+                ->get()->getRow();
+            $levellingId = (int) ($empRow->md_levelling_id ?? 0);
+        }
 
-        // TODO : Define this [x]
-        $allStatuses = [
-            $this->DOCSTATUS_Drafted,
-            $this->DOCSTATUS_Requested,
-            $this->DOCSTATUS_Inprogress,
-            $this->DOCSTATUS_Reopen,
-            $this->DOCSTATUS_Approved,
-            $this->DOCSTATUS_Completed,
-            $this->DOCSTATUS_NotApproved,
-            $this->DOCSTATUS_Voided,
-            $this->DOCSTATUS_Invalid,
-            $this->DOCSTATUS_Suspended,
-            $this->DOCSTATUS_Aborted,
-            $this->DOCSTATUS_Unlock,
+        if ($levellingId === 0) {
+            $userId = (int) (session()->get('sys_user_id') ?? 0);
+            if ($userId > 0) {
+                $userRow = $this->db->table('sys_user')
+                    ->select('md_levelling_id')
+                    ->where('sys_user_id', $userId)
+                    ->get()->getRow();
+                $levellingId = (int) ($userRow->md_levelling_id ?? 0);
+            }
+        }
+
+        $this->resolvedLevellingId = $levellingId;
+        return $levellingId;
+    }
+
+    /**
+     * Resolves uppercase role name from session or sys_role table.
+     */
+    private function resolveRoleName(int $roleId): string
+    {
+        if ($this->resolvedRoleName !== null) {
+            return $this->resolvedRoleName;
+        }
+
+        $roleName = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
+        if ($roleName === '' && $roleId > 0) {
+            $roleRow = $this->db->table('sys_role')
+                ->select('name')
+                ->where('sys_role_id', $roleId)
+                ->get()->getRow();
+            $roleName = strtoupper((string) ($roleRow->name ?? ''));
+        }
+
+        $this->resolvedRoleName = $roleName;
+        return $roleName;
+    }
+
+    /**
+     * Resolves cache TTL in seconds based on date range tier.
+     * Past (< today): 6 hours (21600s)
+     * Future (> today): 12 hours (43200s)
+     * Active/Current period:
+     *   - 'day' mode (today): 0s (no cache, strictly real-time)
+     *   - 'week' / 'month' mode: 180s (3 minutes)
+     */
+    private function resolveCacheTtl(string $mode, string $rangeStart, string $rangeEnd): int
+    {
+        $todayStr = date('Y-m-d');
+        if ($rangeEnd < $todayStr) {
+            return 21600; // 6 hours for past / historical data
+        }
+        if ($rangeStart > $todayStr) {
+            return 43200; // 12 hours for planned future period
+        }
+        // Current / Active period
+        return ($mode === 'day') ? 0 : 180;
+    }
+
+    /**
+     * Fetches active national holidays within the specified range.
+     * Cached globally per calendar year for 24 hours.
+     */
+    private function fetchHolidayRows(string $rangeEnd): array
+    {
+        $year     = substr($rangeEnd, 0, 4);
+        $cacheKey = "dash_holidays_{$year}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $rows = $this->db->table('md_holiday')
+            ->select('name, DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE "0000%" OR CAST(enddate AS CHAR) = "" THEN startdate ELSE enddate END) AS end_date')
+            ->where('isactive', 'Y')
+            ->where('startdate <=', $rangeEnd . ' 23:59:59')
+            ->get()->getResultArray();
+
+        cache()->save($cacheKey, $rows, 86400); // 24 hours
+        return $rows;
+    }
+
+    /**
+     * Fetches active mass leaves within the specified range.
+     * Cached globally per calendar year for 24 hours.
+     */
+    private function fetchMassLeaveRows(string $rangeEnd): array
+    {
+        $year     = substr($rangeEnd, 0, 4);
+        $cacheKey = "dash_massleave_{$year}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $rows = $this->db->table('md_massleave')
+            ->select('name, DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE "0000%" OR CAST(enddate AS CHAR) = "" THEN startdate ELSE enddate END) AS end_date')
+            ->where('isactive', 'Y')
+            ->where('startdate <=', $rangeEnd . ' 23:59:59')
+            ->get()->getResultArray();
+
+        cache()->save($cacheKey, $rows, 86400); // 24 hours
+        return $rows;
+    }
+
+    /**
+     * Calculates personal attendance summary, schedule, and KPI metrics.
+     * Historical ranges (< today) are cached up to 6 hours.
+     * Today's range is kept strictly real-time (no cache).
+     */
+    private function calculatePersonalAttendance(
+        int $employeeId,
+        string $nik,
+        string $today,
+        string $rangeStart,
+        string $rangeEnd,
+        array $holidayRows,
+        array $massLeaveRows
+    ): array {
+        $todayStr  = date('Y-m-d');
+        $isBypass  = !empty($this->request->getGet('refresh'));
+        $cacheTtl  = ($rangeEnd < $todayStr) ? 21600 : (($rangeStart > $todayStr) ? 43200 : 0);
+        $cacheKey  = "dash_att_p_{$employeeId}_{$rangeStart}_{$rangeEnd}_{$today}";
+
+        if (!$isBypass && $cacheTtl > 0 && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $processUntil = ($rangeEnd > $todayStr) ? $todayStr : $rangeEnd;
+
+        $rowsByDate = [];
+        if ($rangeStart <= $processUntil) {
+            $rowsByDate = $this->processEmployeeRange($nik, $rangeStart, $processUntil);
+        }
+
+        if (isset($rowsByDate[$today])) {
+            $todayCalc = $rowsByDate[$today];
+        } else {
+            $todayCalc = $this->processEmployeeDay($nik, $today);
+        }
+
+        $dayNo = (int) date('N', strtotime($today)); // 1 (Mon) - 7 (Sun)
+
+        $empSchedule = $this->db->table('md_employee me')
+            ->select("
+                mb.name AS branch_name,
+                mwd.startwork,
+                mwd.endwork,
+                COALESCE(CONCAT(DATE_FORMAT(mwd.startwork, '%H:%i'), ' - ', DATE_FORMAT(mwd.endwork, '%H:%i')), 'Libur / Tidak Ada Jadwal') AS schedule_range
+            ")
+            ->join('md_employee_branch meb', 'me.md_employee_id = meb.md_employee_id AND meb.isactive = "Y"', 'left')
+            ->join('md_branch mb', 'meb.md_branch_id = mb.md_branch_id', 'left')
+            ->join('md_employee_work mew', 'me.md_employee_id = mew.md_employee_id 
+                AND mew.validfrom <= ' . $this->db->escape($today . ' 23:59:59') . '
+                AND (mew.validto IS NULL OR mew.validto >= ' . $this->db->escape($today . ' 00:00:00') . ' OR CAST(mew.validto AS CHAR) LIKE "0000%")
+                AND (mew.isactive = "Y" OR mew.isactive IS NULL)', 'left')
+            ->join('md_work mw', 'mw.md_work_id = mew.md_work_id', 'left')
+            ->join('md_work_detail mwd', 'mw.md_work_id = mwd.md_work_id AND mwd.md_day_id = ' . $dayNo, 'left')
+            ->where('me.nik', $nik)
+            ->get()
+            ->getRow();
+
+        $isFutureDay      = ($today > $todayStr);
+        $myClockInRaw     = $todayCalc['clock_in'] ?? null;
+        $myClockOutRaw    = $todayCalc['clock_out'] ?? null;
+        $haveClockIn      = !empty($myClockInRaw);
+        $haveClockOut     = !empty($myClockOutRaw);
+
+        if ($isFutureDay) {
+            $clockInTime  = '—';
+            $clockOutTime = '—';
+        } else {
+            $clockInTime  = $haveClockIn ? date('H:i', strtotime($myClockInRaw)) : 'Belum absen';
+            $clockOutTime = $haveClockOut ? date('H:i', strtotime($myClockOutRaw)) : 'Belum absen';
+        }
+
+        $scheduleRange    = $empSchedule->schedule_range ?? 'Libur / Tidak Ada Jadwal';
+        $branchName       = $empSchedule->branch_name ?? '-';
+        $attendanceStatus = $todayCalc['attendance_status'] ?? 'ABSENT';
+        $tkhAllowance     = (float) ($todayCalc['tkh_allowance'] ?? 1.0);
+
+        if ($isFutureDay && $attendanceStatus === 'ABSENT') {
+            $attendanceStatus = 'UPCOMING_WORK';
+        }
+
+        // Query official `alpa` records strictly from trx_absent
+        $officialAlpaRows = $this->db->table('trx_absent a')
+            ->select('DATE(ad.date) as alpa_date')
+            ->join('trx_absent_detail ad', 'ad.trx_absent_id = a.trx_absent_id', 'inner')
+            ->where('a.md_employee_id', $employeeId)
+            ->where('a.submissiontype', 100002) // Pengajuan_Alpa
+            ->where('a.docstatus', 'CO')
+            ->where('ad.date >=', $rangeStart . ' 00:00:00')
+            ->where('ad.date <=', $rangeEnd . ' 23:59:59')
+            ->get()->getResultArray();
+
+        $officialAlpaDates = array_column($officialAlpaRows, 'alpa_date');
+        $hasOfficialAlpa   = !empty($officialAlpaDates);
+
+        if (!$isFutureDay && $attendanceStatus === 'ABSENT' && in_array($today, $officialAlpaDates, true)) {
+            $attendanceStatus = 'ALPA';
+        }
+
+        $statusMap = [
+            'NORMAL'                    => ['text' => 'Hadir Tepat Waktu',        'tone' => 'success',   'punctual' => 'Tepat Waktu'],
+            'IN_OFFICE'                 => ['text' => 'Sedang Bekerja',          'tone' => 'primary',   'punctual' => 'Dalam Jam Kerja'],
+            'IN_OFFICE_LATE'            => ['text' => 'Bekerja (Terlambat)',     'tone' => 'warning',   'punctual' => 'Terlambat Datang'],
+            'LATE_ARRIVAL'              => ['text' => 'Terlambat Datang',        'tone' => 'warning',   'punctual' => 'Terlambat'],
+            'UNEXCUSED_EARLY_DEPARTURE' => ['text' => 'Pulang Cepat',            'tone' => 'warning',   'punctual' => 'Pulang Lebih Awal'],
+            'LATE_AND_EARLY_LEAVE'      => ['text' => 'Terlambat & Pulang Cepat', 'tone' => 'danger',    'punctual' => 'Jam Inkomplit'],
+            'MISSING_CHECK_IN'          => ['text' => 'Tidak Absen Masuk',       'tone' => 'danger',    'punctual' => 'Tanpa Absen Masuk'],
+            'MISSING_CHECK_OUT'         => ['text' => 'Tidak Absen Pulang',      'tone' => 'danger',    'punctual' => 'Tanpa Absen Pulang'],
+            'LATE_AND_MISSING_OUT'      => ['text' => 'Terlambat & Tanpa Pulang', 'tone' => 'danger',    'punctual' => 'Tidak Lengkap'],
+            'ABSENT'                    => ['text' => 'Tidak Hadir',             'tone' => 'secondary', 'punctual' => 'Tidak Hadir'],
+            'ALPA'                      => ['text' => 'Alpa',                    'tone' => 'danger',    'punctual' => 'Alpa'],
+            'UPCOMING_WORK'             => ['text' => 'Jadwal Kerja Mendatang',   'tone' => 'primary',   'punctual' => 'Belum Berjalan'],
+            'LEAVE_APPROVED'            => ['text' => ($isFutureDay ? 'Izin / Cuti Terjadwal' : 'Izin / Cuti Disetujui'), 'tone' => 'info', 'punctual' => ($isFutureDay ? 'Izin Terjadwal' : 'Izin Disetujui')],
+            'HALF_DAY_APPROVED'         => ['text' => 'Izin Setengah Hari',      'tone' => 'info',      'punctual' => 'Setengah Hari'],
+            'LATE_EXCUSED'              => ['text' => 'Terlambat (Disetujui)',    'tone' => 'info',      'punctual' => 'Izin Terlambat'],
+            'EARLY_LEAVE_EXCUSED'       => ['text' => 'Pulang Cepat (Disetujui)', 'tone' => 'info',      'punctual' => 'Izin Pulang Cepat'],
+            'APPROVED_SHORT_HOURS'      => ['text' => 'Izin Jam Kerja',          'tone' => 'info',      'punctual' => 'Izin Jam Kerja'],
+            'MANUAL_HRD_OVERRIDE'       => ['text' => 'Koreksi HRD',             'tone' => 'info',      'punctual' => 'Disesuaikan HRD'],
+            'OFF_DAY'                   => ['text' => 'Hari Libur Kerja',        'tone' => 'secondary', 'punctual' => 'Libur Kerja'],
+            'PUBLIC_HOLIDAY'            => ['text' => 'Libur Nasional',          'tone' => 'secondary', 'punctual' => 'Libur Nasional'],
+            'MASS_LEAVE'                => ['text' => 'Cuti Bersama',            'tone' => 'secondary', 'punctual' => 'Cuti Bersama'],
+            'OVERTIME_OFF_DAY'          => ['text' => 'Lembur Hari Libur',       'tone' => 'info',      'punctual' => 'Kerja Hari Libur'],
+            'HOLIDAY_WORKED'            => ['text' => 'Lembur Libur Nasional',   'tone' => 'info',      'punctual' => 'Kerja Libur Nasional'],
+            'MASS_LEAVE_WORKED'         => ['text' => 'Lembur Cuti Bersama',     'tone' => 'info',      'punctual' => 'Kerja Cuti Bersama'],
         ];
-        // 1. Pending / Active Work-in-Progress (Awaiting Action or Processing)
-        $pendingStatuses = [
-            $this->DOCSTATUS_Drafted,    // 'DR'
-            $this->DOCSTATUS_Requested,  // 'RQ'
-            $this->DOCSTATUS_Inprogress, // 'IP'
-            $this->DOCSTATUS_Reopen,     // 'RE'
-            $this->DOCSTATUS_Unlock,     // 'UL' (Re-opened for editing/action)
+
+        $meta               = $statusMap[$attendanceStatus] ?? ['text' => $attendanceStatus, 'tone' => 'secondary', 'punctual' => 'Catatan Khusus'];
+        $myStatusText       = $meta['text'];
+        $myTone             = $meta['tone'];
+        $myPunctualityText  = $meta['punctual'];
+
+        $myClockInText      = $clockInTime;
+        $myClockOutText     = $clockOutTime;
+
+        $myShiftStart = !empty($empSchedule->startwork) ? date('H:i', strtotime($empSchedule->startwork)) : '08:00';
+        $myShiftEnd   = !empty($empSchedule->endwork)   ? date('H:i', strtotime($empSchedule->endwork))   : '17:00';
+
+        $periodAll = new \DatePeriod(
+            new \DateTime($rangeStart),
+            new \DateInterval('P1D'),
+            (new \DateTime($rangeEnd))->modify('+1 day')
+        );
+
+        $schedDays = $this->db->table('md_employee_work mew')
+            ->select('mwd.md_day_id')
+            ->join('md_work mw', 'mw.md_work_id = mew.md_work_id')
+            ->join('md_work_detail mwd', 'mw.md_work_id = mwd.md_work_id')
+            ->where('mew.md_employee_id', $employeeId)
+            ->where('mew.isactive', 'Y')
+            ->get()->getResultArray();
+
+        $scheduledDayIds = array_column($schedDays, 'md_day_id');
+
+        $isOffDate = function($wDate) use ($holidayRows, $massLeaveRows) {
+            foreach ($holidayRows as $h) {
+                if ($wDate >= $h['start_date'] && $wDate <= $h['end_date']) return true;
+            }
+            foreach ($massLeaveRows as $m) {
+                if ($wDate >= $m['start_date'] && $wDate <= $m['end_date']) return true;
+            }
+            return false;
+        };
+
+        $ontimeCount     = 0;
+        $lateCount       = 0;
+        $incompleteCount = 0;
+        $myLeaveCount    = 0;
+        $myAbsentCount   = 0;
+        $overtimeCount   = 0;
+        $targetWorkDays  = 0;
+        $elapsedWorkDays = 0;
+
+        foreach ($periodAll as $dtItem) {
+            $wDate         = $dtItem->format('Y-m-d');
+            $isPastOrToday = ($wDate <= $todayStr);
+
+            if (isset($rowsByDate[$wDate])) {
+                $status   = $rowsByDate[$wDate]['attendance_status'];
+                $isTarget = !in_array($status, ['OFF_DAY', 'PUBLIC_HOLIDAY', 'MASS_LEAVE'], true);
+            } else {
+                $dayNo    = (int) $dtItem->format('N');
+                $hasSched = in_array($dayNo, $scheduledDayIds, true);
+                $isOff    = $isOffDate($wDate);
+
+                $isTarget = ($hasSched && !$isOff);
+            }
+
+            if ($isTarget) {
+                $targetWorkDays++;
+                if ($isPastOrToday) {
+                    $elapsedWorkDays++;
+                }
+            }
+
+            if ($isPastOrToday && isset($rowsByDate[$wDate])) {
+                $status = $rowsByDate[$wDate]['attendance_status'];
+                switch ($status) {
+                    case 'NORMAL':
+                    case 'IN_OFFICE':
+                    case 'MANUAL_HRD_OVERRIDE':
+                    case 'OFFICIAL_DUTY':
+                        $ontimeCount++;
+                        break;
+
+                    case 'OVERTIME_OFF_DAY':
+                    case 'HOLIDAY_WORKED':
+                    case 'MASS_LEAVE_WORKED':
+                        $ontimeCount++;
+                        $overtimeCount++;
+                        break;
+
+                    case 'IN_OFFICE_LATE':
+                    case 'LATE_ARRIVAL':
+                    case 'LATE_AND_EARLY_LEAVE':
+                        $lateCount++;
+                        break;
+
+                    case 'MISSING_CHECK_IN':
+                    case 'MISSING_CHECK_OUT':
+                    case 'LATE_AND_MISSING_OUT':
+                        $incompleteCount++;
+                        break;
+
+                    case 'LEAVE_APPROVED':
+                    case 'HALF_DAY_APPROVED':
+                    case 'LATE_EXCUSED':
+                    case 'EARLY_LEAVE_EXCUSED':
+                    case 'APPROVED_SHORT_HOURS':
+                    case 'LATE_WITH_APPROVED_LEAVE':
+                        $myLeaveCount++;
+                        break;
+
+                    case 'ABSENT':
+                    case 'UNEXCUSED_EARLY_DEPARTURE':
+                        $myAbsentCount++;
+                        break;
+                }
+            }
+        }
+
+        $attendanceDays = $ontimeCount + $lateCount + $incompleteCount;
+        $totalLate      = $lateCount + $incompleteCount;
+        $fulfilledDays  = $attendanceDays + $myLeaveCount;
+
+        $targetWorkDays = max(1, $targetWorkDays);
+        $denomElapsed   = max(1, $elapsedWorkDays);
+        $myRate         = ($elapsedWorkDays > 0) ? min(100, (int) round(($fulfilledDays / $denomElapsed) * 100)) : null;
+
+        return [
+            'is_future'           => $isFutureDay,
+            'is_future_period'    => ($elapsedWorkDays === 0),
+            'have_clock_in'       => $haveClockIn,
+            'have_clock_out'      => $haveClockOut,
+            'clock_in_time'       => $clockInTime,
+            'clock_out_time'      => $clockOutTime,
+            'schedule_range'      => $scheduleRange,
+            'branch_name'         => $branchName,
+            'attendance_status'   => $attendanceStatus,
+            'tkh_allowance'       => $tkhAllowance,
+            'my_status_text'      => $myStatusText,
+            'my_clock_in_text'    => $myClockInText,
+            'my_clock_out_text'   => $myClockOutText,
+            'my_punctuality_text' => $myPunctualityText,
+            'my_tone'             => $myTone,
+            'my_shift_start'      => $myShiftStart,
+            'my_shift_end'        => $myShiftEnd,
+            'my_clock_in_raw'     => $myClockInRaw,
+            'my_clock_out_raw'    => $myClockOutRaw,
+            'attendance_days'     => $attendanceDays,
+            'target_work_days'    => $targetWorkDays,
+            'elapsed_work_days'   => $elapsedWorkDays,
+            'my_rate'             => $myRate,
+            'my_leave_count'      => $myLeaveCount,
+            'my_absent_count'     => $myAbsentCount,
+            'my_is_alpa'          => $hasOfficialAlpa,
+            'my_absent_label'     => $hasOfficialAlpa ? 'alpa' : 'tidak hadir',
+            'my_absent_tone'      => $hasOfficialAlpa ? 'danger' : 'secondary',
+            'total_late'          => $totalLate,
+            'incomplete_count'    => $incompleteCount,
+            'overtime_count'      => $overtimeCount,
+            'ontime_count'        => $ontimeCount,
         ];
 
-        // 2. Final Approved / Success Statuses
-        $completedStatuses = [
-            $this->DOCSTATUS_Approved,   // 'AP'
-            $this->DOCSTATUS_Completed,  // 'CO'
-        ];
+        if ($cacheTtl > 0) {
+            cache()->save($cacheKey, $result, $cacheTtl);
+        }
 
-        // 3. Terminal / Rejected / Cancelled Statuses
-        $closedStatuses = [
-            $this->DOCSTATUS_NotApproved,
-            $this->DOCSTATUS_Voided,
-            $this->DOCSTATUS_Invalid,
-            $this->DOCSTATUS_Suspended,
-            $this->DOCSTATUS_Aborted,
-        ];
+        return $result;
+    }
 
-        if (!empty($employeeId) && !empty($nik)) {
+    /**
+     * Calculates team daily attendance metrics and weekly/monthly trends for managerial levels.
+     */
+    private function calculateTeamAttendanceStats(
+        int $employeeId,
+        string $mode,
+        string $today,
+        string $currentYear,
+        string $currentMonth,
+        ?\DateTime $wStart,
+        array $holidayRows,
+        array $massLeaveRows
+    ): array {
+        $roleId      = (int) (session()->get('sys_role_id') ?? 0);
+        $levellingId = $this->resolveEmployeeLevellingId();
 
-            // ---------------------------------------------------------
-            // 2. Run Instant Engine Recalculation (In-Memory) & Query Card
-            // ---------------------------------------------------------
-            $attProcessor = new DashboardHelper();
-            $attProcessor->initController($this->request, $this->response, \Config\Services::logger());
+        $canViewTeamCard = in_array($roleId, $this->superRoleIds, true) 
+            || in_array($levellingId, $this->managerialLevellings, true);
 
-            // 1. Calculate today's status in memory (Bypasses DB writes entirely)
-            $todayCalc = $attProcessor->processEmployeeDay($nik, $today);
-
-            $dayNo = (int) date('N', strtotime($today)); // 1 (Mon) - 7 (Sun)
-
-            // 2. Fetch supplementary schedule & branch details
-            $empSchedule = $this->db->table('md_employee me')
-                ->select("
-                    mb.name AS branch_name,
-                    mwd.startwork,
-                    mwd.endwork,
-                    COALESCE(CONCAT(DATE_FORMAT(mwd.startwork, '%H:%i'), ' - ', DATE_FORMAT(mwd.endwork, '%H:%i')), 'Libur / Tidak Ada Jadwal') AS schedule_range
-                ")
-                ->join('md_employee_branch meb', 'me.md_employee_id = meb.md_employee_id AND meb.isactive = "Y"', 'left')
-                ->join('md_branch mb', 'meb.md_branch_id = mb.md_branch_id', 'left')
-                ->join('md_employee_work mew', 'me.md_employee_id = mew.md_employee_id 
-                    AND mew.validfrom <= ' . $this->db->escape($today . ' 23:59:59') . '
-                    AND (mew.validto IS NULL OR mew.validto >= ' . $this->db->escape($today . ' 00:00:00') . ' OR CAST(mew.validto AS CHAR) LIKE "0000%")
-                    AND (mew.isactive = "Y" OR mew.isactive IS NULL)', 'left')
-                ->join('md_work mw', 'mw.md_work_id = mew.md_work_id', 'left')
-                ->join('md_work_detail mwd', 'mw.md_work_id = mwd.md_work_id AND mwd.md_day_id = ' . $dayNo, 'left')
-                ->where('me.nik', $nik)
-                ->get()
-                ->getRow();
-
-            // Default fallbacks for $data array & box_attendance.php
-            $myClockInRaw      = $todayCalc['clock_in'] ?? null;
-            $myClockOutRaw     = $todayCalc['clock_out'] ?? null;
-            $haveClockIn       = !empty($myClockInRaw);
-            $haveClockOut      = !empty($myClockOutRaw);
-
-            $clockInTime       = $haveClockIn ? date('H:i', strtotime($myClockInRaw)) : 'Belum absen';
-            $clockOutTime      = $haveClockOut ? date('H:i', strtotime($myClockOutRaw)) : 'Belum absen';
-
-            $scheduleRange     = $empSchedule->schedule_range ?? 'Libur / Tidak Ada Jadwal';
-            $branchName        = $empSchedule->branch_name ?? '-';
-            $attendanceStatus  = $todayCalc['attendance_status'] ?? 'ABSENT';
-            $tkhAllowance      = (float) ($todayCalc['tkh_allowance'] ?? 1.0);
-
-            $statusMap = [
-                'NORMAL'                    => ['text' => 'Hadir Tepat Waktu',   'tone' => 'success',   'punctual' => 'Tepat Waktu'],
-                'IN_OFFICE'                 => ['text' => 'Sedang Bekerja',     'tone' => 'primary',   'punctual' => 'Dalam Jam Kerja'],
-                'IN_OFFICE_LATE'            => ['text' => 'Bekerja (Terlambat)','tone' => 'warning',   'punctual' => 'Terlambat Datang'],
-                'LATE_ARRIVAL'              => ['text' => 'Terlambat Datang',   'tone' => 'warning',   'punctual' => 'Terlambat'],
-                'UNEXCUSED_EARLY_DEPARTURE' => ['text' => 'Pulang Cepat',       'tone' => 'warning',   'punctual' => 'Pulang Lebih Awal'],
-                'LATE_AND_EARLY_LEAVE'      => ['text' => 'Terlambat & Pulang Cepat', 'tone' => 'danger', 'punctual' => 'Jam Inkomplit'],
-                'MISSING_CHECK_IN'          => ['text' => 'Tidak Absen Masuk',  'tone' => 'danger',    'punctual' => 'Tanpa Absen Masuk'],
-                'MISSING_CHECK_OUT'         => ['text' => 'Tidak Absen Pulang', 'tone' => 'danger',    'punctual' => 'Tanpa Absen Pulang'],
-                'LATE_AND_MISSING_OUT'      => ['text' => 'Terlambat & Tanpa Pulang', 'tone' => 'danger', 'punctual' => 'Tidak Lengkap'],
-                'ABSENT'                    => ['text' => 'Tidak Hadir',        'tone' => 'danger',    'punctual' => 'Mangkir'],
-                'LEAVE_APPROVED'            => ['text' => 'Izin / Cuti Disetujui', 'tone' => 'info',   'punctual' => 'Izin Disetujui'],
-                'HALF_DAY_APPROVED'         => ['text' => 'Izin Setengah Hari', 'tone' => 'info',     'punctual' => 'Setengah Hari'],
-                'LATE_EXCUSED'              => ['text' => 'Terlambat (Disetujui)', 'tone' => 'info',  'punctual' => 'Izin Terlambat'],
-                'EARLY_LEAVE_EXCUSED'       => ['text' => 'Pulang Cepat (Disetujui)', 'tone' => 'info', 'punctual' => 'Izin Pulang Cepat'],
-                'APPROVED_SHORT_HOURS'      => ['text' => 'Izin Jam Kerja',     'tone' => 'info',      'punctual' => 'Izin Jam Kerja'],
-                'MANUAL_HRD_OVERRIDE'       => ['text' => 'Koreksi HRD',        'tone' => 'info',      'punctual' => 'Disesuaikan HRD'],
-                'OFF_DAY'                   => ['text' => 'Hari Libur Kerja',   'tone' => 'secondary', 'punctual' => 'Libur Kerja'],
-                'PUBLIC_HOLIDAY'            => ['text' => 'Libur Nasional',     'tone' => 'secondary', 'punctual' => 'Libur Nasional'],
-                'OVERTIME_OFF_DAY'          => ['text' => 'Lembur Hari Libur',  'tone' => 'info',      'punctual' => 'Kerja Hari Libur'],
-                'HOLIDAY_WORKED'            => ['text' => 'Lembur Libur Nasional', 'tone' => 'info',   'punctual' => 'Kerja Libur Nasional'],
+        if (!$canViewTeamCard) {
+            return [
+                'can_view_team_card' => false,
+                'subordinate_ids'    => [],
+                'team_total'         => 0,
+                'team_present'       => 0,
+                'team_on_leave'      => 0,
+                'team_rate'          => null,
+                'team_trend'         => [],
+                'team_is_future'     => false,
+                'team_leave_names'   => [],
+                'team_absent_names'  => [],
             ];
+        }
 
-            $meta               = $statusMap[$attendanceStatus] ?? ['text' => $attendanceStatus, 'tone' => 'secondary', 'punctual' => 'Catatan Khusus'];
-            $myStatusText      = $meta['text'];
-            $myTone            = $meta['tone'];
-            $myPunctualityText = $meta['punctual'];
+        $wKey     = $wStart ? $wStart->format('Ymd') : 'now';
+        $cacheKey = "dash_team_{$employeeId}_{$roleId}_{$mode}_{$today}_{$currentYear}{$currentMonth}_{$wKey}";
+        $isBypass = !empty($this->request->getGet('refresh'));
 
-            $myClockInText     = $clockInTime;
-            $myClockOutText    = $clockOutTime;
+        // Cache TTL determination:
+        // Day mode past: 6 hours, Day mode today: 90 seconds (short-term buffer)
+        // Week/Month past: 6 hours, Week/Month current: 180 seconds (3 mins)
+        $todayStr = date('Y-m-d');
+        if ($mode === 'day') {
+            $cacheTtl = ($today < $todayStr) ? 21600 : (($today > $todayStr) ? 43200 : 90);
+        } else {
+            $isPastMonth = ($currentYear . '-' . $currentMonth < date('Y-m'));
+            $cacheTtl    = $isPastMonth ? 21600 : 180;
+        }
 
-            $myShiftStart = !empty($empSchedule->startwork) ? date('H:i', strtotime($empSchedule->startwork)) : '08:00';
-            $myShiftEnd   = !empty($empSchedule->endwork)   ? date('H:i', strtotime($empSchedule->endwork))   : '17:00';
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
 
-            // ---------------------------------------------------------
-            // 3. Aggregate Daily Engine Results for Period (In-Memory)
-            // ---------------------------------------------------------
-            $todayStr     = date('Y-m-d');
-            $processUntil = ($rangeEnd > $todayStr) ? $todayStr : $rangeEnd;
+        $candidateIds = [];
+        $isSuperAdminView = false;
 
-            // 1. Process attendance engine directly in-memory (Returns array, 0 DB writes)
-            $rowsByDate = [];
-            if ($rangeStart <= $processUntil) {
-                $rowsByDate = $attProcessor->processEmployeeRange($nik, $rangeStart, $processUntil);
-            }
-
-            // 2. Iterate through EVERY calendar day in the full period ($rangeStart to $rangeEnd)
-            $periodAll = new \DatePeriod(
-                new \DateTime($rangeStart),
-                new \DateInterval('P1D'),
-                (new \DateTime($rangeEnd))->modify('+1 day')
-            );
-
-            // --- OPTIMIZATION: Pre-fetch schedule & holidays ONCE outside the loop ---
-            $futureHolidays = $this->db->table('md_holiday')
-                ->select("DATE(startdate) as start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE '0000%' THEN startdate ELSE enddate END) as end_date")
-                ->where('isactive', 'Y')
-                ->where('startdate <=', $rangeEnd . ' 23:59:59')
-                ->get()->getResultArray();
-
-            $futureMassLeaves = $this->db->table('md_massleave')
-                ->select("DATE(startdate) as start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE '0000%' THEN startdate ELSE enddate END) as end_date")
-                ->where('isactive', 'Y')
-                ->where('startdate <=', $rangeEnd . ' 23:59:59')
-                ->get()->getResultArray();
-
-            $schedDays = $this->db->table('md_employee_work mew')
-                ->select('mwd.md_day_id')
-                ->join('md_work mw', 'mw.md_work_id = mew.md_work_id')
-                ->join('md_work_detail mwd', 'mw.md_work_id = mwd.md_work_id')
-                ->where('mew.md_employee_id', $employeeId)
-                ->where('mew.isactive', 'Y')
-                ->get()->getResultArray();
-
-            $scheduledDayIds = array_column($schedDays, 'md_day_id');
-
-            $isOffDate = function($wDate) use ($futureHolidays, $futureMassLeaves) {
-                foreach ($futureHolidays as $h) {
-                    if ($wDate >= $h['start_date'] && $wDate <= $h['end_date']) return true;
-                }
-                foreach ($futureMassLeaves as $m) {
-                    if ($wDate >= $m['start_date'] && $wDate <= $m['end_date']) return true;
-                }
-                return false;
-            };
-
-            $ontimeCount     = 0;
-            $lateCount       = 0;
-            $incompleteCount = 0;
-            $myLeaveCount    = 0;
-            $myAbsentCount   = 0;
-            $overtimeCount   = 0;
-            $targetWorkDays  = 0;
-            $elapsedWorkDays = 0;
-
-            foreach ($periodAll as $dtItem) {
-                $wDate         = $dtItem->format('Y-m-d');
-                $isPastOrToday = ($wDate <= $todayStr);
-
-                // Determine if this date is a scheduled work day
-                if (isset($rowsByDate[$wDate])) {
-                    $status   = $rowsByDate[$wDate]['attendance_status'];
-                    $isTarget = !in_array($status, ['OFF_DAY', 'PUBLIC_HOLIDAY', 'MASS_LEAVE'], true);
-                } else {
-                    $dayNo    = (int) $dtItem->format('N');
-                    $hasSched = in_array($dayNo, $scheduledDayIds, true);
-                    $isOff    = $isOffDate($wDate);
-
-                    $isTarget = ($hasSched && !$isOff);
-                }
-
-                if ($isTarget) {
-                    $targetWorkDays++; // Accumulates FULL month/week target (y)
-                    if ($isPastOrToday) {
-                        $elapsedWorkDays++;
-                    }
-                }
-
-                // Process past and today attendance metrics directly from memory
-                if ($isPastOrToday && isset($rowsByDate[$wDate])) {
-                    $status = $rowsByDate[$wDate]['attendance_status'];
-                    switch ($status) {
-                        // ON TIME / NORMAL PRESENCE
-                        case 'NORMAL':
-                        case 'IN_OFFICE':
-                        case 'MANUAL_HRD_OVERRIDE':
-                        case 'OFFICIAL_DUTY':
-                            $ontimeCount++;
-                            break;
-
-                        // OVERTIME ON OFF-DAYS / HOLIDAYS
-                        case 'OVERTIME_OFF_DAY':
-                        case 'HOLIDAY_WORKED':
-                        case 'MASS_LEAVE_WORKED':
-                            $ontimeCount++;
-                            $overtimeCount++;
-                            break;
-
-                        // LATE ARRIVALS
-                        case 'IN_OFFICE_LATE':
-                        case 'LATE_ARRIVAL':
-                        case 'LATE_AND_EARLY_LEAVE':
-                            $lateCount++;
-                            break;
-
-                        // INCOMPLETE TAPS
-                        case 'MISSING_CHECK_IN':
-                        case 'MISSING_CHECK_OUT':
-                        case 'LATE_AND_MISSING_OUT':
-                            $incompleteCount++;
-                            break;
-
-                        // GENERALIZED IZIN / CUTI
-                        case 'LEAVE_APPROVED':
-                        case 'HALF_DAY_APPROVED':
-                        case 'LATE_EXCUSED':
-                        case 'EARLY_LEAVE_EXCUSED':
-                        case 'APPROVED_SHORT_HOURS':
-                        case 'LATE_WITH_APPROVED_LEAVE':
-                            $myLeaveCount++;
-                            break;
-
-                        // PURE ABSENT (MANGKIR)
-                        case 'ABSENT':
-                        case 'UNEXCUSED_EARLY_DEPARTURE':
-                            $myAbsentCount++;
-                            break;
-                    }
-                }
-            }
-
-            // x = Physical Presence (Hadir)
-            $attendanceDays  = $ontimeCount + $lateCount + $incompleteCount;
-            $totalLate       = $lateCount + $incompleteCount;
-            $fulfilledDays   = $attendanceDays + $myLeaveCount;
-
-            // Safeguards against division by zero
-            $targetWorkDays  = max(1, $targetWorkDays);
-            $denomElapsed    = max(1, $elapsedWorkDays);
-
-            // Rate Calculation: (Fulfilled Obligations / Elapsed Target Workdays) * 100
-            $myRate          = min(100, (int) round(($fulfilledDays / $denomElapsed) * 100));
-            // ---------------------------------------------------------
-            // 4. Team Attendance Stats (D, W, M)
-            // ---------------------------------------------------------
-            // $mEmployee  = new M_Employee($this->request);
-            // $allTeamIds = $mEmployee->getChartEmployee($employeeId);
-
-            // $candidateIds = array_values(array_diff($allTeamIds, [$employeeId]));
-
-            // Whitelist: Super Roles + Managers + Supervisors (SPVs)
-            // Get session credentials
-            $roleId      = (int) (session()->get('sys_role_id') ?? 0);
-            $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
-
-            // Whitelist: Super Roles + Managers (100001, 100002) + Supervisors / SPVs (100003, 100004)
-            $allowedTeamLevellings = [100001, 100002, 100003, 100004];
-
-            $canViewTeamCard = in_array($roleId, $superRoleIds ?? [], true) 
-                || in_array($levellingId, $allowedTeamLevellings, true);
-
-            $candidateIds = [];
-
-            if ($canViewTeamCard) {
+        if ($canViewTeamCard) {
+            if (empty($employeeId)) {
+                // System Admin (SAS, SuperHRD) without employee profile: Target all active employees company-wide
+                $isSuperAdminView = true;
+            } else {
                 $mEmployee    = new M_Employee($this->request);
                 $allTeamIds   = $mEmployee->getChartEmployee($employeeId) ?? [];
                 $candidateIds = array_values(array_diff($allTeamIds, [$employeeId]));
             }
+        }
 
-            // Exclude resigned / pensioned / inactive — check both md_status and resigndate
-            $excludedStatusNames = ['RESIGN', 'PENSIUN'];
+        $excludedStatusNames = ['RESIGN', 'PENSIUN'];
+        $excludedLevellings  = [100001]; // DIREKSI: Whitelisted from mandatory attendance tracking
 
-            $subordinateIds = [];
+        $subordinateIds   = [];
+        $employeeRegDates = [];
+        $employeeRsgDates = [];
+        if (!empty($candidateIds) || $isSuperAdminView) {
+            $activeQuery = $this->db->table('md_employee e')
+                ->select('e.md_employee_id, e.registerdate, e.resigndate')
+                ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
+                ->where('e.isactive', 'Y')
+                ->whereNotIn('e.md_levelling_id', $excludedLevellings)
+                ->groupStart()
+                    ->where('e.registerdate IS NULL')
+                    ->orWhere("CAST(e.registerdate AS CHAR) = '0000-00-00'")
+                    ->orWhere('e.registerdate <=', $today)
+                ->groupEnd()
+                ->groupStart()
+                    ->where('e.resigndate IS NULL')
+                    ->orWhere("CAST(e.resigndate AS CHAR) = '0000-00-00'")
+                    ->orWhere('e.resigndate >', $today)
+                ->groupEnd()
+                ->groupStart()
+                    ->whereNotIn('s.name', $excludedStatusNames)
+                    ->orWhere('s.name IS NULL')
+                ->groupEnd();
+
             if (!empty($candidateIds)) {
-                $activeRows = $this->db->table('md_employee e')
-                    ->select('e.md_employee_id')
-                    ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
-                    ->whereIn('e.md_employee_id', $candidateIds)
-                    ->where('e.isactive', 'Y')
-                    ->groupStart()
-                        ->where('e.resigndate IS NULL')
-                        ->orWhere("CAST(e.resigndate AS CHAR) = '0000-00-00'")
-                        ->orWhere('e.resigndate >', $today)
-                    ->groupEnd()
-                    ->groupStart()
-                        ->whereNotIn('s.name', $excludedStatusNames)
-                        ->orWhere('s.name IS NULL')
-                    ->groupEnd()
-                    ->get()->getResultArray();
-
-                $subordinateIds = array_column($activeRows, 'md_employee_id');
+                $activeQuery->whereIn('e.md_employee_id', $candidateIds);
             }
 
-            $teamTotal   = count($subordinateIds);
-            $teamPresent = 0;
-            $teamOnLeave = 0;
-            $teamRate    = 0;
-            $teamTrend   = [];
+            $activeRows = $activeQuery->get()->getResultArray();
 
-            if (!empty($subordinateIds)) {
-                // 1. Determine overall Date Range based on Mode
-                if ($mode === 'day') {
-                    $startDate = $today;
-                    $endDate   = $today;
-                } elseif ($mode === 'week') {
-                    $startDate = $wStart->format('Y-m-d');
-                    $endDate   = (clone $wStart)->modify('+6 days')->format('Y-m-d');
-                } else {
-                    $firstDay  = new \DateTime("{$currentYear}-{$currentMonth}-01");
-                    $startDate = $firstDay->format('Y-m-d');
-                    $endDate   = (clone $firstDay)->modify('last day of this month')->format('Y-m-d');
+            $subordinateIds   = array_column($activeRows, 'md_employee_id');
+            $employeeRegDates = array_column($activeRows, 'registerdate', 'md_employee_id');
+            $employeeRsgDates = array_column($activeRows, 'resigndate', 'md_employee_id');
+        }
+
+        $teamTotal   = count($subordinateIds);
+        $teamPresent = 0;
+        $teamOnLeave = 0;
+        $teamRate    = 0;
+        $teamTrend   = [];
+        $todayStr    = date('Y-m-d');
+
+        if (!empty($subordinateIds)) {
+            if ($mode === 'day') {
+                $startDate = $today;
+                $endDate   = $today;
+            } elseif ($mode === 'week' && $wStart) {
+                $startDate = $wStart->format('Y-m-d');
+                $endDate   = (clone $wStart)->modify('+6 days')->format('Y-m-d');
+            } else {
+                $firstDay  = new \DateTime("{$currentYear}-{$currentMonth}-01");
+                $startDate = $firstDay->format('Y-m-d');
+                $endDate   = (clone $firstDay)->modify('last day of this month')->format('Y-m-d');
+            }
+
+            $offDaysMap = [];
+            $processOffDays = function ($rows) use (&$offDaysMap) {
+                foreach ($rows as $row) {
+                    if (empty($row['start_date']) || $row['start_date'] === '0000-00-00') {
+                        continue;
+                    }
+
+                    $startDateObj = new \DateTime($row['start_date']);
+                    $endDateObj   = (!empty($row['end_date']) && !in_array($row['end_date'], ['0000-00-00', '']))
+                        ? new \DateTime($row['end_date'])
+                        : clone $startDateObj;
+
+                    $curr = clone $startDateObj;
+                    while ($curr <= $endDateObj) {
+                        $offDaysMap[$curr->format('Y-m-d')] = $row['name'];
+                        $curr->modify('+1 day');
+                    }
                 }
+            };
 
-                // 2. Pre-fetch Off-days (Holidays & Mass Leave with date ranges)
-                $holidayRows = $this->db->table('md_holiday')
-                    ->select('name, startdate AS start_date, enddate AS end_date')
-                    ->where('startdate <=', $endDate)
-                    ->groupStart()
-                        ->where('enddate >=', $startDate)
-                        ->orWhere('enddate IS NULL')
-                        ->orWhere("CAST(enddate AS CHAR) = '0000-00-00'")
-                        ->orWhere("CAST(enddate AS CHAR) = ''")
-                    ->groupEnd()
-                    ->get()->getResultArray();
+            $processOffDays($holidayRows);
+            $processOffDays($massLeaveRows);
 
-                $massLeaveRows = $this->db->table('md_massleave')
-                    ->select('name, startdate AS start_date, enddate AS end_date')
-                    ->where('startdate <=', $endDate)
-                    ->groupStart()
-                        ->where('enddate >=', $startDate)
-                        ->orWhere('enddate IS NULL')
-                        ->orWhere("CAST(enddate AS CHAR) = '0000-00-00'")
-                        ->orWhere("CAST(enddate AS CHAR) = ''")
-                    ->groupEnd()
-                    ->get()->getResultArray();
+            $penugasanRows = $this->db->table('trx_assignment_date adate')
+                ->select('adetail.md_employee_id, DATE(adate.date) as date')
+                ->join('trx_assignment_detail adetail', 'adetail.trx_assignment_detail_id = adate.trx_assignment_detail_id', 'inner')
+                ->whereIn('adetail.md_employee_id', $subordinateIds)
+                ->where('adate.date >=', $startDate . ' 00:00:00')
+                ->where('adate.date <=', $endDate . ' 23:59:59')
+                ->where('adate.isagree', 'Y')
+                ->get()->getResultArray();
 
-                $offDaysMap = [];
+            $penugasanMap = [];
+            foreach ($penugasanRows as $p) {
+                $penugasanMap[$p['date']][$p['md_employee_id']] = true;
+            }
 
-                // Helper Closure: Expand date ranges into individual date keys
-                $processOffDays = function ($rows) use (&$offDaysMap) {
-                    foreach ($rows as $row) {
-                        if (empty($row['start_date']) || $row['start_date'] === '0000-00-00') {
-                            continue;
-                        }
+            $schedules = $this->db->table('md_employee_work mew')
+                ->select('mew.md_employee_id, mwd.md_day_id')
+                ->join('md_work_detail mwd', 'mwd.md_work_id = mew.md_work_id')
+                ->whereIn('mew.md_employee_id', $subordinateIds)
+                ->where('mew.isactive', 'Y')
+                ->groupStart()
+                    ->where('mew.validfrom IS NULL')
+                    ->orWhere("CAST(mew.validfrom AS CHAR) = '0000-00-00 00:00:00'")
+                    ->orWhere('DATE(mew.validfrom) <=', $endDate)
+                ->groupEnd()
+                ->groupStart()
+                    ->where('mew.validto IS NULL')
+                    ->orWhere("CAST(mew.validto AS CHAR) = '0000-00-00 00:00:00'")
+                    ->orWhere('DATE(mew.validto) >=', $startDate)
+                ->groupEnd()
+                ->get()->getResultArray();
 
-                        $startDateObj = new \DateTime($row['start_date']);
-                        $endDateObj   = (!empty($row['end_date']) && !in_array($row['end_date'], ['0000-00-00', '']))
-                            ? new \DateTime($row['end_date'])
-                            : clone $startDateObj; // Fallback to single-day if enddate is NULL or empty
+            $employeeWorkDays = [];
+            foreach ($schedules as $s) {
+                $employeeWorkDays[$s['md_employee_id']][] = (int) $s['md_day_id'];
+            }
 
-                        $curr = clone $startDateObj;
-                        while ($curr <= $endDateObj) {
-                            $offDaysMap[$curr->format('Y-m-d')] = $row['name'];
-                            $curr->modify('+1 day');
+            $attendanceRows = $this->db->table('trx_attendance t')
+                ->select('e.md_employee_id, t.work_date as date')
+                ->join('md_employee e', 'e.nik = t.nik', 'inner')
+                ->whereIn('e.md_employee_id', $subordinateIds)
+                ->where('t.work_date >=', $startDate)
+                ->where('t.work_date <=', $endDate)
+                ->groupBy('e.md_employee_id, t.work_date')
+                ->get()->getResultArray();
+
+            $attendanceMap = [];
+            foreach ($attendanceRows as $att) {
+                $attendanceMap[$att['date']][$att['md_employee_id']] = true;
+            }
+
+            $teamLeaveRows = $this->db->table('v_all_submission s')
+                ->select('s.md_employee_id, DATE(s.date) as date')
+                ->whereIn('s.md_employee_id', $subordinateIds)
+                ->where('s.date >=', $startDate . ' 00:00:00')
+                ->where('s.date <=', $endDate . ' 23:59:59')
+                ->whereIn('s.docstatus', ['CO', 'AP'])
+                ->where('s.isagree !=', 'C')
+                ->get()->getResultArray();
+
+            $teamLeaveMap = [];
+            foreach ($teamLeaveRows as $l) {
+                $teamLeaveMap[$l['date']][$l['md_employee_id']] = true;
+            }
+
+            $evaluateDailyStats = function ($dateStr) use (
+                $subordinateIds, $offDaysMap, $penugasanMap, $employeeWorkDays, 
+                $attendanceMap, $employeeRegDates, $employeeRsgDates, $teamLeaveMap
+            ) {
+                $dt        = new \DateTime($dateStr);
+                $dayOfWeek = (int) $dt->format('N'); // 1 (Mon) to 7 (Sun)
+                $isWeekend = ($dayOfWeek >= 6);
+                $isHoliday = isset($offDaysMap[$dateStr]);
+
+                $dayCapacity = 0;
+                $dayPresent  = 0;
+                $dayOnLeave  = 0;
+
+                foreach ($subordinateIds as $empId) {
+                    $regDate = $employeeRegDates[$empId] ?? null;
+                    if (!empty($regDate) && $regDate !== '0000-00-00' && $dateStr < $regDate) {
+                        continue;
+                    }
+
+                    $rsgDate = $employeeRsgDates[$empId] ?? null;
+                    if (!empty($rsgDate) && $rsgDate !== '0000-00-00' && $dateStr >= $rsgDate) {
+                        continue;
+                    }
+
+                    $hasPenugasan      = isset($penugasanMap[$dateStr][$empId]);
+                    $scheduledDays     = $employeeWorkDays[$empId] ?? [1, 2, 3, 4, 5];
+                    $isScheduledToWork = in_array($dayOfWeek, $scheduledDays);
+                    $isOnLeave         = isset($teamLeaveMap[$dateStr][$empId]);
+
+                    if ($isOnLeave && !$isHoliday && ($isScheduledToWork || $hasPenugasan)) {
+                        $dayOnLeave++;
+                    } elseif ($hasPenugasan || ($isScheduledToWork && !$isHoliday)) {
+                        $dayCapacity++;
+                        if (isset($attendanceMap[$dateStr][$empId])) {
+                            $dayPresent++;
                         }
                     }
-                };
-
-                $processOffDays($holidayRows);
-                $processOffDays($massLeaveRows);
-
-                // 3. Pre-fetch Approved Penugasan (Assignments)
-                $penugasanRows = $this->db->table('v_all_submission')
-                    ->select('md_employee_id, DATE(date) as date')
-                    ->whereIn('md_employee_id', $subordinateIds)
-                    ->where('DATE(date) >=', $startDate)
-                    ->where('DATE(date) <=', $endDate)
-                    ->where('doctype', 'Penugasan')
-                    ->where('isagree', 'Y')
-                    ->get()->getResultArray();
-
-                $penugasanMap = [];
-                foreach ($penugasanRows as $p) {
-                    $penugasanMap[$p['date']][$p['md_employee_id']] = true;
                 }
 
-                // 4. Pre-fetch Regular Employee Work Schedules
-                // md_day_id: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
-                $schedules = $this->db->table('md_employee_work mew')
-                    ->select('mew.md_employee_id, mwd.md_day_id')
-                    ->join('md_work_detail mwd', 'mwd.md_work_id = mew.md_work_id')
-                    ->whereIn('mew.md_employee_id', $subordinateIds)
-                    ->where('mew.isactive', 'Y')
-                    ->get()->getResultArray();
-
-                $employeeWorkDays = [];
-                foreach ($schedules as $s) {
-                    $employeeWorkDays[$s['md_employee_id']][] = (int) $s['md_day_id'];
+                $todayStr = date('Y-m-d');
+                $isFuture = ($dateStr > $todayStr);
+                if ($isFuture) {
+                    return [
+                        'capacity'   => $dayCapacity,
+                        'present'    => 0,
+                        'on_leave'   => $dayOnLeave,
+                        'rate'       => null,
+                        'is_holiday' => $isHoliday || ($isWeekend && $dayCapacity === 0),
+                        'is_future'  => true
+                    ];
                 }
 
-                // 5. Pre-fetch Attendance Logs (clock_in OR clock_out presence)
-                $attendanceRows = $this->db->table('v_attendance')
-                    ->select('md_employee_id, DATE(date) as date, clock_in, clock_out')
-                    ->whereIn('md_employee_id', $subordinateIds)
-                    ->where('date >=', $startDate)
-                    ->where('date <=', $endDate)
-                    ->groupStart()
-                        ->groupStart()
-                            ->where('clock_in IS NOT NULL')
-                            ->where("clock_in != ''")
-                            ->where("clock_in != '00:00:00'")
-                        ->groupEnd()
-                        ->orGroupStart()
-                            ->where('clock_out IS NOT NULL')
-                            ->where("clock_out != ''")
-                            ->where("clock_out != '00:00:00'")
-                        ->groupEnd()
-                    ->groupEnd()
-                    ->get()->getResultArray();
+                $rate = $dayCapacity > 0 ? (int) round(($dayPresent / $dayCapacity) * 100) : ($isHoliday || $isWeekend ? 100 : 0);
 
-                $attendanceMap = [];
-                foreach ($attendanceRows as $att) {
-                    $attendanceMap[$att['date']][$att['md_employee_id']] = true;
+                return [
+                    'capacity'   => $dayCapacity,
+                    'present'    => $dayPresent,
+                    'on_leave'   => $dayOnLeave,
+                    'rate'       => $rate,
+                    'is_holiday' => $isHoliday || ($isWeekend && $dayCapacity === 0),
+                    'is_future'  => false
+                ];
+            };
+
+            $todayStr = date('Y-m-d');
+
+            if ($mode === 'day') {
+                $isTargetFuture    = ($today > $todayStr);
+                $stats             = $evaluateDailyStats($today);
+                $teamPresent       = $isTargetFuture ? 0 : $stats['present'];
+                $totalTeamCapacity = $stats['capacity'];
+                $teamRate          = $isTargetFuture ? null : $stats['rate'];
+                $teamOnLeave       = $stats['on_leave'];
+
+                // Query names of subordinates on approved leave on $today
+                $teamLeaveNames = [];
+                if (!empty($subordinateIds)) {
+                    $leaveRows = $this->db->table('v_all_submission s')
+                        ->select('e.fullname')
+                        ->join('md_employee e', 'e.md_employee_id = s.md_employee_id', 'inner')
+                        ->whereIn('s.md_employee_id', $subordinateIds)
+                        ->where('s.date >=', $today . ' 00:00:00')
+                        ->where('s.date <=', $today . ' 23:59:59')
+                        ->whereIn('s.docstatus', ['CO', 'AP'])
+                        ->where('s.isagree !=', 'C')
+                        ->groupBy('e.md_employee_id')
+                        ->get()->getResultArray();
+                    $teamLeaveNames = array_column($leaveRows, 'fullname');
                 }
 
-                // Helper Closure: Compute Capacity & Attendance for a Single Date
-                $evaluateDailyStats = function ($dateStr) use ($subordinateIds, $offDaysMap, $penugasanMap, $employeeWorkDays, $attendanceMap) {
-                    $dt        = new \DateTime($dateStr);
-                    $dayOfWeek = (int) $dt->format('N'); // 1 (Mon) to 7 (Sun)
-                    $isWeekend = ($dayOfWeek >= 6);
-                    $isHoliday = isset($offDaysMap[$dateStr]);
-
-                    $dayCapacity = 0;
-                    $dayPresent  = 0;
-
+                $teamAbsentNames = [];
+                if (!$isTargetFuture) {
+                    $dayOfWeek = (int) (new \DateTime($today))->format('N');
+                    $isHoliday = isset($offDaysMap[$today]);
                     foreach ($subordinateIds as $empId) {
-                        $hasPenugasan      = isset($penugasanMap[$dateStr][$empId]);
-                        $scheduledDays     = $employeeWorkDays[$empId] ?? [1, 2, 3, 4, 5]; // Default Mon-Fri
+                        $regDate = $employeeRegDates[$empId] ?? null;
+                        if (!empty($regDate) && $regDate !== '0000-00-00' && $today < $regDate) continue;
+                        $rsgDate = $employeeRsgDates[$empId] ?? null;
+                        if (!empty($rsgDate) && $rsgDate !== '0000-00-00' && $today >= $rsgDate) continue;
+
+                        $hasPenugasan      = isset($penugasanMap[$today][$empId]);
+                        $scheduledDays     = $employeeWorkDays[$empId] ?? [1, 2, 3, 4, 5];
                         $isScheduledToWork = in_array($dayOfWeek, $scheduledDays);
+                        $isOnLeave         = isset($teamLeaveMap[$today][$empId]);
 
-                        // Employee is expected to work if:
-                        // 1. Has explicit Penugasan (overrides holiday/weekend off) OR
-                        // 2. Is scheduled on this day AND it is not a holiday/mass leave
-                        $isExpected = $hasPenugasan || ($isScheduledToWork && !$isHoliday);
-
-                        if ($isExpected) {
-                            $dayCapacity++;
-                            if (isset($attendanceMap[$dateStr][$empId])) {
-                                $dayPresent++;
+                        if (($hasPenugasan || ($isScheduledToWork && !$isHoliday)) && !$isOnLeave && !isset($attendanceMap[$today][$empId])) {
+                            $empRow = $this->db->table('md_employee')->select('fullname')->where('md_employee_id', $empId)->get()->getRow();
+                            if ($empRow && !empty($empRow->fullname)) {
+                                $teamAbsentNames[] = $empRow->fullname;
                             }
                         }
                     }
+                }
 
-                    $rate = $dayCapacity > 0 ? (int) round(($dayPresent / $dayCapacity) * 100) : ($isHoliday || $isWeekend ? 100 : 0);
+            } elseif ($mode === 'week' && $wStart) {
+                $dayLabels         = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'];
+                $monday            = clone $wStart;
+                $totalTeamCapacity = 0;
 
-                    return [
-                        'capacity'   => $dayCapacity,
-                        'present'    => $dayPresent,
-                        'rate'       => $rate,
-                        'is_holiday' => $isHoliday || ($isWeekend && $dayCapacity === 0)
-                    ];
-                };
+                foreach ($dayLabels as $i => $label) {
+                    $dayDate = (clone $monday)->modify("+{$i} days")->format('Y-m-d');
+                    $stats   = $evaluateDailyStats($dayDate);
 
-                // 6. Execute Stats Aggregation by Mode
-                if ($mode === 'day') {
-                    $stats             = $evaluateDailyStats($today);
-                    $teamPresent       = $stats['present'];
-                    $totalTeamCapacity = $stats['capacity'];
-                    $teamRate          = $stats['rate'];
-
-                    $teamOnLeave = $this->db->table('v_all_submission')
-                        ->whereIn('md_employee_id', $subordinateIds)
-                        ->where('DATE(date)', $today)
-                        ->where('isagree', 'Y')
-                        ->countAllResults();
-
-                } elseif ($mode === 'week') {
-                    $dayLabels         = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'];
-                    $monday            = clone $wStart;
-                    $totalTeamCapacity = 0;
-
-                    foreach ($dayLabels as $i => $label) {
-                        $dayDate = (clone $monday)->modify("+{$i} days")->format('Y-m-d');
-                        $stats   = $evaluateDailyStats($dayDate);
-
+                    if ($dayDate <= $todayStr) {
                         $teamPresent       += $stats['present'];
+                        $teamOnLeave       += $stats['on_leave'];
                         $totalTeamCapacity += $stats['capacity'];
-
-                        $teamTrend[] = [
-                            'label'      => $label,
-                            'rate'       => min(100, $stats['rate']),
-                            'is_holiday' => $stats['is_holiday']
-                        ];
                     }
 
-                    $teamRate = $totalTeamCapacity > 0 ? (int) round(($teamPresent / $totalTeamCapacity) * 100) : 0;
+                    $teamTrend[] = [
+                        'label'      => $label,
+                        'rate'       => $stats['rate'] !== null ? min(100, $stats['rate']) : null,
+                        'is_holiday' => $stats['is_holiday'],
+                        'is_future'  => !empty($stats['is_future'])
+                    ];
+                }
 
-                } else { // Month Mode
-                    $firstDayOfMonth   = new \DateTime("{$currentYear}-{$currentMonth}-01");
-                    $totalTeamCapacity = 0;
+                $teamRate = $totalTeamCapacity > 0 ? (int) round(($teamPresent / $totalTeamCapacity) * 100) : null;
 
-                    for ($w = 1; $w <= 4; $w++) {
-                        $wStartBracket = (clone $firstDayOfMonth)->modify('+' . (($w - 1) * 7) . ' days');
-                        $wEndBracket   = $w === 4
-                            ? (clone $firstDayOfMonth)->modify('last day of this month')
-                            : (clone $firstDayOfMonth)->modify('+' . ($w * 7 - 1) . ' days');
+            } else {
+                $firstDayOfMonth   = new \DateTime("{$currentYear}-{$currentMonth}-01");
+                $totalTeamCapacity = 0;
 
-                        $weekCapacity = 0;
-                        $weekPresent  = 0;
+                for ($w = 1; $w <= 4; $w++) {
+                    $wStartBracket = (clone $firstDayOfMonth)->modify('+' . (($w - 1) * 7) . ' days');
+                    $wEndBracket   = $w === 4
+                        ? (clone $firstDayOfMonth)->modify('last day of this month')
+                        : (clone $firstDayOfMonth)->modify('+' . ($w * 7 - 1) . ' days');
 
-                        $curr = clone $wStartBracket;
-                        while ($curr <= $wEndBracket) {
-                            $stats        = $evaluateDailyStats($curr->format('Y-m-d'));
-                            $weekCapacity += $stats['capacity'];
-                            $weekPresent  += $stats['present'];
-                            $curr->modify('+1 day');
+                    $weekCapacity   = 0;
+                    $weekPresent    = 0;
+                    $hasElapsedDays = false;
+
+                    $curr = clone $wStartBracket;
+                    while ($curr <= $wEndBracket) {
+                        $cDate = $curr->format('Y-m-d');
+                        $stats = $evaluateDailyStats($cDate);
+                        if ($cDate <= $todayStr) {
+                            $weekCapacity   += $stats['capacity'];
+                            $weekPresent    += $stats['present'];
+                            $teamOnLeave    += $stats['on_leave'];
+                            $hasElapsedDays  = true;
                         }
-
-                        $wRate       = $weekCapacity > 0 ? (int) round(($weekPresent / $weekCapacity) * 100) : 100;
-                        $teamTrend[] = [
-                            'label' => 'W' . $w,
-                            'rate'  => min(100, $wRate)
-                        ];
-
-                        $teamPresent       += $weekPresent;
-                        $totalTeamCapacity += $weekCapacity;
+                        $curr->modify('+1 day');
                     }
 
-                    $teamRate = $totalTeamCapacity > 0 ? (int) round(($teamPresent / $totalTeamCapacity) * 100) : 0;
+                    $wRate = $hasElapsedDays ? ($weekCapacity > 0 ? (int) round(($weekPresent / $weekCapacity) * 100) : 100) : null;
+                    $teamTrend[] = [
+                        'label'     => 'W' . $w,
+                        'rate'      => $wRate !== null ? min(100, $wRate) : null,
+                        'is_future' => !$hasElapsedDays
+                    ];
+
+                    $teamPresent       += $weekPresent;
+                    $totalTeamCapacity += $weekCapacity;
                 }
+
+                $teamRate = $totalTeamCapacity > 0 ? (int) round(($teamPresent / $totalTeamCapacity) * 100) : null;
             }
-
-            // ---------------------------------------------------------
-            // 5. Leave Balance Calculation
-            // ---------------------------------------------------------
-            $mLeaveBalance  = new M_LeaveBalance($this->request);
-            $leaveBalance   = $mLeaveBalance->getTotalBalance($employeeId, $currentYear);
-            $carryOverValid = (!empty($leaveBalance) && !empty($leaveBalance->carry_over_expiry_date) && $today <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
-
-            $balance        = (float) ($leaveBalance->balance_amount ?? 0);
-            $carriedOver    = (float) ($leaveBalance->carried_over_amount ?? 0);
-            $reserved       = (float) ($leaveBalance->reserved ?? 0);
-
-            $availableLeave = $carryOverValid ? ($carriedOver + $balance) : $balance;
-            $availableLeave = max(0, $availableLeave - $reserved);
-
-            // ---------------------------------------------------------
-            // 6. Pending Approvals
-            // ---------------------------------------------------------
-            $pendingGroups = $this->db->table('v_all_submission')
-                ->select('doctype, COUNT(DISTINCT documentno) as total')
-                ->where('md_employee_id', $employeeId)
-                ->where('date <=', $rangeEnd . ' 23:59:59') // Removes DATE() function to keep index active
-                ->whereIn('docstatus', $pendingStatuses)
-                ->groupBy('doctype')
-                ->get()->getResult();
-
-            $pendingApprovals = 0;
-            $summaryParts     = [];
-            $pendingBreakdown = [];
-
-            foreach ($pendingGroups as $group) {
-                $count = (int) $group->total;
-                $pendingApprovals += $count;
-
-                $cleanLabel = ucwords(strtolower(str_replace('_', ' ', $group->doctype ?? 'Submission')));
-                $pendingBreakdown[$cleanLabel] = $count;
-                $summaryParts[]                = "{$count} " . strtolower($cleanLabel);
-            }
-
-            $pendingSummary = !empty($summaryParts) ? implode(', ', $summaryParts) : 'Tidak ada yang tertunda';
-            $pendingFull    = $pendingSummary;
-
-            // ---------------------------------------------------------
-            // 7. Calendar Subordinates & Birthday Events (Approved Only)
-            // ---------------------------------------------------------
-            if (!empty($subordinateIds)) {
-
-                // Pull session data needed for permission check
-                $roleId      = (int) (session()->get('sys_role_id') ?? 0);
-                $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
-
-                // Executives/GM (70,71,74, etc.), Super Admins, HR, and Managers (100001, 100002)
-                $canViewSubmissions = in_array($roleId, $superRoleIds, true) 
-                    || in_array($levellingId, [100001, 100002], true);
-                
-                if ($canViewSubmissions) {
-                    // 1. Pengajuan Bawahan yang SUDAH DISETUJUI
-                    $submissions = $this->db->table('v_all_submission s')
-                        ->select('s.date, s.reason, dt.md_doctype_id, dt.name as doctype_name, e.fullname as employee_name')
-                        ->join('md_doctype dt', 'dt.md_doctype_id = s.submissiontype', 'inner')
-                        ->join('md_employee e', 'e.md_employee_id = s.md_employee_id', 'left')
-                        ->whereIn('s.md_employee_id', $subordinateIds)
-                        ->where('s.docstatus', $this->DOCSTATUS_Approved)
-                        ->get()->getResult();
-
-                    foreach ($submissions as $sub) {
-                        $isLeaveType = isset($this->submissionTypes[$sub->md_doctype_id]);
-                        $eventType   = $isLeaveType ? 'leave' : 'team';
-                        $cleanLabel  = ucwords(strtolower($sub->doctype_name ?? 'Pengajuan'));
-                        $empName     = $sub->employee_name ?? 'Karyawan';
-
-                        $calendarEvents[] = [
-                            'start' => date('Y-m-d', strtotime($sub->date)),
-                            'title' => "{$cleanLabel} - {$empName}",
-                            'type'  => $eventType,
-                            'place' => $sub->reason ?? ''
-                        ];
-                    }
-                }
-
-                // 2. Ulang Tahun Bawahan
-                $birthdays = $this->db->table('md_employee')
-                    ->select('fullname, birthday')
-                    ->whereIn('md_employee_id', $subordinateIds)
-                    ->where('birthday IS NOT NULL')
-                    ->where('birthday >', '1900-01-01')
-                    ->get()->getResult();
-
-                foreach ($birthdays as $bday) {
-                    $timestamp = strtotime($bday->birthday);
-                    if (!empty($bday->birthday) && $timestamp > 0) {
-                        $calendarEvents[] = [
-                            'start' => $currentYear . '-' . date('m-d', $timestamp),
-                            'title' => "Ulang Tahun - {$bday->fullname}",
-                            'type'  => 'bday',
-                            'place' => 'Ulang Tahun Karyawan'
-                        ];
-                    }
-                }
-            }
-
-            // ---------------------------------------------------------
-            // 8. Announcements
-            // ---------------------------------------------------------
-            $announcements = $this->db->table('trx_message')
-                ->select('trx_message.trx_message_id, trx_message.subject, trx_message.body, trx_message.messagedate, trx_message.isread, sys_user.name as author')
-                ->join('sys_user', 'sys_user.sys_user_id = trx_message.author_id', 'left')
-                ->where('trx_message.recipient_id', $employeeId)
-                ->where('trx_message.isread', 'N')
-                ->orderBy('trx_message.messagedate', 'DESC')
-                ->limit(25)
-                ->get()->getResultArray();
-
-            // ---------------------------------------------------------
-            // 9. Greetings and Personalization
-            // ---------------------------------------------------------
-            $positionTable = 'md_position';
-            $positionLabel = 'name';
-            $photoDir      = 'uploads/employee/';
-            $useSalutation = true;
-
-            $validDate = static function (?string $d): ?\DateTime {
-                if (!$d || str_starts_with($d, '0000')) {
-                    return null;
-                }
-                try {
-                    return new \DateTime($d);
-                } catch (\Throwable $e) {
-                    return null;
-                }
-            };
-
-            $greetingRow = $this->db->table('md_employee e')
-                ->select('e.nickname, e.fullname, e.image, e.birthday, e.registerdate, e.gender,
-                          p.' . $positionLabel . ' AS position_name,
-                          sup.nickname AS sup_nick, sup.fullname AS sup_full')
-                ->join($positionTable . ' p', 'p.md_position_id = e.md_position_id', 'left')
-                ->join('md_employee sup', 'sup.md_employee_id = e.superior_id', 'left')
-                ->where('e.md_employee_id', $employeeId)
-                ->where('e.isactive', 'Y')
-                ->get()->getRowArray();
-
-            $employeePhoto    = null;
-            $employeeNickname = null;
-            $employeePosition = null;
-            $salutation       = null;
-            $isBirthday       = false;
-            $workAnniversary  = null;
-            $tenureText       = null;
-            $supervisorName   = null;
-
-            if ($greetingRow) {
-                $nowDateObj = new \DateTime('today');
-                $md         = $nowDateObj->format('m-d');
-
-                $bday       = $validDate($greetingRow['birthday']);
-                $isBirthday = $bday && $bday->format('m-d') === $md;
-
-                $joined          = $validDate($greetingRow['registerdate']);
-                $years           = $joined ? $joined->diff($nowDateObj)->y : 0;
-                $months          = $joined ? $joined->diff($nowDateObj)->m : 0;
-                $workAnniversary = ($joined && $years >= 1 && $joined->format('m-d') === $md) ? $years : null;
-
-                $tenureText = $joined ? trim(($years ? $years . ' th ' : '') . ($months ? $months . ' bln' : '')) : '';
-                if ($joined && $tenureText === '') {
-                    $tenureText = 'baru bergabung';
-                }
-
-                $img = trim((string) ($greetingRow['image'] ?? ''));
-                if ($img !== '' && is_file(FCPATH . $photoDir . $img)) {
-                    $employeePhoto = base_url($photoDir . $img);
-                }
-
-                if ($useSalutation) {
-                    $g          = strtoupper(trim((string) ($greetingRow['gender'] ?? '')));
-                    $salutation = in_array($g, ['L', 'M'], true) ? 'Pak' : (in_array($g, ['P', 'F'], true) ? 'Bu' : null);
-                }
-
-                $employeeNickname = $greetingRow['nickname'] ?: null;
-                $employeePosition = $greetingRow['position_name'] ?: null;
-                $supervisorName   = ($greetingRow['sup_nick'] ?: $greetingRow['sup_full']) ?: null;
-            }
-
-            // ---------------------------------------------------------
-            // 10. Scope Levels & Access Lookup
-            // ---------------------------------------------------------
-            $roleId      = (int) (session()->get('sys_role_id') ?? 0);
-            $roleName    = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
-            $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
-
-            $levels = ['me' => 'Saya'];
-            $managerialLevellings = [100001, 100002, 100003, 100004];
-            $isManagerialRole     = (bool) preg_match('/(MGR|SPV|GM|KACAB|DIREKTUR|OM)/i', $roleName);
-
-            if (!empty($subordinateIds) || in_array($levellingId, $managerialLevellings, true) || $isManagerialRole) {
-                $levels['team'] = 'Tim Saya';
-            }
-
-            if (in_array($roleId, $superRoleIds, true) || $levellingId === 100001 || str_contains($roleName, 'HRD')) {
-                $levels['all'] = 'Semua';
-            }
-
-            $currentLevel = $this->request->getGet('level') ?? 'me';
-            if (!array_key_exists($currentLevel, $levels)) {
-                $currentLevel = array_key_first($levels);
-            }
-
-            $fetchAccess = function (string $table, string $accessTable, string $pkCol, string $targetEmpId) {
-                return $this->db->table("{$table} m")
-                    ->select("m.{$pkCol} as id, m.name")
-                    ->join("{$accessTable} acc", "acc.{$pkCol} = m.{$pkCol}", 'inner')
-                    ->join('sys_user su', 'su.sys_user_id = acc.sys_user_id', 'inner')
-                    ->join('md_employee me', 'me.md_employee_id = su.md_employee_id', 'inner')
-                    ->where('me.md_employee_id', $targetEmpId)
-                    ->where('m.isactive', 'Y')
-                    ->orderBy('m.name', 'ASC')
-                    ->get()->getResultArray();
-            };
-
-            $resolveAccess = function (string $empId, array &$visited = []) use (&$resolveAccess, $fetchAccess) {
-                if (empty($empId) || isset($visited[$empId])) {
-                    return ['branches' => [], 'divisions' => []];
-                }
-                $visited[$empId] = true;
-
-                $branches  = $fetchAccess('md_branch', 'sys_user_branchaccess', 'md_branch_id', $empId);
-                $divisions = $fetchAccess('md_division', 'sys_user_divaccess', 'md_division_id', $empId);
-
-                if (!empty($branches) && !empty($divisions)) {
-                    return ['branches' => $branches, 'divisions' => $divisions];
-                }
-
-                $superiorRow = $this->db->table('md_employee')
-                    ->select('superior_id')
-                    ->where('md_employee_id', $empId)
-                    ->get()->getRow();
-
-                $superiorId = $superiorRow->superior_id ?? null;
-
-                if (!empty($superiorId)) {
-                    $parentAccess = $resolveAccess($superiorId, $visited);
-                    if (empty($branches))  $branches  = $parentAccess['branches'];
-                    if (empty($divisions)) $divisions = $parentAccess['divisions'];
-                }
-
-                return ['branches' => $branches, 'divisions' => $divisions];
-            };
-
-            $access    = $resolveAccess($employeeId);
-            $branches  = $access['branches'];
-            $divisions = $access['divisions'];
         }
 
-        // TODO : Need to define all the default value
-        // If not this will cause error 
-        // -----------------------------------------------------------------
-        // $data Array Payload (Hardened Default Values)
-        // -----------------------------------------------------------------
-        $todayDate = $today ?? date('Y-m-d');
-
-        $data = [
-            // Employee Profile & Greeting Header
-            'employee_name'     => $employeeName ?? ($greetingRow['fullname'] ?? 'Karyawan'),
-            'employee_nickname' => $employeeNickname ?? ($employeeName ?? 'Karyawan'),
-            'employee_photo'    => $employeePhoto ?? null,
-            'employee_position' => $employeePosition ?? '-',
-            'salutation'        => $salutation ?? null,
-            'is_birthday'       => $isBirthday ?? false,
-            'work_anniversary'  => $workAnniversary ?? null,
-            'tenure_text'       => $tenureText ?? null,
-            'supervisor_name'   => $supervisorName ?? '-',
-            'checkin_url'       => site_url('attendance/checkin'),
-            'leave_remaining'   => $availableLeave ?? 0,
-            'leave_total'       => $balance ?? 0,
-            'employee_moments'  => $employeeMoments ?? [],
-            'calendar_events'   => $calendarEvents ?? [],
-            'announcements'     => $announcements ?? [],
-
-            // Attendance Raw Data & Summary
-            'have_clock_in'     => $haveClockIn ?? false,
-            'have_clock_out'    => $haveClockOut ?? false,
-            'clock_in_time'     => $clockInTime ?? null,
-            'clock_out_time'    => $clockOutTime ?? null,
-            'today_checkin'     => (!empty($haveClockIn) && !empty($clockInTime)) ? $clockInTime : null,
-            'today_checkout'    => (!empty($haveClockOut) && !empty($clockOutTime)) ? $clockOutTime : null,
-            'schedule_range'    => $scheduleRange ?? '-',
-            'branch_name'       => $branchName ?? '-',
-            'attendance_status' => $attendanceStatus ?? '-',
-            'tkh_allowance'     => $tkhAllowance ?? 0,
-
-            // Personal Attendance Card (box_attendance.php)
-            'mode'              => $mode ?? 'month', // FIXED: 'month' instead of 'me'
-            'label'             => $dateLabel ?? ('Hari ini, ' . date('d M Y', strtotime($todayDate))),
-            'attendance_days'   => $attendanceDays ?? 0,     // x in x/y (Hadir)
-            'work_days'         => $targetWorkDays ?? 0,     // y in x/y (Total target kerja)
-            'work_days_elapsed' => $elapsedWorkDays ?? 0,    // Hari kerja berlalu
-            'my_rate'           => $myRate ?? 0,              // Attendance %
-            'my_leave_count'    => $myLeaveCount ?? 0,        // Total Izin / Cuti
-            'my_absent_count'   => $myAbsentCount ?? 0,       // Total Alpa / Mangkir
-            'late_count'        => $totalLate ?? 0,          // Total Terlambat + Tidak Lengkap
-            'incomplete_count'  => $incompleteCount ?? 0,    // Tanpa Absen Masuk / Pulang
-            'overtime_count'    => $overtimeCount ?? 0,      // Total Hari Lembur
-            'my_streak'         => $streakCount ?? 0,        // Streak beruntun
-
-            // Text & UI Theme Keys for box_attendance.php
-            'my_status_text'      => $myStatusText ?? '-',
-            'my_clock_in_text'    => $myClockInText ?? '--:--',
-            'my_clock_out_text'   => $myClockOutText ?? '--:--',
-            'my_punctuality_text' => $myPunctualityText ?? '-',
-            'my_tone'             => $myTone ?? 'neutral',
-            'my_shift_start'      => $myShiftStart ?? null,
-            'my_shift_end'        => $myShiftEnd ?? null,
-            'my_clock_in_raw'     => $myClockInRaw ?? null,
-            'my_clock_out_raw'    => $myClockOutRaw ?? null,
-            'my_days'             => $myDays ?? [],
-            'my_ontime_count'     => $ontimeCount ?? 0,
-
-            // Team Attendance Stats
-            'team_total'        => $teamTotal ?? 0,
-            'team_present'      => $teamPresent ?? 0,
-            'team_on_leave'     => $teamOnLeave ?? 0,
-            'team_rate'         => min(100, (float)($teamRate ?? 0)),
-            'team_trend'        => is_array($teamTrend ?? null) ? $teamTrend : [], // FIXED: Array fallback instead of string 'flat'
-            'show_team_card'    => $canViewTeamCard ?? false,
-
-            // Filters & Scope
-            'levels'            => $levels ?? ['me' => 'Saya'],
-            'level'             => $currentLevel ?? 'me',
-            'divisions'         => $divisions ?? [],
-            'branches'          => $branches ?? [],
-
-            // FIXED: Re-added missing dropdown filter selections
-            'selected_branch'   => $selectedBranchId ?? null,
-            'selected_division' => $selectedDivisionId ?? null,
-
-            // Date Picker (date_picker.php)
-            'date'              => (isset($dt) && $dt instanceof DateTimeInterface) ? $dt->format('Y-m-d') : $todayDate,
-            'today'             => $todayDate,
-            'todayDate'         => $todayDate,
-            'dateLabel'         => $dateLabel ?? date('F Y', strtotime($todayDate)),
-            'prevDate'          => $prevDate ?? date('Y-m-d', strtotime('-1 day', strtotime($todayDate))),
-            'nextDate'          => $nextDate ?? date('Y-m-d', strtotime('+1 day', strtotime($todayDate))),
-            'rangeStart'        => $rangeStart ?? date('Y-m-01', strtotime($todayDate)),
-            'rangeEnd'          => $rangeEnd ?? date('Y-m-t', strtotime($todayDate)),
-
-            // Pending Approvals Summary
-            'pending_approvals' => $pendingApprovals ?? 0,
-            'pending_summary'   => $pendingSummary ?? 'Tidak ada pengajuan berjalan',
-            'pending_full'      => $pendingFull ?? 'Tidak ada pengajuan berjalan',
-            'pending_breakdown' => $pendingBreakdown ?? [],
+        $result = [
+            'can_view_team_card' => $canViewTeamCard,
+            'subordinate_ids'    => $subordinateIds,
+            'team_total'         => $teamTotal,
+            'team_present'       => $teamPresent,
+            'team_on_leave'      => $teamOnLeave,
+            'team_rate'          => $teamRate,
+            'team_trend'         => $teamTrend,
+            'team_is_future'     => ($mode === 'day') ? ($today > $todayStr) : (!empty($startDate) && $startDate > $todayStr),
+            'team_leave_names'   => $teamLeaveNames ?? [],
+            'team_absent_names'  => $teamAbsentNames ?? [],
         ];
 
-        // Debug Output
-        if ($this->request->getGet('debug') === '1') {
-            return $this->response->setJSON($data);
+        if ($cacheTtl > 0) {
+            cache()->save($cacheKey, $result, $cacheTtl);
         }
 
-        // Ajax Refresh
-        if ($this->request->isAJAX() || $this->request->getGet('ajax') === '1') {
-            return $this->response->setJSON($data);
+        return $result;
+    }
+
+    /**
+     * Calculates leave remaining balance and carried over amounts.
+     * Cached per employee for 15 minutes.
+     */
+    private function getLeaveBalanceData(int $employeeId, string $today, string $currentYear): array
+    {
+        $cacheKey = "dash_leave_{$employeeId}_{$currentYear}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
         }
 
-        return $this->template->render('dashboard/v_dashboard', $data);
+        $mLeaveBalance  = new M_LeaveBalance($this->request);
+        $leaveBalance   = $mLeaveBalance->getTotalBalance($employeeId, $currentYear);
+        $carryOverValid = (!empty($leaveBalance) && !empty($leaveBalance->carry_over_expiry_date) && $today <= date('Y-m-d', strtotime($leaveBalance->carry_over_expiry_date)));
+
+        $balance        = (float) ($leaveBalance->balance_amount ?? 0);
+        $carriedOver    = (float) ($leaveBalance->carried_over_amount ?? 0);
+        $reserved       = (float) ($leaveBalance->reserved ?? 0);
+
+        $availableLeave = $carryOverValid ? ($carriedOver + $balance) : $balance;
+        $availableLeave = max(0, $availableLeave - $reserved);
+
+        $result = [
+            'balance'         => $balance,
+            'available_leave' => $availableLeave,
+        ];
+
+        cache()->save($cacheKey, $result, 900); // 15 minutes
+        return $result;
+    }
+
+    /**
+     * Aggregates pending submissions and formats summary breakdown.
+     * Cached for 120 seconds.
+     */
+    private function getPendingApprovalsData(int $employeeId, string $rangeEnd): array
+    {
+        $roleId   = (int) (session()->get('sys_role_id') ?? 0);
+        $roleName = $this->resolveRoleName($roleId);
+        $isSuper  = in_array($roleId, $this->superRoleIds, true) || (strpos($roleName, 'HRD') !== false);
+
+        $cacheKey = "dash_pending_{$employeeId}_{$roleId}_{$rangeEnd}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $builder = $this->db->table('v_all_submission')
+            ->select('doctype, COUNT(DISTINCT documentno) as total')
+            ->where('date <=', $rangeEnd . ' 23:59:59')
+            ->whereIn('docstatus', $this->pendingDocStatuses);
+
+        if (empty($employeeId) && $isSuper) {
+            // System Admin / SuperHRD without employee ID: View all pending submissions company-wide
+        } else {
+            $builder->where('md_employee_id', $employeeId);
+        }
+
+        $pendingGroups = $builder->groupBy('doctype')->get()->getResult();
+
+        $pendingApprovals = 0;
+        $summaryParts     = [];
+        $pendingBreakdown = [];
+
+        foreach ($pendingGroups as $group) {
+            $count = (int) $group->total;
+            $pendingApprovals += $count;
+
+            $cleanLabel = ucwords(strtolower(str_replace('_', ' ', $group->doctype ?? 'Submission')));
+            $pendingBreakdown[$cleanLabel] = $count;
+            $summaryParts[]                = "{$count} " . strtolower($cleanLabel);
+        }
+
+        $pendingSummary = !empty($summaryParts) ? implode(', ', $summaryParts) : 'Tidak ada yang tertunda';
+
+        $result = [
+            'pending_approvals' => $pendingApprovals,
+            'pending_summary'   => $pendingSummary,
+            'pending_full'      => $pendingSummary,
+            'pending_breakdown' => $pendingBreakdown,
+        ];
+
+        cache()->save($cacheKey, $result, 120); // 2 minutes
+        return $result;
+    }
+
+    /**
+     * Fetches approved subordinate submissions and upcoming birthdays for calendar feed.
+     */
+    private function getSubordinateCalendarEvents(array $subordinateIds, string $currentYear): array
+    {
+        $calendarEvents = [];
+        if (empty($subordinateIds)) {
+            return $calendarEvents;
+        }
+
+        $roleId      = (int) (session()->get('sys_role_id') ?? 0);
+        $levellingId = $this->resolveEmployeeLevellingId();
+
+        // Executives/GM, Super Admins, HR, and Managers (100001, 100002)
+        $canViewSubmissions = in_array($roleId, $this->superRoleIds, true) 
+            || in_array($levellingId, [100001, 100002], true);
+
+        if ($canViewSubmissions) {
+            $submissions = $this->db->table('v_all_submission s')
+                ->select('s.date, s.reason, dt.md_doctype_id, dt.name as doctype_name, e.fullname as employee_name')
+                ->join('md_doctype dt', 'dt.md_doctype_id = s.submissiontype', 'inner')
+                ->join('md_employee e', 'e.md_employee_id = s.md_employee_id', 'left')
+                ->whereIn('s.md_employee_id', $subordinateIds)
+                ->where('s.docstatus', $this->DOCSTATUS_Approved)
+                ->get()->getResult();
+
+            foreach ($submissions as $sub) {
+                $isLeaveType = isset($this->submissionTypes[$sub->md_doctype_id]);
+                $eventType   = $isLeaveType ? 'leave' : 'team';
+                $cleanLabel  = ucwords(strtolower($sub->doctype_name ?? 'Pengajuan'));
+                $empName     = !empty($sub->employee_name) ? ucwords(strtolower(trim($sub->employee_name))) : 'Karyawan';
+
+                $calendarEvents[] = [
+                    'start' => date('Y-m-d', strtotime($sub->date)),
+                    'title' => "{$cleanLabel} - {$empName}",
+                    'type'  => $eventType,
+                    'place' => $sub->reason ?? ''
+                ];
+            }
+        }
+
+        // Subordinate birthdays
+        $birthdays = $this->db->table('md_employee')
+            ->select('fullname, birthday')
+            ->whereIn('md_employee_id', $subordinateIds)
+            ->where('birthday IS NOT NULL')
+            ->where('birthday >', '1900-01-01')
+            ->where("CAST(birthday AS CHAR) NOT LIKE '0000%'")
+            ->get()->getResult();
+
+        foreach ($birthdays as $bday) {
+            if (empty($bday->birthday) || strpos((string) $bday->birthday, '0000') === 0) continue;
+            $timestamp = strtotime($bday->birthday);
+            if ($timestamp && $timestamp > 0) {
+                $bdayName = !empty($bday->fullname) ? ucwords(strtolower(trim($bday->fullname))) : 'Karyawan';
+                $calendarEvents[] = [
+                    'start' => $currentYear . '-' . date('m-d', $timestamp),
+                    'title' => "Ulang Tahun - {$bdayName}",
+                    'type'  => 'bday',
+                    'place' => 'Ulang Tahun Karyawan'
+                ];
+            }
+        }
+
+        return $calendarEvents;
+    }
+
+    /**
+     * Fetches unread announcements for the employee.
+     * Cached per employee for 10 minutes.
+     */
+    private function getUnreadAnnouncements(int $employeeId, int $limit = 25): array
+    {
+        $cacheKey = "dash_unread_msg_{$employeeId}_{$limit}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $rows = $this->db->table('trx_message')
+            ->select('trx_message.trx_message_id, trx_message.subject, trx_message.body, trx_message.messagedate, trx_message.isread, sys_user.name as author')
+            ->join('sys_user', 'sys_user.sys_user_id = trx_message.author_id', 'left')
+            ->where('trx_message.recipient_id', $employeeId)
+            ->where('trx_message.isread', 'N')
+            ->orderBy('trx_message.messagedate', 'DESC')
+            ->limit($limit)
+            ->get()->getResultArray();
+
+        cache()->save($cacheKey, $rows, 600); // 10 minutes
+        return $rows;
+    }
+
+    /**
+     * Fetches employee greeting, tenure, birthday, and avatar info.
+     * Cached per employee for 30 minutes.
+     */
+    private function getEmployeeGreetingData(int $employeeId): array
+    {
+        $cacheKey = "dash_greeting_{$employeeId}";
+        $isBypass = !empty($this->request->getGet('refresh'));
+
+        if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+            return $cached;
+        }
+
+        $positionTable = 'md_position';
+        $positionLabel = 'name';
+        $photoDir      = 'uploads/employee/';
+        $useSalutation = true;
+
+        $validDate = static function (?string $d): ?\DateTime {
+            if (!$d || strpos($d, '0000') === 0) {
+                return null;
+            }
+            try {
+                return new \DateTime($d);
+            } catch (\Throwable $e) {
+                return null;
+            }
+        };
+
+        $greetingRow = $this->db->table('md_employee e')
+            ->select('e.nickname, e.fullname, e.image, e.birthday, e.registerdate, e.gender,
+                      p.' . $positionLabel . ' AS position_name,
+                      sup.nickname AS sup_nick, sup.fullname AS sup_full')
+            ->join($positionTable . ' p', 'p.md_position_id = e.md_position_id', 'left')
+            ->join('md_employee sup', 'sup.md_employee_id = e.superior_id', 'left')
+            ->where('e.md_employee_id', $employeeId)
+            ->where('e.isactive', 'Y')
+            ->get()->getRowArray();
+
+        $employeePhoto    = null;
+        $employeeNickname = null;
+        $employeePosition = null;
+        $salutation       = null;
+        $isBirthday       = false;
+        $workAnniversary  = null;
+        $tenureText       = null;
+        $supervisorName   = null;
+
+        if ($greetingRow) {
+            $nowDateObj = new \DateTime('today');
+            $md         = $nowDateObj->format('m-d');
+
+            $bday       = $validDate($greetingRow['birthday']);
+            $isBirthday = $bday && $bday->format('m-d') === $md;
+
+            $joined          = $validDate($greetingRow['registerdate']);
+            $years           = $joined ? $joined->diff($nowDateObj)->y : 0;
+            $months          = $joined ? $joined->diff($nowDateObj)->m : 0;
+            $workAnniversary = ($joined && $years >= 1 && $joined->format('m-d') === $md) ? $years : null;
+
+            $tenureText = $joined ? trim(($years ? $years . ' th ' : '') . ($months ? $months . ' bln' : '')) : '';
+            if ($joined && $tenureText === '') {
+                $tenureText = 'baru bergabung';
+            }
+
+            $img = trim((string) ($greetingRow['image'] ?? ''));
+            if ($img !== '' && is_file(FCPATH . $photoDir . $img)) {
+                $employeePhoto = base_url($photoDir . $img);
+            }
+
+            if ($useSalutation) {
+                $g          = strtoupper(trim((string) ($greetingRow['gender'] ?? '')));
+                $salutation = in_array($g, ['L', 'M'], true) ? 'Pak' : (in_array($g, ['P', 'F'], true) ? 'Bu' : null);
+            }
+
+            $rawEmployeeName = $greetingRow['fullname'] ?? ($employeeName ?? 'Karyawan');
+            $employeeNormalizedName = !empty($rawEmployeeName) ? ucwords(strtolower(trim($rawEmployeeName))) : 'Karyawan';
+            $employeeNickname = !empty($greetingRow['nickname']) ? ucwords(strtolower(trim($greetingRow['nickname']))) : $employeeNormalizedName;
+            $employeePosition = $greetingRow['position_name'] ?: null;
+
+            $rawSupervisorName = $greetingRow['sup_full'] ?: ($greetingRow['sup_nick'] ?: null);
+            $supervisorName   = !empty($rawSupervisorName) ? ucwords(strtolower(trim($rawSupervisorName))) : null;
+        }
+
+        $result = [
+            'greeting_row'      => $greetingRow,
+            'employee_photo'    => $employeePhoto,
+            'employee_nickname' => $employeeNickname,
+            'employee_position' => $employeePosition,
+            'salutation'        => $salutation,
+            'is_birthday'       => $isBirthday,
+            'work_anniversary'  => $workAnniversary,
+            'tenure_text'       => $tenureText,
+            'supervisor_name'   => $supervisorName,
+        ];
+
+        cache()->save($cacheKey, $result, 1800); // 30 minutes
+        return $result;
+    }
+
+    /**
+     * Resolves scope levels (me, team, all) and branch/division access hierarchy.
+     */
+    private function resolveDashboardScope(int $employeeId, array $subordinateIds): array
+    {
+        $roleId      = (int) (session()->get('sys_role_id') ?? 0);
+        $roleName    = $this->resolveRoleName($roleId);
+        $levellingId = $this->resolveEmployeeLevellingId($employeeId ?: null);
+
+        $levels = ['me' => 'Saya'];
+        $isManagerialRole = (bool) preg_match('/(MGR|SPV|GM|KACAB|DIREKTUR|OM)/i', $roleName);
+
+        if (!empty($subordinateIds) || in_array($levellingId, $this->managerialLevellings, true) || $isManagerialRole) {
+            $levels['team'] = 'Tim Saya';
+        }
+
+        if (in_array($roleId, $this->superRoleIds, true) || $levellingId === 100001 || strpos($roleName, 'HRD') !== false) {
+            $levels['all'] = 'Semua';
+        }
+
+        $currentLevel = $this->request->getGet('level') ?? 'me';
+        if (!array_key_exists($currentLevel, $levels)) {
+            $currentLevel = array_key_first($levels);
+        }
+
+        $access    = $this->resolveEmployeeAccess((string) $employeeId);
+        $branches  = $access['branches'];
+        $divisions = $access['divisions'];
+
+        return [
+            'levels'        => $levels,
+            'current_level' => $currentLevel,
+            'branches'      => $branches,
+            'divisions'     => $divisions,
+        ];
     }
 
     public function getCalendarEvents()
@@ -1074,56 +1565,22 @@ class Dashboard extends BaseController
 
             $employeeId  = session()->get('md_employee_id');
             $roleId      = (int) (session()->get('sys_role_id') ?? 0);
-            $roleName    = strtoupper((string) (session()->get('role_name') ?? session()->get('name') ?? ''));
-            $levellingId = (int) (session()->get('md_levelling_id') ?? 0);
+            $roleName    = $this->resolveRoleName($roleId);
+            $levellingId = $this->resolveEmployeeLevellingId($employeeId ? (int) $employeeId : null);
+
+            // Calendar cache layer: 15 minutes for active periods, 6 hours for past
+            $catHash  = md5(implode(',', $categories));
+            $cacheKey = "dash_calev_{$employeeId}_{$scope}_{$branchId}_{$divisionId}_{$startDate}_{$endDate}_{$catHash}";
+            $isBypass = !empty($this->request->getGet('refresh'));
+
+            if (!$isBypass && ($cached = cache($cacheKey)) !== null) {
+                return $this->response->setJSON($cached);
+            }
 
             $isHrd          = (strpos($roleName, 'HRD') !== false);
-            $superRoleIds   = [1, 5, 6, 7, 21, 79, 80, 90];
-            $hasSuperAccess = in_array($roleId, $superRoleIds, true) || $levellingId === 100001 || $isHrd;
+            $hasSuperAccess = in_array($roleId, $this->superRoleIds, true) || $levellingId === 100001 || $isHrd;
 
-            $fetchAccess = function (string $table, string $accessTable, string $pkCol, string $targetEmpId) {
-                return $this->db->table("{$table} m")
-                    ->select("m.{$pkCol} as id, m.name")
-                    ->join("{$accessTable} acc", "acc.{$pkCol} = m.{$pkCol}", 'inner')
-                    ->join('sys_user su', 'su.sys_user_id = acc.sys_user_id', 'inner')
-                    ->join('md_employee me', 'me.md_employee_id = su.md_employee_id', 'inner')
-                    ->where('me.md_employee_id', $targetEmpId)
-                    ->where('m.isactive', 'Y')
-                    ->orderBy('m.name', 'ASC')
-                    ->get()->getResultArray();
-            };
-
-            $resolveAccess = function (string $empId, array &$visited = []) use (&$resolveAccess, $fetchAccess) {
-                if (empty($empId) || isset($visited[$empId])) {
-                    return ['branches' => [], 'divisions' => []];
-                }
-                $visited[$empId] = true;
-
-                $branches  = $fetchAccess('md_branch', 'sys_user_branchaccess', 'md_branch_id', $empId);
-                $divisions = $fetchAccess('md_division', 'sys_user_divaccess', 'md_division_id', $empId);
-
-                if (!empty($branches) && !empty($divisions)) {
-                    return ['branches' => $branches, 'divisions' => $divisions];
-                }
-
-                $superiorRow = $this->db->table('md_employee')
-                    ->select('superior_id')
-                    ->where('md_employee_id', $empId)
-                    ->get()->getRow();
-
-                $superiorId = $superiorRow->superior_id ?? null;
-
-                if (!empty($superiorId) && $superiorId != $empId) {
-                    $parentAccess = $resolveAccess((string) $superiorId, $visited);
-
-                    if (empty($branches))  $branches  = $parentAccess['branches'];
-                    if (empty($divisions)) $divisions = $parentAccess['divisions'];
-                }
-
-                return ['branches' => $branches, 'divisions' => $divisions];
-            };
-
-            $myAccess    = $resolveAccess((string) $employeeId);
+            $myAccess    = $this->resolveEmployeeAccess((string) $employeeId);
             $myBranchIds = array_map('strval', array_column($myAccess['branches'], 'id'));
             $myDivIds    = array_map('strval', array_column($myAccess['divisions'], 'id'));
 
@@ -1140,7 +1597,7 @@ class Dashboard extends BaseController
             $selectedDiv    = (!empty($divisionId) && $divisionId !== 'all') ? (string) $divisionId : null;
             $isFiltering    = ($selectedBranch !== null) || ($selectedDiv !== null);
 
-            if ($hasSuperAccess && !$isFiltering && ($scope === 'all' || empty($scope))) {
+            if ($hasSuperAccess && !$isFiltering && ($scope === 'all' || empty($scope) || empty($employeeId))) {
                 $targetEmployeeIds = null;
             } else {
                 $empBuilder = $this->db->table('md_employee e')
@@ -1158,16 +1615,28 @@ class Dashboard extends BaseController
                     }
                 } else {
                     $empBuilder->groupStart();
-                    if (!empty($myBranchIds)) {
-                        $empBuilder->orWhereIn('e.md_employee_id', function($sub) use ($myBranchIds) {
+
+                    // 1. Employees in user assigned Branch AND Division
+                    if (!empty($myBranchIds) && !empty($myDivIds)) {
+                        $empBuilder->whereIn('e.md_employee_id', function($sub) use ($myBranchIds, $myDivIds) {
+                            return $sub->select('eb.md_employee_id')
+                                ->from('md_employee_branch eb')
+                                ->join('md_employee_division ed', 'ed.md_employee_id = eb.md_employee_id AND ed.isactive = "Y"', 'inner')
+                                ->whereIn('eb.md_branch_id', $myBranchIds)
+                                ->whereIn('ed.md_division_id', $myDivIds)
+                                ->where('eb.isactive', 'Y');
+                        });
+                    } elseif (!empty($myBranchIds)) {
+                        $empBuilder->whereIn('e.md_employee_id', function($sub) use ($myBranchIds) {
                             return $sub->select('md_employee_id')->from('md_employee_branch')->whereIn('md_branch_id', $myBranchIds)->where('isactive', 'Y');
                         });
-                    }
-                    if (!empty($myDivIds)) {
-                        $empBuilder->orWhereIn('e.md_employee_id', function($sub) use ($myDivIds) {
+                    } elseif (!empty($myDivIds)) {
+                        $empBuilder->whereIn('e.md_employee_id', function($sub) use ($myDivIds) {
                             return $sub->select('md_employee_id')->from('md_employee_division')->whereIn('md_division_id', $myDivIds)->where('isactive', 'Y');
                         });
                     }
+
+                    // 2. OR Employees directly reporting to user in hierarchy
                     if (!empty($allTeamIds)) {
                         $empBuilder->orWhereIn('e.md_employee_id', $allTeamIds);
                     }
@@ -1187,22 +1656,19 @@ class Dashboard extends BaseController
                 'leave'   => '#f59e0b',
                 'holiday' => '#dc2626',
                 'bday'    => '#8b5cf6',
-                'team'    => '#10b981',
+                'team'    => '#0284c7',
             ];
 
-            $superRoleIds = [1, 4, 5, 6, 21, 70, 71, 74, 79, 80, 90];
             $subCats = array_intersect($categories, ['leave', 'team']);
-            $canViewSubmissions = in_array($roleId, $superRoleIds, true) 
-                || in_array($levellingId, [100001, 100002], true);
+            $canViewSubmissions = in_array($roleId, $this->superRoleIds, true) 
+                || in_array($levellingId, $this->managerialLevellings, true)
+                || $isHrd;
 
-            if (!$canViewSubmissions) {
-                $subCats = [];
-            }
             if (!empty($subCats)) {
                 $builder = $this->db->table('v_all_submission s')
                     ->select('
                         s.documentno,
-                        MAX(s.date) as date, 
+                        DATE(s.date) as event_date, 
                         MAX(s.reason) as reason, 
                         MAX(s.docstatus) as docstatus, 
                         MAX(s.ref_id) as ref_id, 
@@ -1220,32 +1686,39 @@ class Dashboard extends BaseController
                     ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
                     ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id AND ed.isactive = "Y"', 'left')
                     ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
-                    ->whereIn('s.docstatus', ['CO', 'AP', 'IP']);
+                    ->whereIn('s.docstatus', ['CO', 'AP', 'IP'])
+                    ->where('s.isagree !=', 'C');
 
-                if ($targetEmployeeIds !== null) {
+                if (!$canViewSubmissions) {
+                    // Non-managerial users can always view their own submissions regardless of permissions
+                    $builder->where('s.md_employee_id', $employeeId);
+                } elseif ($targetEmployeeIds !== null) {
                     $builder->whereIn('s.md_employee_id', $targetEmployeeIds);
                 }
                 if ($startDate && $endDate) {
-                    $builder->where('s.date >=', $startDate)->where('s.date <=', $endDate);
+                    $builder->where('s.date >=', $startDate . ' 00:00:00')->where('s.date <=', $endDate . ' 23:59:59');
                 }
 
-                $submissions = $builder->groupBy('s.documentno')->get()->getResult();
+                $submissions = $builder->groupBy('s.documentno, DATE(s.date)')->get()->getResult();
 
                 foreach ($submissions as $sub) {
                     $catKey = (isset($sub->md_doctype_id) && $sub->md_doctype_id == 100003) ? 'leave' : 'team';
                     if (!in_array($catKey, $categories, true)) continue;
 
+                    $cleanEmpName = !empty($sub->employee_name) ? ucwords(strtolower(trim($sub->employee_name))) : 'Karyawan';
+                    $cleanDocName = ucwords(strtolower($sub->doctype_name ?? 'Pengajuan'));
+
                     $events[] = [
-                        'id'              => $sub->documentno,
-                        'title'           => ucwords(strtolower($sub->doctype_name ?? 'Pengajuan')) . " - " . ($sub->employee_name ?? 'Karyawan'),
-                        'start'           => date('Y-m-d', strtotime($sub->date)),
+                        'id'              => $sub->documentno . '-' . date('Ymd', strtotime($sub->event_date)),
+                        'title'           => $cleanDocName . " - " . $cleanEmpName,
+                        'start'           => date('Y-m-d', strtotime($sub->event_date)),
                         'className'       => 't-' . $catKey,
                         'backgroundColor' => $colorMap[$catKey],
                         'type'            => $catKey,
                         'extendedProps'   => [
                             'documentno'   => $sub->documentno,
-                            'doctype_name' => ucwords(strtolower($sub->doctype_name ?? 'Pengajuan')),
-                            'employee'     => $sub->employee_name ?? 'Karyawan',
+                            'doctype_name' => $cleanDocName,
+                            'employee'     => $cleanEmpName,
                             'nik'          => $sub->employee_nik ?? '',
                             'branch'       => $sub->branch_name ?? '-',
                             'division'     => $sub->division_name ?? '-',
@@ -1259,6 +1732,12 @@ class Dashboard extends BaseController
             }
 
             if (in_array('bday', $categories, true)) {
+
+                # BUG : Showing non active emp within the list
+                # This due to my assumption of this bday list is included in the subordinatesId
+                $excludedStatusNames = ['RESIGN', 'PENSIUN'];
+                $today = date('Y-m-d');
+
                 $bdayBuilder = $this->db->table('md_employee e')
                     ->select('
                         e.md_employee_id,
@@ -1268,12 +1747,24 @@ class Dashboard extends BaseController
                         MAX(b.name) as branch_name,
                         MAX(d.name) as division_name
                     ')
+                    ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
                     ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id AND eb.isactive = "Y"', 'left')
                     ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
                     ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id AND ed.isactive = "Y"', 'left')
                     ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
                     ->where('e.isactive', 'Y')
                     ->where('e.birthday IS NOT NULL')
+                    ->where('e.birthday >', '1900-01-01')
+                    ->where("CAST(e.birthday AS CHAR) NOT LIKE '0000%'")
+                    ->groupStart()
+                        ->where('e.resigndate IS NULL')
+                        ->orWhere("CAST(e.resigndate AS CHAR) = '0000-00-00'")
+                        ->orWhere('e.resigndate >', $today)
+                    ->groupEnd()
+                    ->groupStart()
+                        ->whereNotIn('s.name', $excludedStatusNames)
+                        ->orWhere('s.name IS NULL')
+                    ->groupEnd()
                     ->groupBy('e.md_employee_id');
 
                 if ($targetEmployeeIds !== null) {
@@ -1285,21 +1776,25 @@ class Dashboard extends BaseController
                 $endYear   = (int) date('Y', strtotime($endDate));
 
                 foreach ($bdayEmps as $emp) {
-                    if (empty($emp->birthday)) continue;
-                    $dobMonthDay = date('m-d', strtotime($emp->birthday));
+                    if (empty($emp->birthday) || strpos((string) $emp->birthday, '0000') === 0) continue;
+                    $bdayTimestamp = strtotime($emp->birthday);
+                    if (!$bdayTimestamp || $bdayTimestamp <= 0) continue;
+
+                    $dobMonthDay = date('m-d', $bdayTimestamp);
+                    $cleanBdayEmpName = !empty($emp->employee_name) ? ucwords(strtolower(trim($emp->employee_name))) : 'Karyawan';
 
                     for ($yr = $startYear; $yr <= $endYear; $yr++) {
                         $bdayDate = $yr . '-' . $dobMonthDay;
                         if ($bdayDate >= $startDate && $bdayDate <= $endDate) {
                             $events[] = [
                                 'id'              => 'bday_' . $emp->md_employee_id . '_' . $yr,
-                                'title'           => 'Ulang Tahun - ' . ($emp->employee_name ?? 'Karyawan'),
+                                'title'           => 'Ulang Tahun - ' . $cleanBdayEmpName,
                                 'start'           => $bdayDate,
                                 'className'       => 't-bday',
                                 'backgroundColor' => $colorMap['bday'],
                                 'type'            => 'bday',
                                 'extendedProps'   => [
-                                    'employee' => $emp->employee_name ?? 'Karyawan',
+                                    'employee' => $cleanBdayEmpName,
                                     'nik'      => $emp->employee_nik ?? '',
                                     'branch'   => $emp->branch_name ?? '-',
                                     'division' => $emp->division_name ?? '-'
@@ -1311,21 +1806,99 @@ class Dashboard extends BaseController
             }
 
             if (in_array('holiday', $categories, true)) {
-                $year     = $startDate ? date('Y', strtotime($startDate)) : date('Y');
-                $holidays = cache("google_id_holidays_{$year}") ?? [];
+                $processedHolidayDates = [];
 
-                foreach ($holidays as $index => $h) {
-                    $events[] = [
-                        'id'              => 'holiday_' . $index,
-                        'title'           => "Libur - {$h['title']}",
-                        'start'           => $h['date'],
-                        'allDay'          => true,
-                        'className'       => 't-holiday',
-                        'backgroundColor' => $colorMap['holiday'],
-                        'type'            => 'holiday'
-                    ];
+                // 1. Libur Nasional (md_holiday) - Highest priority
+                $holidayBuilder = $this->db->table('md_holiday')
+                    ->select('name, DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE "0000%" OR CAST(enddate AS CHAR) = "" THEN startdate ELSE enddate END) AS end_date')
+                    ->where('isactive', 'Y');
+
+                if ($startDate && $endDate) {
+                    $holidayBuilder->where('startdate <=', $endDate . ' 23:59:59')
+                        ->groupStart()
+                            ->where('enddate >=', $startDate . ' 00:00:00')
+                            ->orWhere('enddate IS NULL')
+                            ->orWhere("CAST(enddate AS CHAR) LIKE '0000%'")
+                            ->orWhere("CAST(enddate AS CHAR) = ''")
+                        ->groupEnd();
+                }
+
+                $dbHolidays = $holidayBuilder->get()->getResultArray();
+                foreach ($dbHolidays as $index => $h) {
+                    $sDate = $h['start_date'];
+                    $eDate = (!empty($h['end_date']) && $h['end_date'] >= $sDate) ? $h['end_date'] : $sDate;
+
+                    $currDate = $sDate;
+                    while ($currDate <= $eDate) {
+                        if ((!$startDate || $currDate >= $startDate) && (!$endDate || $currDate <= $endDate)) {
+                            $events[] = [
+                                'id'              => 'holiday_' . $index . '_' . $currDate,
+                                'title'           => $h['name'],
+                                'start'           => $currDate,
+                                'allDay'          => true,
+                                'className'       => 't-holiday',
+                                'backgroundColor' => $colorMap['holiday'],
+                                'type'            => 'holiday',
+                                'extendedProps'   => [
+                                    'holiday_type' => 'Libur Nasional',
+                                    'holiday_name' => $h['name']
+                                ]
+                            ];
+                            $processedHolidayDates[$currDate] = true;
+                        }
+                        $currDate = date('Y-m-d', strtotime($currDate . ' +1 day'));
+                    }
+                }
+
+                // 2. Cuti Bersama (md_massleave) - Secondary priority
+                $massBuilder = $this->db->table('md_massleave')
+                    ->select('name, DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE "0000%" OR CAST(enddate AS CHAR) = "" THEN startdate ELSE enddate END) AS end_date')
+                    ->where('isactive', 'Y');
+
+                if ($startDate && $endDate) {
+                    $massBuilder->where('startdate <=', $endDate . ' 23:59:59')
+                        ->groupStart()
+                            ->where('enddate >=', $startDate . ' 00:00:00')
+                            ->orWhere('enddate IS NULL')
+                            ->orWhere("CAST(enddate AS CHAR) LIKE '0000%'")
+                            ->orWhere("CAST(enddate AS CHAR) = ''")
+                        ->groupEnd();
+                }
+
+                $dbMassLeaves = $massBuilder->get()->getResultArray();
+                foreach ($dbMassLeaves as $index => $m) {
+                    $sDate = $m['start_date'];
+                    $eDate = (!empty($m['end_date']) && $m['end_date'] >= $sDate) ? $m['end_date'] : $sDate;
+
+                    $currDate = $sDate;
+                    while ($currDate <= $eDate) {
+                        if ((!$startDate || $currDate >= $startDate) && (!$endDate || $currDate <= $endDate)) {
+                            // If not already covered by a national holiday, add as mass leave
+                            if (!isset($processedHolidayDates[$currDate])) {
+                                $events[] = [
+                                    'id'              => 'massleave_' . $index . '_' . $currDate,
+                                    'title'           => $m['name'],
+                                    'start'           => $currDate,
+                                    'allDay'          => true,
+                                    'className'       => 't-holiday',
+                                    'backgroundColor' => $colorMap['holiday'],
+                                    'type'            => 'holiday',
+                                    'extendedProps'   => [
+                                        'holiday_type' => 'Cuti Bersama',
+                                        'holiday_name' => $m['name']
+                                    ]
+                                ];
+                            }
+                        }
+                        $currDate = date('Y-m-d', strtotime($currDate . ' +1 day'));
+                    }
                 }
             }
+
+            // Save calendar events to cache (15 mins active, 6 hours past)
+            $todayStr = date('Y-m-d');
+            $calTtl   = (!empty($endDate) && $endDate < $todayStr) ? 21600 : 900;
+            cache()->save($cacheKey, $events, $calTtl);
 
             return $this->response->setJSON($events);
 
@@ -1333,5 +1906,681 @@ class Dashboard extends BaseController
             log_message('error', 'Calendar Events Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return $this->response->setStatusCode(500)->setJSON(['error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Dashboard Endpoint: Fetches attendance card data for today or a target date directly in-memory.
+     * Route: GET /sas/get-today-card?date=2026-10-07&debug=1
+     */
+    public function getTodayCard()
+    {
+        $sessionNik = (string) ($this->session->get('nik') ?? '');
+        $targetNik  = (string) ($this->request->getGet('nik') ?: $sessionNik);
+
+        if (empty($targetNik)) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'status'  => 'error',
+                'message' => 'Session expired or missing NIK.'
+            ]);
+        }
+
+        // IDOR Check: Non-privileged users can only view their own attendance card
+        if ($sessionNik !== '' && $targetNik !== $sessionNik) {
+            $roleId      = (int) (session()->get('sys_role_id') ?? 0);
+            $levellingId = $this->resolveEmployeeLevellingId();
+
+            $canInspect = in_array($roleId, $this->superRoleIds, true) || in_array($levellingId, $this->managerialLevellings, true);
+
+            if (!$canInspect) {
+                return $this->response->setStatusCode(403)->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Unauthorized to view other employee attendance.'
+                ]);
+            }
+        }
+
+        $nik      = $targetNik;
+        $workDate = $this->request->getGet('date') ?? date('Y-m-d');
+        $isDebug  = ($this->request->getGet('debug') === '1');
+
+        // 1. Process attendance engine calculation in-memory
+        $calc = $this->processEmployeeDay($nik, $workDate);
+
+        // 2. Fetch supplementary branch & employee information
+        $empInfo = $this->db->table('md_employee me')
+            ->select('me.value AS employee_name, mb.name AS branch_name')
+            ->join('md_employee_branch meb', 'me.md_employee_id = meb.md_employee_id AND meb.isactive = "Y"', 'left')
+            ->join('md_branch mb', 'meb.md_branch_id = mb.md_branch_id', 'left')
+            ->where('me.nik', $nik)
+            ->get()->getRowArray();
+
+        $schedule   = $this->getEmployeeSchedule($calc['md_employee_id'], $workDate);
+        $startWork  = $schedule['startwork'] ?? null;
+        $endWork    = $schedule['endwork'] ?? null;
+        $schedRange = ($startWork && $endWork) ? "{$startWork} - {$endWork}" : 'Libur / Tidak Ada Jadwal';
+
+        $attendance = array_merge($calc, [
+            'employee_name'  => $empInfo['employee_name'] ?? '-',
+            'branch_name'    => $empInfo['branch_name'] ?? '-',
+            'startwork'      => $startWork,
+            'endwork'        => $endWork,
+            'schedule_range' => $schedRange,
+        ]);
+
+        $response = [
+            'status' => 'success',
+            'data'   => $attendance
+        ];
+
+        if ($isDebug) {
+            $response['debug'] = [
+                'request_params'    => ['nik' => $nik, 'work_date' => $workDate],
+                'calculation_trace' => $this->debugLog,
+                'result'            => $attendance
+            ];
+        }
+
+        return $this->response->setJSON($response);
+    }
+
+    /**
+     * Batch process employee attendance for a date range in-memory.
+     * OPTIMIZATION: Replaces the 180+ query N+1 loop with 5 batch pre-fetches.
+     */
+    private function processEmployeeRange(string $nik, string $startDate, string $endDate): array
+    {
+        $this->rangeQueryStats = [];
+
+        // 1. Resolve Employee ID once
+        $empId = $this->getEmployeeId($nik);
+        if ($empId === 0) {
+            return [];
+        }
+
+        // 2. Batch Pre-fetch Holidays overlapping the period
+        $holidayRows = $this->db->table('md_holiday')
+            ->select("DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE '0000%' THEN startdate ELSE enddate END) AS end_date")
+            ->where('isactive', 'Y')
+            ->where('startdate <=', $endDate . ' 23:59:59')
+            ->groupStart()
+                ->where('enddate >=', $startDate . ' 00:00:00')
+                ->orWhere('enddate IS NULL')
+                ->orWhere("CAST(enddate AS CHAR) = '0000-00-00'")
+                ->orWhere("CAST(enddate AS CHAR) = ''")
+            ->groupEnd()
+            ->get()->getResultArray();
+
+        $holidaySet = [];
+        foreach ($holidayRows as $h) {
+            $curr = new \DateTime($h['start_date']);
+            $end  = new \DateTime($h['end_date']);
+            while ($curr <= $end) {
+                $holidaySet[$curr->format('Y-m-d')] = true;
+                $curr->modify('+1 day');
+            }
+        }
+
+        // 3. Batch Pre-fetch Mass Leaves overlapping the period
+        $massLeaveRows = $this->db->table('md_massleave')
+            ->select("DATE(startdate) AS start_date, DATE(CASE WHEN enddate IS NULL OR CAST(enddate AS CHAR) LIKE '0000%' THEN startdate ELSE enddate END) AS end_date")
+            ->where('isactive', 'Y')
+            ->where('startdate <=', $endDate . ' 23:59:59')
+            ->groupStart()
+                ->where('enddate >=', $startDate . ' 00:00:00')
+                ->orWhere('enddate IS NULL')
+                ->orWhere("CAST(enddate AS CHAR) = '0000-00-00'")
+                ->orWhere("CAST(enddate AS CHAR) = ''")
+            ->groupEnd()
+            ->get()->getResultArray();
+
+        $massLeaveSet = [];
+        foreach ($massLeaveRows as $m) {
+            $curr = new \DateTime($m['start_date']);
+            $end  = new \DateTime($m['end_date']);
+            while ($curr <= $end) {
+                $massLeaveSet[$curr->format('Y-m-d')] = true;
+                $curr->modify('+1 day');
+            }
+        }
+
+        // 4. Batch Pre-fetch Employee Schedules (7 days max)
+        $scheduleRows = $this->db->table('md_employee_work mew')
+            ->select("
+                mwd.md_day_id,
+                DATE_FORMAT(mwd.startwork, '%H:%i:%s') AS startwork,
+                DATE_FORMAT(mwd.endwork, '%H:%i:%s') AS endwork,
+                mew.validfrom,
+                mew.validto
+            ")
+            ->join('md_work mw', 'mw.md_work_id = mew.md_work_id')
+            ->join('md_work_detail mwd', 'mw.md_work_id = mwd.md_work_id')
+            ->where('mew.md_employee_id', $empId)
+            ->where('(mew.isactive = "Y" OR mew.isactive IS NULL)')
+            ->where('mew.validfrom <=', $endDate . ' 23:59:59')
+            ->groupStart()
+                ->where('mew.validto IS NULL')
+                ->orWhere("CAST(mew.validto AS CHAR) LIKE '0000%'")
+                ->orWhere('mew.validto >=', $startDate . ' 00:00:00')
+            ->groupEnd()
+            ->get()->getResultArray();
+
+        // 5. Batch Pre-fetch Approved Submissions
+        $subRows = $this->db->table('v_all_submission')
+            ->select('DATE(date) AS sub_date, submissiontype')
+            ->where('md_employee_id', $empId)
+            ->where('date >=', $startDate . ' 00:00:00')
+            ->where('date <=', $endDate . ' 23:59:59')
+            ->whereIn('docstatus', ['CO', 'AP'])
+            ->get()->getResultArray();
+
+        $submissionsByDate = [];
+        foreach ($subRows as $sub) {
+            if (!isset($submissionsByDate[$sub['sub_date']])) {
+                $submissionsByDate[$sub['sub_date']] = $sub['submissiontype'];
+            }
+        }
+
+        // 6. Batch Pre-fetch All Raw Biometric Taps for Range
+        $startBound = $startDate . ' 05:00:00';
+        $endBound   = date('Y-m-d', strtotime($endDate . ' +1 day')) . ' 04:59:59';
+
+        $allTaps = $this->db->table('trx_attendance')
+            ->select("checktime, updated_by, DATE_FORMAT(checktime, '%H:%i:%s') AS time_val")
+            ->where('nik', $nik)
+            ->where('checktime >=', $startBound)
+            ->where('checktime <=', $endBound)
+            ->orderBy('checktime', 'ASC')
+            ->get()->getResultArray();
+
+        // Bucket taps by logical workDate (taps before 05:00 belong to previous day)
+        $rawTapsByDate = [];
+        foreach ($allTaps as $tap) {
+            $timePart = substr($tap['checktime'], 11, 8);
+            $datePart = substr($tap['checktime'], 0, 10);
+            $workDate = ($timePart < '05:00:00') ? date('Y-m-d', strtotime($datePart . ' -1 day')) : $datePart;
+            $rawTapsByDate[$workDate][] = $tap;
+        }
+
+        // Deduplicate taps per work date within 60s
+        $cleanedTapsByDate = [];
+        foreach ($rawTapsByDate as $wDate => $taps) {
+            $cleaned = [];
+            $lastStamp = 0;
+            foreach ($taps as $tap) {
+                $currentStamp = strtotime($tap['checktime']);
+                if ($lastStamp === 0 || ($currentStamp - $lastStamp) >= $this->tapDeduplicationSec) {
+                    $cleaned[] = $tap;
+                    $lastStamp = $currentStamp;
+                }
+            }
+            $cleanedTapsByDate[$wDate] = $cleaned;
+        }
+
+        // 7. In-Memory Evaluation Loop (0 DB Queries inside loop)
+        $period = new \DatePeriod(
+            new \DateTime($startDate),
+            new \DateInterval('P1D'),
+            (new \DateTime($endDate))->modify('+1 day')
+        );
+
+        $results = [];
+        foreach ($period as $dt) {
+            $workDate = $dt->format('Y-m-d');
+            $dayNo    = (int) $dt->format('N');
+
+            // Find matching schedule for this specific date
+            $matchedSched = null;
+            $wStartDt = $workDate . ' 00:00:00';
+            $wEndDt   = $workDate . ' 23:59:59';
+            foreach ($scheduleRows as $sRow) {
+                if ((int)$sRow['md_day_id'] === $dayNo) {
+                    $vFrom = $sRow['validfrom'];
+                    $vTo   = $sRow['validto'];
+                    if ($vFrom <= $wEndDt && ($vTo === null || strpos((string)$vTo, '0000') === 0 || $vTo >= $wStartDt)) {
+                        $matchedSched = [
+                            'startwork' => $sRow['startwork'],
+                            'endwork'   => $sRow['endwork'],
+                        ];
+                        break;
+                    }
+                }
+            }
+
+            $dayTaps     = $cleanedTapsByDate[$workDate] ?? [];
+            $isHoliday   = isset($holidaySet[$workDate]);
+            $isMassLeave = isset($massLeaveSet[$workDate]);
+            $subType     = $submissionsByDate[$workDate] ?? null;
+
+            $tStart = microtime(true);
+
+            $results[$workDate] = $this->evaluateDayLogic(
+                $empId,
+                $nik,
+                $workDate,
+                $dayTaps,
+                $matchedSched,
+                $isHoliday,
+                $isMassLeave,
+                $subType
+            );
+
+            // Record micro-timing for profiler (queries = 0 inside loop!)
+            $this->rangeQueryStats[] = [
+                'date'    => $workDate,
+                'queries' => 0,
+                'time_ms' => round((microtime(true) - $tStart) * 1000, 3),
+            ];
+        }
+
+        return $results;
+    }
+
+    /**
+     * Core Engine Processor (In-Memory Evaluation for Single Day)
+     */
+    private function processEmployeeDay(string $nik, string $workDate): array
+    {
+        $empId       = $this->getEmployeeId($nik);
+        $rawTaps     = $this->getCleanedRawTaps($nik, $workDate);
+        $schedule    = $this->getEmployeeSchedule($empId, $workDate);
+        $isHoliday   = $this->isNationalHoliday($workDate);
+        $isMassLeave = $this->isMassLeave($workDate);
+        $subType     = $this->getApprovedSubmission($nik, $workDate);
+
+        return $this->evaluateDayLogic(
+            $empId,
+            $nik,
+            $workDate,
+            $rawTaps,
+            $schedule,
+            $isHoliday,
+            $isMassLeave,
+            $subType
+        );
+    }
+
+    /**
+     * Pure In-Memory Attendance Rules Engine
+     */
+    private function evaluateDayLogic(
+        int $empId,
+        string $nik,
+        string $workDate,
+        array $rawTaps,
+        ?array $schedule,
+        bool $isHoliday,
+        bool $isMassLeave,
+        ?string $subType
+    ): array {
+        $totalPunches = count($rawTaps);
+        $hasManual    = $this->hasManualOverride($rawTaps);
+        $isDebug      = ($this->request->getGet('debug') === '1');
+        $isToday      = ($workDate === date('Y-m-d'));
+        $currentTime  = date('H:i:s');
+
+        // -----------------------------------------------------------------
+        // RULE 1: Manual HRD Override Bypass
+        // -----------------------------------------------------------------
+        if ($hasManual) {
+            $in  = date('H:i:s', strtotime($rawTaps[0]['checktime']));
+            $out = $totalPunches > 1 ? date('H:i:s', strtotime(end($rawTaps)['checktime'])) : null;
+
+            if ($isDebug) {
+                $this->debugLog[] = [
+                    'nik' => $nik, 'work_date' => $workDate, 'final_status' => 'MANUAL_HRD_OVERRIDE'
+                ];
+            }
+
+            return $this->formatOutput($empId, $nik, $workDate, $in, $out, $totalPunches, 'MANUAL_HRD_OVERRIDE', 1.0, 1);
+        }
+
+        // -----------------------------------------------------------------
+        // RULE 2: Non-Working Days / Public Holidays / Mass Leaves
+        // -----------------------------------------------------------------
+        $isOffDay = (!$schedule || $isHoliday || $isMassLeave);
+        if ($isOffDay) {
+            if ($totalPunches > 0) {
+                $in     = $rawTaps[0]['time_val'];
+                $out    = $totalPunches > 1 ? end($rawTaps)['time_val'] : null;
+                $status = $isHoliday ? 'HOLIDAY_WORKED' : ($isMassLeave ? 'MASS_LEAVE_WORKED' : 'OVERTIME_OFF_DAY');
+                return $this->formatOutput($empId, $nik, $workDate, $in, $out, $totalPunches, $status, 1.0, 0);
+            } else {
+                $status = $isHoliday ? 'PUBLIC_HOLIDAY' : ($isMassLeave ? 'MASS_LEAVE' : 'OFF_DAY');
+                return $this->formatOutput($empId, $nik, $workDate, null, null, 0, $status, 1.0, 0);
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // RULE 3: Regular Workday Calculations
+        // -----------------------------------------------------------------
+        $startWork     = $schedule['startwork'];
+        $endWork       = $schedule['endwork'];
+        $cutoff        = date('H:i:s', strtotime($startWork . ' +4 hours'));
+        $lateThreshold = date('H:i:s', strtotime($startWork . " +{$this->lateToleranceMinutes} minutes"));
+
+        // Split Taps by Midday Cutoff
+        $morning   = [];
+        $afternoon = [];
+        foreach ($rawTaps as $tap) {
+            if ($tap['time_val'] < $cutoff && $tap['time_val'] >= '05:00:00') {
+                $morning[] = $tap;
+            } else {
+                $afternoon[] = $tap;
+            }
+        }
+
+        // Resolve Clock-In and Clock-Out
+        $clockIn  = !empty($morning) ? $morning[0]['time_val'] : null;
+        $clockOut = !empty($afternoon) ? end($afternoon)['time_val'] : null;
+
+        // Disambiguate single taps
+        if ($totalPunches === 1) {
+            $singleTap = $rawTaps[0]['time_val'];
+            if ($singleTap < $cutoff) {
+                $clockIn  = ($subType === 'TUGAS_HALF_AFTERNOON') ? null : $singleTap;
+                $clockOut = ($subType === 'TUGAS_HALF_AFTERNOON') ? $singleTap : null;
+            } else {
+                $clockIn  = ($subType === 'TUGAS_HALF_MORNING') ? $singleTap : null;
+                $clockOut = ($subType === 'TUGAS_HALF_MORNING') ? null : $singleTap;
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // RULE 4: Status & Allowance Evaluation Engine
+        // -----------------------------------------------------------------
+        $status = 'NORMAL';
+        $tkh    = 1.0;
+
+        // --- A. No Taps At All ---
+        if (!$clockIn && !$clockOut) {
+            if ($subType) {
+                $status = 'LEAVE_APPROVED';
+                $tkh    = 1.0;
+            } elseif ($workDate > date('Y-m-d')) {
+                $status = 'UPCOMING_WORK';
+                $tkh    = 1.0;
+            } else {
+                $status = 'ABSENT';
+                $tkh    = 0.0;
+            }
+        } 
+        // --- B. Clock-In Present, Clock-Out Missing ---
+        elseif ($clockIn && !$clockOut) {
+            $isLate = ($clockIn > $lateThreshold);
+
+            if ($isToday && $currentTime < $endWork) {
+                $status = $isLate ? 'IN_OFFICE_LATE' : 'IN_OFFICE';
+                $tkh    = $isLate ? 0.5 : 1.0;
+            } elseif (in_array($subType, ['100011', 'LUPA_ABSEN_PULANG'], true)) {
+                $status = $isLate ? 'LATE_EXCUSED' : 'NORMAL';
+                $tkh    = $isLate ? 0.5 : 1.0;
+            } elseif ($subType) {
+                $status = $isLate ? 'LATE_WITH_APPROVED_LEAVE' : 'HALF_DAY_APPROVED';
+                $tkh    = $isLate ? 0.5 : 1.0;
+            } else {
+                $status = $isLate ? 'LATE_AND_MISSING_OUT' : 'MISSING_CHECK_OUT';
+                $tkh    = 0.0;
+            }
+        } 
+        // --- C. Clock-In Missing, Clock-Out Present ---
+        elseif (!$clockIn && $clockOut) {
+            if (in_array($subType, ['100010', 'LUPA_ABSEN_MASUK'], true)) {
+                $status = 'NORMAL';
+                $tkh    = 1.0;
+            } elseif ($subType) {
+                $status = 'HALF_DAY_APPROVED';
+                $tkh    = 1.0;
+            } else {
+                $status = 'MISSING_CHECK_IN';
+                $tkh    = 0.0;
+            }
+        } 
+        // --- D. Both Clock-In and Clock-Out Present ---
+        else {
+            $isLate     = ($clockIn > $lateThreshold);
+            $isEarlyOut = ($clockOut < $endWork);
+
+            if ($isLate && $isEarlyOut) {
+                $status = $subType ? 'APPROVED_SHORT_HOURS' : 'LATE_AND_EARLY_LEAVE';
+                $tkh    = $subType ? 1.0 : 0.0;
+            } elseif ($isLate) {
+                $status = (in_array($subType, ['100012', 'DATANG_TERLAMBAT'], true) || !empty($subType)) ? 'LATE_EXCUSED' : 'LATE_ARRIVAL';
+                $tkh    = (in_array($subType, ['100012', 'DATANG_TERLAMBAT'], true) || !empty($subType)) ? 1.0 : 0.5;
+            } elseif ($isEarlyOut) {
+                // Pulang Cepat (100013) and Sakit (100001, 100026) excuse early departure; other reasons still require full hours
+                $isEarlyExcused = in_array((string)$subType, ['100013', 'PULANG_CEPAT', '100001', '100026', 'SAKIT', 'TUGAS_HALF_AFTERNOON'], true);
+                $status = $isEarlyExcused ? 'EARLY_LEAVE_EXCUSED' : 'UNEXCUSED_EARLY_DEPARTURE';
+                $tkh    = $isEarlyExcused ? 1.0 : 0.5;
+            }
+        }
+
+        if ($isDebug) {
+            $this->debugLog[] = [
+                'nik'           => $nik,
+                'work_date'     => $workDate,
+                'shift'         => "{$startWork} - {$endWork}",
+                'late_limit'    => $lateThreshold,
+                'resolved_in'   => $clockIn,
+                'resolved_out'  => $clockOut,
+                'submission'    => $subType,
+                'final_status'  => $status,
+                'tkh_allowance' => $tkh
+            ];
+        }
+
+        return $this->formatOutput($empId, $nik, $workDate, $clockIn, $clockOut, $totalPunches, $status, $tkh, 0);
+    }
+
+    private function getCleanedRawTaps(string $nik, string $workDate): array
+    {
+        $startBound = $workDate . ' 05:00:00';
+        $nextDay    = date('Y-m-d', strtotime($workDate . ' +1 day'));
+        $endBound   = $nextDay . ' 04:59:59';
+
+        $sql = "
+            SELECT checktime, updated_by, DATE_FORMAT(checktime, '%H:%i:%s') AS time_val
+            FROM trx_attendance
+            WHERE nik = :nik:
+              AND checktime >= :startBound:
+              AND checktime <= :endBound:
+            ORDER BY checktime ASC
+        ";
+
+        $raw = $this->db->query($sql, [
+            'nik'        => $nik,
+            'startBound' => $startBound,
+            'endBound'   => $endBound
+        ])->getResultArray();
+
+        $cleaned   = [];
+        $lastStamp = 0;
+
+        foreach ($raw as $tap) {
+            $currentStamp = strtotime($tap['checktime']);
+            if ($lastStamp === 0 || ($currentStamp - $lastStamp) >= $this->tapDeduplicationSec) {
+                $cleaned[] = $tap;
+                $lastStamp = $currentStamp;
+            }
+        }
+
+        return $cleaned;
+    }
+
+    private function isNationalHoliday(string $workDate): bool
+    {
+        $sql = "
+            SELECT COUNT(*) as cnt 
+            FROM md_holiday 
+            WHERE isactive = 'Y'
+              AND (
+                  ( (enddate IS NULL OR CAST(enddate AS CHAR) LIKE '0000%') AND startdate >= :wStart: AND startdate <= :wEnd: )
+                  OR 
+                  ( enddate IS NOT NULL AND CAST(enddate AS CHAR) NOT LIKE '0000%' AND startdate <= :wEnd: AND enddate >= :wStart: )
+              )
+        ";
+        $row = $this->db->query($sql, [
+            'wStart' => $workDate . ' 00:00:00',
+            'wEnd'   => $workDate . ' 23:59:59'
+        ])->getRowArray();
+
+        return ((int)($row['cnt'] ?? 0)) > 0;
+    }
+
+    private function isMassLeave(string $workDate): bool
+    {
+        $sql = "
+            SELECT COUNT(*) as cnt 
+            FROM md_massleave 
+            WHERE isactive = 'Y'
+              AND (
+                  ( (enddate IS NULL OR CAST(enddate AS CHAR) LIKE '0000%') AND startdate >= :wStart: AND startdate <= :wEnd: )
+                  OR 
+                  ( enddate IS NOT NULL AND CAST(enddate AS CHAR) NOT LIKE '0000%' AND startdate <= :wEnd: AND enddate >= :wStart: )
+              )
+        ";
+        $row = $this->db->query($sql, [
+            'wStart' => $workDate . ' 00:00:00',
+            'wEnd'   => $workDate . ' 23:59:59'
+        ])->getRowArray();
+
+        return ((int)($row['cnt'] ?? 0)) > 0;
+    }
+
+    private function getApprovedSubmission(string $nik, string $workDate): ?string
+    {
+        $sql = "
+            SELECT vas.submissiontype
+            FROM v_all_submission vas
+            JOIN md_employee me ON me.md_employee_id = vas.md_employee_id
+            WHERE me.nik = :nik:
+              AND vas.date >= :wStart:
+              AND vas.date <= :wEnd:
+              AND vas.docstatus IN ('CO', 'AP')
+            LIMIT 1
+        ";
+        $row = $this->db->query($sql, [
+            'nik'    => $nik,
+            'wStart' => $workDate . ' 00:00:00',
+            'wEnd'   => $workDate . ' 23:59:59'
+        ])->getRowArray();
+
+        return $row['submissiontype'] ?? null;
+    }
+
+    private function getEmployeeSchedule(int $empId, string $workDate): ?array
+    {
+        $dayNo = (int) date('N', strtotime($workDate));
+
+        $sql = "
+            SELECT 
+                DATE_FORMAT(mwd.startwork, '%H:%i:%s') AS startwork, 
+                DATE_FORMAT(mwd.endwork, '%H:%i:%s') AS endwork
+            FROM md_employee_work mew
+            JOIN md_work_detail mwd ON mew.md_work_id = mwd.md_work_id
+            WHERE mew.md_employee_id = :empId:
+              AND mew.validfrom <= :wEnd: 
+              AND (mew.validto IS NULL OR CAST(mew.validto AS CHAR) LIKE '0000%' OR mew.validto >= :wStart:)
+              AND (mew.isactive = 'Y' OR mew.isactive IS NULL)
+              AND mwd.md_day_id = :dayNo:
+            LIMIT 1
+        ";
+
+        return $this->db->query($sql, [
+            'empId'  => $empId,
+            'wStart' => $workDate . ' 00:00:00',
+            'wEnd'   => $workDate . ' 23:59:59',
+            'dayNo'  => $dayNo
+        ])->getRowArray();
+    }
+
+    private function getEmployeeId(string $nik): int
+    {
+        $sql = "SELECT md_employee_id FROM md_employee WHERE nik = :nik: LIMIT 1";
+        $row = $this->db->query($sql, ['nik' => $nik])->getRowArray();
+        return (int)($row['md_employee_id'] ?? 0);
+    }
+
+    private function hasManualOverride(array $rawTaps): bool
+    {
+        foreach ($rawTaps as $tap) {
+            if (
+                $tap['updated_by'] !== null && 
+                !in_array((string)$tap['updated_by'], ['100000', '0', 'SYSTEM'], true)
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function formatOutput(
+        int $empId,
+        string $nik,
+        string $wDate,
+        ?string $in,
+        ?string $out,
+        int $punches,
+        string $status,
+        float $tkh,
+        int $manual
+    ): array {
+        return [
+            'md_employee_id'     => $empId,
+            'nik'                => $nik,
+            'work_date'          => $wDate,
+            'clock_in'           => $in,
+            'clock_out'          => $out,
+            'total_punches'      => $punches,
+            'attendance_status'  => $status,
+            'tkh_allowance'      => $tkh,
+            'is_manual_override' => $manual
+        ];
+    }
+
+    /**
+     * Recursive employee branch & division access resolver
+     */
+    private function resolveEmployeeAccess(string $empId, array &$visited = []): array
+    {
+        if (empty($empId) || isset($visited[$empId])) {
+            return ['branches' => [], 'divisions' => []];
+        }
+        $visited[$empId] = true;
+
+        $branches  = $this->fetchAccessList('md_branch', 'sys_user_branchaccess', 'md_branch_id', $empId);
+        $divisions = $this->fetchAccessList('md_division', 'sys_user_divaccess', 'md_division_id', $empId);
+
+        if (!empty($branches) && !empty($divisions)) {
+            return ['branches' => $branches, 'divisions' => $divisions];
+        }
+
+        $superiorRow = $this->db->table('md_employee')
+            ->select('superior_id')
+            ->where('md_employee_id', $empId)
+            ->get()->getRow();
+
+        $superiorId = $superiorRow->superior_id ?? null;
+
+        if (!empty($superiorId) && $superiorId != $empId) {
+            $parentAccess = $this->resolveEmployeeAccess((string) $superiorId, $visited);
+
+            if (empty($branches))  $branches  = $parentAccess['branches'];
+            if (empty($divisions)) $divisions = $parentAccess['divisions'];
+        }
+
+        return ['branches' => $branches, 'divisions' => $divisions];
+    }
+
+    private function fetchAccessList(string $table, string $accessTable, string $pkCol, string $targetEmpId): array
+    {
+        return $this->db->table("{$table} m")
+            ->select("m.{$pkCol} as id, m.name")
+            ->join("{$accessTable} acc", "acc.{$pkCol} = m.{$pkCol}", 'inner')
+            ->join('sys_user su', 'su.sys_user_id = acc.sys_user_id', 'inner')
+            ->join('md_employee me', 'me.md_employee_id = su.md_employee_id', 'inner')
+            ->where('me.md_employee_id', $targetEmpId)
+            ->where('m.isactive', 'Y')
+            ->orderBy('m.name', 'ASC')
+            ->get()->getResultArray();
     }
 }

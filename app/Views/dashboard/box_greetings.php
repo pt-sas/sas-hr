@@ -43,14 +43,14 @@ $meta = array_slice($meta, 0, $maxMeta);
 ?>
 <div class="gr">
 
-    <div class="gr-avatar-wrap">
+    <!-- <div class="gr-avatar-wrap">
         <?php if (! empty($employee_photo)): ?>
             <img class="gr-avatar" src="<?= esc($employee_photo, 'attr') ?>" alt="" width="68" height="68">
         <?php else: ?>
             <span class="gr-avatar gr-initials" style="background:linear-gradient(135deg,<?= $pair[0] ?>,<?= $pair[1] ?>)" aria-hidden="true"><?= esc($initials) ?></span>
         <?php endif; ?>
         <?php if (! empty($is_birthday)): ?><span class="gr-badge" aria-hidden="true">🎂</span><?php endif; ?>
-    </div>
+    </div> -->
 
     <div class="gr-body">
         <h1 class="gr-title"><?= $greeting ?><?php if ($first !== ''): ?>, <?= $salut !== '' ? esc($salut) . ' ' : '' ?><em><?= esc($first) ?></em><?php endif; ?></h1>

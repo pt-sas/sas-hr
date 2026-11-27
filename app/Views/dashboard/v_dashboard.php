@@ -47,12 +47,19 @@
             aria-label="Ringkasan KPI"
             tabindex="0">
 
-            <!-- Filled Card 1: Personal Attendance -->
-            <div class="kc-slide">
-                <?= $this->include('dashboard/box_attendance') ?>
-            </div>
+            <?php 
+                $isDireksi = (isset($levelling_id) && (int) $levelling_id === 100001);
+                $showPersonalCard = !empty($employee_id) && !empty($nik) && !$isDireksi;
+            ?>
 
-            <!-- Filled Card 2 (Conditional): Team Attendance -->
+            <!-- Filled Card 1: Personal Attendance (Hidden for system admin & DIREKSI) -->
+            <?php if ($showPersonalCard): ?>
+                <div class="kc-slide">
+                    <?= $this->include('dashboard/box_attendance') ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Filled Card 2 (Conditional): Team / Company Attendance -->
             <?php if (!empty($show_team_card)): ?>
                 <div class="kc-slide">
                     <?= $this->include('dashboard/box_team_attendance') ?>
@@ -65,7 +72,11 @@
             </div>
 
             <!-- Placeholders (Pushed to the far right to maintain 4 total slides) -->
-            <?php if (empty($show_team_card)): ?>
+            <?php 
+                $visibleFilled = ($showPersonalCard ? 1 : 0) + (!empty($show_team_card) ? 1 : 0) + 1;
+                $placeholdersNeeded = max(0, 4 - $visibleFilled);
+                for ($p = 0; $p < $placeholdersNeeded; $p++):
+            ?>
                 <div class="kc-slide">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body d-flex flex-column align-items-center justify-content-center p-4 text-center text-muted">
@@ -73,15 +84,7 @@
                         </div>
                     </div>
                 </div>
-            <?php endif; ?>
-
-            <div class="kc-slide">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center p-4 text-center text-muted">
-                        <i class="fas fa-layer-group fa-2x mb-2 opacity-25"></i>
-                    </div>
-                </div>
-            </div>
+            <?php endfor; ?>
 
         </div>
     </div>
@@ -256,6 +259,56 @@
     filter: blur(0.5px);
 }
 
+/* =========================================================
+   KPI SKELETON & LOADING ANIMATIONS
+   ========================================================= */
+
+@keyframes kpiPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.42; }
+}
+
+.kpi-card-loading {
+    pointer-events: none;
+    position: relative;
+}
+
+.kpi-card-loading [data-kpi] {
+    opacity: 0.48;
+    animation: kpiPulse 1.2s ease-in-out infinite;
+    transition: opacity .2s ease;
+}
+
+.kpi-card-loading .progress-bar,
+.kpi-card-loading .k-bar,
+.kpi-card-loading .tk-chart-bar,
+.kpi-card-loading .tk-seg {
+    opacity: 0.45;
+    animation: kpiPulse 1.2s ease-in-out infinite;
+}
+
+
+/* Calendar Loading State */
+#fc-calendar {
+    transition: opacity .2s ease;
+}
+
+#fc-calendar.cal-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kpi-card-loading [data-kpi],
+    .kpi-card-loading .progress-bar,
+    .kpi-card-loading .k-bar,
+    .kpi-card-loading .tk-chart-bar,
+    .kpi-card-loading .tk-seg {
+        animation: none !important;
+        opacity: 0.6;
+    }
+}
+
 
 /* =========================================================
    KPI ARROWS
@@ -374,10 +427,10 @@
 }
 </style>
 
-<?= $this->endSection() ?>
-
 <script>
 window.APP_URLS = window.APP_URLS || {};
 window.APP_URLS.pesanUpdateRead = '<?= base_url('sas/pesan/updateRead') ?>';
 </script>
+
+<?= $this->endSection() ?>
 

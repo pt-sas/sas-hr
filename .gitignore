@@ -136,9 +136,10 @@ public/uploads
 .prettierrc
 .prettierignore
 
+# Local caches & tools
+*graphify-out/
+.playwright-mcp/
+
 .agent
 .agents
 .antigravity
-.playwright-mcp
-app/graphify-out
-graphify-out

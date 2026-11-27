@@ -266,7 +266,16 @@ class BaseServices
             // TODO : Populate data to oldV and newV
             foreach ($data as $key => $val) {
                 if ($newRecord) {
-                    $newV->{$key} = $val;
+                    foreach ($fields as $field) :
+                        if ($field->name === $key) {
+                            if ($field->type === 'int' && empty($data[$key]) && $field->nullable) {
+                                $newV->{$key} = null;
+                            } else {
+                                $newV->{$key} = $val;
+                            }
+                            break;
+                        }
+                    endforeach;
                 } else {
                     // TODO : Convert value type integer is null to Zero
                     foreach ($fields as $field) :
@@ -292,6 +301,8 @@ class BaseServices
                     $newV->{$this->primaryKey} = $this->getID();
                 }
             }
+
+            logMessage($newV);
 
             // TODO : Check is created by or updated by already set?
             if ($newRecord) {
@@ -520,7 +531,7 @@ class BaseServices
 
             if ($result) {
                 // TODO : Insert delete log
-                $this->changeLog($model->table, $model->primaryKey, $dataDelete, $model->db->getFieldNames($model->table), $this->EVENTCHANGELOG_Delete);
+                $this->changeLog($model->table, $model->primaryKey, $dataDelete['data'], $model->db->getFieldNames($model->table), $this->EVENTCHANGELOG_Delete);
 
                 $result = 1;
             } else {

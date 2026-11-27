@@ -66,7 +66,7 @@ $csrfHash = function_exists('csrf_hash')  ? csrf_hash()  : '';
 #kalender {
   --c-company: #1d4ed8; --bg-company: #eff6ff; --txt-company: #0f172a;
   --c-leave:   #d97706; --bg-leave:   #fffbeb; --txt-leave:   #78350f;
-  --c-team:    #059669; --bg-team:    #ecfdf5; --txt-team:    #064e3b;
+  --c-team:    #0284c7; --bg-team:    #f0f9ff; --txt-team:    #075985;
   --c-bday:    #7c3aed; --bg-bday:    #f3e8ff; --txt-bday:    #4c1d95;
   
   --line:  #cbd5e1;
@@ -93,6 +93,19 @@ $csrfHash = function_exists('csrf_hash')  ? csrf_hash()  : '';
 #kalender .t-team    { --dot: var(--c-team);    --bg: var(--bg-team);    --txt: var(--txt-team); }
 #kalender .t-bday    { --dot: var(--c-bday);    --bg: var(--bg-bday);    --txt: var(--txt-bday); }
 #kalender .t-holiday { --dot: #dc2626;          --bg: #fef2f2;           --txt: #991b1b; }
+
+/* FullCalendar Agenda / List View Dots */
+#kalender .fc-list-item .fc-event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+#kalender .fc-list-item.t-company .fc-event-dot { background-color: var(--c-company) !important; }
+#kalender .fc-list-item.t-leave .fc-event-dot   { background-color: var(--c-leave) !important; }
+#kalender .fc-list-item.t-team .fc-event-dot    { background-color: var(--c-team) !important; }
+#kalender .fc-list-item.t-bday .fc-event-dot    { background-color: var(--c-bday) !important; }
+#kalender .fc-list-item.t-holiday .fc-event-dot { background-color: #dc2626 !important; }
 
 /* Accessible Center-Aligned Calendar Legend Bar */
 .k-legend-bar {
@@ -203,6 +216,13 @@ $csrfHash = function_exists('csrf_hash')  ? csrf_hash()  : '';
 }
 #kalender .fc-bg td.is-selected {
   box-shadow: inset 0 0 0 3px var(--c-company);
+}
+
+#kalender .fc-day,
+#kalender .fc-day-top,
+#kalender .fc-day-grid-event,
+#kalender .k-row {
+  cursor: pointer;
 }
 
 /* ==========================================================================

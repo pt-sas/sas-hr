@@ -1,4 +1,4 @@
-`<?php
+<?php
 /**
 - app/Views/dashboard/box_approval.php - Senior-Friendly Accessibility Version
  */
@@ -54,7 +54,7 @@ $approvalUrl = $approval_url ?? site_url('submission');
                 <?php if ($count === 0): ?>
                     <span class="ap-status-clear"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>Tidak ada yang tertunda</span>
                 <?php else: ?>
-                    <span class="ap-status-pending"><i class="fas fa-exclamation-circle me-1" aria-hidden="true"></i><?= esc($summary !== '' ? $summary : 'Perlu ditinjau') ?></span>
+                    <span><?= esc($summary !== '' ? $summary : 'Perlu ditinjau') ?></span>
                 <?php endif; ?>
             </div>
         </div>
