@@ -135,3 +135,10 @@ public/uploads
 # Prettier (Formatter)
 .prettierrc
 .prettierignore
+
+.agent
+.agents
+.antigravity
+.playwright-mcp
+app/graphify-out
+graphify-out
