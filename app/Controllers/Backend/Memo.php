@@ -598,7 +598,7 @@ class Memo extends BaseController
         $pdf->Cell($colWidth, 0, 'Manajer Ybs,', 0, 0, 'C');
         $pdf->Cell($colWidth, 0, 'Kary. Ybs,', 0, 1, 'C');
 
-        $pdf->Ln(14); // Spacing for physical signature
+        $pdf->Ln(20); // Spacing for physical signature
 
         // Signature Names
         $pdf->setFont('helvetica', '', 8.5);

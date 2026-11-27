@@ -1,0 +1,502 @@
+<?php
+
+namespace App\Services;
+
+use App\Entities\Appraisal;
+use App\Exceptions\BusinessException;
+use App\Exceptions\ValidationException;
+use App\Models\M_Appraisal;
+use App\Models\M_AppraisalCycle;
+use App\Models\M_AppraisalTemplate;
+use CodeIgniter\Database\Exceptions\DatabaseException;
+
+class AppraisalGeneratorServices extends BaseServices
+{
+    protected M_AppraisalCycle $cycleModel;
+    protected M_Appraisal $appraisalModel;
+    protected M_AppraisalTemplate $templateModel;
+    protected AppraisalTemplateResolverServices $resolverService;
+    protected \App\Models\M_Employee $employeeModel;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->cycleModel      = new M_AppraisalCycle();
+        $this->appraisalModel  = new M_Appraisal();
+        $this->templateModel   = new M_AppraisalTemplate();
+        $this->resolverService = new AppraisalTemplateResolverServices();
+        $this->employeeModel   = new \App\Models\M_Employee();
+    }
+
+    /**
+     * Batch generate appraisals for all active employees in an OPEN cycle.
+     */
+    public function generateBatchForCycle(int $cycleId, int $userId): array
+    {
+        $cycle = $this->cycleModel->find($cycleId);
+
+        if (! $cycle || ! $cycle->isOpen()) {
+            throw new ValidationException('Appraisals can only be generated for OPEN cycles.');
+        }
+
+        $db              = \Config\Database::connect();
+        $minTenureMonths = 6;
+        $cutoffDate      = date('Y-m-d', strtotime("-{$minTenureMonths} months"));
+
+        // NOTE: Edit to exclude the DIREKSI
+        // Query all active employees with current org structure (deduplicated by employee)
+        $empQuery = $db->table('md_employee e')
+            ->select('
+                e.md_employee_id, 
+                e.md_levelling_id, 
+                e.md_position_id, 
+                e.superior_id,
+                GROUP_CONCAT(DISTINCT eb.md_branch_id) as branch_ids,
+                GROUP_CONCAT(DISTINCT ed.md_division_id) as division_ids
+            ')
+            ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+            ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
+            ->where('e.isactive', 'Y')
+            // Only include md.status_id of PERMANENT and KONTRAK
+            ->whereIn('UPPER(s.name)', ['PERMANENT', 'KONTRAK'])
+            ->where('(l.name IS NULL OR UPPER(l.name) != "DIREKSI")')
+            ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")');
+
+        if ($minTenureMonths > 0) {
+            $empQuery->where('e.registerdate IS NOT NULL')
+                ->where("CAST(e.registerdate AS CHAR) != '0000-00-00'")
+                ->where('e.registerdate <=', $cutoffDate);
+        }
+
+        $employees = $empQuery
+            ->groupBy('e.md_employee_id, e.md_levelling_id, e.md_position_id, e.superior_id')
+            ->get()
+            ->getResultArray();
+
+        if (empty($employees)) {
+            throw new BusinessException('No active employees found to generate appraisals.');
+        }
+
+        $generatedCount = 0;
+        $skippedCount   = 0;
+        $errors         = [];
+
+        // Cache resolved template snapshots in memory to prevent redundant queries
+        $templateCache = [];
+
+        foreach ($employees as $employee) {
+            $employeeId = (int) $employee['md_employee_id'];
+
+            // 1. Check duplicate safeguard (uq_appraisals_cycle_employee)
+            $existing = $this->appraisalModel
+                ->where('md_appraisal_cycle_id', $cycleId)
+                ->where('md_employee_id', $employeeId)
+                ->first();
+
+            if ($existing) {
+                $skippedCount++;
+                continue;
+            }
+
+            $db->transBegin();
+
+            try {
+                $branchIds   = !empty($employee['branch_ids']) ? explode(',', $employee['branch_ids']) : [];
+                $divisionIds = !empty($employee['division_ids']) ? explode(',', $employee['division_ids']) : [];
+                $levellingId = (int) ($employee['md_levelling_id'] ?? 0);
+                $positionId  = (int) ($employee['md_position_id'] ?? 0);
+
+                // Primary branch/division for snapshot
+                $branchId    = !empty($branchIds) ? (int) $branchIds[0] : 0;
+                $divisionId  = !empty($divisionIds) ? (int) $divisionIds[0] : 0;
+
+                // 2. Resolve target published template ID based on Branch, Division, Levelling, Position
+                $templateId = $this->resolverService->resolveTemplateId($branchIds, $divisionIds, $levellingId, $positionId);
+
+                // 3. Load or build template JSON snapshot
+                if (! isset($templateCache[$templateId])) {
+                    $template = $this->templateModel->find($templateId);
+
+                    $schema = [];
+                    if ($template && ! empty($template->schema_json)) {
+                        $schema = is_string($template->schema_json)
+                            ? (json_decode($template->schema_json, true) ?: [])
+                            : (array) $template->schema_json;
+                    }
+
+                    if (empty($schema['sections'])) {
+                        throw new ValidationException("Template ID {$templateId} tidak memiliki struktur schema_json yang valid.");
+                    }
+
+                    $expanded = AppraisalTemplateServices::expandSchema($schema, $template);
+                    $tplMeta  = $expanded['template'];
+                    if (empty($tplMeta['target_group'])) {
+                        $tplMeta['target_group'] = strtoupper((string) ($template->target_group ?? 'PERMANENT'));
+                    }
+
+                    $templateCache[$templateId] = [
+                        'snapshot' => [
+                            'template' => $tplMeta,
+                            'sections' => $schema['sections'],
+                        ],
+                        'items' => $expanded['items'],
+                    ];
+                }
+
+                $cachedData = $templateCache[$templateId];
+
+                // 4. Create Appraisal Header with Frozen Snapshots
+                $appraisal = new Appraisal();
+                $appraisal->md_appraisal_cycle_id    = $cycleId;
+                $appraisal->md_appraisal_template_id = $templateId;
+                $appraisal->md_employee_id           = $employeeId;
+
+                // Deduce hierarchy (Evaluator/Manager & Reviewer)
+                $hierarchy   = $this->employeeModel->getAppraisalHierarchy($employeeId);
+                $evaluatorId = (int) ($hierarchy['manager_id'] ?? 0);
+                if ($evaluatorId <= 0 && ! empty($employee['superior_id'])) {
+                    $evaluatorId = (int) $employee['superior_id'];
+                }
+                $reviewerId = (int) ($hierarchy['reviewer_id'] ?? 0);
+
+                // Freeze organizational structure
+                $appraisal->snapshot_branch_id    = $branchId ?: null;
+                $appraisal->snapshot_division_id  = $divisionId;
+                $appraisal->snapshot_position_id  = $positionId;
+                $appraisal->snapshot_evaluator_id = $evaluatorId;
+                $appraisal->snapshot_reviewer_id  = $reviewerId > 0 ? $reviewerId : null;
+
+                // Freeze template JSON structure
+                $appraisal->template_snapshot     = $cachedData['snapshot'];
+                $appraisal->status                = M_Appraisal::STATUS_DRAFT_EVALUATOR;
+                $appraisal->created_by            = $userId;
+                $appraisal->updated_by            = $userId;
+
+                $this->appraisalModel->insert($appraisal, true);
+
+                if ($db->transStatus() === false) {
+                    $db->transRollback();
+                    throw new DatabaseException("Failed transaction for employee ID {$employeeId}");
+                }
+
+                $db->transCommit();
+                $generatedCount++;
+            } catch (\Throwable $e) {
+                $db->transRollback();
+                $errors[] = "Employee ID {$employeeId}: " . $e->getMessage();
+            }
+        }
+
+        return [
+            'total_processed' => count($employees),
+            'generated'       => $generatedCount,
+            'skipped'         => $skippedCount,
+            'errors'          => $errors,
+        ];
+    }
+
+    /**
+     * Preview appraisal batch distribution for a cycle (or general simulation if cycleId is null).
+     *
+     * @param int|null $cycleId
+     * @return array
+     */
+    public function previewBatchForCycle(?int $cycleId = null): array
+    {
+        $db    = \Config\Database::connect();
+        $cycle = null;
+        if (!empty($cycleId)) {
+            $cycle = $this->cycleModel->find($cycleId);
+        }
+
+        $cycleStatus = $cycle ? (is_object($cycle) ? ($cycle->status ?? 'DRAFT') : ($cycle['status'] ?? 'DRAFT')) : 'DRAFT';
+        $isHistoricalCycle = ($cycle && in_array($cycleStatus, [M_AppraisalCycle::STATUS_OPEN, M_AppraisalCycle::STATUS_CLOSED, 'OPEN', 'CLOSED'], true));
+
+        // CASE 1: RUNNING (OPEN) OR COMPLETED (CLOSED) CYCLE
+        if ($isHistoricalCycle) {
+            $cycleIdVal = is_object($cycle) ? ($cycle->md_appraisal_cycle_id ?? 0) : ($cycle['md_appraisal_cycle_id'] ?? 0);
+
+            $appraisals = $db->table('md_appraisal a')
+                ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_template_id, a.status as appraisal_status, '
+                    . 'e.nik as nik, e.fullname, '
+                    . 'b.name as branch_name, d.name as division_name, l.name as level_name, p.name as position_name, '
+                    . 't.title as template_title, t.template_code, t.status as template_status, '
+                    . 'sup.fullname as evaluator_name, rev.fullname as reviewer_name, '
+                    . 'a.snapshot_evaluator_id as evaluator_id, a.snapshot_reviewer_id as reviewer_id')
+                ->join('md_employee e', 'e.md_employee_id = a.md_employee_id', 'left')
+                ->join('md_branch b', 'b.md_branch_id = a.snapshot_branch_id', 'left')
+                ->join('md_division d', 'd.md_division_id = a.snapshot_division_id', 'left')
+                ->join('md_position p', 'p.md_position_id = a.snapshot_position_id', 'left')
+                ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+                ->join('md_appraisal_template t', 't.md_appraisal_template_id = a.md_appraisal_template_id', 'left')
+                ->join('md_employee sup', 'sup.md_employee_id = a.snapshot_evaluator_id', 'left')
+                ->join('md_employee rev', 'rev.md_employee_id = a.snapshot_reviewer_id', 'left')
+                ->where('a.md_appraisal_cycle_id', (int) $cycleIdVal)
+                ->where('a.isactive', 'Y')
+                ->where('(l.name IS NULL OR UPPER(l.name) != "DIREKSI")')
+                ->orderBy('e.fullname', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            $rows = [];
+            foreach ($appraisals as $app) {
+                $tplId    = (int) ($app['md_appraisal_template_id'] ?? 0);
+                $tplCode  = $app['template_code'] ?? 'TPL';
+                $tplTitle = $app['template_title'] ?? "Template #{$tplId}";
+                $tplName  = "[{$tplCode}] {$tplTitle}";
+
+                $rows[] = [
+                    'md_employee_id'   => (int) $app['md_employee_id'],
+                    'nik'              => $app['nik'] ?? '-',
+                    'name'             => !empty($app['fullname']) ? mb_strtoupper($app['fullname'], 'UTF-8') : '-',
+                    'branch'           => $app['branch_name'] ?? 'Pusat',
+                    'division'         => $app['division_name'] ?? 'Semua Divisi',
+                    'level'            => $app['level_name'] ?? 'Staff',
+                    'position'         => $app['position_name'] ?? '-',
+                    'template_id'      => $tplId,
+                    'template_name'    => $tplName,
+                    'template_status'  => $app['template_status'] ?? 'PUBLISHED',
+                    'evaluator_id'     => (int) ($app['evaluator_id'] ?? 0),
+                    'evaluator_name'   => !empty($app['evaluator_name']) ? mb_strtoupper($app['evaluator_name'], 'UTF-8') : '-',
+                    'reviewer_id'      => (int) ($app['reviewer_id'] ?? 0),
+                    'reviewer_name'    => !empty($app['reviewer_name']) ? mb_strtoupper($app['reviewer_name'], 'UTF-8') : '-',
+                    'readiness_status' => 'ALREADY_GENERATED',
+                    'status_note'      => 'Form aktif (' . ($app['appraisal_status'] ?? M_Appraisal::STATUS_PENILAIAN) . ')',
+                ];
+            }
+
+            $summary = [
+                'total'             => count($rows),
+                'ready'             => count($rows),
+                'missing_template'  => 0,
+                'missing_evaluator' => 0,
+                'incomplete'        => 0,
+                'draft_template'    => 0,
+                'already_generated' => count($rows),
+                'can_blast'         => false,
+            ];
+
+            return [
+                'cycle'   => [
+                    'id'     => $cycleIdVal,
+                    'title'  => is_object($cycle) ? ($cycle->title ?? null) : ($cycle['title'] ?? null),
+                    'status' => $cycleStatus,
+                ],
+                'summary' => $summary,
+                'rows'    => $rows,
+            ];
+        }
+
+        // CASE 2: DRAFT CYCLE OR GENERAL SIMULATION
+        $minTenureMonths = 6;
+        $cutoffDate      = date('Y-m-d', strtotime("-{$minTenureMonths} months"));
+
+        $empQuery = $db->table('md_employee e')
+            ->select("
+                e.md_employee_id, 
+                e.nik as nik, 
+                e.fullname, 
+                e.md_levelling_id, 
+                l.name as level_name, 
+                e.md_position_id, 
+                p.name as position_name, 
+                e.superior_id,
+                GROUP_CONCAT(DISTINCT eb.md_branch_id) as branch_ids,
+                GROUP_CONCAT(DISTINCT b.name ORDER BY b.name SEPARATOR ', ') as branch_name,
+                GROUP_CONCAT(DISTINCT ed.md_division_id) as division_ids,
+                GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR ', ') as division_name
+            ")
+            ->join('md_employee_branch eb', 'eb.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_branch b', 'b.md_branch_id = eb.md_branch_id', 'left')
+            ->join('md_employee_division ed', 'ed.md_employee_id = e.md_employee_id', 'left')
+            ->join('md_division d', 'd.md_division_id = ed.md_division_id', 'left')
+            ->join('md_levelling l', 'l.md_levelling_id = e.md_levelling_id', 'left')
+            ->join('md_position p', 'p.md_position_id = e.md_position_id', 'left')
+            ->join('md_status s', 's.md_status_id = e.md_status_id', 'left')
+            ->where('e.isactive', 'Y')
+            // Only include md.status_id of PERMANENT and KONTRAK
+            ->whereIn('UPPER(s.name)', ['PERMANENT', 'KONTRAK'])
+            ->where('(l.name IS NULL OR UPPER(l.name) != "DIREKSI")')
+            ->where('(e.resigndate IS NULL OR e.resigndate > CURDATE() OR CAST(e.resigndate AS CHAR) = "0000-00-00")');
+
+        if ($minTenureMonths > 0) {
+            $empQuery->where('e.registerdate IS NOT NULL')
+                ->where("CAST(e.registerdate AS CHAR) != '0000-00-00'")
+                ->where('e.registerdate <=', $cutoffDate);
+        }
+
+        $employees = $empQuery
+            ->groupBy('e.md_employee_id, e.nik, e.fullname, e.md_levelling_id, l.name, e.md_position_id, p.name, e.superior_id')
+            ->orderBy('e.fullname', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $empNameMap = [];
+        foreach ($employees as $e) {
+            $empNameMap[(int) $e['md_employee_id']] = $e['fullname'];
+        }
+
+        $templateCache = [];
+        $templateStatusCache = [];
+        $templateRows = $db->table('md_appraisal_template')
+            ->select('md_appraisal_template_id, title, template_code, status')
+            ->whereIn('status', [M_AppraisalTemplate::STATUS_PUBLISHED, M_AppraisalTemplate::STATUS_DRAFT])
+            ->where('isactive', 'Y')
+            ->get()
+            ->getResultArray();
+        foreach ($templateRows as $tRow) {
+            $templateCache[(int) $tRow['md_appraisal_template_id']] = '[' . $tRow['template_code'] . '] ' . $tRow['title'];
+            $templateStatusCache[(int) $tRow['md_appraisal_template_id']] = $tRow['status'];
+        }
+
+        $existingGenerated = [];
+        if ($cycle) {
+            $cycleIdVal = is_object($cycle) ? ($cycle->md_appraisal_cycle_id ?? 0) : ($cycle['md_appraisal_cycle_id'] ?? 0);
+            $existingAppraisals = $db->table('md_appraisal a')
+                ->select('a.md_appraisal_id, a.md_employee_id, a.md_appraisal_template_id, a.snapshot_evaluator_id, a.snapshot_reviewer_id, a.status, t.title as template_title, t.template_code, t.status as template_status')
+                ->join('md_appraisal_template t', 't.md_appraisal_template_id = a.md_appraisal_template_id', 'left')
+                ->where('a.md_appraisal_cycle_id', (int) $cycleIdVal)
+                ->where('a.isactive', 'Y')
+                ->get()
+                ->getResultArray();
+            foreach ($existingAppraisals as $app) {
+                $existingGenerated[(int) $app['md_employee_id']] = $app;
+            }
+        }
+
+        $rows             = [];
+        $totalCount       = count($employees);
+        $readyCount       = 0;
+        $missingTplCount  = 0;
+        $missingEvalCount = 0;
+        $incompleteCount  = 0;
+        $draftTplCount    = 0;
+        $generatedCount   = 0;
+
+        foreach ($employees as $emp) {
+            $empId       = (int) $emp['md_employee_id'];
+            $branchIds   = !empty($emp['branch_ids']) ? explode(',', $emp['branch_ids']) : [];
+            $divisionIds = !empty($emp['division_ids']) ? explode(',', $emp['division_ids']) : [];
+            $levellingId = (int) ($emp['md_levelling_id'] ?? 0);
+            $positionId  = (int) ($emp['md_position_id'] ?? 0);
+
+            $existingApp = $existingGenerated[$empId] ?? null;
+
+            if ($existingApp) {
+                $resolvedTplId     = (int) ($existingApp['md_appraisal_template_id'] ?? 0);
+                $tplCode           = $existingApp['template_code'] ?? 'TPL';
+                $tplTitle          = $existingApp['template_title'] ?? "Template #{$resolvedTplId}";
+                $resolvedTplName   = "[{$tplCode}] {$tplTitle}";
+                $resolvedTplStatus = $existingApp['template_status'] ?? 'PUBLISHED';
+
+                $evaluatorId = (int) ($existingApp['snapshot_evaluator_id'] ?? 0);
+                $evaluatorName = ($evaluatorId > 0 && isset($empNameMap[$evaluatorId]))
+                    ? $empNameMap[$evaluatorId]
+                    : ($evaluatorId > 0 ? "Karyawan #{$evaluatorId}" : '-');
+
+                $reviewerId = (int) ($existingApp['snapshot_reviewer_id'] ?? 0);
+                $reviewerName = ($reviewerId > 0 && isset($empNameMap[$reviewerId]))
+                    ? $empNameMap[$reviewerId]
+                    : ($reviewerId > 0 ? "Karyawan #{$reviewerId}" : '-');
+
+                $readiness  = 'ALREADY_GENERATED';
+                $appStatus  = $existingApp['status'] ?? M_Appraisal::STATUS_PENILAIAN;
+                $statusNote = 'Form telah aktif (' . $appStatus . ')';
+                $generatedCount++;
+            } else {
+                $resolvedTplId     = 0;
+                $resolvedTplName   = '-';
+                $resolvedTplStatus = 'NONE';
+                try {
+                    $resolvedTplId     = $this->resolverService->resolveTemplateId($branchIds, $divisionIds, $levellingId, $positionId, true);
+                    $resolvedTplName   = $templateCache[$resolvedTplId] ?? "Template #{$resolvedTplId}";
+                    $resolvedTplStatus = $templateStatusCache[$resolvedTplId] ?? 'PUBLISHED';
+                } catch (\Throwable $te) {
+                    $resolvedTplId     = 0;
+                    $resolvedTplName   = 'Belum ditugaskan';
+                    $resolvedTplStatus = 'NONE';
+                }
+
+                $hierarchy   = $this->employeeModel->getAppraisalHierarchy($empId);
+                $evaluatorId = (int) ($hierarchy['manager_id'] ?? 0);
+                if ($evaluatorId <= 0 && !empty($emp['superior_id'])) {
+                    $evaluatorId = (int) $emp['superior_id'];
+                }
+                $evaluatorName = ($evaluatorId > 0 && isset($empNameMap[$evaluatorId]))
+                    ? $empNameMap[$evaluatorId]
+                    : ($evaluatorId > 0 ? "Karyawan #{$evaluatorId}" : '-');
+
+                $reviewerId = (int) ($hierarchy['reviewer_id'] ?? 0);
+                $reviewerName = ($reviewerId > 0 && isset($empNameMap[$reviewerId]))
+                    ? $empNameMap[$reviewerId]
+                    : ($reviewerId > 0 ? "Karyawan #{$reviewerId}" : '-');
+
+                $readiness  = 'READY';
+                $statusNote = 'Siap didistribusikan';
+
+                if ($resolvedTplId <= 0 && $evaluatorId <= 0) {
+                    $readiness  = 'INCOMPLETE';
+                    $statusNote = 'Template belum terhubung dan atasan langsung belum terdata';
+                    $incompleteCount++;
+                } elseif ($resolvedTplId <= 0) {
+                    $readiness  = 'MISSING_TEMPLATE';
+                    $statusNote = 'Tidak ada master template yang cocok';
+                    $missingTplCount++;
+                } elseif ($evaluatorId <= 0) {
+                    $readiness  = 'MISSING_EVALUATOR';
+                    $statusNote = 'Atasan langsung (evaluator) belum terdata';
+                    $missingEvalCount++;
+                } elseif ($resolvedTplStatus === 'DRAFT') {
+                    $readiness  = 'TEMPLATE_DRAFT';
+                    $statusNote = 'Template masih DRAFT (perlu dipublish sebelum rilis)';
+                    $draftTplCount++;
+                } else {
+                    $readyCount++;
+                }
+            }
+
+            $rows[] = [
+                'md_employee_id'   => $empId,
+                'nik'              => $emp['nik'] ?? '-',
+                'name'             => !empty($emp['fullname']) ? mb_strtoupper($emp['fullname'], 'UTF-8') : '-',
+                'division'         => $emp['division_name'] ?? '-',
+                'branch'           => $emp['branch_name'] ?? '-',
+                'level'            => $emp['level_name'] ?? '-',
+                'position'         => $emp['position_name'] ?? '-',
+                'template_id'      => $resolvedTplId,
+                'template_name'    => $resolvedTplName,
+                'template_status'  => $resolvedTplStatus,
+                'evaluator_id'     => $evaluatorId,
+                'evaluator_name'   => !empty($evaluatorName) && $evaluatorName !== '-' ? mb_strtoupper($evaluatorName, 'UTF-8') : $evaluatorName,
+                'reviewer_id'      => $reviewerId,
+                'reviewer_name'    => !empty($reviewerName) && $reviewerName !== '-' ? mb_strtoupper($reviewerName, 'UTF-8') : $reviewerName,
+                'readiness_status' => $readiness,
+                'status_note'      => $statusNote,
+            ];
+        }
+
+        $isCycleOpen = ($cycle && (is_object($cycle) ? ($cycle->status ?? '') : ($cycle['status'] ?? '')) === M_AppraisalCycle::STATUS_OPEN);
+        $summary = [
+            'total'             => $totalCount,
+            'ready'             => $readyCount,
+            'missing_template'  => $missingTplCount,
+            'missing_evaluator' => $missingEvalCount,
+            'incomplete'        => $incompleteCount,
+            'draft_template'    => $draftTplCount,
+            'already_generated' => $generatedCount,
+            'can_blast'         => (!$isCycleOpen && $readyCount > 0 && $draftTplCount === 0),
+        ];
+
+        return [
+            'cycle'   => $cycle ? [
+                'id'     => is_object($cycle) ? ($cycle->md_appraisal_cycle_id ?? null) : ($cycle['md_appraisal_cycle_id'] ?? null),
+                'title'  => is_object($cycle) ? ($cycle->title ?? null) : ($cycle['title'] ?? null),
+                'status' => is_object($cycle) ? ($cycle->status ?? null) : ($cycle['status'] ?? null),
+            ] : null,
+            'summary' => $summary,
+            'rows'    => $rows,
+        ];
+    }
+}
